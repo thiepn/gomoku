@@ -1,0 +1,59 @@
+name: Certify Chapter 1 course
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    if: github.event.head_commit.message == 'Certify Chapter 1 course'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Run production certification
+        run: |
+          cat > .ch1-cert.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const root='https://thiepn.dev/gomoku/';
+          const src=await (await fetch(root+'?cert='+Date.now(),{cache:'no-store'})).text();
+          for(const x of ['course-ch1-v1-script','__GomokuCourseChapter1Booted','MutationObserver(enforceSingleCourseCard)','gomoku.course.chapter1.v1']) if(!src.includes(x)) throw Error('missing '+x);
+          if((src.match(/id="course-ch1-v1-script"/g)||[]).length!==1) throw Error('source chapter duplicated');
+          console.log('PASS singular course source + rerender guard');
+          const browser=await chromium.launch({headless:true});
+          async function fresh(){
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();
+            await p.goto(root+'?mobile='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(900);
+            const close=p.locator('button[aria-label*="Close" i]:visible');if(await close.count())await close.first().click();return{ctx,p};
+          }
+          async function learn(p){const b=p.getByRole('button',{name:/^learn$/i});if(await b.count())await b.click();else await p.locator('[data-v92-route="improve"]').first().click();await p.waitForTimeout(450);const n=await p.locator('#ch1CourseCard').count();if(n!==1)throw Error('Chapter card count '+n);}
+          const A=await fresh();await learn(A.p);await A.p.locator('#ch1Start').click();await A.p.waitForTimeout(150);
+          const geom=await A.p.evaluate(()=>({iw:innerWidth,sw:document.documentElement.scrollWidth,dw:document.querySelector('#ch1CourseDialog')?.scrollWidth||0}));if(geom.sw>geom.iw+2||geom.dw>geom.iw+2)throw Error('mobile overflow '+JSON.stringify(geom));
+          await A.p.locator('#ch1Board [data-i="0"]').click();if(!/not this/i.test(await A.p.locator('#ch1Feedback').innerText()))throw Error('first miss feedback');await A.p.locator('#ch1Board [data-i="8"]').click();if(await A.p.locator('#ch1Reveal').isHidden())throw Error('reveal missing');await A.p.locator('#ch1Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter1.v1')).tasks.d1);if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false)throw Error('assisted scoring '+JSON.stringify(assisted));console.log('PASS mobile coaching + assisted scoring');await A.ctx.close();
+          const B=await fresh();await learn(B.p);await B.p.locator('#ch1Start').click();
+          for(const i of [42,58,60,56]){await B.p.locator('#ch1Board [data-i="'+i+'"]').click();if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText()))throw Error('clean answer '+i);await B.p.locator('#ch1NextTask').click();}
+          let rep=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());if(!rep.lessons[0].complete||rep.lessons[0].rate!==1)throw Error('lesson completion '+JSON.stringify(rep.lessons[0]));console.log('PASS clean first-try lesson scoring');
+          await B.p.reload({waitUntil:'domcontentloaded'});await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await B.p.waitForTimeout(1000);rep=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());if(!rep.lessons[0].complete)throw Error('persistence');await learn(B.p);if(await B.p.locator('#ch1CourseCard').count()!==1)throw Error('duplicate after reload');console.log('PASS persistence + card uniqueness after rerender/reload');
+          await B.p.locator('#ch1Start').click();await B.p.getByRole('button',{name:/read live and blocked space/i}).click();if(await B.p.locator('#ch1Board .ch1-cell:not(:disabled)').count()!==2)throw Error('candidate choice count');await B.p.locator('#ch1Board [data-i="41"]').click();if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText()))throw Error('candidate lesson answer');await B.p.getByRole('button',{name:/chapter checkpoint/i}).click();if(!/1 \/ 12/.test(await B.p.locator('.ch1-task-count').innerText()))throw Error('checkpoint count');console.log('PASS candidate lesson + 12-position checkpoint');
+          await B.ctx.close();await browser.close();console.log('CHAPTER1_CERTIFIED');
+          JS
+          node .ch1-cert.mjs
+      - name: Remove certification workflow
+        if: always()
+        run: |
+          rm -f .ch1-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/ch1-cert-final.yml
+          git commit -m 'Remove Chapter 1 certification workflow' || true
+          git push || true
