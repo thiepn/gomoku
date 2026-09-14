@@ -1,0 +1,57 @@
+name: Fix private room modal handoff
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Fix private room modal handoff'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Close room setup after successful create or join
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="""applyRoomState(res.state);rememberRoom();pollRoom();if(create){$('roomCode').value=res.id;toast('Room '+res.id+' created. Share the invite link.');}else toast('Joined room '+res.id+'.');"""
+          new="""applyRoomState(res.state);rememberRoom();pollRoom();if(create){$('roomCode').value=res.id;toast('Room '+res.id+' created. Share the invite link.');}else toast('Joined room '+res.id+'.');if($('workbenchDialog').open)$('workbenchDialog').close();"""
+          count=s.count(old)
+          if count!=1: raise SystemExit(f'private room success hook count={count}')
+          s=s.replace(old,new,1)
+          if s.count("toast('Joined room '+res.id+'.');if($('workbenchDialog').open)$('workbenchDialog').close();")!=1:
+              raise SystemExit('modal close was not inserted exactly once')
+          p.write_text(s,encoding='utf-8')
+          print('patched private-room success handoff')
+          PY
+      - name: Validate source and JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          required=["function openOnline()","id=\"createRoom\"","id=\"joinRoom\"","$('workbenchDialog').open)$('workbenchDialog').close()","roomMatchHud","roomChatSheet"]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('missing '+', '.join(missing))
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
+                  f.write(js); name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode: raise SystemExit(f'script {i} syntax error: {r.stderr}')
+          print('validated',len(scripts),'scripts')
+          PY
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/fix-room-modal.yml
+          git commit -m 'Close private room setup after connecting'
+          git push
