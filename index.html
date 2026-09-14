@@ -253,7 +253,7 @@ body.v91-local-active #opponentPauseBtn{display:none!important}
 <section class="board-side" aria-label="Game board"><div class="board-col">
 <div class="board-top"><div><div class="eyebrow" id="matchLabel">YOU VS ENGINE / RENJU</div><div class="board-heading"><span class="turn-dot" id="turnDot" aria-hidden="true"></span><h2 id="statusText" aria-live="polite">Black to play</h2><span class="spinner" id="spinner" hidden aria-hidden="true"></span></div></div><span class="move-badge" id="moveBadge">00<span>MOVE</span></span></div>
 <div class="board-shell" id="shell"><canvas id="board" aria-hidden="true"></canvas><canvas id="v94Fx" aria-hidden="true"></canvas><div class="v94-thinking-pill" id="v94ThinkPill" hidden aria-hidden="true"><span class="v94-thinking-dot"></span><span id="v94ThinkText">Thinking</span><span class="v94-thinking-ellipsis" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="board-grid" id="boardGrid" role="grid" aria-label="15 by 15 Gomoku board" aria-describedby="boardHelp" aria-rowcount="15" aria-colcount="15"></div></div>
-<div class="caption"><span id="ruleCaption">15 × 15 · Renju practice</span><span id="capR">Center-first opening</span></div>
+<div class="caption"><span id="ruleCaption">15 × 15 · Renju</span><span id="capR">Black forbidden moves enforced</span></div>
 <div class="editor-panel card" id="editorPanel" hidden><div class="eyebrow">POSITION LAB · EDITING ONLY</div><div class="brushes" role="group" aria-label="Setup stone brush"><button class="btn" data-brush="1" aria-pressed="true">Black</button><button class="btn ghost" data-brush="2" aria-pressed="false">White</button><button class="btn ghost" data-brush="0" aria-pressed="false">Erase</button></div><div class="field-row"><label>Side to play<select id="editorTurn"><option value="1">Black</option><option value="2">White</option></select></label><label>Rules<select id="editorRule"></select></label></div><p class="muted" id="editorStatus">Place or remove stones. This is not a live match.</p><div class="button-row"><button class="btn" id="applyEditorBtn">Study position</button><button class="btn ghost" id="clearEditorBtn">Clear</button><button class="btn ghost" id="cancelEditorBtn">Cancel</button></div></div>
 <div class="placement" id="placement"><div><strong id="selectionText">H8 · empty</strong><span id="selectionHint">Choose a point to begin.</span></div><button class="btn" id="placeBtn">Place H8</button></div>
 <div class="game-actions"><button class="btn primary" id="newBtn">New game</button><button class="btn ghost" id="undoBtn" title="Undo (U)" disabled>↶ <span>Undo</span></button><button class="btn ghost" id="redoBtn" title="Redo (Y)" disabled>↷ <span>Redo</span></button><button class="btn ghost" id="hintBtn" title="Hint (H)">Hint</button><button class="btn ghost" id="reviewBtn" title="Review (R)" aria-pressed="false" disabled>Review</button></div>
@@ -276,7 +276,7 @@ body.v91-local-active #opponentPauseBtn{display:none!important}
 <footer><span>GOMOKU STUDIO / 12.0.1</span><p>Local-first play, guided practice and private studies. Optional accounts and online play require your own hosted server.</p></footer>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span></div>
 <dialog id="newDialog" aria-labelledby="newTitle"><div class="dialog-header"><div><p class="eyebrow">A NEW BOARD</p><h2 id="newTitle">Choose your game.</h2></div><button class="icon-btn" data-close="newDialog" aria-label="Close new game dialog">×</button></div><form id="newForm"><label>Mode<select id="modeSelect"><option value="ai">You vs engine</option><option value="local">Two players · same device</option><option value="arena">Engine vs engine · spectator</option><option value="study">Study · control both colors</option></select></label><div class="field-row"><label>Rules<select id="ruleSelect"></select></label><label id="colorLabel">Your color<select id="colorSelect"><option value="1">Black · first</option><option value="2">White · second</option><option value="random">Random color</option></select></label></div><div class="field-row" id="newAIFields"><label id="newLevelLabel">Difficulty<select id="levelSelect"></select></label><label id="newWhiteLevelLabel" hidden>White engine<select id="newWhiteLevelSelect"></select></label></div><label>Starting position<select id="openingSelect"></select></label><p class="tiny">Three-stone starts are teaching setups, not a rated opening book. Starting a new game replaces the autosave; save or export the current game to keep it.</p><div class="dialog-actions"><button class="btn ghost" type="button" data-close="newDialog">Cancel</button><button class="btn" type="submit">Start game</button></div></form></dialog>
-<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-header"><h2 id="settingsTitle">Board preferences</h2><button class="icon-btn" data-close="settingsDialog" aria-label="Close settings">×</button></div><label>Appearance<select id="themeSelect"><option value="paper">Paper &amp; kaya</option><option value="night">Midnight &amp; kaya</option><option value="slate">Slate &amp; ash</option></select></label><label class="toggle"><input type="checkbox" id="numbersChk">Show move numbers</label><label class="toggle"><input type="checkbox" id="heatChk">Show stone influence</label><p class="tiny">Influence is proximity only, not territory, a score, or a win probability.</p><label class="toggle"><input type="checkbox" id="touchChk" checked>Confirm touch placement</label><label class="toggle"><input type="checkbox" id="soundChk">Stone sound</label><details><summary>Rules &amp; keyboard reference</summary><p class="muted">Use arrows to move around the board, Enter or Space to place. Home/End reaches the edge of a row. Ctrl+Home/End reaches a corner. Outside text fields: U undo, Y redo, H hint, R review, F focus. Escape cancels a search or exits focus mode.</p><p class="muted">All modes use a 15 × 15 board. Renju practice opens at H8 and rejects Black fouls. The opening lab offers local swap/proposal procedures. Main-board Renju blocks fouls as practice; it is not a tournament referee. Optional clocks restore paused.</p><p class="muted">Reduced-motion preferences are respected automatically. Small mobile intersections have a separate 44-pixel Place control for confirmation.</p><p class="muted"><a href="https://www.renju.net/rifrules/" target="_blank" rel="noopener noreferrer">International Renju rules</a></p></details></dialog>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-header"><h2 id="settingsTitle">Board preferences</h2><button class="icon-btn" data-close="settingsDialog" aria-label="Close settings">×</button></div><label>Appearance<select id="themeSelect"><option value="paper">Paper &amp; kaya</option><option value="night">Midnight &amp; kaya</option><option value="slate">Slate &amp; ash</option></select></label><label class="toggle"><input type="checkbox" id="numbersChk">Show move numbers</label><label class="toggle"><input type="checkbox" id="heatChk">Show stone influence</label><p class="tiny">Influence is proximity only, not territory, a score, or a win probability.</p><label class="toggle"><input type="checkbox" id="touchChk" checked>Confirm touch placement</label><label class="toggle"><input type="checkbox" id="soundChk">Stone sound</label><details><summary>Rules &amp; keyboard reference</summary><p class="muted">Use arrows to move around the board, Enter or Space to place. Home/End reaches the edge of a row. Ctrl+Home/End reaches a corner. Outside text fields: U undo, Y redo, H hint, R review, F focus. Escape cancels a search or exits focus mode.</p><p class="muted">All modes use a 15 × 15 board. Renju forbids Black overlines, double-fours and genuine double-threes; White is unrestricted by those fouls. Opening and swap procedures are separate tools and are not applied to the main-board Renju ruleset. Optional clocks restore paused.</p><p class="muted">Reduced-motion preferences are respected automatically. Small mobile intersections have a separate 44-pixel Place control for confirmation.</p><p class="muted"><a href="https://www.renju.net/rifrules/" target="_blank" rel="noopener noreferrer">International Renju rules</a></p></details></dialog>
 <dialog id="resultDialog" aria-labelledby="resTitle"><div class="result-card"><span class="stamp" id="resStamp" aria-hidden="true">勝</span><h2 id="resTitle">Game complete</h2><p id="resSub"></p><div class="dialog-actions"><button class="btn" id="rematchBtn">Rematch · swap colors</button><button class="btn ghost" id="resultReviewBtn">Review game</button></div><button class="text-btn" data-close="resultDialog">View final board</button></div></dialog>
 <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Replace this board?</h2><p id="confirmText">Save or export the current game first.</p><div class="dialog-actions"><button class="btn ghost" id="confirmCancel" autofocus>Cancel</button><button class="btn" id="confirmAccept">Continue</button></div></dialog>
 <noscript><p>This offline game requires JavaScript.</p></noscript>
@@ -419,7 +419,6 @@ function createEngine(variant='renju-practice') {
   }
   function legalMove(board,i,color,moveCount) {
     if(i===-1) return moveCount>=3 ? {legal:true,win:false,foul:false,reason:'pass',fours:[],threes:[],winLines:[]} : invalid('opening-pass');
-    if(renju&&moveCount===0&&!board.some(Boolean)&&i!==112) return invalid('opening-center');
     return classify(board,i,color);
   }
   function winningMoves(board,color,check) {
@@ -827,7 +826,7 @@ if(typeof module==='object'&&module.exports)module.exports={createV5EngineFactor
     maximum:{label:'Master',seal:'八',timeMs:3400,maxDepth:10,width:22,randomPool:1,humanTag:'Strongest policy',description:'Strongest available local policy. No deliberate humanized deviation from the searched best move.'}
   };
   const rules={
-    'renju-practice':{label:'Renju practice',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes rejected. White: five or more. Center-first practice opening; no tournament swaps.'},
+    'renju-practice':{label:'Renju',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes are forbidden. White: five or more.'},
     'exact-five':{label:'Gomoku · exact five',short:'Exact five',description:'Both colors need exactly five. A longer line is legal but does not win. Free opening; no forbidden forks or tournament swap protocol.'},
     freestyle:{label:'Gomoku · freestyle',short:'Freestyle',description:'Both colors win with five or more. No forbidden forks. Any first intersection is allowed.'}
   };
@@ -2024,7 +2023,7 @@ function v114QualityLabel(p){if(!p)return '';const a=Array.isArray(p.answers)?p.
 const effectiveCount=()=>S.initial.length+S.records.length;
 const terminalView=()=>!!S.result&&(!S.reviewing||S.reviewPos===S.records.length)&&S.result.reason!=='resign';
 const FOUL={overline:'That makes a forbidden Black overline.','double-four':'Black cannot create two distinct fours.',
-  'double-three':'Black cannot create two genuine threes.','opening-center':'Black opens at H8 in Renju practice.',
+  'double-three':'Black cannot create two genuine threes.',
   'opening-pass':'Place the first three stones before passing.',occupied:'That point already has a stone.',invalid:'Choose a board intersection.'};
 function toast(message){$('toastMsg').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}
 function snapshot(){return {aiPaused:S.aiPaused,version:3,variant:S.variant,mode:S.mode,humanColor:S.humanColor,level:S.level,opponentLevel:S.opponentLevel,
@@ -4361,7 +4360,7 @@ function updateV85Guidance(){
   if(S.mode==='puzzle'){if(S.puzzleSolved)return setNext85('Tactic solved','Continue with another unsolved drill while the pattern is fresh.','Next drill',()=>$('nextUnsolvedBtn').click());return setNext85('Find the tactical move','Look for a win, forced defense, four, or fork before guessing.','Focus board',focusBoard85);}
   if(S.result)return setNext85('Turn this game into feedback','Review the game before starting another one so the useful decisions are not lost.','Review game',()=>enterReview());
   if(S.busy)return setNext85('Engine is thinking','The board is locked until the local search finishes. Escape cancels the search without changing the board.','Thinking…',null,true);
-  if(!S.records.length)return setNext85('Make the first move','Select an intersection. In Renju practice, beginning near the center is the clearest starting point.','Focus board',focusBoard85);
+  if(!S.records.length)return setNext85('Make the first move','Select an intersection. In Renju, beginning near the center is usually the clearest starting point.','Focus board',focusBoard85);
   if(humanTurn())return setNext85('Your move','Check your immediate win, then the opponent\'s immediate win, before choosing a plan.','Focus board',focusBoard85);
   return setNext85('Opponent to move','The local engine will respond automatically.','Waiting…',null,true);
 }
@@ -6060,4 +6059,34 @@ mount();})();
 })();
 </script>
 
+<script id="renju-forbidden-hotfix-ui">
+(()=>{'use strict';
+  const clean=v=>String(v??'').replace(/\\n\\n+/g,' ').replace(/\\n/g,' ');
+  function scrub(root){
+    if(!root)return;
+    const nodes=[];
+    if(root.nodeType===Node.TEXT_NODE)nodes.push(root);
+    else if(root.nodeType===Node.ELEMENT_NODE){
+      const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+      while(walker.nextNode())nodes.push(walker.currentNode);
+    }
+    for(const node of nodes){
+      const tag=node.parentElement?.tagName;
+      if(!tag||/^(SCRIPT|STYLE|TEXTAREA|PRE|CODE)$/.test(tag))continue;
+      if(node.nodeValue?.includes('\\n'))node.nodeValue=clean(node.nodeValue);
+    }
+  }
+  const start=()=>{
+    scrub(document.body);
+    const observer=new MutationObserver(records=>{
+      for(const record of records){
+        if(record.type==='characterData')scrub(record.target);
+        else for(const node of record.addedNodes)scrub(node);
+      }
+    });
+    observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
 </body></html>
