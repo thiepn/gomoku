@@ -1,4 +1,5 @@
 name: Private room debug
+# insert-path diagnostic
 
 on:
   push:
