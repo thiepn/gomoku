@@ -1,0 +1,31 @@
+><button class="btn ghost" id="ch1Reveal" type="button" hidden>Show answer</button><button class="btn" id="ch1NextTask" type="button" hidden>'+(ti+1<ts.length?'Next position':'Finish lesson')+'</button></div></div></div></section>';
+ renderBoard(t);$('#ch1Reveal').onclick=()=>reveal(t);$('#ch1NextTask').onclick=()=>{if(ti+1<ts.length){S.cursor[l.id]=ti+1;save();renderTask(li,ti+1);}else{renderNav();renderLessonDone(li);}};
+ if(r.correct){$('#ch1Feedback').className='ch1-hint good';$('#ch1Feedback').textContent=(r.assisted?'Previously completed with help. ':'Previously solved. ')+t.why;$('#ch1NextTask').hidden=false;disableBoard();}
+}
+function renderBoard(t){
+ const board=$('ch1Board'),map=new Map(t.stones.map(([x,y,c])=>[p(x,y),c])),choices=t.choices?new Set(t.choices):null;board.replaceChildren();
+ for(let i=0;i<N*N;i++){const b=document.createElement('button');b.type='button';b.className='ch1-cell';b.dataset.i=i;b.setAttribute('role','gridcell');const c=map.get(i);if(c){b.classList.add('occupied');b.disabled=true;const s=document.createElement('i');s.className='ch1-stone '+(c===1?'black':'white');b.append(s);b.setAttribute('aria-label',(c===1?'Black':'White')+' stone');}
+ else {const allowed=!choices||choices.has(i);b.disabled=!allowed;b.setAttribute('aria-label',allowed?'Empty intersection, choose move':'Empty intersection');if(choices?.has(i)){b.classList.add('choice');const lab=document.createElement('span');lab.className='ch1-choice-label';lab.textContent=String.fromCharCode(65+[...choices].indexOf(i));b.append(lab);}if(allowed)b.onclick=()=>answer(t,i,b);}board.append(b);}
+}
+function disableBoard(){for(const b of document.querySelectorAll('#ch1Board .ch1-cell'))b.disabled=true}
+function answer(t,i,b){
+ const old=rec(t.id);if(old.correct||revealed)return;const first=old.attempts===0,correct=t.answers.includes(i),next={...old,attempts:old.attempts+1};
+ S.attemptLog.push({at:now(),chapter:1,lesson:S.lesson,task:t.id,skill:t.skill,i,correct,assisted:false});S.attemptLog=S.attemptLog.slice(-500);
+ if(correct){next.correct=true;next.firstTry=first;next.assisted=false;next.lastAt=now();S.tasks[t.id]=next;b.classList.add('correct');disableBoard();const f=$('ch1Feedback');f.className='ch1-hint good';f.textContent='Correct. '+t.why;$('#ch1NextTask').hidden=false;save();renderNav();return;}
+ next.firstTry=false;next.lastAt=now();S.tasks[t.id]=next;b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');lastWrong=i;const f=$('ch1Feedback');f.className='ch1-hint bad';f.textContent=next.attempts>=2?'Not yet. Hint: '+t.hint:'Not this point. Run the scan again before choosing another move.';if(next.attempts>=2)$('#ch1Reveal').hidden=false;save();renderNav();
+}
+function reveal(t){
+ if(revealed)return;revealed=true;const r=rec(t.id),next={...r,correct:true,firstTry:false,assisted:true,lastAt:now()};S.tasks[t.id]=next;S.attemptLog.push({at:now(),chapter:1,lesson:S.lesson,task:t.id,skill:t.skill,i:null,correct:true,assisted:true});S.attemptLog=S.attemptLog.slice(-500);for(const i of t.answers){const b=$('ch1Board')?.querySelector('[data-i="'+i+'"]');b?.classList.add('revealed');}disableBoard();const f=$('ch1Feedback');f.className='ch1-hint good';f.textContent='Answer shown. '+t.why;$('#ch1Reveal').hidden=true;$('#ch1NextTask').hidden=false;save();renderNav();
+}
+function renderLessonDone(li){
+ const l=L[li],lr=lessonReport(li),host=$('ch1LessonDone');if(!host)return;const r=report(),next=li+1<L.length?li+1:null,skills=r.skills;
+ if(l.checkpoint){const passed=(lr.rate??0)>=.7;host.innerHTML='<section class="ch1-chapter-finish"><span class="ch1-kicker">CHAPTER 1 COMPLETE</span><h4>'+(passed?'Your board scan is established.':'Good first pass. Review the weak spots once more.')+'</h4><p>Checkpoint first-try score: <b>'+pct(lr.rate)+'</b>. This score is diagnostic, not a lock. Chapter 2 will build on this scan with fours and forcing threats.</p><div class="ch1-skill-grid" id="ch1Skills"></div><div class="ch1-card-actions"><button class="btn" id="ch1ReviewWeak">Review weakest lesson</button><button class="btn ghost" id="ch1CloseDone">Return to Learn</button></div></section>';renderSkills(skills);$('#ch1ReviewWeak').onclick=()=>{S.lesson=weakestLesson();save();renderCourse();};$('#ch1CloseDone').onclick=()=>dialog.close();return;}
+ host.innerHTML='<section class="ch1-lesson-done"><h4>Lesson complete · '+pct(lr.rate)+' first try</h4><p>'+(lr.rate===1?'Clean run. The important part is keeping this scan automatic in real games.':lr.rate>=.7?'Solid. A short review later will make the pattern more automatic.':'You finished the lesson. Revisit it once more before relying on speed.')+'</p><div class="ch1-card-actions">'+(next!=null?'<button class="btn" id="ch1NextLesson">Next · '+L[next].title+'</button>':'')+'<button class="btn ghost" id="ch1RedoLesson">Redo lesson</button></div></section>';$('#ch1NextLesson')?.addEventListener('click',()=>{S.lesson=next;save();renderCourse();});$('#ch1RedoLesson').onclick=()=>redoLesson(li);
+}
+function renderSkills(skills){
+ const host=$('ch1Skills');if(!host)return;host.replaceChildren();for(const x of Object.values(skills)){const el=document.createElement('div');el.className='ch1-skill';const rate=x.rate??0;el.innerHTML='<b><span>'+x.label+'</span><em>'+pct(x.rate)+'</em></b><span><i style="width:'+Math.round(rate*100)+'%"></i></span><small>'+x.clean+' clean / '+x.attempted+' attempted</small>';host.append(el);}
+}
+function redoLesson(li){const ts=tasksFor(li);for(const t of ts)delete S.tasks[t.id];S.cursor[L[li].id]=0;save();renderCourse();}
+mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});[400,1200,2500].forEach(ms=>setTimeout(mount,ms));
+})();
+</script>
