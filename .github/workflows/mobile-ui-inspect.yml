@@ -1,0 +1,28 @@
+name: Inspect mobile Gomoku UI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  inspect:
+    if: github.event.head_commit.message == 'Inspect mobile Gomoku UI'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect mobile CSS and interaction hooks
+        run: |
+          echo '=== MEDIA QUERIES ==='
+          grep -n "@media" index.html | tail -n 80 || true
+          echo '=== TOUCH CONFIRM ==='
+          grep -n "touchConfirm" index.html | head -n 40 || true
+          echo '=== BOARD POINT ==='
+          grep -n "board-point" index.html | head -n 40 || true
+          echo '=== PLACEMENT ==='
+          grep -n "placement" index.html | head -n 50 || true
+          echo '=== GAME ACTIONS ==='
+          grep -n "game-actions" index.html | head -n 50 || true
+          echo '=== MOBILE MARKERS ==='
+          grep -n -Ei "mobile|phone|coarse|pointer" index.html | head -n 100 || true
+          echo '=== ONLINE ROOM ==='
+          grep -n "Private online room\|roomDetails\|platform-launch" index.html | head -n 80 || true
