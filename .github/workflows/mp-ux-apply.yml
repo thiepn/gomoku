@@ -1,0 +1,46 @@
+name: Apply multiplayer UX polish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Apply multiplayer UX polish'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply multiplayer UX patch
+        run: python .github/mp_ux_patch.py
+      - name: Validate multiplayer UX layer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          required=['multiplayer-ux-polish-v12','roomMatchHud','roomChatSheet','roomPresenceLabel','presenceState()','channel.track({seat:','navigator.vibrate','roomWaitingPanel']
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('Missing: '+', '.join(missing))
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              path=Path(tempfile.gettempdir())/f'gomoku-inline-{i}.js'
+              path.write_text(js,encoding='utf-8')
+              r=subprocess.run(['node','--check',str(path)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr)
+                  raise SystemExit(f'Inline script {i} failed syntax check')
+          print('Validated',len(scripts),'inline scripts')
+          PY
+          git diff --check
+      - name: Commit implementation and clean temporary files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/mp_ux_patch.py .github/workflows/mp-ux-apply.yml
+          git add index.html
+          git commit -m 'Polish private room multiplayer UX'
+          git push
