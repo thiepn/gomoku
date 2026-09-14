@@ -1,0 +1,40 @@
+name: Trace Chapter 1 render error
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  trace:
+    if: github.event.head_commit.message == 'Trace Chapter 1 render error'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Trace live course
+        run: |
+          cat > .diag.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const chrome=process.env.CHROME;const browser=await chromium.launch({headless:true,executablePath:chrome});const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push({message:e.message,stack:e.stack}));
+          await p.goto('https://thiepn.dev/gomoku/?diag='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(1000);const c=p.locator('button[aria-label*="Close" i]:visible');if(await c.count())await c.first().click();const l=p.getByRole('button',{name:/^learn$/i});if(await l.count())await l.click();await p.waitForTimeout(500);
+          try{await p.evaluate(()=>window.GomokuCourseChapter1.open())}catch(e){console.log('DIRECT_THROW',String(e))};await p.waitForTimeout(300);
+          console.log('STATE',JSON.stringify(await p.evaluate(()=>{const d=document.querySelector('#ch1CourseDialog');return{api:typeof window.GomokuCourseChapter1?.open,dialog:!!d,open:d?.open??null,board:!!d?.querySelector('#ch1Board'),feedback:!!d?.querySelector('#ch1Feedback'),reveal:!!d?.querySelector('#ch1Reveal'),next:!!d?.querySelector('#ch1NextTask'),taskHost:!!d?.querySelector('#ch1TaskHost'),main:!!d?.querySelector('#ch1Main'),incidents:window.__GomokuEarly117?.incidents?.().slice(-10)}})));
+          console.log('ERRORS',JSON.stringify(errors));await ctx.close();await browser.close();
+          JS
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          CHROME="$CHROME" node .diag.mjs
+      - name: Remove trace
+        if: always()
+        run: |
+          rm -f .diag.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/ch1-error-diag.yml
+          git commit -m 'Remove Chapter 1 error trace' || true
+          git push || true
