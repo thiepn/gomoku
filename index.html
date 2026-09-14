@@ -245,6 +245,18 @@ body.v91-local-active #levelSection{display:none!important}
 body.v91-local-active #opponentPauseBtn{display:none!important}
 @media(max-width:520px){.v91-local-launch{align-items:stretch;flex-direction:column}.v91-local-launch .btn{width:100%}.v91-local-head{align-items:flex-start}.v91-score{grid-template-columns:1fr auto 1fr;gap:5px}.v91-score-player{padding:7px 6px}.v91-score-player b{font-size:11px}.v91-score-main strong{font-size:19px}.v91-local-actions .btn{min-width:0}.player-card.v91-turn{padding:5px}}
 </style>
+<!-- PWA_META_START -->
+<meta name="theme-color" content="#1f1714">
+<meta name="application-name" content="Gomoku">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gomoku">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<!-- PWA_META_END -->
 </head><body>
 <a class="skip" href="#boardGrid">Skip to board</a>
 <header class="top"><div class="brand"><span class="logo-seal" aria-hidden="true">弈</span><div><h1>GOMOKU <span>STUDIO</span></h1><p>Play. Learn. Compete.</p></div></div><div class="header-tools"><span class="version">STUDIO / 12.0.1</span><button class="icon-btn" id="soundBtn" aria-label="Toggle sound" aria-pressed="false" title="Sound">♪</button><button class="icon-btn" id="focusBtn" aria-label="Toggle focused board" aria-pressed="false" title="Focus board">⛶</button><button class="icon-btn" id="settingsBtn" aria-label="Open settings" title="Settings">⚙</button></div></header><nav class="studio-launcher" aria-label="Advanced tools"><span class="eyebrow">THE WORKBENCH</span><button class="btn ghost" id="openingLabBtn">Opening lab</button><button class="btn ghost" id="academyBtn">Academy</button><button class="btn ghost" id="competitionBtn">Competition</button><button class="btn ghost" id="onlineBtn">Private room</button><button class="btn ghost" id="commandBtn">Commands <kbd>Ctrl K</kbd></button></nav>
@@ -6175,4 +6187,15 @@ body:not([data-v92-route="play"]) #roomMatchHud{display:none!important}
 @media(max-width:390px){.room-hud-main{grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr)}.room-hud-player small{font-size:6px}.room-hud-player b{font-size:11px}.room-presence{font-size:7px}.room-hud-turn b{font-size:11px}.room-hud-turn span{font-size:5.5px}.room-waiting-panel{align-items:flex-start;flex-direction:column}.room-waiting-panel .btn{width:100%}}
 </style>
 
+<!-- PWA_SW_START -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((error) => {
+      console.error('Service worker registration failed:', error);
+    });
+  });
+}
+</script>
+<!-- PWA_SW_END -->
 </body></html>
