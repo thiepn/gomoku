@@ -1,5 +1,5 @@
 name: Private room debug
-# insert-path diagnostic
+# request-response diagnostic
 
 on:
   push:
@@ -10,6 +10,6 @@ jobs:
     if: github.event.head_commit.message == 'Run private-room debug'
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect room backend database access
+      - name: Inspect room backend request and response path
         run: |
-          curl -fsS https://hycegznamzjhwinegaai.supabase.co/functions/v1/gomoku-room-debug | jq .
+          curl -fsS -X POST https://hycegznamzjhwinegaai.supabase.co/functions/v1/gomoku-room-debug -H 'Content-Type: application/json' --data '{"name":"Smoke Host","rule":"renju-practice"}' | jq .
