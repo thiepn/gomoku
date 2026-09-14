@@ -1,0 +1,39 @@
+name: Inspect private room success handlers
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    if: github.event.head_commit.message == 'Inspect private room success handlers'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print room-handler context
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=['function openOnline','Create room','Join room','network={base:ROOM_API_BASE','applyRoomState(res.state)','closeDesk','workbenchDialog']
+          for term in terms:
+              print('\n===== '+term+' =====')
+              start=0
+              hits=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  hits+=1
+                  print(f'-- hit {hits} at {i} --')
+                  print(s[max(0,i-1400):min(len(s),i+2600)])
+                  start=i+len(term)
+                  if hits>=5: break
+          PY
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/inspect-room-handlers.yml
+          git commit -m 'Remove private room handler inspection' || true
+          git push || true
