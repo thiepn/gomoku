@@ -1,0 +1,114 @@
+name: Chapter 1 production smoke
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    if: github.event.head_commit.message == 'Run Chapter 1 production smoke'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Test live Chapter 1
+        run: |
+          cat > .chapter1-smoke.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const root='https://thiepn.dev/gomoku/';
+          const source=await (await fetch(root+'?ch1smoke='+Date.now(),{cache:'no-store'})).text();
+          for(const marker of ['course-ch1-v1-script','COURSE · CHAPTER 1','gomoku.course.chapter1.v1','Chapter checkpoint']){
+            if(!source.includes(marker)) throw new Error('Missing live Chapter 1 marker: '+marker);
+          }
+          console.log('PASS live source contains Chapter 1');
+          const browser=await chromium.launch({headless:true});
+          async function page(){
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            const p=await ctx.newPage();
+            await p.goto(root+'?qa='+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});
+            await p.waitForTimeout(700);
+            const close=p.locator('button[aria-label*="Close" i]:visible');
+            if(await close.count()) await close.first().click();
+            return {ctx,p};
+          }
+          async function openCourse(p){
+            const learn=p.getByRole('button',{name:/^learn$/i});
+            if(await learn.count()) await learn.click(); else await p.locator('[data-v92-route="improve"]').first().click();
+            await p.waitForTimeout(300);
+            if(!await p.locator('#ch1CourseCard').isVisible()) throw new Error('Chapter 1 card not visible on Learn');
+            await p.locator('#ch1Start').click();
+            await p.waitForTimeout(200);
+            if(!await p.locator('#ch1CourseDialog').isVisible()) throw new Error('Chapter dialog did not open');
+          }
+
+          // Assisted path: wrong twice, reveal, verify it is not counted as a clean solve.
+          const A=await page();await openCourse(A.p);
+          const geom=await A.p.evaluate(()=>({iw:innerWidth,sw:document.documentElement.scrollWidth,dw:document.querySelector('#ch1CourseDialog')?.scrollWidth||0}));
+          if(geom.sw>geom.iw+2||geom.dw>geom.iw+2) throw new Error('Mobile overflow '+JSON.stringify(geom));
+          await A.p.locator('#ch1Board [data-i="0"]').click();
+          if(!/not this/i.test(await A.p.locator('#ch1Feedback').innerText())) throw new Error('First wrong-answer coaching missing');
+          await A.p.locator('#ch1Board [data-i="8"]').click();
+          if(await A.p.locator('#ch1Reveal').isHidden()) throw new Error('Reveal did not appear after two misses');
+          await A.p.locator('#ch1Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter1.v1')).tasks.d1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false) throw new Error('Assisted result recorded incorrectly '+JSON.stringify(assisted));
+          console.log('PASS wrong-answer coaching + assisted reveal accounting');
+          await A.ctx.close();
+
+          // Clean path in a fresh profile.
+          const B=await page();await openCourse(B.p);
+          await B.p.locator('#ch1Board [data-i="42"]').click();
+          if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText())) throw new Error('Correct feedback missing');
+          let d1=await B.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter1.v1')).tasks.d1);
+          if(!d1?.correct||d1.firstTry!==true||d1.assisted) throw new Error('Clean result recorded incorrectly '+JSON.stringify(d1));
+          await B.p.locator('#ch1NextTask').click();
+          await B.p.locator('#ch1Board [data-i="58"]').click();await B.p.locator('#ch1NextTask').click();
+          await B.p.locator('#ch1Board [data-i="60"]').click();await B.p.locator('#ch1NextTask').click();
+          await B.p.locator('#ch1Board [data-i="56"]').click();await B.p.locator('#ch1NextTask').click();
+          await B.p.waitForTimeout(100);
+          const rep1=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());
+          if(!rep1.lessons[0].complete||rep1.lessons[0].rate!==1) throw new Error('Lesson 1 completion incorrect '+JSON.stringify(rep1.lessons[0]));
+          console.log('PASS clean lesson completion + first-try score');
+
+          // Persistence after reload.
+          await B.p.reload({waitUntil:'domcontentloaded'});await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await B.p.waitForTimeout(600);
+          const persisted=await B.p.evaluate(()=>window.GomokuCourseChapter1?.report?.());
+          if(!persisted?.lessons?.[0]?.complete) throw new Error('Course progress did not persist after reload');
+          console.log('PASS course persistence');
+
+          // Reopen course and inspect a candidate-choice lesson + checkpoint.
+          const close=B.p.locator('button[aria-label*="Close" i]:visible');if(await close.count()) await close.first().click();
+          const learn=B.p.getByRole('button',{name:/^learn$/i});if(await learn.count())await learn.click();
+          await B.p.locator('#ch1Start').click();await B.p.waitForTimeout(150);
+          await B.p.getByRole('button',{name:/read live and blocked space/i}).click();await B.p.waitForTimeout(100);
+          const enabled=await B.p.locator('#ch1Board .ch1-cell:not(:disabled)').count();
+          if(enabled!==2) throw new Error('Candidate lesson should expose exactly 2 choices, got '+enabled);
+          await B.p.locator('#ch1Board [data-i="41"]').click();
+          if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText())) throw new Error('Candidate-choice lesson answer failed');
+          await B.p.getByRole('button',{name:/chapter checkpoint/i}).click();await B.p.waitForTimeout(100);
+          if(!/1 \/ 12/.test(await B.p.locator('.ch1-task-count').innerText())) throw new Error('Checkpoint does not contain 12 positions');
+          console.log('PASS candidate-choice lesson + 12-position checkpoint');
+          await B.ctx.close();
+          await browser.close();
+          console.log('CHAPTER1_PRODUCTION_SMOKE_PASS');
+          JS
+          node .chapter1-smoke.mjs
+      - name: Remove temporary smoke
+        if: always()
+        run: |
+          rm -f .chapter1-smoke.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/chapter1-smoke.yml
+          git commit -m 'Remove Chapter 1 production smoke' || true
+          git push || true
