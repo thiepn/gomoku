@@ -1,106 +1,14 @@
-name: Renju forbidden-move hotfix
+name: Renju hotfix runner test
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  patch:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Patch Renju rules and visible escaped newlines
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('index.html')
-          s = path.read_text(encoding='utf-8')
-          original = s
-
-          center = "if(V==='renju-practice'&&moveCount===0&&color===1&&i!==112)return {legal:false,reason:'opening-center',win:false,threes:[],fours:[]};"
-          if s.count(center) != 1:
-              raise SystemExit(f'Expected one center-first restriction, found {s.count(center)}')
-          s = s.replace(center, '')
-
-          old_rules = "'renju-practice':{label:'Renju practice',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes rejected. White: five or more. Center-first practice opening; no tournament swaps.'}"
-          new_rules = "'renju-practice':{label:'Renju',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes are forbidden. White: five or more.'}"
-          if s.count(old_rules) != 1:
-              raise SystemExit(f'Expected one Renju rule descriptor, found {s.count(old_rules)}')
-          s = s.replace(old_rules, new_rules)
-
-          s = s.replace(
-              "Practice variant: center-first, free continuation, rejected Black fouls,\n   passes after the first three moves. No tournament opening/swap protocol.",
-              "Renju variant: free opening with Black forbidden moves enforced.\n   No tournament opening/swap protocol is enforced by the main board."
-          )
-          s = s.replace("'double-three':'Black cannot create two genuine threes.','opening-center':'Black opens at H8 in Renju practice.',", "'double-three':'Black cannot create two genuine threes.',")
-          s = s.replace('15 × 15 · Renju practice', '15 × 15 · Renju')
-          s = s.replace('Center-first opening', 'Black forbidden moves enforced')
-          s = s.replace(
-              'All modes use a 15 × 15 board. Renju practice opens at H8 and rejects Black fouls. The opening lab offers local swap/proposal procedures. Main-board Renju blocks fouls as practice; it is not a tournament referee. Optional clocks restore paused.',
-              'All modes use a 15 × 15 board. Renju forbids Black overlines, double-fours and genuine double-threes; White is unrestricted by those fouls. Opening and swap procedures are separate tools and are not applied to the main-board Renju ruleset. Optional clocks restore paused.'
-          )
-          s = s.replace('Renju practice', 'Renju')
-
-          old_toast = "function toast(message){$('toastMsg').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}"
-          if s.count(old_toast) != 1:
-              raise SystemExit(f'Expected one toast function, found {s.count(old_toast)}')
-          new_toast = r"""function scrubEscapedUiNewlines(root){
-  if(!root)return;
-  const nodes=[];
-  if(root.nodeType===Node.TEXT_NODE)nodes.push(root);
-  else if(root.nodeType===Node.ELEMENT_NODE){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);while(w.nextNode())nodes.push(w.currentNode);}
-  for(const n of nodes){const tag=n.parentElement?.tagName;if(!tag||/^(SCRIPT|STYLE|TEXTAREA|PRE|CODE)$/.test(tag))continue;if(n.nodeValue?.includes('\\n'))n.nodeValue=n.nodeValue.replace(/\\n\\n+/g,' ').replace(/\\n/g,' ');}
-}
-function toast(message){$('toastMsg').textContent=String(message??'').replace(/\\n\\n+/g,' ').replace(/\\n/g,' ');$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}
-queueMicrotask(()=>{scrubEscapedUiNewlines(document.body);const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='characterData')scrubEscapedUiNewlines(record.target);else for(const node of record.addedNodes)scrubEscapedUiNewlines(node);}});observer.observe(document.body,{subtree:true,childList:true,characterData:true});});"""
-          s = s.replace(old_toast, new_toast)
-          s = s.replace('12.0.1', '12.0.2')
-
-          if s == original:
-              raise SystemExit('Patch made no changes')
-          if center in s or 'Center-first opening' in s or 'Renju practice opens at H8' in s:
-              raise SystemExit('Obsolete Renju opening restriction remains')
-          path.write_text(s, encoding='utf-8')
-          PY
-
-      - name: Verify forbidden-move behavior
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs=require('fs'),vm=require('vm'),assert=require('assert');
-          const html=fs.readFileSync('index.html','utf8');
-          const m=html.match(/<script id="rules-engine">([\s\S]*?)<\/script>/);
-          assert(m,'rules-engine script missing');
-          vm.runInThisContext(m[1]);
-          const e=createEngine('renju-practice');
-          const board=(black=[],white=[])=>{const b=new Int8Array(225);for(const i of black)b[i]=1;for(const i of white)b[i]=2;return b;};
-          let a;
-          a=e.legalMove(board(),0,1,0); assert.equal(a.legal,true,'Renju first move must be free');
-          a=e.legalMove(board([107,108,109,110,111]),112,1,5); assert.equal(a.legal,false); assert.equal(a.reason,'overline');
-          a=e.legalMove(board([109,110,111,67,82,97]),112,1,6); assert.equal(a.legal,false); assert.equal(a.reason,'double-four');
-          a=e.legalMove(board([111,113,97,127]),112,1,4); assert.equal(a.legal,false); assert.equal(a.reason,'double-three');
-          a=e.legalMove(board([108,109,110,111]),112,1,4); assert.equal(a.legal,true); assert.equal(a.win,true);
-          a=e.legalMove(board([], [107,108,109,110,111]),112,2,5); assert.equal(a.legal,true); assert.equal(a.win,true);
-          console.log('Renju forbidden-move regression checks passed.');
-          NODE
-
-      - name: Commit hotfix
-        shell: bash
-        run: |
-          rm -f .github/workflows/renju-forbidden-hotfix.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html .github/workflows/renju-forbidden-hotfix.yml
-          git diff --cached --check
-          git commit -m "Fix Renju forbidden moves and UI newline leak"
-          git push
+      - run: echo runner-ok
