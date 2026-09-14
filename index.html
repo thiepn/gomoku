@@ -6310,17 +6310,19 @@ function report(){
 }
 function pct(v){return v==null?'—':Math.round(v*100)+'%'}
 let dialog=null,selected=-1,revealed=false,lastWrong=-1,courseCardObserver=null;
-function enforceSingleCourseCard(){const cards=[...document.querySelectorAll('#ch1CourseCard')];if(cards.length<=1)return;const keep=cards.find(x=>x.isConnected&&x.getClientRects().length)||cards[0];for(const card of cards)if(card!==keep)card.remove();}
+function enforceSingleCourseCard(){const cards=[...document.querySelectorAll('#ch1CourseCard')];if(cards.length<=1)return;const keep=cards.find(x=>x.__gomokuCh1Owner)||cards.find(x=>x.isConnected&&x.getClientRects().length)||cards[0];for(const card of cards)if(card!==keep)card.remove();}
 function watchCourseCard(){if(courseCardObserver||!document.body)return;courseCardObserver=new MutationObserver(enforceSingleCourseCard);courseCardObserver.observe(document.body,{childList:true,subtree:true});window.__GomokuCourseChapter1Observer=courseCardObserver;}
+function chapterLauncherClick(e){const start=e.target?.closest?.('#ch1Start'),review=e.target?.closest?.('#ch1Review');if(!start&&!review)return;e.preventDefault();e.stopPropagation();openCourse(review?weakestLesson():nextLesson());}
+document.addEventListener('click',chapterLauncherClick,true);
 
 function mount(){
  enforceSingleCourseCard();watchCourseCard();
  if($('#ch1CourseCard'))return;
  const home=$('v92ImproveHome');if(!home){setTimeout(mount,80);return;}
- const card=document.createElement('section');card.id='ch1CourseCard';card.innerHTML='<div class="ch1-card-head"><div class="ch1-card-copy"><span class="ch1-kicker">COURSE · CHAPTER 1</span><h3>Seeing the Board</h3><p>Build the scan you should run before every move: see the four directions, find immediate wins, spot urgent defense and use intersections efficiently.</p></div><div class="ch1-progress-ring" id="ch1Ring"><span id="ch1RingText">0/7</span></div></div><div class="ch1-card-meta"><div><b id="ch1MetaLessons">0 / 7</b><span>steps complete</span></div><div><b id="ch1MetaAccuracy">—</b><span>first-try accuracy</span></div><div><b id="ch1MetaNext">Four directions</b><span>next lesson</span></div></div><div class="ch1-card-actions"><button class="v92-primary" id="ch1Start">Start Chapter 1</button><button class="v92-secondary" id="ch1Review">Review chapter</button></div>';
+ const card=document.createElement('section');card.id='ch1CourseCard';card.__gomokuCh1Owner=true;card.innerHTML='<div class="ch1-card-head"><div class="ch1-card-copy"><span class="ch1-kicker">COURSE · CHAPTER 1</span><h3>Seeing the Board</h3><p>Build the scan you should run before every move: see the four directions, find immediate wins, spot urgent defense and use intersections efficiently.</p></div><div class="ch1-progress-ring" id="ch1Ring"><span id="ch1RingText">0/7</span></div></div><div class="ch1-card-meta"><div><b id="ch1MetaLessons">0 / 7</b><span>steps complete</span></div><div><b id="ch1MetaAccuracy">—</b><span>first-try accuracy</span></div><div><b id="ch1MetaNext">Four directions</b><span>next lesson</span></div></div><div class="ch1-card-actions"><button class="v92-primary" id="ch1Start">Start Chapter 1</button><button class="v92-secondary" id="ch1Review">Review chapter</button></div>';
  const path=$('v112LearnPath'),intro=home.querySelector('.v92-page-intro');(path||intro)?.insertAdjacentElement('afterend',card);
  enforceSingleCourseCard();
- $('#ch1Start').onclick=()=>openCourse(nextLesson());$('#ch1Review').onclick=()=>openCourse(weakestLesson());
+
  const h=intro?.querySelector('h2'),pp=intro?.querySelector('p:last-child');if(h)h.textContent='Learn Gomoku, then learn from your games';if(pp)pp.textContent='Start with the course to build board vision. Reviews and practice then turn your real games into targeted improvement.';
  renderCard();
  window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});
