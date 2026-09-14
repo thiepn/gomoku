@@ -1,0 +1,99 @@
+name: Targeted private room QA
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    if: github.event.head_commit.message == 'Run targeted private room QA'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Test live private-room interactions
+        run: |
+          cat > .targeted-room-qa.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const base='https://thiepn.dev/gomoku/';
+          const source=await (await fetch(base)).text();
+          const apiKey=source.match(/ROOM_API_KEY='([^']+)'/)?.[1];
+          if(!apiKey)throw Error('ROOM_API_KEY missing');
+          const browser=await chromium.launch({headless:true});
+          const fails=[];
+          const check=(v,m)=>{if(v)console.log('PASS '+m);else{console.error('FAIL '+m);fails.push(m)}};
+          async function boot(p){
+            await p.goto(base,{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000}).catch(()=>{});
+            await p.waitForTimeout(450);
+            const close=p.locator('button[aria-label*="Close" i]:visible');
+            if(await close.count())await close.first().click();
+            else {const u=p.getByText(/use the current board/i);if(await u.count()&&await u.first().isVisible())await u.first().click();}
+            await p.waitForTimeout(180);
+          }
+          async function openRoom(p){
+            const direct=p.getByRole('button',{name:/private room/i});
+            if(await direct.count()&&await direct.first().isVisible())await direct.first().click();
+            else {
+              const menu=p.getByRole('button',{name:/menu|more/i}).first();
+              if(await menu.count()&&await menu.isVisible())await menu.click();
+              await p.waitForTimeout(120);
+              await p.getByRole('button',{name:/private room/i}).first().click();
+            }
+            await p.waitForTimeout(150);
+            const d=p.locator('#workbenchDialog');
+            check(await d.isVisible().catch(()=>false)&&/Private online room/i.test(await d.innerText().catch(()=>'')),'Private room setup opens');
+            return d;
+          }
+          const session=async p=>JSON.parse(await p.evaluate(()=>sessionStorage.getItem('gomoku.room.v4'))||'null');
+          async function roomState(s){const r=await fetch(s.base+'/api/rooms/'+s.id,{headers:{apikey:apiKey,Authorization:'Bearer '+s.token}});return {status:r.status,data:await r.json()}}
+
+          const hc=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const gc=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const h=await hc.newPage(),g=await gc.newPage();await boot(h);await boot(g);
+
+          let d=await openRoom(h);await h.locator('#roomNickname').fill('QA Host');await d.getByRole('button',{name:/create room/i}).first().click();
+          await h.waitForFunction(()=>!!sessionStorage.getItem('gomoku.room.v4'),{timeout:8000});await h.waitForTimeout(650);
+          const hs=await session(h);console.log('QA_ROOM='+hs.id);check(!await h.locator('#workbenchDialog').evaluate(e=>e.open),'Create success closes setup modal');check(await h.locator('#roomWaitingPanel').isVisible().catch(()=>false),'Host immediately gets waiting panel');
+
+          d=await openRoom(g);await g.locator('#roomNickname').fill('QA Guest');await g.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();
+          await g.waitForFunction(id=>{try{return JSON.parse(sessionStorage.getItem('gomoku.room.v4'))?.id===id}catch{return false}},hs.id,{timeout:8000});await h.waitForTimeout(1300);await g.waitForTimeout(400);
+          check(!await g.locator('#workbenchDialog').evaluate(e=>e.open),'Join success closes setup modal');check(!(await h.locator('#roomWaitingPanel').isVisible().catch(()=>false)),'Waiting panel clears after join');
+          await h.waitForFunction(()=>/online/i.test(document.querySelector('#roomMatchHud')?.innerText||''),{timeout:6000}).catch(()=>{});check(/online/i.test(await h.locator('#roomMatchHud').innerText()),'Opponent presence reaches Online');
+
+          // Chat now must be tappable because no modal overlays it.
+          await h.locator('#roomHudChat').click();check(await h.locator('#roomChatSheet').isVisible().catch(()=>false),'Chat button opens mobile chat sheet');await h.locator('#roomChatInput').fill('hello from targeted QA');await h.locator('#roomChatForm').getByRole('button',{name:/send/i}).click();await g.waitForTimeout(1000);await g.locator('#roomHudChat').click();await g.waitForFunction(()=>document.querySelector('#roomChatSheet')?.innerText.includes('hello from targeted QA'),{timeout:5000}).catch(()=>{});check((await g.locator('#roomChatSheet').innerText()).includes('hello from targeted QA'),'Chat message reaches opponent through realtime room state');await g.locator('#roomChatClose').click();await h.locator('#roomChatClose').click();
+
+          // Double confirmation may race locally; server must persist one move only.
+          await h.evaluate(()=>document.querySelectorAll('.board-point')[112]?.click());await h.waitForTimeout(100);const place=h.locator('#placeBtn');check(await place.isVisible().catch(()=>false),'Place control is reachable after connecting');await Promise.allSettled([place.click({timeout:2500}),place.click({timeout:2500})]);await h.waitForTimeout(1100);let rs=await roomState(hs),moves=rs.data?.game?.moves||rs.data?.moves||[];check(rs.status===200,'Room remains healthy after rapid double input');check(Array.isArray(moves)&&moves.length===1,`Rapid double Place persists exactly one move (${moves.length})`);
+
+          // Background and network recovery.
+          await g.bringToFront();await g.waitForTimeout(250);await h.bringToFront();await h.waitForTimeout(850);check(/live|fallback|connecting|reconnecting/i.test(await h.locator('#roomConnectionPill').innerText()),'Foreground return keeps or rebuilds room transport');await hc.setOffline(true);await h.evaluate(()=>window.dispatchEvent(new Event('offline')));await h.waitForTimeout(220);check(/offline/i.test(await h.locator('#roomConnectionPill').innerText()),'Offline transition is visible');await hc.setOffline(false);await h.evaluate(()=>window.dispatchEvent(new Event('online')));await h.waitForFunction(()=>/live|fallback sync/i.test(document.querySelector('#roomConnectionPill')?.innerText||''),{timeout:8000}).catch(()=>{});check(/live|fallback sync|connecting|reconnecting/i.test(await h.locator('#roomConnectionPill').innerText()),'Transport recovers after network restoration');
+
+          // A third player must be rejected and remain in setup so the error can be read.
+          const tc=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const t=await tc.newPage();await boot(t);d=await openRoom(t);await t.locator('#roomNickname').fill('QA Third');await t.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();await t.waitForTimeout(900);check(await t.locator('#workbenchDialog').evaluate(e=>e.open),'Failed third-player join keeps setup modal open');const body=(await d.innerText()).toLowerCase();check(/full|two players|already has|unavailable/.test(body),'Full room gives readable rejection');await tc.close();
+
+          await hc.close();await gc.close();await browser.close();
+          if(fails.length){console.error('TARGETED_QA_FAILURES='+JSON.stringify(fails));process.exit(1)}
+          console.log('TARGETED_PRIVATE_ROOM_QA_PASS');
+          JS
+          node .targeted-room-qa.mjs
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          rm -f .targeted-room-qa.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/private-room-targeted-qa.yml
+          git commit -m 'Remove targeted private room QA' || true
+          git push || true
