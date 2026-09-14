@@ -1,0 +1,43 @@
+name: Diagnose Chapter 1 surface state
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  diag:
+    if: github.event.head_commit.message == 'Diagnose Chapter 1 surface state'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Inspect live surface
+        run: |
+          cat > .diag.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const chrome=process.env.CHROME;const browser=await chromium.launch({headless:true,executablePath:chrome});const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+          await p.goto('https://thiepn.dev/gomoku/?surface='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(1000);const c=p.locator('button[aria-label*="Close" i]:visible');if(await c.count())await c.first().click();const learn=p.getByRole('button',{name:/^learn$/i});if(await learn.count())await learn.click();await p.waitForTimeout(500);
+          console.log('BEFORE',JSON.stringify(await p.evaluate(()=>({api:typeof window.GomokuCourseChapter1?.open,cards:document.querySelectorAll('#ch1CourseCard').length,dialogs:document.querySelectorAll('#ch1CourseDialog').length,boards:document.querySelectorAll('#ch1Board').length}))));
+          await p.locator('#ch1Start').click();await p.waitForTimeout(500);
+          console.log('CLICK',JSON.stringify(await p.evaluate(()=>({dialogs:[...document.querySelectorAll('#ch1CourseDialog')].map((d,i)=>({i,open:d.open,connected:d.isConnected,display:getComputedStyle(d).display,rect:d.getBoundingClientRect().toJSON?.()||{w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height},boards:d.querySelectorAll('#ch1Board').length})),active:document.activeElement?.id||document.activeElement?.tagName,errs:window.__GomokuEarly117?.incidents?.().slice(-8)}))));
+          try{await p.evaluate(()=>window.GomokuCourseChapter1.open())}catch(e){console.log('DIRECT_THROW',String(e))};await p.waitForTimeout(500);
+          console.log('DIRECT',JSON.stringify(await p.evaluate(()=>({dialogs:[...document.querySelectorAll('#ch1CourseDialog')].map((d,i)=>({i,open:d.open,connected:d.isConnected,display:getComputedStyle(d).display,w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height,boards:d.querySelectorAll('#ch1Board').length})),boards:document.querySelectorAll('#ch1Board').length,visibleBoards:[...document.querySelectorAll('#ch1Board')].filter(x=>x.getClientRects().length).length,errs:window.__GomokuEarly117?.incidents?.().slice(-8)}))));
+          console.log('PAGEERRORS',JSON.stringify(errs));await ctx.close();await browser.close();
+          JS
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          CHROME="$CHROME" node .diag.mjs
+      - name: Remove diagnostic
+        if: always()
+        run: |
+          rm -f .diag.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/ch1-surface-diag.yml
+          git commit -m 'Remove Chapter 1 surface diagnostic' || true
+          git push || true
