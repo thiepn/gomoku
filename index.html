@@ -6209,7 +6209,7 @@ body:not([data-v92-route="play"]) #roomMatchHud{display:none!important}
 <script id="course-ch1-v1-script">
 (()=>{'use strict';
 if(window.__GomokuCourseChapter1Booted)return;window.__GomokuCourseChapter1Booted=true;
-const $=id=>document.getElementById(id),KEY='gomoku.course.chapter1.v1',N=9,p=(x,y)=>y*N+x,now=()=>Date.now();
+const $=id=>dialog?.querySelector?.('#'+id)||document.getElementById(id),KEY='gomoku.course.chapter1.v1',N=9,p=(x,y)=>y*N+x,now=()=>Date.now();
 const SKILLS={
  directions:'Four directions',
  wins:'Winning points',
