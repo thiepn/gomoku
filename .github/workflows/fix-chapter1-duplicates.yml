@@ -1,4 +1,4 @@
-name: Fix Chapter 1 duplicate integration
+name: Harden Chapter 1 initialization
 
 on:
   push:
@@ -9,34 +9,31 @@ permissions:
 
 jobs:
   fix:
-    if: github.event.head_commit.message == 'Fix Chapter 1 duplicate integration'
+    if: github.event.head_commit.message == 'Harden Chapter 1 initialization'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deduplicate Chapter 1
+      - name: Make Chapter 1 initialization idempotent
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          pat=re.compile(r'<style id="course-ch1-v1-style">[\s\S]*?</style>\s*<script id="course-ch1-v1-script">[\s\S]*?</script>')
-          matches=list(pat.finditer(s))
-          print('Chapter 1 blocks before:',len(matches))
-          if len(matches)<2:
-              raise SystemExit('Expected duplicate Chapter 1 blocks; found '+str(len(matches)))
-          block=matches[-1].group(0)
+          if s.count('id="course-ch1-v1-style"')!=1 or s.count('id="course-ch1-v1-script"')!=1:
+              raise SystemExit('Expected exactly one Chapter 1 source block')
           old='.ch1-skill span{display:block;height:4px;background:var(--hair);border-radius:999px;margin-top:7px;overflow:hidden}'
           new='.ch1-skill>span{display:block;height:4px;background:var(--hair);border-radius:999px;margin-top:7px;overflow:hidden}'
-          if old not in block:
-              raise SystemExit('Skill progress selector not found')
-          block=block.replace(old,new,1)
-          s=pat.sub('',s)
-          marker='</body></html>'
-          if marker not in s: raise SystemExit('body marker missing')
-          s=s.replace(marker,'\n'+block+'\n'+marker,1)
+          if old not in s: raise SystemExit('Skill selector not found')
+          s=s.replace(old,new,1)
+          start="<script id=\"course-ch1-v1-script\">\n(()=>{'use strict';\n"
+          hardened="<script id=\"course-ch1-v1-script\">\n(()=>{'use strict';\nif(window.__GomokuCourseChapter1Booted)return;window.__GomokuCourseChapter1Booted=true;\n"
+          if s.count(start)!=1: raise SystemExit('Chapter script start mismatch')
+          s=s.replace(start,hardened,1)
+          mount="function mount(){\n if($('#ch1CourseCard'))return;"
+          mount_hardened="function mount(){\n const existing=[...document.querySelectorAll('#ch1CourseCard')];for(let i=1;i<existing.length;i++)existing[i].remove();\n if($('#ch1CourseCard'))return;"
+          if s.count(mount)!=1: raise SystemExit('Chapter mount marker mismatch')
+          s=s.replace(mount,mount_hardened,1)
           p.write_text(s,encoding='utf-8')
-          print('Chapter 1 blocks after:',s.count('id="course-ch1-v1-style"'))
           PY
       - name: Validate
         run: |
@@ -44,14 +41,10 @@ jobs:
           from pathlib import Path
           import re,subprocess,tempfile
           s=Path('index.html').read_text(encoding='utf-8')
-          for marker in ['course-ch1-v1-style','course-ch1-v1-script','gomoku.course.chapter1.v1','Chapter checkpoint','window.GomokuCourseChapter1']:
-              if s.count(marker)<1: raise SystemExit('missing '+marker)
-          if s.count('id="course-ch1-v1-style"')!=1 or s.count('id="course-ch1-v1-script"')!=1:
-              raise SystemExit('Chapter 1 still duplicated')
-          if '.ch1-skill span{display:block;height:4px' in s:
-              raise SystemExit('broad skill span selector remains')
-          if '.ch1-skill>span{display:block;height:4px' not in s:
-              raise SystemExit('fixed skill progress selector missing')
+          required=['window.__GomokuCourseChapter1Booted','document.querySelectorAll(\'#ch1CourseCard\')','.ch1-skill>span{display:block;height:4px','window.GomokuCourseChapter1']
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('missing hardening '+repr(missing))
+          if s.count('id="course-ch1-v1-style"')!=1 or s.count('id="course-ch1-v1-script"')!=1: raise SystemExit('Chapter source block count changed')
           scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
           for i,js in enumerate(scripts):
               if not js.strip(): continue
@@ -59,7 +52,7 @@ jobs:
                   f.write(js);name=f.name
               r=subprocess.run(['node','--check',name],capture_output=True,text=True)
               if r.returncode: raise SystemExit(f'script {i}: {r.stderr}')
-          print('Dedup validation passed; scripts',len(scripts))
+          print('Chapter initialization hardening passed; scripts',len(scripts))
           PY
           git diff --check
       - name: Commit cleanup
@@ -68,5 +61,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git rm .github/workflows/fix-chapter1-duplicates.yml
-          git commit -m 'Deduplicate Chapter 1 course integration'
+          git commit -m 'Harden Chapter 1 course initialization'
           git push
