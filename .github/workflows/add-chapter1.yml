@@ -18,12 +18,17 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64
+          import hashlib
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
           if 'course-ch1-v1-script' in s:
               raise SystemExit('Chapter 1 already exists')
-          block=base64.b64decode('''PHN0eWxlIGlkPSJjb3Vyc2UtY2gxLXYxLXN0eWxlIj4KLyo...TRUNCATED_BASE64_FOR_BREVITY...''').decode('utf-8')
+          parts=[Path(f'.chapter1.part{i}').read_text(encoding='utf-8') for i in range(1,7)]
+          block=''.join(parts)
+          expected='87f96e1c71ceaea36f7c4be0ec2cac72dfd838f026d8e01cd8e02630a1e2b8f0'
+          digest=hashlib.sha256(block.encode()).hexdigest()
+          if len(block)!=36745 or digest!=expected:
+              raise SystemExit(f'Chapter payload mismatch len={len(block)} sha={digest}')
           marker='</body></html>'
           if marker not in s:
               raise SystemExit('body marker missing')
@@ -39,7 +44,7 @@ jobs:
           import re, subprocess, tempfile
           s=Path('index.html').read_text(encoding='utf-8')
           required=[
-            'course-ch1-v1-style','course-ch1-v1-script','Chapter 1 · Seeing the Board',
+            'course-ch1-v1-style','course-ch1-v1-script','Seeing the Board',
             'Learn Gomoku, then learn from your games','gomoku.course.chapter1.v1',
             'Chapter checkpoint','Review weakest lesson','window.GomokuCourseChapter1'
           ]
@@ -48,7 +53,7 @@ jobs:
               raise SystemExit('missing Chapter 1 pieces '+repr(missing))
           if s.count("id:'checkpoint'")!=1:
               raise SystemExit('checkpoint definition count mismatch')
-          scripts=re.findall(r'<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>',s,re.I)
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
           for i,js in enumerate(scripts):
               if not js.strip():
                   continue
@@ -66,6 +71,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git rm .github/workflows/add-chapter1.yml
+          git rm .github/workflows/add-chapter1.yml .chapter1.part1 .chapter1.part2 .chapter1.part3 .chapter1.part4 .chapter1.part5 .chapter1.part6
           git commit -m 'Add interactive Chapter 1 Gomoku course'
           git push
