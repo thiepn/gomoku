@@ -1,0 +1,53 @@
+name: Map obsolete online dependencies
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: github.event.head_commit.message == 'Map obsolete online dependencies'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Map legacy block and external dependencies
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          start=s.find('/* Optional self-hosted competition. Offline play never touches these endpoints. */')
+          ends=[s.find('/* V5.7 opening knowledge',start),s.find('/* V5.7',start),s.find('const O=createOpeningCore',start)]
+          end=next((x for x in ends if x>start),-1)
+          print('START',start,'END',end,'LEN',end-start)
+          if start<0 or end<0: raise SystemExit('block markers not found')
+          block=s[start:end]
+          print('--- BLOCK START 12K ---');print(block[:12000])
+          print('--- BLOCK END 12K ---');print(block[-12000:])
+          names=[m.group(1) for m in re.finditer(r'(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(',block)]
+          vars=[]
+          for m in re.finditer(r'\b(?:let|const|var)\s+([A-Za-z_$][\w$]*)',block): vars.append(m.group(1))
+          print('FUNCTIONS',names)
+          print('TOP_VARS',vars[:100])
+          outside=s[:start]+s[end:]
+          terms=sorted(set(names+['queueTicket','queuePoll','platformSession','roomStream','networkClockTimer']))
+          print('--- OUTSIDE REFS ---')
+          for term in terms:
+              n=len(re.findall(r'\b'+re.escape(term)+r'\b',outside))
+              if n:
+                  print(term,n)
+                  for m in list(re.finditer(r'\b'+re.escape(term)+r'\b',outside))[:3]:
+                      p=m.start();print(' ',outside[max(0,p-180):p+300].replace('\n',' '))
+          print('STALE_FOOTER',s.count('Optional accounts and online play require your own hosted server.'))
+          PY
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/inspect-legacy-online-2.yml
+          git commit -m 'Remove obsolete online dependency map' || true
+          git push || true
