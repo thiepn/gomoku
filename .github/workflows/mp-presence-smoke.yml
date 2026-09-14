@@ -38,7 +38,7 @@ jobs:
           await Promise.race([Promise.all([sub(ca,1),sub(cb,2)]),timeout('subscriptions')]);
           await Promise.race([new Promise(resolve=>{const check=()=>{const all=Object.values(ca.presenceState()||{}).flat();if(all.some(p=>Number(p.seat)===2))resolve();else setTimeout(check,100)};check();}),timeout('guest presence')]);
           const all=Object.values(ca.presenceState()||{}).flat();if(!all.some(p=>Number(p.seat)===1)||!all.some(p=>Number(p.seat)===2))throw new Error('Presence state missing a seat');
-          await a.removeChannel(ca);await b.removeChannel(cb);console.log('PRESENCE_SMOKE_PASS room='+room);
+          await a.removeChannel(ca);await b.removeChannel(cb);console.log('PRESENCE_SMOKE_PASS room='+room);process.exit(0);
           JS
           node .presence-smoke.mjs
           rm .presence-smoke.mjs
