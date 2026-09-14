@@ -1,0 +1,51 @@
+name: Multiplayer presence smoke test
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    if: github.event.head_commit.message == 'Run multiplayer presence smoke test'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install realtime client
+        run: npm install --no-save --no-package-lock @supabase/supabase-js@2.107.0
+      - name: Verify two-player presence
+        run: |
+          cat > .presence-smoke.mjs <<'JS'
+          import fs from 'node:fs';
+          import { createClient } from '@supabase/supabase-js';
+          const source=fs.readFileSync('index.html','utf8');
+          const project=source.match(/ROOM_PROJECT_URL='([^']+)'/)?.[1];
+          const key=source.match(/ROOM_API_KEY='([^']+)'/)?.[1];
+          if(!project||!key)throw new Error('Room configuration not found');
+          const api=project+'/functions/v1/gomoku-room';
+          async function post(path,body){const r=await fetch(api+path,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(path+' '+r.status+' '+JSON.stringify(d));return d;}
+          const made=await post('/api/rooms',{name:'Presence Host',rule:'renju-practice'}),room=made.id;
+          await post('/api/rooms/'+room+'/join',{name:'Presence Guest'});
+          const a=createClient(project,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}),b=createClient(project,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+          const ca=a.channel('gomoku:'+room,{config:{presence:{key:'host-'+Date.now()},private:false}}),cb=b.channel('gomoku:'+room,{config:{presence:{key:'guest-'+Date.now()},private:false}});
+          const timeout=(label)=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timed out: '+label)),8000));
+          const sub=(ch,seat)=>new Promise((resolve,reject)=>ch.on('presence',{event:'sync'},()=>{}).subscribe(async(status)=>{if(status==='SUBSCRIBED'){await ch.track({seat});resolve();}else if(['CHANNEL_ERROR','TIMED_OUT'].includes(status))reject(new Error(status));}));
+          await Promise.race([Promise.all([sub(ca,1),sub(cb,2)]),timeout('subscriptions')]);
+          await Promise.race([new Promise(resolve=>{const check=()=>{const all=Object.values(ca.presenceState()||{}).flat();if(all.some(p=>Number(p.seat)===2))resolve();else setTimeout(check,100)};check();}),timeout('guest presence')]);
+          const all=Object.values(ca.presenceState()||{}).flat();if(!all.some(p=>Number(p.seat)===1)||!all.some(p=>Number(p.seat)===2))throw new Error('Presence state missing a seat');
+          await a.removeChannel(ca);await b.removeChannel(cb);console.log('PRESENCE_SMOKE_PASS room='+room);
+          JS
+          node .presence-smoke.mjs
+          rm .presence-smoke.mjs
+      - name: Remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/mp-presence-smoke.yml
+          git commit -m 'Remove multiplayer presence smoke test'
+          git push
