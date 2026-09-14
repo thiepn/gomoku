@@ -10,15 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect final mobile layers
+      - name: Inspect game bar and mobile board state
         run: |
-          echo '=== V9.2 LAYOUT ==='
-          sed -n '4680,4775p' index.html
-          echo '=== V9.2 PLAY ROUTE / MENU ==='
-          sed -n '4865,4965p' index.html
-          echo '=== V9.3 MOBILE COLLAPSE ==='
-          sed -n '5045,5130p' index.html
-          echo '=== V10 SETTINGS ==='
-          sed -n '5320,5410p' index.html
-          echo '=== V11 MOBILE MENU ==='
-          sed -n '5600,5650p' index.html
+          echo '=== GAME BAR CREATION ==='
+          sed -n '4790,4868p' index.html
+          echo '=== BOARD CLICK LOGIC ==='
+          sed -n '2668,2705p' index.html
+          echo '=== RENDER PLACEMENT ==='
+          sed -n '2508,2548p' index.html
+          echo '=== MOBILE BOARD CSS LATE ==='
+          sed -n '4920,4960p' index.html
+          sed -n '5130,5160p' index.html
