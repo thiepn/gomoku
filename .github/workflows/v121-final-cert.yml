@@ -1,0 +1,76 @@
+name: Final v12.1 certification
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    if: github.event.head_commit.message == 'Run final v12.1 certification'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Certify live release
+        run: |
+          cat > .cert.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const root='https://thiepn.dev/gomoku/';
+          const stamp=Date.now();
+          const source=await (await fetch(root+'?cert='+stamp,{cache:'no-store'})).text();
+          for(const x of ['12.1.0','private-room-ui-v121','Create or join an invite-only game.','ROOM_API_BASE','roomMatchHud','roomChatSheet'])if(!source.includes(x))throw Error('Missing live marker '+x);
+          for(const x of ['12.0.1','networkOpeningMove','renderNetworkOpening','id="networkOpening"','Use your configured server.','PWA_SW_START','PWA_SW_END','private-room-realtime-style','multiplayer-ux-polish-v12',"dataset.hosted==='true'"])if(source.includes(x))throw Error('Stale live marker '+x);
+          if((source.match(/navigator\.serviceWorker\.register\('\.\/sw\.js'/g)||[]).length!==1)throw Error('Service-worker registration is not singular');
+          const apiKey=source.match(/ROOM_API_KEY='([^']+)'/)?.[1];if(!apiKey)throw Error('ROOM_API_KEY missing');
+          console.log('PASS consolidated v12.1 source');
+
+          const sw=await (await fetch(root+'sw.js?cert='+stamp,{cache:'no-store'})).text();
+          for(const x of ["gomoku-v12.1.0","event.data?.type === 'SKIP_WAITING'","self.skipWaiting()"]){if(!sw.includes(x))throw Error('SW missing '+x)}
+          if(sw.includes('.then(() => self.skipWaiting())'))throw Error('SW still auto-activates updates');
+          const manifest=await (await fetch(root+'manifest.webmanifest?cert='+stamp,{cache:'no-store'})).json();if(manifest.display!=='standalone'||manifest.icons?.length<3)throw Error('Manifest invalid');
+          for(const path of ['icons/icon-192.png','icons/icon-512.png','icons/maskable-icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png']){const r=await fetch(root+path+'?cert='+stamp,{cache:'no-store'});if(!r.ok)throw Error(path+' HTTP '+r.status)}
+          console.log('PASS PWA assets and update worker');
+
+          const browser=await chromium.launch({headless:true});const contexts=[];
+          async function page(){const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});contexts.push(ctx);const p=await ctx.newPage();await p.goto(root+'?browsercert='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(450);const close=p.locator('button[aria-label*="Close" i]:visible');if(await close.count())await close.first().click();else{const u=p.getByText(/use the current board/i);if(await u.count()&&await u.first().isVisible())await u.first().click()}await p.waitForTimeout(150);return p}
+          async function openRoom(p){const direct=p.getByRole('button',{name:/private room/i});if(await direct.count()&&await direct.first().isVisible())await direct.first().click();else{const menu=p.getByRole('button',{name:/menu|more/i}).first();if(await menu.count()&&await menu.isVisible())await menu.click();await p.waitForTimeout(100);await p.getByRole('button',{name:/private room/i}).first().click()}await p.waitForTimeout(150);const d=p.locator('#workbenchDialog');if(!(await d.isVisible())||!/Private online room/i.test(await d.innerText()))throw Error('Private room setup unavailable');return d}
+          const session=async p=>JSON.parse(await p.evaluate(()=>sessionStorage.getItem('gomoku.room.v4'))||'null');
+          async function roomState(s){const r=await fetch(s.base+'/api/rooms/'+s.id,{headers:{apikey:apiKey,Authorization:'Bearer '+s.token}});return {status:r.status,data:await r.json()}}
+
+          const H=await page();const geom=await H.evaluate(()=>({iw:innerWidth,sw:document.documentElement.scrollWidth,version:document.documentElement.dataset.gomokuVersion,manifest:!!document.querySelector('link[rel="manifest"]')}));if(geom.sw>geom.iw+2||geom.version!=='12.1.0'||!geom.manifest)throw Error('Mobile/release DOM mismatch '+JSON.stringify(geom));console.log('PASS mobile 390px release DOM');
+
+          const reg=await H.evaluate(async()=>{const r=await Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('SW ready timeout')),12000))]);return {scope:r.scope,active:r.active?.scriptURL||'',controller:!!navigator.serviceWorker.controller}});
+          if(!reg.scope.endsWith('/gomoku/')||!reg.active.endsWith('/gomoku/sw.js'))throw Error('SW registration invalid '+JSON.stringify(reg));
+          await H.reload({waitUntil:'domcontentloaded'});await H.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await H.waitForTimeout(450);const control=await H.evaluate(()=>({yes:!!navigator.serviceWorker.controller,url:navigator.serviceWorker.controller?.scriptURL||''}));if(!control.yes||!control.url.endsWith('/gomoku/sw.js'))throw Error('SW not controlling after reload '+JSON.stringify(control));const c2=H.locator('button[aria-label*="Close" i]:visible');if(await c2.count())await c2.first().click();console.log('PASS PWA registers and controls fresh install');
+
+          let d=await openRoom(H);await H.locator('#roomNickname').fill('V121 Final Host');await d.getByRole('button',{name:/create room/i}).first().click();await H.waitForFunction(()=>!!sessionStorage.getItem('gomoku.room.v4'),{timeout:8000});await H.waitForTimeout(650);const hs=await session(H);if(!hs?.id)throw Error('Room not created');console.log('CERT_ROOM='+hs.id);if(await H.locator('#workbenchDialog').evaluate(e=>e.open)||!await H.locator('#roomWaitingPanel').isVisible())throw Error('Create handoff/waiting state failed');console.log('PASS room create');
+
+          const G=await page();d=await openRoom(G);await G.locator('#roomNickname').fill('V121 Final Guest');await G.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();await G.waitForFunction(id=>{try{return JSON.parse(sessionStorage.getItem('gomoku.room.v4'))?.id===id}catch{return false}},hs.id,{timeout:8000});await H.waitForTimeout(1400);if(await G.locator('#workbenchDialog').evaluate(e=>e.open)||await H.locator('#roomWaitingPanel').isVisible().catch(()=>false))throw Error('Join handoff failed');await H.waitForFunction(()=>/online/i.test(document.querySelector('#roomMatchHud')?.innerText||''),{timeout:6000});console.log('PASS join + Presence');
+
+          await H.locator('#roomHudChat').click();await H.locator('#roomChatInput').fill('final v12.1 cert');await H.locator('#roomChatForm').getByRole('button',{name:/send/i}).click();await G.waitForTimeout(1000);await G.locator('#roomHudChat').click();await G.waitForFunction(()=>document.querySelector('#roomChatSheet')?.innerText.includes('final v12.1 cert'),{timeout:5000});await G.locator('#roomChatClose').click();await H.locator('#roomChatClose').click();console.log('PASS chat');
+
+          await H.evaluate(()=>document.querySelectorAll('.board-point')[112]?.click());await H.waitForTimeout(100);await Promise.allSettled([H.locator('#placeBtn').click(),H.locator('#placeBtn').click()]);await H.waitForTimeout(1000);const rs=await roomState(hs),moves=rs.data?.game?.moves||rs.data?.moves||[];if(rs.status!==200||moves.length!==1)throw Error('Rapid double-confirm persisted '+moves.length);console.log('PASS one authoritative move');
+
+          const T=await page();d=await openRoom(T);await T.locator('#roomNickname').fill('V121 Final Third');await T.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();await T.waitForTimeout(900);const inline=(await T.locator('#roomStatus').innerText()).trim();if(!await T.locator('#workbenchDialog').evaluate(e=>e.open)||!/two players|full|already/i.test(inline))throw Error('Full room UX failed: '+inline);console.log('PASS full-room inline rejection: '+inline);
+
+          for(const ctx of contexts)await ctx.close();await browser.close();console.log('V121_FINAL_CERT_PASS');
+          JS
+          node .cert.mjs
+      - name: Remove temporary certification
+        if: always()
+        run: |
+          rm -f .cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/v121-final-cert.yml
+          git commit -m 'Remove v12.1 final certification' || true
+          git push || true
