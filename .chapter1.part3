@@ -1,0 +1,31 @@
+ne.',rule:'After urgent tactics are handled, prefer intersections that participate in more than one useful direction.',skill:'crossing'},
+ {id:'checkpoint',title:'Chapter checkpoint',lead:'Now run the scan without being told which skill is being tested. These positions mix wins, blocks, live lines and multi-direction vision.',rule:'Do not guess. Run the same scan every time: win → defend → force → improve.',skill:'mixed',checkpoint:true}
+];
+function st(x,y,c){return [x,y,c]}
+function task(id,skill,title,prompt,stones,answers,why,hint,choices=null){return{id,skill,title,prompt,stones,answers,why,hint,choices};}
+const LESSON_TASKS={
+ directions:[
+  task('d1','directions','Horizontal finish','Black has four stones in one row. Finish the five.',[st(1,4,2),st(2,4,1),st(3,4,1),st(4,4,1),st(5,4,1)],[p(6,4)],'The winning line runs left to right. The white stone closes the other end, leaving one finishing point.','Follow the horizontal line through all four black stones.'),
+  task('d2','directions','Vertical finish','Find Black’s finishing point.',[st(4,1,2),st(4,2,1),st(4,3,1),st(4,4,1),st(4,5,1)],[p(4,6)],'The same pattern works vertically. Board vision should not depend on orientation.','Trace the black stones straight down.'),
+  task('d3','directions','Diagonal finish','Complete the diagonal five.',[st(1,1,2),st(2,2,1),st(3,3,1),st(4,4,1),st(5,5,1)],[p(6,6)],'This is the down-right diagonal. Diagonal wins are just as real as horizontal ones.','Look for four black stones with equal x/y movement.'),
+  task('d4','directions','The other diagonal','Complete Black’s five.',[st(7,1,2),st(6,2,1),st(5,3,1),st(4,4,1),st(3,5,1)],[p(2,6)],'The second diagonal slopes the other way. A complete scan always checks both diagonals.','Follow the diagonal down and left.'),
+ ],
+ wins:[
+  task('w1','wins','The gap counts','Black does not need four adjacent stones. Tap the winning point.',[st(1,4,1),st(2,4,1),st(4,4,1),st(5,4,1),st(7,2,2)],[p(3,4)],'Filling the internal gap creates five consecutive black stones immediately.','Look inside the line, not only at its ends.'),
+  task('w2','wins','Vertical gap','Find the immediate win.',[st(5,1,1),st(5,2,1),st(5,4,1),st(5,5,1),st(2,6,2)],[p(5,3)],'The empty point is inside a five-cell vertical window.','Count a five-cell window with exactly one empty point.'),
+  task('w3','wins','Diagonal gap','Tap the move that wins now.',[st(1,1,1),st(2,2,1),st(4,4,1),st(5,5,1),st(7,6,2)],[p(3,3)],'The missing center point completes the diagonal.','Scan both diagonals for an internal gap.'),
+  task('w4','wins','Endpoint with one side closed','Black has only one winning endpoint. Find it.',[st(2,5,2),st(3,5,1),st(4,5,1),st(5,5,1),st(6,5,1)],[p(7,5)],'White has already occupied the left endpoint, so the right endpoint is the only immediate win.','Check both ends; one is already blocked.'),
+  task('w5','wins','Ignore the distraction','Several stones are nearby. Find the move that actually finishes five.',[st(0,7,2),st(1,6,1),st(2,5,1),st(3,4,1),st(4,3,1),st(6,5,2),st(7,5,2)],[p(5,2)],'The four black stones on the rising diagonal already have a one-move finish. Nearby stones do not change the priority.','Trace connected directions before evaluating the whole cluster.')
+ ],
+ defense:[
+  task('b1','defense','One move from losing','White threatens to win horizontally. Block the only winning point.',[st(1,4,1),st(2,4,2),st(3,4,2),st(4,4,2),st(5,4,2)],[p(6,4)],'White would win at this point next move. With no immediate Black win, this block is mandatory.','Pretend it is White’s turn. Where would White play to win?'),
+  task('b2','defense','Vertical emergency','Stop White’s immediate win.',[st(4,1,1),st(4,2,2),st(4,3,2),st(4,4,2),st(4,5,2)],[p(4,6)],'The threat is vertical; orientation does not change the defensive priority.','Scan White’s lines exactly as carefully as your own.'),
+  task('b3','defense','Block the gap','White can win by filling an internal gap. Stop it.',[st(2,2,2),st(3,3,2),st(5,5,2),st(6,6,2),st(1,6,1)],[p(4,4)],'A broken line can still contain an immediate winning point.','Look inside White’s diagonal line.'),
+  task('b4','defense','Do not chase your attack','Black has an attractive cluster, but White has a one-move win. Block it.',[st(1,2,1),st(2,2,1),st(3,2,1),st(5,5,2),st(5,4,2),st(5,3,2),st(5,2,2),st(5,1,1)],[p(5,6)],'Building Black’s row would be too slow. White already threatens an immediate five.','Urgent defense comes before a non-winning attack.'),
+  task('b5','defense','Edge defense','The board edge closes one side of White’s line. Find the remaining winning point.',[st(0,3,2),st(1,3,2),st(2,3,2),st(3,3,2),st(6,6,1)],[p(4,3)],'At the edge there is only one direction the four can extend to five.','Treat the board edge like a permanent boundary.')
+ ],
+ priority:[
+  task('p1','priority','Win before blocking','Both sides threaten something. Black can end the game now. Find the winning move.',[st(1,2,2),st(2,2,1),st(3,2,1),st(4,2,1),st(5,2,1),st(7,3,2),st(7,4,2),st(7,5,2),st(7,6,2)],[p(6,2)],'An immediate win ends the game, so there is no need to spend the move blocking White.','Scan your own winning moves before defensive ones.'),
+  task('p2','priority','Defense before development','Black can extend a three, but White can win next move. Choose the correct move.',[st(1,6,1),st(2,6,1),st(3,6,1),st(5,2,1),st(5,3,2),st(5,4,2),st(5,5,2),st(5,6,2)],[p(5,7)],'Extending Black’s three is not an immediate win. White’s winning point must be removed first.','Ask whether your attractive move actually wins now.'),
+  task('p3','priority','Broken win beats everything','Black has a hidden immediate win while White also threatens. Take the win.',[st(1,4,1),st(2,4,1),st(4,4,1),st(5,4,1),st(7,1,2),st(7,2,2),st(7,3,2),st(7,4,2)],[p(3,4)],'The internal gap completes Black’s five. Immediate wins outrank every opponent threat.','Check gaps as part of your win scan.'),
+  task('p4','priority','No win? Then block','Black has no immediate five. White does. Find the required move.',[st(1,2,1),st(2,2,1),st(3,2,1),st(3,5,2),st(4,5,2),st(5,5,2),st(6,5,2),st(7,5,1)],[p(2,5)],'White’s right end is already blocked, so the left endpoint is the only immediate win and must be occupied.','After your win 
