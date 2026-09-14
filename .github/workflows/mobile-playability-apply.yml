@@ -1,0 +1,55 @@
+name: Apply mobile playability improvements
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Apply mobile playability improvements'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply mobile UI patch
+        run: python .github/mobile_playability_patch.py
+      - name: Validate mobile layer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          checks={
+            'style layer': 'id="mobile-playability-v12"' in s,
+            'script layer': 'id="mobile-playability-v12-script"' in s,
+            'thumb dock': 'v12-touch-confirm #placement:not([hidden])' in s,
+            'near-edge board': 'main{padding:8px 4px 170px!important}' in s,
+            'private-room main menu': 'v12PrivateRoomMenu' in s,
+            'old V92 matchmaking route removed': "online:()=>api.openPlatform()" not in s,
+            'old V85 matchmaking route removed': 'online:openPlatform' not in s,
+            'room dialog phone layout': '#workbenchDialog:has(#roomCode)' in s,
+            'iOS input zoom prevention': 'dialog input,dialog select,dialog textarea{font-size:16px!important}' in s,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          print(checks)
+          if failed: raise SystemExit('Failed checks: '+', '.join(failed))
+          m=re.search(r'<script id="mobile-playability-v12-script">([\s\S]*?)</script>',s)
+          if not m: raise SystemExit('Mobile script missing')
+          f=tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8')
+          f.write(m.group(1));f.close()
+          subprocess.run(['node','--check',f.name],check=True)
+          PY
+          git diff --check
+      - name: Commit implementation and clean temporary files
+        run: |
+          rm .github/mobile_playability_patch.py .github/workflows/mobile-ui-inspect.yml .github/workflows/mobile-playability-apply.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Improve mobile UI and playability"
+          git push
