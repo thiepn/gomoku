@@ -1,4 +1,5 @@
 name: Private room smoke test
+# Backend v2 smoke validation
 
 on:
   push:
@@ -54,10 +55,7 @@ jobs:
             if [ "$expected" = 200 ]; then rev=$(jq -r .revision "$tmp/body"); fi
           }
 
-          # A wrong-turn move must be rejected by the authoritative server.
           move "$guest" 20 409
-
-          # Build five separated Black stones; filling the gap would make six and must be rejected in Renju.
           move "$host" 107
           move "$guest" 0
           move "$host" 108
