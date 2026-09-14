@@ -1,0 +1,48 @@
+name: Fix v12.1 PWA hosted detection
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Fix v12.1 PWA hosted detection'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix hosted detection
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          a="const hosted=()=>document.documentElement.dataset.hosted==='true'&&['http:','https:'].includes(location.protocol);"
+          b="const hosted=()=>['http:','https:'].includes(location.protocol);"
+          if s.count(a)!=1: raise SystemExit('production hosted gate count='+str(s.count(a)))
+          s=s.replace(a,b,1)
+          a2="const hosted=['http:','https:'].includes(location.protocol)&&document.documentElement.dataset.hosted==='true'"
+          b2="const hosted=['http:','https:'].includes(location.protocol)"
+          if s.count(a2)!=1: raise SystemExit('release-check hosted gate count='+str(s.count(a2)))
+          s=s.replace(a2,b2,1)
+          if "dataset.hosted==='true'" in s: raise SystemExit('stale hosted dataset gate remains')
+          p.write_text(s,encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:f.write(js);name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode: raise SystemExit(f'script {i}: {r.stderr}')
+          print('PWA hosted detection fixed; scripts',len(scripts))
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/fix-pwa-hosted-gate.yml
+          git commit -m 'Fix PWA registration on hosted builds'
+          git push
