@@ -10,14 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect game bar and mobile board state
+      - name: Inspect current menu and private room routing
         run: |
-          echo '=== GAME BAR CREATION ==='
-          sed -n '4790,4868p' index.html
-          echo '=== BOARD CLICK LOGIC ==='
-          sed -n '2668,2705p' index.html
-          echo '=== RENDER PLACEMENT ==='
-          sed -n '2508,2548p' index.html
-          echo '=== MOBILE BOARD CSS LATE ==='
-          sed -n '4920,4960p' index.html
-          sed -n '5130,5160p' index.html
+          echo '=== V111 MENU SCRIPT ==='
+          sed -n '5635,5705p' index.html
+          echo '=== ONLINE REFERENCES LATE ==='
+          grep -n "onlineBtn\|openOnline\|openPlatform\|Private room\|Private online" index.html | tail -n 60
