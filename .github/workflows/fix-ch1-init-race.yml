@@ -1,0 +1,90 @@
+name: Fix Chapter 1 initialization race
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Fix Chapter 1 initialization race'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove unstable launcher queries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          # renderCard must operate on the actual surviving course card, not assume
+          # Learn's surrounding rerender kept every globally queried child alive.
+          pat=re.compile(r"function renderCard\(\)\{\n const card=\$\('ch1CourseCard'\);if\(!card\)return;const r=report\(\),n=nextLesson\(\),progress=Math\.round\(r\.completedLessons/r\.totalLessons\*100\);\n .*?\n\}",re.S)
+          m=pat.search(s)
+          if not m: raise SystemExit('renderCard block not found')
+          replacement="""function renderCard(){
+ enforceSingleCourseCard();
+ const cards=[...document.querySelectorAll('#ch1CourseCard')],card=cards.find(x=>x.__gomokuCh1Owner)||cards[0];if(!card)return;
+ const q=id=>card.querySelector('#'+id),ring=q('ch1Ring'),ringText=q('ch1RingText'),lessons=q('ch1MetaLessons'),accuracy=q('ch1MetaAccuracy'),nextNode=q('ch1MetaNext'),start=q('ch1Start'),review=q('ch1Review');
+ if(!ring||!ringText||!lessons||!accuracy||!nextNode||!start||!review)return;
+ const r=report(),n=nextLesson(),progress=Math.round(r.completedLessons/r.totalLessons*100);
+ ring.style.setProperty('--ch1-pct',progress+'%');ringText.textContent=r.completedLessons+'/'+r.totalLessons;lessons.textContent=r.completedLessons+' / '+r.totalLessons;accuracy.textContent=pct(r.firstTryRate);nextNode.textContent=r.complete?'Chapter complete':L[n].title;start.textContent=r.complete?'Open Chapter 1':r.taskAttempts?'Continue Chapter 1':'Start Chapter 1';review.disabled=!r.taskAttempts;
+}"""
+          s=s[:m.start()]+replacement+s[m.end():]
+
+          # Wire the dialog using its own node reference before it is appended to a
+          # body that has several legacy MutationObservers.
+          old="document.body.append(dialog);$('#ch1Close').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});return dialog;"
+          new="const closeButton=dialog.querySelector('#ch1Close');if(closeButton)closeButton.onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});document.body.append(dialog);return dialog;"
+          if s.count(old)!=1: raise SystemExit('ensureDialog tail count='+str(s.count(old)))
+          s=s.replace(old,new,1)
+
+          # Export the public course API even if Learn's launcher surface is being
+          # rebuilt at exactly the same time as mount().
+          api="window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});"
+          if s.count(api)!=1: raise SystemExit('course API count='+str(s.count(api)))
+          s=s.replace(api,'',1)
+          marker="mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});"
+          if s.count(marker)!=1: raise SystemExit('mount footer marker count='+str(s.count(marker)))
+          s=s.replace(marker,api+'\n'+marker,1)
+
+          p.write_text(s,encoding='utf-8')
+          print('Chapter initialization race fixed')
+          PY
+      - name: Validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re,subprocess,tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          required=[
+            "const q=id=>card.querySelector('#'+id)",
+            "const closeButton=dialog.querySelector('#ch1Close')",
+            "window.GomokuCourseChapter1=Object.freeze({version:'1.0'",
+            'window.__GomokuCourseChapter1Booted',
+            'function chapterLauncherClick(e)'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('missing init-race fixes '+repr(missing))
+          if s.count('id="course-ch1-v1-script"')!=1: raise SystemExit('course source count changed')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:f.write(js);name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode: raise SystemExit(f'script {i}: {r.stderr}')
+          print('init-race validation passed; scripts',len(scripts))
+          PY
+          git diff --check
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/fix-ch1-init-race.yml
+          git commit -m 'Stabilize Chapter 1 course mounting'
+          git push
