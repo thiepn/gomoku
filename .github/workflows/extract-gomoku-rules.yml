@@ -1,0 +1,27 @@
+name: Extract Gomoku rules engine
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    if: github.event.head_commit.message == 'Run rules engine extraction'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract rules engine
+        run: python .github/extract_gomoku_rules.py
+      - name: Commit extracted rules and remove temporary extractor
+        run: |
+          rm .github/extract_gomoku_rules.py .github/workflows/extract-gomoku-rules.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract Gomoku rules engine"
+          git push
