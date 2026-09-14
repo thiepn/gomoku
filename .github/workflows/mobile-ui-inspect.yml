@@ -10,19 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect mobile CSS and interaction hooks
+      - name: Inspect final mobile layers
         run: |
-          echo '=== MEDIA QUERIES ==='
-          grep -n "@media" index.html | tail -n 80 || true
-          echo '=== TOUCH CONFIRM ==='
-          grep -n "touchConfirm" index.html | head -n 40 || true
-          echo '=== BOARD POINT ==='
-          grep -n "board-point" index.html | head -n 40 || true
-          echo '=== PLACEMENT ==='
-          grep -n "placement" index.html | head -n 50 || true
-          echo '=== GAME ACTIONS ==='
-          grep -n "game-actions" index.html | head -n 50 || true
-          echo '=== MOBILE MARKERS ==='
-          grep -n -Ei "mobile|phone|coarse|pointer" index.html | head -n 100 || true
-          echo '=== ONLINE ROOM ==='
-          grep -n "Private online room\|roomDetails\|platform-launch" index.html | head -n 80 || true
+          echo '=== V9.2 LAYOUT ==='
+          sed -n '4680,4775p' index.html
+          echo '=== V9.2 PLAY ROUTE / MENU ==='
+          sed -n '4865,4965p' index.html
+          echo '=== V9.3 MOBILE COLLAPSE ==='
+          sed -n '5045,5130p' index.html
+          echo '=== V10 SETTINGS ==='
+          sed -n '5320,5410p' index.html
+          echo '=== V11 MOBILE MENU ==='
+          sed -n '5600,5650p' index.html
