@@ -1,0 +1,52 @@
+name: Final Chapter 1 smoke
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    if: github.event.head_commit.message == 'Run final Chapter 1 smoke'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Certify Chapter 1
+        run: |
+          cat > .ch1-final.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const root='https://thiepn.dev/gomoku/';
+          const source=await (await fetch(root+'?ch1final='+Date.now(),{cache:'no-store'})).text();
+          for(const marker of ['course-ch1-v1-script','window.__GomokuCourseChapter1Booted','gomoku.course.chapter1.v1','Chapter checkpoint']) if(!source.includes(marker)) throw Error('Missing '+marker);
+          if((source.match(/id="course-ch1-v1-script"/g)||[]).length!==1) throw Error('Chapter script source duplicated');
+          console.log('PASS source is singular and idempotent');
+          const browser=await chromium.launch({headless:true});
+          async function fresh(){const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();await p.goto(root+'?qa='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(700);const c=p.locator('button[aria-label*="Close" i]:visible');if(await c.count())await c.first().click();return{ctx,p}}
+          async function open(p){const learn=p.getByRole('button',{name:/^learn$/i});if(await learn.count())await learn.click();else await p.locator('[data-v92-route="improve"]').first().click();await p.waitForTimeout(250);const cards=p.locator('#ch1CourseCard');if(await cards.count()!==1)throw Error('Expected one Chapter card, got '+await cards.count());await cards.click();}
+          const A=await fresh();const learn=A.p.getByRole('button',{name:/^learn$/i});if(await learn.count())await learn.click();else await A.p.locator('[data-v92-route="improve"]').first().click();await A.p.waitForTimeout(250);if(await A.p.locator('#ch1CourseCard').count()!==1)throw Error('Chapter card runtime duplicate');await A.p.locator('#ch1Start').click();await A.p.waitForTimeout(150);const g=await A.p.evaluate(()=>({iw:innerWidth,sw:document.documentElement.scrollWidth,dw:document.querySelector('#ch1CourseDialog').scrollWidth}));if(g.sw>g.iw+2||g.dw>g.iw+2)throw Error('Mobile overflow '+JSON.stringify(g));
+          await A.p.locator('#ch1Board [data-i="0"]').click();await A.p.locator('#ch1Board [data-i="8"]').click();if(await A.p.locator('#ch1Reveal').isHidden())throw Error('Reveal missing after two errors');await A.p.locator('#ch1Reveal').click();const ar=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter1.v1')).tasks.d1);if(!ar.correct||!ar.assisted||ar.firstTry!==false)throw Error('Assisted scoring wrong '+JSON.stringify(ar));console.log('PASS coaching/reveal/assisted scoring');await A.ctx.close();
+          const B=await fresh();const l2=B.p.getByRole('button',{name:/^learn$/i});if(await l2.count())await l2.click();else await B.p.locator('[data-v92-route="improve"]').first().click();await B.p.waitForTimeout(200);await B.p.locator('#ch1Start').click();for(const [i,last] of [[42,false],[58,false],[60,false],[56,true]]){await B.p.locator('#ch1Board [data-i="'+i+'"]').click();if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText()))throw Error('Expected clean answer at '+i);await B.p.locator('#ch1NextTask').click();}
+          const rep=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());if(!rep.lessons[0].complete||rep.lessons[0].rate!==1)throw Error('Lesson report wrong');console.log('PASS clean lesson + first-try score');
+          await B.p.reload({waitUntil:'domcontentloaded'});await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await B.p.waitForTimeout(600);if(!(await B.p.evaluate(()=>window.GomokuCourseChapter1.report().lessons[0].complete)))throw Error('Persistence failed');if(await B.p.locator('#ch1CourseCard').count()>1)throw Error('Card duplicated after reload');console.log('PASS persistence + reload idempotence');
+          const c2=B.p.locator('button[aria-label*="Close" i]:visible');if(await c2.count())await c2.first().click();const l3=B.p.getByRole('button',{name:/^learn$/i});if(await l3.count())await l3.click();await B.p.locator('#ch1Start').click();await B.p.getByRole('button',{name:/read live and blocked space/i}).click();if(await B.p.locator('#ch1Board .ch1-cell:not(:disabled)').count()!==2)throw Error('Candidate lesson does not have 2 choices');await B.p.locator('#ch1Board [data-i="41"]').click();if(!/^Correct\./.test(await B.p.locator('#ch1Feedback').innerText()))throw Error('Candidate answer failed');await B.p.getByRole('button',{name:/chapter checkpoint/i}).click();if(!/1 \/ 12/.test(await B.p.locator('.ch1-task-count').innerText()))throw Error('Checkpoint size wrong');console.log('PASS candidate lesson + 12-position checkpoint');
+          await B.ctx.close();await browser.close();console.log('CHAPTER1_FINAL_SMOKE_PASS');
+          JS
+          node .ch1-final.mjs
+      - name: Remove smoke workflow
+        if: always()
+        run: |
+          rm -f .ch1-final.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/chapter1-final-smoke.yml
+          git commit -m 'Remove final Chapter 1 smoke' || true
+          git push || true
