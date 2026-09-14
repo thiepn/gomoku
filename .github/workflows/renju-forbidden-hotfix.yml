@@ -2,32 +2,31 @@ name: Renju forbidden-move hotfix
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Patch Renju rules and visible escaped newlines
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('index.html')
           s = path.read_text(encoding='utf-8')
           original = s
 
-          # Main-board Renju is forbidden-move Renju only: no forced center/opening protocol.
           center = "if(V==='renju-practice'&&moveCount===0&&color===1&&i!==112)return {legal:false,reason:'opening-center',win:false,threes:[],fours:[]};"
           if s.count(center) != 1:
               raise SystemExit(f'Expected one center-first restriction, found {s.count(center)}')
@@ -50,7 +49,6 @@ jobs:
               'All modes use a 15 × 15 board. Renju practice opens at H8 and rejects Black fouls. The opening lab offers local swap/proposal procedures. Main-board Renju blocks fouls as practice; it is not a tournament referee. Optional clocks restore paused.',
               'All modes use a 15 × 15 board. Renju forbids Black overlines, double-fours and genuine double-threes; White is unrestricted by those fouls. Opening and swap procedures are separate tools and are not applied to the main-board Renju ruleset. Optional clocks restore paused.'
           )
-          # User-facing naming: keep the stable internal save key "renju-practice", but stop presenting it as a practice-opening ruleset.
           s = s.replace('Renju practice', 'Renju')
 
           old_toast = "function toast(message){$('toastMsg').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}"
@@ -66,8 +64,6 @@ jobs:
 function toast(message){$('toastMsg').textContent=String(message??'').replace(/\\n\\n+/g,' ').replace(/\\n/g,' ');$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}
 queueMicrotask(()=>{scrubEscapedUiNewlines(document.body);const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='characterData')scrubEscapedUiNewlines(record.target);else for(const node of record.addedNodes)scrubEscapedUiNewlines(node);}});observer.observe(document.body,{subtree:true,childList:true,characterData:true});});"""
           s = s.replace(old_toast, new_toast)
-
-          # Bump the app build so the deployed page and diagnostics clearly identify the fix.
           s = s.replace('12.0.1', '12.0.2')
 
           if s == original:
@@ -93,8 +89,8 @@ queueMicrotask(()=>{scrubEscapedUiNewlines(document.body);const observer=new Mut
           a=e.legalMove(board([107,108,109,110,111]),112,1,5); assert.equal(a.legal,false); assert.equal(a.reason,'overline');
           a=e.legalMove(board([109,110,111,67,82,97]),112,1,6); assert.equal(a.legal,false); assert.equal(a.reason,'double-four');
           a=e.legalMove(board([111,113,97,127]),112,1,4); assert.equal(a.legal,false); assert.equal(a.reason,'double-three');
-          a=e.legalMove(board([108,109,110,111]),112,1,4); assert.equal(a.legal,true); assert.equal(a.win,true,'exact five must remain a legal Black win');
-          a=e.legalMove(board([], [107,108,109,110,111]),112,2,5); assert.equal(a.legal,true,'White overline must remain legal'); assert.equal(a.win,true);
+          a=e.legalMove(board([108,109,110,111]),112,1,4); assert.equal(a.legal,true); assert.equal(a.win,true);
+          a=e.legalMove(board([], [107,108,109,110,111]),112,2,5); assert.equal(a.legal,true); assert.equal(a.win,true);
           console.log('Renju forbidden-move regression checks passed.');
           NODE
 
