@@ -1,0 +1,72 @@
+name: Fix Chapter 1 duplicate integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Fix Chapter 1 duplicate integration'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deduplicate Chapter 1
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          pat=re.compile(r'<style id="course-ch1-v1-style">[\s\S]*?</style>\s*<script id="course-ch1-v1-script">[\s\S]*?</script>')
+          matches=list(pat.finditer(s))
+          print('Chapter 1 blocks before:',len(matches))
+          if len(matches)<2:
+              raise SystemExit('Expected duplicate Chapter 1 blocks; found '+str(len(matches)))
+          block=matches[-1].group(0)
+          old='.ch1-skill span{display:block;height:4px;background:var(--hair);border-radius:999px;margin-top:7px;overflow:hidden}'
+          new='.ch1-skill>span{display:block;height:4px;background:var(--hair);border-radius:999px;margin-top:7px;overflow:hidden}'
+          if old not in block:
+              raise SystemExit('Skill progress selector not found')
+          block=block.replace(old,new,1)
+          s=pat.sub('',s)
+          marker='</body></html>'
+          if marker not in s: raise SystemExit('body marker missing')
+          s=s.replace(marker,'\n'+block+'\n'+marker,1)
+          p.write_text(s,encoding='utf-8')
+          print('Chapter 1 blocks after:',s.count('id="course-ch1-v1-style"'))
+          PY
+      - name: Validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re,subprocess,tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          for marker in ['course-ch1-v1-style','course-ch1-v1-script','gomoku.course.chapter1.v1','Chapter checkpoint','window.GomokuCourseChapter1']:
+              if s.count(marker)<1: raise SystemExit('missing '+marker)
+          if s.count('id="course-ch1-v1-style"')!=1 or s.count('id="course-ch1-v1-script"')!=1:
+              raise SystemExit('Chapter 1 still duplicated')
+          if '.ch1-skill span{display:block;height:4px' in s:
+              raise SystemExit('broad skill span selector remains')
+          if '.ch1-skill>span{display:block;height:4px' not in s:
+              raise SystemExit('fixed skill progress selector missing')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
+                  f.write(js);name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode: raise SystemExit(f'script {i}: {r.stderr}')
+          print('Dedup validation passed; scripts',len(scripts))
+          PY
+          git diff --check
+      - name: Commit cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/fix-chapter1-duplicates.yml
+          git commit -m 'Deduplicate Chapter 1 course integration'
+          git push
