@@ -1,0 +1,125 @@
+name: Release consolidation v12.1 retry
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    if: github.event.head_commit.message == 'Retry v12.1 release consolidation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consolidate release
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old=s
+
+          version_hits=s.count('12.0.1')
+          if version_hits < 20: raise SystemExit(f'unexpected 12.0.1 count: {version_hits}')
+          s=s.replace('12.0.1','12.1.0')
+
+          stale='<b>Online room</b><span>Use your configured server.</span>'
+          fresh='<b>Private room</b><span>Create or join an invite-only game.</span>'
+          if s.count(stale)!=2: raise SystemExit(f'stale private-room menu copy count={s.count(stale)}')
+          s=s.replace(stale,fresh)
+
+          replacements=[
+            ("if(network&&origin!=='remote'){if(networkOpeningMove(i))return false;if(network.color!==currentColor())", "if(network&&origin!=='remote'){if(network.color!==currentColor())"),
+            ("network.role=state.you?.role||'spectator';", "network.role=state.you?.role||'player';"),
+            ("$('resignBtn').disabled=!!S.result||network.role==='spectator';", "$('resignBtn').disabled=!!S.result;"),
+            ("if(network.state?.openingInfo)$('statusText').textContent=network.state.openingInfo.label+' · '+network.id;renderNetworkClock();renderNetworkOpening();", "renderNetworkClock();"),
+            ("render();renderRoomDetails();renderNetworkOpening();renderNetworkClock();ensureRoomStream();", "render();renderRoomDetails();renderNetworkClock();ensureRoomStream();"),
+            ("finally{roomRequest=false;renderNetworkOpening();}}", "finally{roomRequest=false;}}"),
+            ("applyData(study,{queue:false});renderNetworkOpening();$('clockToggle').disabled=false;", "applyData(study,{queue:false});$('clockToggle').disabled=false;"),
+            ("function networkOpeningMove(){return false;}\nfunction renderNetworkOpening(){const host=$('networkOpening');if(!host)return;host.hidden=true;host.replaceChildren();}\n", ""),
+            ("const anchor=$('networkOpening')||document.querySelector('.board-top');", "const anchor=document.querySelector('.board-top');"),
+            ("<div id=\"roomConnectionPill\" class=\"room-connection-pill\" hidden role=\"status\" aria-live=\"polite\"><i></i><span>Connecting…</span></div><section id=\"networkOpening\" class=\"platform-card\" hidden></section>", "<div id=\"roomConnectionPill\" class=\"room-connection-pill\" hidden role=\"status\" aria-live=\"polite\"><i></i><span>Connecting…</span></div>"),
+            (".platform-launch .wide{width:100%}#networkOpening{max-width:100%;padding:12px;border:1px solid var(--hair);border-radius:6px;background:var(--card)}#networkOpening h3{font-size:15px}.clock-box strong{font-variant-numeric:tabular-nums}", ".platform-launch .wide{width:100%}.clock-box strong{font-variant-numeric:tabular-nums}")
+          ]
+          for a,b in replacements:
+              if s.count(a)!=1: raise SystemExit(f'expected one replacement for {a[:70]!r}, found {s.count(a)}')
+              s=s.replace(a,b,1)
+
+          p1=re.compile(r'<style id="private-room-realtime-style">\s*([\s\S]*?)\s*</style>')
+          m1=p1.search(s)
+          if not m1: raise SystemExit('private-room-realtime-style missing')
+          realtime=m1.group(1).strip(); s=s[:m1.start()]+s[m1.end():]
+          p2=re.compile(r'<style id="multiplayer-ux-polish-v12">\s*([\s\S]*?)\s*</style>')
+          m2=p2.search(s)
+          if not m2: raise SystemExit('multiplayer-ux-polish-v12 missing')
+          ux=m2.group(1).strip()
+          merged='<style id="private-room-ui-v121">\n/* V12.1 · private-room connection, match HUD, Presence and chat UI. */\n'+realtime+'\n\n'+ux+'\n</style>'
+          s=s[:m2.start()]+merged+s[m2.end():]
+
+          pwa=re.compile(r'\s*<!-- PWA_SW_START -->[\s\S]*?<!-- PWA_SW_END -->\s*')
+          if len(list(pwa.finditer(s)))!=1: raise SystemExit('unexpected duplicate PWA registration marker count')
+          s=pwa.sub('\n',s,count=1)
+
+          s=s.replace('<!-- V12.1.0: production PWA/update layer. Portable HTML remains fully self-contained. -->','<!-- V12.1.0: private-room release + production PWA/update layer. Portable HTML remains fully self-contained. -->',1)
+          s=s.replace('installable PWA is included in the V12 package.','installable PWA is included in the V12.1 package.')
+          s=s.replace('deploy the V12 PWA package over HTTPS.','deploy the V12.1 PWA package over HTTPS.')
+          s=s.replace('The installable V12 package adds the manifest, service worker and icons','The installable V12.1 package adds the manifest, service worker and icons')
+          if s==old: raise SystemExit('index.html unchanged')
+          p.write_text(s,encoding='utf-8')
+          print('index release consolidation applied; version refs',version_hits,'bytes',len(old),'->',len(s))
+
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
+          if "const CACHE_NAME = 'gomoku-v1';" not in w: raise SystemExit('unexpected service-worker cache name')
+          w=w.replace("const CACHE_NAME = 'gomoku-v1';","const CACHE_NAME = 'gomoku-v12.1.0';",1)
+          old_install="""    caches.open(CACHE_NAME)\n      .then((cache) => cache.addAll(APP_SHELL))\n      .then(() => self.skipWaiting())\n"""
+          new_install="""    caches.open(CACHE_NAME)\n      .then((cache) => cache.addAll(APP_SHELL))\n"""
+          if old_install not in w: raise SystemExit('service-worker install chain changed')
+          w=w.replace(old_install,new_install,1)
+          marker="self.addEventListener('activate', (event) => {"
+          if marker not in w: raise SystemExit('service-worker activate marker missing')
+          w=w.replace(marker,"self.addEventListener('message', (event) => {\n  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();\n});\n\n"+marker,1)
+          sw.write_text(w,encoding='utf-8')
+          print('service worker aligned to v12.1 update flow')
+          PY
+      - name: Validate consolidated release
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile, json
+          s=Path('index.html').read_text(encoding='utf-8')
+          if '12.0.1' in s: raise SystemExit('stale 12.0.1 remains')
+          required=['12.1.0','private-room-ui-v121','Create or join an invite-only game.','ROOM_API_BASE','roomMatchHud','roomChatSheet',"navigator.serviceWorker.register('./sw.js',{scope:'./'})"]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('missing release pieces '+repr(missing))
+          forbidden=['networkOpeningMove','renderNetworkOpening','id="networkOpening"','private-room-realtime-style','multiplayer-ux-polish-v12','Use your configured server.','PWA_SW_START','PWA_SW_END']
+          leftovers=[x for x in forbidden if x in s]
+          if leftovers: raise SystemExit('stale compatibility pieces '+repr(leftovers))
+          if s.count("navigator.serviceWorker.register('./sw.js'")!=1: raise SystemExit('service worker registration count='+str(s.count("navigator.serviceWorker.register('./sw.js'")))
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f: f.write(js); name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode: raise SystemExit(f'index script {i}: {r.stderr}')
+          r=subprocess.run(['node','--check','sw.js'],capture_output=True,text=True)
+          if r.returncode: raise SystemExit(r.stderr)
+          json.loads(Path('manifest.webmanifest').read_text(encoding='utf-8'))
+          w=Path('sw.js').read_text(encoding='utf-8')
+          for x in ["gomoku-v12.1.0","event.data?.type === 'SKIP_WAITING'","self.skipWaiting()"]:
+              if x not in w: raise SystemExit('service worker missing '+x)
+          for x in ['icons/icon-192.png','icons/icon-512.png','icons/maskable-icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png']:
+              if not Path(x).exists(): raise SystemExit('missing PWA asset '+x)
+          print('release validation passed; scripts',len(scripts),'index bytes',len(s),'sw bytes',len(w))
+          PY
+      - name: Commit release consolidation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js
+          git rm .github/workflows/release-consolidation-v121.yml .github/workflows/release-consolidation-v121-retry.yml
+          git commit -m 'Release Gomoku Studio v12.1.0'
+          git push
