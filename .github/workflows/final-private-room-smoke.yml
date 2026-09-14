@@ -1,0 +1,67 @@
+name: Final private room production smoke
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    if: ${{ github.event.head_commit.message == 'Run final private room production smoke' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Run cleaned production smoke
+        run: |
+          cat > .final-room-smoke.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const root='https://thiepn.dev/gomoku/';
+          const source=await (await fetch(root+'?sourcecheck='+Date.now(),{cache:'no-store'})).text();
+          const forbidden=['openPlatform','queueTicket','pollQueue','gomoku.account.v5','gomoku.queue.v56','Quick match','Server URL','runAccountSync','platformFetch','authRequest','loadLeaderboard','joinQueue','cancelQueue'];
+          for(const term of forbidden) if(source.includes(term)) throw new Error('Legacy production symbol remains: '+term);
+          if(!source.includes('Private online rooms are invite-only. No account or public matchmaking is required.')) throw new Error('Clean private-room footer is not live');
+          const apiKey=source.match(/ROOM_API_KEY='([^']+)'/)?.[1];
+          if(!apiKey) throw new Error('ROOM_API_KEY missing');
+          console.log('PASS cleaned production source has no legacy account/queue/server subsystem');
+
+          const browser=await chromium.launch({headless:true});
+          async function makePage(){const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();await p.goto(root+'?qa='+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000}).catch(()=>{});await p.waitForTimeout(450);const c=p.locator('button[aria-label*="Close" i]:visible');if(await c.count())await c.first().click();else{const u=p.getByText(/use the current board/i);if(await u.count()&&await u.first().isVisible())await u.first().click();}await p.waitForTimeout(150);return {ctx,p};}
+          async function openRoom(p){const direct=p.getByRole('button',{name:/private room/i});if(await direct.count()&&await direct.first().isVisible())await direct.first().click();else{const menu=p.getByRole('button',{name:/menu|more/i}).first();if(await menu.count()&&await menu.isVisible())await menu.click();await p.waitForTimeout(100);await p.getByRole('button',{name:/private room/i}).first().click();}await p.waitForTimeout(120);const d=p.locator('#workbenchDialog');if(!(await d.isVisible())||!/Private online room/i.test(await d.innerText()))throw new Error('Private room dialog did not open');return d;}
+          const session=async p=>JSON.parse(await p.evaluate(()=>sessionStorage.getItem('gomoku.room.v4'))||'null');
+          async function state(s){const r=await fetch(s.base+'/api/rooms/'+s.id,{headers:{apikey:apiKey,Authorization:'Bearer '+s.token}});return {status:r.status,data:await r.json()};}
+
+          const H=await makePage(),G=await makePage();
+          let d=await openRoom(H.p);await H.p.locator('#roomNickname').fill('Final QA Host');await d.getByRole('button',{name:/create room/i}).first().click();await H.p.waitForFunction(()=>!!sessionStorage.getItem('gomoku.room.v4'),{timeout:8000});await H.p.waitForTimeout(650);const hs=await session(H.p);if(!hs?.id)throw new Error('Host room not created');console.log('FINAL_QA_ROOM='+hs.id);if(await H.p.locator('#workbenchDialog').evaluate(e=>e.open))throw new Error('Create modal remained open');if(!await H.p.locator('#roomWaitingPanel').isVisible())throw new Error('Waiting panel missing');console.log('PASS create closes setup and shows waiting state');
+
+          d=await openRoom(G.p);await G.p.locator('#roomNickname').fill('Final QA Guest');await G.p.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();await G.p.waitForFunction(id=>{try{return JSON.parse(sessionStorage.getItem('gomoku.room.v4'))?.id===id}catch{return false}},hs.id,{timeout:8000});await H.p.waitForTimeout(1200);if(await G.p.locator('#workbenchDialog').evaluate(e=>e.open))throw new Error('Join modal remained open');if(await H.p.locator('#roomWaitingPanel').isVisible().catch(()=>false))throw new Error('Waiting panel stayed visible after join');await H.p.waitForFunction(()=>/online/i.test(document.querySelector('#roomMatchHud')?.innerText||''),{timeout:6000});console.log('PASS guest joins, setup closes, Presence reaches Online');
+
+          await H.p.locator('#roomHudChat').click();await H.p.locator('#roomChatInput').fill('final smoke hello');await H.p.locator('#roomChatForm').getByRole('button',{name:/send/i}).click();await G.p.waitForTimeout(900);await G.p.locator('#roomHudChat').click();await G.p.waitForFunction(()=>document.querySelector('#roomChatSheet')?.innerText.includes('final smoke hello'),{timeout:5000});console.log('PASS mobile chat reaches opponent');await G.p.locator('#roomChatClose').click();await H.p.locator('#roomChatClose').click();
+
+          await H.p.evaluate(()=>document.querySelectorAll('.board-point')[112]?.click());await H.p.waitForTimeout(100);await Promise.allSettled([H.p.locator('#placeBtn').click(),H.p.locator('#placeBtn').click()]);await H.p.waitForTimeout(900);const rs=await state(hs),moves=rs.data?.game?.moves||rs.data?.moves||[];if(rs.status!==200||!Array.isArray(moves)||moves.length!==1)throw new Error('Authoritative move count after rapid confirm: '+moves.length);console.log('PASS rapid double-confirm persists exactly one move');
+
+          const T=await makePage();d=await openRoom(T.p);await T.p.locator('#roomNickname').fill('Final QA Third');await T.p.locator('#roomCode').fill(hs.id);await d.getByRole('button',{name:/join room/i}).first().click();await T.p.waitForTimeout(900);if(!await T.p.locator('#workbenchDialog').evaluate(e=>e.open))throw new Error('Full-room rejection closed setup');const inline=(await T.p.locator('#roomStatus').innerText()).trim();if(!inline||/Not connected\./i.test(inline))throw new Error('Full-room error was not persisted inline: '+inline);console.log('PASS full-room error remains readable inline: '+inline);
+
+          await T.ctx.close();await H.ctx.close();await G.ctx.close();await browser.close();
+          console.log('FINAL_PRIVATE_ROOM_PRODUCTION_SMOKE_PASS');
+          JS
+          node .final-room-smoke.mjs
+      - name: Remove temporary smoke
+        if: always()
+        run: |
+          rm -f .final-room-smoke.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/final-private-room-smoke.yml
+          git commit -m 'Remove final private room production smoke' || true
+          git push || true
