@@ -20,7 +20,7 @@ jobs:
         run: npm install --no-save --no-package-lock @supabase/supabase-js@2.107.0
       - name: Verify database broadcast reaches a room subscriber
         run: |
-          cat > /tmp/realtime-smoke.mjs <<'JS'
+          cat > realtime-smoke.mjs <<'JS'
           import fs from 'node:fs';
           import { createClient } from '@supabase/supabase-js';
           const source=fs.readFileSync('index.html','utf8');
@@ -52,9 +52,10 @@ jobs:
           await client.removeChannel(channel);
           console.log('REALTIME_SMOKE_PASS room='+room);
           JS
-          node /tmp/realtime-smoke.mjs
+          node realtime-smoke.mjs
       - name: Remove temporary smoke workflow
         run: |
+          rm -f realtime-smoke.mjs
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/realtime-smoke.yml
