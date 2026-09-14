@@ -1,0 +1,48 @@
+name: Implement private online rooms
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Run private-room frontend patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch private rooms frontend
+        run: python .github/private_rooms_patch.py
+      - name: Source checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          checks={
+            'built-in endpoint': "const ROOM_API_BASE='https://hycegznamzjhwinegaai.supabase.co/functions/v1/gomoku-room'" in s,
+            'publishable api key': "const ROOM_API_KEY='sb_publishable_" in s,
+            'private room UI': 'Private online room' in s,
+            'no server URL field': 'id="roomBase"' not in s,
+            'no spectator option': '<option value="spectator">Spectator</option>' not in s,
+            'no swap opening in room dialog': '<option value="swap2">Swap2 · freestyle</option>' not in s,
+            'polling transport': "if(String(n.state?.realtime||'polling')==='polling')return;" in s,
+            'invite link': "u.searchParams.set('room',id)" in s,
+            'private launcher': "$('platformBtn').onclick=openOnline;" in s,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          print(checks)
+          if failed: raise SystemExit('Failed source checks: '+', '.join(failed))
+          PY
+      - name: Commit implementation and clean temporary files
+        run: |
+          rm .github/private_rooms_patch.py .github/workflows/private-rooms-patch.yml gomoku-rules-engine.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Implement private online rooms"
+          git push
