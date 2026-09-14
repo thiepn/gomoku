@@ -1,0 +1,71 @@
+name: Add Chapter 1 course
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-chapter:
+    if: github.event.head_commit.message == 'Prepare Chapter 1 course'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add Chapter 1
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'course-ch1-v1-script' in s:
+              raise SystemExit('Chapter 1 already exists')
+          block=base64.b64decode('''PHN0eWxlIGlkPSJjb3Vyc2UtY2gxLXYxLXN0eWxlIj4KLyo...TRUNCATED_BASE64_FOR_BREVITY...''').decode('utf-8')
+          marker='</body></html>'
+          if marker not in s:
+              raise SystemExit('body marker missing')
+          s=s.replace(marker,block+'\n'+marker,1)
+          p.write_text(s,encoding='utf-8')
+          print('Chapter 1 inserted; index bytes',len(s))
+          PY
+
+      - name: Validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          required=[
+            'course-ch1-v1-style','course-ch1-v1-script','Chapter 1 · Seeing the Board',
+            'Learn Gomoku, then learn from your games','gomoku.course.chapter1.v1',
+            'Chapter checkpoint','Review weakest lesson','window.GomokuCourseChapter1'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+              raise SystemExit('missing Chapter 1 pieces '+repr(missing))
+          if s.count("id:'checkpoint'")!=1:
+              raise SystemExit('checkpoint definition count mismatch')
+          scripts=re.findall(r'<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>',s,re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip():
+                  continue
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
+                  f.write(js); name=f.name
+              r=subprocess.run(['node','--check',name],capture_output=True,text=True)
+              if r.returncode:
+                  raise SystemExit(f'inline script {i} failed: {r.stderr}')
+          print('Chapter 1 validation passed; inline scripts',len(scripts))
+          PY
+          git diff --check
+
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/add-chapter1.yml
+          git commit -m 'Add interactive Chapter 1 Gomoku course'
+          git push
