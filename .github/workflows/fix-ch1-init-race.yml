@@ -20,7 +20,6 @@ jobs:
           import re
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-
           pat=re.compile(r"function renderCard\(\)\{\n const card=\$\('ch1CourseCard'\);if\(!card\)return;const r=report\(\),n=nextLesson\(\),progress=Math\.round\(r\.completedLessons/r\.totalLessons\*100\);\n .*?\n\}",re.S)
           m=pat.search(s)
           if not m: raise SystemExit('renderCard block not found')
@@ -34,21 +33,18 @@ jobs:
             " ring.style.setProperty('--ch1-pct',progress+'%');ringText.textContent=r.completedLessons+'/'+r.totalLessons;lessons.textContent=r.completedLessons+' / '+r.totalLessons;accuracy.textContent=pct(r.firstTryRate);nextNode.textContent=r.complete?'Chapter complete':L[n].title;start.textContent=r.complete?'Open Chapter 1':r.taskAttempts?'Continue Chapter 1':'Start Chapter 1';review.disabled=!r.taskAttempts;",
             '}'
           ]
-          replacement='\n'.join(lines)
-          s=s[:m.start()]+replacement+s[m.end():]
-
+          s=s[:m.start()]+'\n'.join(lines)+s[m.end():]
           old="document.body.append(dialog);$('#ch1Close').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});return dialog;"
           new="const closeButton=dialog.querySelector('#ch1Close');if(closeButton)closeButton.onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});document.body.append(dialog);return dialog;"
           if s.count(old)!=1: raise SystemExit('ensureDialog tail count='+str(s.count(old)))
           s=s.replace(old,new,1)
-
           api="window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});"
           if s.count(api)!=1: raise SystemExit('course API count='+str(s.count(api)))
           s=s.replace(api,'',1)
           marker="mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});"
           if s.count(marker)!=1: raise SystemExit('mount footer marker count='+str(s.count(marker)))
           s=s.replace(marker,api+'\n'+marker,1)
-
+          s='\n'.join(line.rstrip() for line in s.splitlines())+'\n'
           p.write_text(s,encoding='utf-8')
           print('Chapter initialization race fixed')
           PY
