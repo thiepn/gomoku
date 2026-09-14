@@ -6325,7 +6325,7 @@ function mount(){
 
  const h=intro?.querySelector('h2'),pp=intro?.querySelector('p:last-child');if(h)h.textContent='Learn Gomoku, then learn from your games';if(pp)pp.textContent='Start with the course to build board vision. Reviews and practice then turn your real games into targeted improvement.';
  renderCard();
- window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});
+
 }
 function nextLesson(){const i=L.findIndex((_,k)=>!lessonReport(k).complete);return i<0?L.length-1:i}
 function weakestLesson(){
@@ -6333,11 +6333,15 @@ function weakestLesson(){
  if(!candidates.length)return 0;candidates.sort((a,b)=>(a.rate??1)-(b.rate??1)||a.i-b.i);return candidates[0].i;
 }
 function renderCard(){
- const card=$('ch1CourseCard');if(!card)return;const r=report(),n=nextLesson(),progress=Math.round(r.completedLessons/r.totalLessons*100);
- $('#ch1Ring').style.setProperty('--ch1-pct',progress+'%');$('#ch1RingText').textContent=r.completedLessons+'/'+r.totalLessons;$('#ch1MetaLessons').textContent=r.completedLessons+' / '+r.totalLessons;$('#ch1MetaAccuracy').textContent=pct(r.firstTryRate);$('#ch1MetaNext').textContent=r.complete?'Chapter complete':L[n].title;$('#ch1Start').textContent=r.complete?'Open Chapter 1':r.taskAttempts?'Continue Chapter 1':'Start Chapter 1';$('#ch1Review').disabled=!r.taskAttempts;
+ enforceSingleCourseCard();
+ const cards=[...document.querySelectorAll('#ch1CourseCard')],card=cards.find(x=>x.__gomokuCh1Owner)||cards[0];if(!card)return;
+ const q=id=>card.querySelector('#'+id),ring=q('ch1Ring'),ringText=q('ch1RingText'),lessons=q('ch1MetaLessons'),accuracy=q('ch1MetaAccuracy'),nextNode=q('ch1MetaNext'),start=q('ch1Start'),review=q('ch1Review');
+ if(!ring||!ringText||!lessons||!accuracy||!nextNode||!start||!review)return;
+ const r=report(),n=nextLesson(),progress=Math.round(r.completedLessons/r.totalLessons*100);
+ ring.style.setProperty('--ch1-pct',progress+'%');ringText.textContent=r.completedLessons+'/'+r.totalLessons;lessons.textContent=r.completedLessons+' / '+r.totalLessons;accuracy.textContent=pct(r.firstTryRate);nextNode.textContent=r.complete?'Chapter complete':L[n].title;start.textContent=r.complete?'Open Chapter 1':r.taskAttempts?'Continue Chapter 1':'Start Chapter 1';review.disabled=!r.taskAttempts;
 }
 function ensureDialog(){
- if(dialog)return dialog;dialog=document.createElement('dialog');dialog.id='ch1CourseDialog';dialog.setAttribute('aria-labelledby','ch1DialogTitle');dialog.innerHTML='<div class="ch1-shell"><header class="ch1-head"><div><span class="ch1-kicker">GOMOKU COURSE · CHAPTER 1</span><h2 id="ch1DialogTitle">Seeing the Board</h2><p>Build a reliable scan before learning deeper fours, threes and forcing sequences.</p></div><button class="ch1-close" id="ch1Close" aria-label="Close Chapter 1">×</button></header><div class="ch1-body"><nav class="ch1-nav" id="ch1Nav" aria-label="Chapter 1 lessons"></nav><main class="ch1-main" id="ch1Main"></main></div></div>';document.body.append(dialog);$('#ch1Close').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});return dialog;
+ if(dialog)return dialog;dialog=document.createElement('dialog');dialog.id='ch1CourseDialog';dialog.setAttribute('aria-labelledby','ch1DialogTitle');dialog.innerHTML='<div class="ch1-shell"><header class="ch1-head"><div><span class="ch1-kicker">GOMOKU COURSE · CHAPTER 1</span><h2 id="ch1DialogTitle">Seeing the Board</h2><p>Build a reliable scan before learning deeper fours, threes and forcing sequences.</p></div><button class="ch1-close" id="ch1Close" aria-label="Close Chapter 1">×</button></header><div class="ch1-body"><nav class="ch1-nav" id="ch1Nav" aria-label="Chapter 1 lessons"></nav><main class="ch1-main" id="ch1Main"></main></div></div>';const closeButton=dialog.querySelector('#ch1Close');if(closeButton)closeButton.onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});document.body.append(dialog);return dialog;
 }
 function openCourse(li=0){ensureDialog();S.lesson=Math.max(0,Math.min(L.length-1,li));save();renderCourse();if(!dialog.open)dialog.showModal();}
 function renderNav(){
@@ -6379,6 +6383,7 @@ function renderSkills(skills){
  const host=$('ch1Skills');if(!host)return;host.replaceChildren();for(const x of Object.values(skills)){const el=document.createElement('div');el.className='ch1-skill';const rate=x.rate??0;el.innerHTML='<b><span>'+x.label+'</span><em>'+pct(x.rate)+'</em></b><span><i style="width:'+Math.round(rate*100)+'%"></i></span><small>'+x.clean+' clean / '+x.attempted+' attempted</small>';host.append(el);}
 }
 function redoLesson(li){const ts=tasksFor(li);for(const t of ts)delete S.tasks[t.id];S.cursor[L[li].id]=0;save();renderCourse();}
+window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});
 mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});[400,1200,2500].forEach(ms=>setTimeout(mount,ms));
 })();
 </script>
