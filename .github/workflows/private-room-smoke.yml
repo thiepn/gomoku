@@ -1,0 +1,101 @@
+name: Private room smoke test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    if: github.event.head_commit.message == 'Run private-room smoke test'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Exercise deployed private-room service
+        env:
+          API: https://hycegznamzjhwinegaai.supabase.co/functions/v1/gomoku-room
+          KEY: sb_publishable_1rZzRPzfLMaAH5pIgCwIjA_19UPMIsR
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+
+          request() {
+            local method=$1 url=$2 token=${3:-} data=${4:-}
+            local args=(-sS -X "$method" "$url" -H "apikey: $KEY" -H 'Content-Type: application/json' -o "$tmp/body" -w '%{http_code}')
+            if [ -n "$token" ]; then args+=(-H "Authorization: Bearer $token"); fi
+            if [ -n "$data" ]; then args+=(--data "$data"); fi
+            curl "${args[@]}"
+          }
+
+          code=$(request POST "$API/api/rooms" '' '{"name":"Smoke Host","rule":"renju-practice"}')
+          test "$code" = 201 || { cat "$tmp/body"; echo " create status=$code"; exit 1; }
+          cp "$tmp/body" "$tmp/create.json"
+          room=$(jq -r .id "$tmp/create.json")
+          host=$(jq -r .token "$tmp/create.json")
+          test ${#room} -eq 8
+          test -n "$host"
+          test "$(jq -r '.state.you.color' "$tmp/create.json")" = 1
+
+          code=$(request GET "$API/api/rooms/$room" '' '')
+          test "$code" = 401 || { echo "Unauthenticated read unexpectedly returned $code"; cat "$tmp/body"; exit 1; }
+
+          code=$(request POST "$API/api/rooms/$room/join" '' '{"name":"Smoke Guest"}')
+          test "$code" = 200 || { cat "$tmp/body"; echo " join status=$code"; exit 1; }
+          cp "$tmp/body" "$tmp/join.json"
+          guest=$(jq -r .token "$tmp/join.json")
+          test "$(jq -r '.state.players|length' "$tmp/join.json")" = 2
+          rev=$(jq -r '.state.revision' "$tmp/join.json")
+
+          move() {
+            local tok=$1 idx=$2 expected=${3:-200}
+            local payload
+            payload=$(jq -cn --argjson r "$rev" --argjson i "$idx" --arg c "smoke-$rev-$idx" '{action:"move",revision:$r,i:$i,commandId:$c}')
+            code=$(request POST "$API/api/rooms/$room/action" "$tok" "$payload")
+            if [ "$code" != "$expected" ]; then cat "$tmp/body"; echo " move $idx expected=$expected got=$code"; exit 1; fi
+            if [ "$expected" = 200 ]; then rev=$(jq -r .revision "$tmp/body"); fi
+          }
+
+          # A wrong-turn move must be rejected by the authoritative server.
+          move "$guest" 20 409
+
+          # Build five separated Black stones; filling the gap would make six and must be rejected in Renju.
+          move "$host" 107
+          move "$guest" 0
+          move "$host" 108
+          move "$guest" 2
+          move "$host" 109
+          move "$guest" 4
+          move "$host" 111
+          move "$guest" 6
+          move "$host" 112
+          move "$guest" 8
+          move "$host" 110 422
+          grep -qi overline "$tmp/body" || { cat "$tmp/body"; echo 'Expected overline error'; exit 1; }
+
+          code=$(request GET "$API/api/rooms/$room" "$host" '')
+          test "$code" = 200 || { cat "$tmp/body"; exit 1; }
+          test "$(jq -r '.game.moves|length' "$tmp/body")" = 10
+          rev=$(jq -r .revision "$tmp/body")
+
+          payload=$(jq -cn --argjson r "$rev" '{action:"offer_draw",revision:$r,commandId:"smoke-draw-offer"}')
+          code=$(request POST "$API/api/rooms/$room/action" "$host" "$payload")
+          test "$code" = 200 || { cat "$tmp/body"; exit 1; }
+          rev=$(jq -r .revision "$tmp/body")
+          payload=$(jq -cn --argjson r "$rev" '{action:"accept_draw",revision:$r,commandId:"smoke-draw-accept"}')
+          code=$(request POST "$API/api/rooms/$room/action" "$guest" "$payload")
+          test "$code" = 200 || { cat "$tmp/body"; exit 1; }
+          test "$(jq -r '.game.result.reason' "$tmp/body")" = agreement
+          rev=$(jq -r .revision "$tmp/body")
+
+          payload=$(jq -cn --argjson r "$rev" '{action:"rematch",revision:$r,commandId:"smoke-rematch-host"}')
+          code=$(request POST "$API/api/rooms/$room/action" "$host" "$payload")
+          test "$code" = 200 || { cat "$tmp/body"; exit 1; }
+          rev=$(jq -r .revision "$tmp/body")
+          payload=$(jq -cn --argjson r "$rev" '{action:"rematch",revision:$r,commandId:"smoke-rematch-guest"}')
+          code=$(request POST "$API/api/rooms/$room/action" "$guest" "$payload")
+          test "$code" = 200 || { cat "$tmp/body"; exit 1; }
+          test "$(jq -r .round "$tmp/body")" = 2
+          test "$(jq -r '.players[]|select(.seat==1)|.color' "$tmp/body")" = 2
+          test "$(jq -r '.players[]|select(.seat==2)|.color' "$tmp/body")" = 1
+          test "$(jq -r '.game.moves|length' "$tmp/body")" = 0
+
+          echo "Private room smoke test passed for room $room"
