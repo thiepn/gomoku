@@ -1,0 +1,195 @@
+name: Mobile multiplayer hardening QA
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    if: github.event.head_commit.message == 'Run mobile multiplayer hardening QA'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Inspect legacy online code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          for term in ['openPlatform','queueTicket','pollQueue','matchmaking','account','Server URL','spectator']:
+              print(f'LEGACY_COUNT {term} = {s.count(term)}')
+              pos=s.find(term)
+              if pos>=0:
+                  print(s[max(0,pos-350):pos+650].replace('\n',' '))
+                  print('---')
+          PY
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install chromium --with-deps
+      - name: Run production mobile QA
+        run: |
+          cat > .mobile-hardening-qa.mjs <<'JS'
+          import { chromium } from 'playwright';
+
+          const candidates=['https://thiepn.dev/gomoku','https://thiepn.github.io/gomoku/'];
+          let base='';
+          for(const u of candidates){
+            try{const r=await fetch(u,{redirect:'follow'});if(r.ok){base=r.url;break;}}catch{}
+          }
+          if(!base) throw new Error('No production URL resolved');
+          console.log('PRODUCTION_URL='+base);
+          const browser=await chromium.launch({headless:true});
+          const failures=[];
+          const assert=(cond,msg)=>{if(!cond){failures.push(msg);console.error('FAIL '+msg)}else console.log('PASS '+msg)};
+          async function ready(page){
+            await page.goto(base,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:20000}).catch(()=>{});
+            await page.waitForTimeout(800);
+          }
+
+          for(const vp of [{width:360,height:800},{width:390,height:844},{width:412,height:915},{width:430,height:932}]){
+            const ctx=await browser.newContext({viewport:vp,isMobile:true,hasTouch:true});
+            const p=await ctx.newPage();
+            await ready(p);
+            const m=await p.evaluate(()=>({
+              innerWidth,
+              scrollWidth:document.documentElement.scrollWidth,
+              board:(()=>{const e=document.querySelector('.board-shell');const r=e?.getBoundingClientRect();return r?{w:r.width,left:r.left,right:r.right}:null})(),
+              place:(()=>{const e=document.querySelector('#placeBtn');const r=e?.getBoundingClientRect();return e&&r?{w:r.width,h:r.height,left:r.left,right:r.right,bottom:r.bottom,display:getComputedStyle(e).display}:null})(),
+              top:(()=>{const e=document.querySelector('.top');const r=e?.getBoundingClientRect();return r?{left:r.left,right:r.right,w:r.width}:null})()
+            }));
+            assert(m.scrollWidth<=m.innerWidth+2,`${vp.width}px has no horizontal overflow (${m.scrollWidth}/${m.innerWidth})`);
+            assert(m.board&&m.board.w>=vp.width*0.88,`${vp.width}px board uses at least 88% viewport (${m.board?.w})`);
+            assert(m.board&&m.board.left>=-1&&m.board.right<=vp.width+1,`${vp.width}px board stays inside viewport`);
+            assert(m.place&&m.place.h>=44,`${vp.width}px Place control keeps >=44px touch height`);
+            await p.screenshot({path:`qa-${vp.width}.png`,fullPage:true});
+            await ctx.close();
+          }
+
+          const hostCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const guestCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const host=await hostCtx.newPage(),guest=await guestCtx.newPage();
+          await ready(host); await ready(guest);
+
+          async function openPrivate(page){
+            const candidates=[
+              page.getByRole('button',{name:/private room/i}),
+              page.getByRole('button',{name:/online room/i}),
+              page.locator('#onlineBtn'),
+              page.locator('#platformBtn')
+            ];
+            for(const c of candidates){if(await c.count()&&await c.first().isVisible().catch(()=>false)){await c.first().click();break;}}
+            await page.waitForTimeout(250);
+            assert((await page.getByText(/Private online room/i).count())>0,'Private room dialog opens on mobile');
+          }
+          await openPrivate(host);
+
+          const hinputs=host.locator('dialog input, [role="dialog"] input');
+          assert((await hinputs.count())>=2,'Private room dialog exposes mobile form inputs');
+          const nickname=host.getByLabel(/nickname/i);
+          if(await nickname.count()) await nickname.fill('QA Host'); else await hinputs.nth(0).fill('QA Host');
+          const create=host.getByRole('button',{name:/create room/i});
+          assert(await create.count()>0,'Create room action is available');
+          await create.click();
+          await host.waitForTimeout(1500);
+          const hsession=JSON.parse(await host.evaluate(()=>sessionStorage.getItem('gomoku.room.v4'))||'null');
+          assert(!!hsession?.id&&!!hsession?.token,'Host room session is persisted');
+          const room=hsession?.id;
+          console.log('QA_ROOM='+room);
+          assert((await host.locator('#multiplayerStrip').count())===1,'Host gets multiplayer strip');
+          assert((await host.locator('#waitingRoomCard').count())===1,'Host gets waiting-room card before join');
+
+          await openPrivate(guest);
+          const ginputs=guest.locator('dialog input, [role="dialog"] input');
+          const gnick=guest.getByLabel(/nickname/i);
+          if(await gnick.count()) await gnick.fill('QA Guest'); else await ginputs.nth(0).fill('QA Guest');
+          const roomInput=guest.getByLabel(/room code/i);
+          if(await roomInput.count()) await roomInput.fill(room); else {
+            for(let i=0;i<await ginputs.count();i++){const el=ginputs.nth(i);const ph=(await el.getAttribute('placeholder'))||'';if(/room|code/i.test(ph)){await el.fill(room);break;}}
+          }
+          const join=guest.getByRole('button',{name:/join room/i});
+          assert(await join.count()>0,'Join room action is available');
+          await join.click();
+          await guest.waitForTimeout(1600); await host.waitForTimeout(1600);
+          const gsession=JSON.parse(await guest.evaluate(()=>sessionStorage.getItem('gomoku.room.v4'))||'null');
+          assert(gsession?.id===room,'Guest joins the host room');
+          assert((await host.locator('#waitingRoomCard').count())===0,'Waiting-room card disappears after opponent joins');
+          const hostStrip=await host.locator('#multiplayerStrip').innerText().catch(()=> '');
+          const guestStrip=await guest.locator('#multiplayerStrip').innerText().catch(()=> '');
+          assert(/QA Host|You/i.test(hostStrip)&&/QA Guest|Opponent/i.test(hostStrip),'Host strip identifies both players');
+          assert(/QA Host|Opponent/i.test(guestStrip)&&/QA Guest|You/i.test(guestStrip),'Guest strip identifies both players');
+
+          await host.waitForTimeout(1200);
+          const presenceText=await host.locator('#multiplayerStrip').innerText().catch(()=> '');
+          assert(/online/i.test(presenceText),'Host sees opponent online through Presence');
+
+          const chatBtn=host.locator('#openRoomChat');
+          assert(await chatBtn.count()===1,'Dedicated mobile Chat button exists');
+          await chatBtn.click();
+          assert(await host.locator('#roomChatSheet').isVisible().catch(()=>false),'Chat opens as mobile sheet');
+          const chatInput=host.locator('#roomChatSheet textarea, #roomChatSheet input').last();
+          await chatInput.fill('hello from mobile QA');
+          const send=host.locator('#roomChatSheet').getByRole('button',{name:/send/i});
+          await send.click();
+          await guest.waitForTimeout(1200);
+          await guest.locator('#openRoomChat').click();
+          const guestChat=await guest.locator('#roomChatSheet').innerText().catch(()=> '');
+          assert(guestChat.includes('hello from mobile QA'),'Room chat pushes to opponent and renders in sheet');
+
+          await guest.locator('#closeRoomChat, #roomChatSheet [aria-label*="Close" i]').first().click().catch(async()=>{await guest.keyboard.press('Escape')});
+          await host.locator('#closeRoomChat, #roomChatSheet [aria-label*="Close" i]').first().click().catch(async()=>{await host.keyboard.press('Escape')});
+
+          // Rapid tap: select a legal point and press Place twice quickly; server must accept only one move.
+          await host.bringToFront();
+          await host.evaluate(()=>document.querySelectorAll('.board-point')[112]?.click());
+          await host.waitForTimeout(100);
+          const place=host.locator('#placeBtn');
+          await Promise.allSettled([place.click({timeout:3000}),place.click({timeout:3000})]);
+          await host.waitForTimeout(1200);
+          const stateRes=await fetch(hsession.base+'/api/rooms/'+room,{headers:{apikey:(await host.evaluate(()=>ROOM_API_KEY)),Authorization:'Bearer '+hsession.token}});
+          const state=await stateRes.json();
+          const moves=state?.game?.moves||state?.moves||[];
+          assert(Array.isArray(moves)&&moves.length===1,'Rapid double Place produces exactly one authoritative move');
+
+          // Offline -> online recovery should be visible and recover automatically.
+          await hostCtx.setOffline(true);
+          await host.waitForTimeout(400);
+          const offline=await host.locator('#roomConnectionPill').innerText().catch(()=> '');
+          assert(/offline/i.test(offline),'Connection pill reports Offline');
+          await hostCtx.setOffline(false);
+          await host.waitForTimeout(2600);
+          const recovered=await host.locator('#roomConnectionPill').innerText().catch(()=> '');
+          assert(/live|fallback|connecting|reconnecting/i.test(recovered),'Connection recovers after network restoration');
+
+          await host.screenshot({path:'qa-room-host.png',fullPage:true});
+          await guest.screenshot({path:'qa-room-guest.png',fullPage:true});
+          await hostCtx.close(); await guestCtx.close(); await browser.close();
+
+          if(failures.length){console.error('QA_FAILURES='+JSON.stringify(failures));process.exit(1)}
+          console.log('MOBILE_HARDENING_QA_PASS');
+          JS
+          node .mobile-hardening-qa.mjs
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-hardening-qa
+          path: qa-*.png
+          if-no-files-found: ignore
+          retention-days: 1
+      - name: Remove temporary QA workflow
+        if: always()
+        run: |
+          rm -f .mobile-hardening-qa.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/mobile-hardening-qa.yml
+          git commit -m 'Remove mobile multiplayer hardening QA' || true
+          git push || true
