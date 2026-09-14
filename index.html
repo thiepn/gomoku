@@ -6185,4 +6185,194 @@ body:not([data-v92-route="play"]) #roomMatchHud{display:none!important}
 @media(max-width:760px){body[data-v92-route="play"] .room-match-hud{margin:0 8px 8px;padding:8px;border-radius:9px}.room-hud-main{grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:7px}.room-hud-player{gap:6px}.room-hud-player b{font-size:12px}.room-hud-stone{width:19px;height:19px}.room-hud-turn{min-width:0}.room-hud-turn b{font-size:12px}.room-hud-turn span{font-size:6px;white-space:normal;line-height:1.25}.room-hud-actions{margin-top:6px;padding-top:6px}.room-hud-actions .btn{min-height:38px;flex:1}.room-waiting-panel{padding:9px}.room-waiting-panel b{font-size:13px}.room-waiting-panel .btn{min-height:42px;padding-inline:10px}#roomChatSheet{margin:auto 0 0;width:100vw;max-width:none;max-height:74dvh;border-width:1px 0 0;border-radius:16px 16px 0 0}.room-chat-shell{max-height:74dvh}.room-chat-shell header{padding:13px 14px}.room-chat-messages{padding:12px 10px}.room-chat-message{max-width:88%}.room-chat-shell form{padding:9px 9px calc(9px + env(safe-area-inset-bottom))}}
 @media(max-width:390px){.room-hud-main{grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr)}.room-hud-player small{font-size:6px}.room-hud-player b{font-size:11px}.room-presence{font-size:7px}.room-hud-turn b{font-size:11px}.room-hud-turn span{font-size:5.5px}.room-waiting-panel{align-items:flex-start;flex-direction:column}.room-waiting-panel .btn{width:100%}}
 </style>
+<style id="course-ch1-v1-style">
+/* Chapter 1 · Seeing the Board — first structured Gomoku course chapter. */
+#ch1CourseCard{margin:14px 0;padding:16px;border:1px solid var(--hair);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--card) 94%,transparent),color-mix(in srgb,var(--soft) 45%,var(--card)));position:relative;overflow:hidden}
+#ch1CourseCard::after{content:'五';position:absolute;right:14px;top:3px;font:600 74px/1 Georgia,serif;color:color-mix(in srgb,var(--seal) 8%,transparent);pointer-events:none}
+.ch1-card-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;position:relative;z-index:1}.ch1-card-copy{min-width:0}.ch1-kicker{display:block;color:var(--seal);font-size:8px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}.ch1-card-copy h3{font:600 21px/1.18 Georgia,serif;margin:5px 0}.ch1-card-copy p{max-width:560px;color:var(--ink2);font-size:10px;line-height:1.6;margin:0}.ch1-progress-ring{flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--seal) var(--ch1-pct,0%),var(--hair) 0);position:relative}.ch1-progress-ring::before{content:'';position:absolute;inset:5px;border-radius:50%;background:var(--card)}.ch1-progress-ring span{position:relative;z-index:1;font:700 11px system-ui}.ch1-card-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:13px;position:relative;z-index:1}.ch1-card-meta>div{padding:8px 9px;border:1px solid var(--hair);border-radius:7px;background:color-mix(in srgb,var(--card2) 84%,transparent)}.ch1-card-meta b{display:block;font-size:11px}.ch1-card-meta span{display:block;margin-top:2px;color:var(--ink2);font-size:7px;letter-spacing:.06em;text-transform:uppercase}.ch1-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;position:relative;z-index:1}.ch1-card-actions button{min-height:40px}
+
+#ch1CourseDialog{width:min(980px,calc(100vw - 24px));max-height:min(94dvh,920px);padding:0;overflow:hidden;border:1px solid var(--hair2);border-radius:14px;background:var(--paper);color:var(--ink)}
+#ch1CourseDialog::backdrop{background:#17130d66;backdrop-filter:blur(3px)}
+.ch1-shell{display:grid;grid-template-rows:auto minmax(0,1fr);max-height:min(94dvh,920px)}.ch1-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:17px 19px 14px;border-bottom:1px solid var(--hair);background:var(--paper)}.ch1-head h2{font:600 25px/1.15 Georgia,serif;margin:3px 0 4px}.ch1-head p{color:var(--ink2);font-size:9px;line-height:1.55;max-width:650px;margin:0}.ch1-close{width:42px;height:42px;flex:none;border:1px solid var(--hair);border-radius:8px;background:transparent;color:var(--ink);font-size:24px}.ch1-body{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:0}.ch1-nav{padding:13px;border-right:1px solid var(--hair);overflow:auto;background:color-mix(in srgb,var(--card) 54%,var(--paper))}.ch1-nav-summary{padding:9px 9px 11px;border-bottom:1px solid var(--hair);margin-bottom:7px}.ch1-nav-summary b{display:block;font:600 15px Georgia,serif}.ch1-nav-summary span{display:block;margin-top:4px;color:var(--ink2);font-size:8px;line-height:1.45}.ch1-nav button{width:100%;display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:7px;align-items:center;text-align:left;border:0;background:transparent;color:var(--ink);padding:9px 8px;border-radius:7px;min-height:48px}.ch1-nav button:hover{background:var(--card2)}.ch1-nav button[aria-current="step"]{background:var(--soft)}.ch1-step-num{width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:50%;font-size:8px;font-weight:750}.ch1-nav button.done .ch1-step-num{background:var(--seal);border-color:var(--seal);color:white}.ch1-step-copy b{display:block;font-size:9px}.ch1-step-copy span{display:block;margin-top:2px;color:var(--ink2);font-size:7px;line-height:1.3}.ch1-step-score{font-size:7px;color:var(--ink2);white-space:nowrap}
+.ch1-main{overflow:auto;padding:20px 22px 24px}.ch1-breadcrumb{color:var(--seal);font-size:7px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.ch1-main h3{font:600 27px/1.12 Georgia,serif;margin:6px 0 7px}.ch1-lead{max-width:690px;color:var(--ink2);font-size:11px;line-height:1.68}.ch1-rule{margin:14px 0;padding:11px 13px;border-left:3px solid var(--seal);border-radius:0 7px 7px 0;background:var(--card);font-size:10px;line-height:1.55}.ch1-scan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:13px 0}.ch1-scan div{padding:8px;border:1px solid var(--hair);border-radius:7px;background:var(--card2)}.ch1-scan b{display:block;color:var(--seal);font-size:8px}.ch1-scan span{display:block;margin-top:3px;font-size:8px;line-height:1.35;color:var(--ink2)}
+.ch1-task-card{margin-top:17px;padding:14px;border:1px solid var(--hair);border-radius:10px;background:var(--card)}.ch1-task-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:11px}.ch1-task-top small{display:block;color:var(--ink2);font-size:7px;letter-spacing:.12em;font-weight:800}.ch1-task-top b{display:block;margin-top:3px;font-size:12px}.ch1-task-count{font-size:8px;color:var(--ink2);white-space:nowrap}.ch1-work{display:grid;grid-template-columns:minmax(300px,430px) minmax(210px,1fr);gap:18px;align-items:center}.ch1-board-wrap{display:grid;place-items:center}.ch1-board{--cell:min(42px,5.6vw);display:grid;grid-template-columns:repeat(9,var(--cell));grid-template-rows:repeat(9,var(--cell));padding:9px;border:1px solid #967044;border-radius:9px;background:#d7ad68;box-shadow:inset 0 0 25px #81542424;touch-action:manipulation}.ch1-cell{appearance:none;position:relative;width:var(--cell);height:var(--cell);min-width:0;min-height:0;padding:0;border:0;background:transparent;color:#6a2118;cursor:pointer}.ch1-cell::before,.ch1-cell::after{content:'';position:absolute;pointer-events:none;background:#71533380}.ch1-cell::before{left:0;right:0;top:50%;height:1px}.ch1-cell::after{top:0;bottom:0;left:50%;width:1px}.ch1-cell:disabled{cursor:default;opacity:.58}.ch1-cell.occupied:disabled{opacity:1}.ch1-stone{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);width:72%;height:72%;border-radius:50%;box-shadow:0 2px 4px #0004}.ch1-stone.black{background:radial-gradient(circle at 34% 28%,#5a554d,#181713 66%,#050505)}.ch1-stone.white{background:radial-gradient(circle at 34% 28%,#fff,#e7dfd2 68%);border:1px solid #9d907d}.ch1-cell.choice::marker{display:none}.ch1-cell.choice{border-radius:50%;outline:2px solid color-mix(in srgb,var(--seal) 55%,transparent);outline-offset:-7px}.ch1-choice-label{position:absolute;z-index:4;inset:auto 3px 2px auto;width:15px;height:15px;display:grid;place-items:center;border-radius:50%;background:var(--seal);color:white;font:800 7px system-ui}.ch1-cell.wrong{animation:ch1Wrong .22s ease}.ch1-cell.correct{background:radial-gradient(circle,color-mix(in srgb,var(--seal) 25%,transparent) 0 26%,transparent 29%)}.ch1-cell.revealed{background:radial-gradient(circle,color-mix(in srgb,#2e7b50 30%,transparent) 0 26%,transparent 29%)}@keyframes ch1Wrong{0%,100%{transform:translateX(0)}35%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+.ch1-task-copy h4{font:600 18px Georgia,serif;margin:0 0 7px}.ch1-task-copy>p{font-size:10px;line-height:1.62;color:var(--ink2);margin:0}.ch1-hint{min-height:38px;margin-top:10px;padding:9px 10px;border-radius:7px;background:var(--paper);font-size:9px;line-height:1.5;color:var(--ink2)}.ch1-hint.good{color:#246642;border-left:3px solid #347a55}.ch1-hint.bad{color:var(--seal);border-left:3px solid var(--seal)}.ch1-task-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.ch1-task-actions button{min-height:39px}.ch1-lesson-done{margin-top:16px;padding:15px;border:1px solid color-mix(in srgb,var(--seal) 24%,var(--hair));border-radius:9px;background:var(--soft)}.ch1-lesson-done h4{font:600 18px Georgia,serif;margin:0 0 5px}.ch1-lesson-done p{font-size:9px;line-height:1.55;color:var(--ink2)}.ch1-skill-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:11px}.ch1-skill{padding:9px;border:1px solid var(--hair);border-radius:7px;background:var(--card2)}.ch1-skill b{display:flex;justify-content:space-between;gap:8px;font-size:8px}.ch1-skill span{display:block;height:4px;background:var(--hair);border-radius:999px;margin-top:7px;overflow:hidden}.ch1-skill i{display:block;height:100%;background:var(--seal);border-radius:inherit}.ch1-skill small{display:block;margin-top:5px;color:var(--ink2);font-size:7px}.ch1-chapter-finish{padding:18px;border:1px solid var(--hair);border-radius:10px;background:linear-gradient(135deg,var(--card),var(--soft));margin-top:18px}.ch1-chapter-finish h4{font:600 22px Georgia,serif}.ch1-chapter-finish p{margin-top:6px;color:var(--ink2);font-size:10px;line-height:1.6}
+
+@media(max-width:760px){
+ #ch1CourseCard{margin:11px 0;padding:13px}.ch1-card-copy h3{font-size:18px}.ch1-progress-ring{width:50px;height:50px}.ch1-card-meta{grid-template-columns:1fr 1fr}.ch1-card-meta>div:last-child{grid-column:1/-1}
+ #ch1CourseDialog{width:100vw;max-width:none;height:100dvh;max-height:100dvh;border:0;border-radius:0;margin:0}.ch1-shell{height:100dvh;max-height:none}.ch1-head{padding:12px 13px}.ch1-head h2{font-size:21px}.ch1-head p{font-size:8px}.ch1-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.ch1-nav{display:flex;gap:5px;border-right:0;border-bottom:1px solid var(--hair);padding:7px;overflow:auto}.ch1-nav-summary{display:none}.ch1-nav button{flex:0 0 118px;grid-template-columns:22px 1fr;padding:7px;min-height:43px}.ch1-step-score{display:none}.ch1-step-copy span{display:none}.ch1-main{padding:15px 12px calc(22px + env(safe-area-inset-bottom))}.ch1-main h3{font-size:23px}.ch1-lead{font-size:10px}.ch1-scan{grid-template-columns:1fr 1fr}.ch1-work{grid-template-columns:1fr;gap:13px}.ch1-board{--cell:min(9.6vw,42px);padding:6px}.ch1-task-card{padding:11px}.ch1-task-copy h4{font-size:17px}.ch1-skill-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:390px){.ch1-card-meta{grid-template-columns:1fr}.ch1-card-meta>div:last-child{grid-column:auto}.ch1-board{--cell:9.25vw}.ch1-skill-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.ch1-cell.wrong{animation:none!important}}
+</style>
+
+<script id="course-ch1-v1-script">
+(()=>{'use strict';
+const $=id=>document.getElementById(id),KEY='gomoku.course.chapter1.v1',N=9,p=(x,y)=>y*N+x,now=()=>Date.now();
+const SKILLS={
+ directions:'Four directions',
+ wins:'Winning points',
+ defense:'Immediate defense',
+ priority:'Move priority',
+ space:'Live lines',
+ crossing:'Multi-direction vision'
+};
+const L=[
+ {id:'directions',title:'See the four directions',lead:'Every useful scan starts with the same geometry: horizontal, vertical and the two diagonals. Learn to see a line before you calculate anything.',rule:'A five can run in four directions. Before moving, sweep all four through the important stones.',skill:'directions'},
+ {id:'wins',title:'Find the winning point',lead:'Do not search for a clever move while a win is already on the board. Learn to recognize endpoints and internal gaps that complete five.',rule:'First question: Can I win right now? Check every line for one empty point that completes five.',skill:'wins'},
+ {id:'defense',title:'See their win too',lead:'Board vision must work for both colors. If you cannot win immediately, the next scan is the opponent’s immediate winning point.',rule:'Second question: Can they win next move? If yes, answer that threat before starting a slower plan.',skill:'defense'},
+ {id:'priority',title:'Use the scan order',lead:'Strong players reduce the board before comparing strategic ideas. Immediate wins and losses come before development.',rule:'Use this order: win now → stop their win → create a forcing threat → improve your shape.',skill:'priority'},
+ {id:'space',title:'Read live and blocked space',lead:'A row of stones is not useful just because it is long. Opponent stones and the board edge restrict where that line can still grow.',rule:'Trace the line into empty space. A stone behind an opponent blocker cannot continue that line.',skill:'space'},
+ {id:'crossing',title:'See more than one direction',lead:'An intersection can belong to several lines at once. Efficient moves often improve two directions instead of only one.',rule:'After urgent tactics are handled, prefer intersections that participate in more than one useful direction.',skill:'crossing'},
+ {id:'checkpoint',title:'Chapter checkpoint',lead:'Now run the scan without being told which skill is being tested. These positions mix wins, blocks, live lines and multi-direction vision.',rule:'Do not guess. Run the same scan every time: win → defend → force → improve.',skill:'mixed',checkpoint:true}
+];
+function st(x,y,c){return [x,y,c]}
+function task(id,skill,title,prompt,stones,answers,why,hint,choices=null){return{id,skill,title,prompt,stones,answers,why,hint,choices};}
+const LESSON_TASKS={
+ directions:[
+  task('d1','directions','Horizontal finish','Black has four stones in one row. Finish the five.',[st(1,4,2),st(2,4,1),st(3,4,1),st(4,4,1),st(5,4,1)],[p(6,4)],'The winning line runs left to right. The white stone closes the other end, leaving one finishing point.','Follow the horizontal line through all four black stones.'),
+  task('d2','directions','Vertical finish','Find Black’s finishing point.',[st(4,1,2),st(4,2,1),st(4,3,1),st(4,4,1),st(4,5,1)],[p(4,6)],'The same pattern works vertically. Board vision should not depend on orientation.','Trace the black stones straight down.'),
+  task('d3','directions','Diagonal finish','Complete the diagonal five.',[st(1,1,2),st(2,2,1),st(3,3,1),st(4,4,1),st(5,5,1)],[p(6,6)],'This is the down-right diagonal. Diagonal wins are just as real as horizontal ones.','Look for four black stones with equal x/y movement.'),
+  task('d4','directions','The other diagonal','Complete Black’s five.',[st(7,1,2),st(6,2,1),st(5,3,1),st(4,4,1),st(3,5,1)],[p(2,6)],'The second diagonal slopes the other way. A complete scan always checks both diagonals.','Follow the diagonal down and left.'),
+ ],
+ wins:[
+  task('w1','wins','The gap counts','Black does not need four adjacent stones. Tap the winning point.',[st(1,4,1),st(2,4,1),st(4,4,1),st(5,4,1),st(7,2,2)],[p(3,4)],'Filling the internal gap creates five consecutive black stones immediately.','Look inside the line, not only at its ends.'),
+  task('w2','wins','Vertical gap','Find the immediate win.',[st(5,1,1),st(5,2,1),st(5,4,1),st(5,5,1),st(2,6,2)],[p(5,3)],'The empty point is inside a five-cell vertical window.','Count a five-cell window with exactly one empty point.'),
+  task('w3','wins','Diagonal gap','Tap the move that wins now.',[st(1,1,1),st(2,2,1),st(4,4,1),st(5,5,1),st(7,6,2)],[p(3,3)],'The missing center point completes the diagonal.','Scan both diagonals for an internal gap.'),
+  task('w4','wins','Endpoint with one side closed','Black has only one winning endpoint. Find it.',[st(2,5,2),st(3,5,1),st(4,5,1),st(5,5,1),st(6,5,1)],[p(7,5)],'White has already occupied the left endpoint, so the right endpoint is the only immediate win.','Check both ends; one is already blocked.'),
+  task('w5','wins','Ignore the distraction','Several stones are nearby. Find the move that actually finishes five.',[st(0,7,2),st(1,6,1),st(2,5,1),st(3,4,1),st(4,3,1),st(6,5,2),st(7,5,2)],[p(5,2)],'The four black stones on the rising diagonal already have a one-move finish. Nearby stones do not change the priority.','Trace connected directions before evaluating the whole cluster.')
+ ],
+ defense:[
+  task('b1','defense','One move from losing','White threatens to win horizontally. Block the only winning point.',[st(1,4,1),st(2,4,2),st(3,4,2),st(4,4,2),st(5,4,2)],[p(6,4)],'White would win at this point next move. With no immediate Black win, this block is mandatory.','Pretend it is White’s turn. Where would White play to win?'),
+  task('b2','defense','Vertical emergency','Stop White’s immediate win.',[st(4,1,1),st(4,2,2),st(4,3,2),st(4,4,2),st(4,5,2)],[p(4,6)],'The threat is vertical; orientation does not change the defensive priority.','Scan White’s lines exactly as carefully as your own.'),
+  task('b3','defense','Block the gap','White can win by filling an internal gap. Stop it.',[st(2,2,2),st(3,3,2),st(5,5,2),st(6,6,2),st(1,6,1)],[p(4,4)],'A broken line can still contain an immediate winning point.','Look inside White’s diagonal line.'),
+  task('b4','defense','Do not chase your attack','Black has an attractive cluster, but White has a one-move win. Block it.',[st(1,2,1),st(2,2,1),st(3,2,1),st(5,5,2),st(5,4,2),st(5,3,2),st(5,2,2),st(5,1,1)],[p(5,6)],'Building Black’s row would be too slow. White already threatens an immediate five.','Urgent defense comes before a non-winning attack.'),
+  task('b5','defense','Edge defense','The board edge closes one side of White’s line. Find the remaining winning point.',[st(0,3,2),st(1,3,2),st(2,3,2),st(3,3,2),st(6,6,1)],[p(4,3)],'At the edge there is only one direction the four can extend to five.','Treat the board edge like a permanent boundary.')
+ ],
+ priority:[
+  task('p1','priority','Win before blocking','Both sides threaten something. Black can end the game now. Find the winning move.',[st(1,2,2),st(2,2,1),st(3,2,1),st(4,2,1),st(5,2,1),st(7,3,2),st(7,4,2),st(7,5,2),st(7,6,2)],[p(6,2)],'An immediate win ends the game, so there is no need to spend the move blocking White.','Scan your own winning moves before defensive ones.'),
+  task('p2','priority','Defense before development','Black can extend a three, but White can win next move. Choose the correct move.',[st(1,6,1),st(2,6,1),st(3,6,1),st(5,2,1),st(5,3,2),st(5,4,2),st(5,5,2),st(5,6,2)],[p(5,7)],'Extending Black’s three is not an immediate win. White’s winning point must be removed first.','Ask whether your attractive move actually wins now.'),
+  task('p3','priority','Broken win beats everything','Black has a hidden immediate win while White also threatens. Take the win.',[st(1,4,1),st(2,4,1),st(4,4,1),st(5,4,1),st(7,1,2),st(7,2,2),st(7,3,2),st(7,4,2)],[p(3,4)],'The internal gap completes Black’s five. Immediate wins outrank every opponent threat.','Check gaps as part of your win scan.'),
+  task('p4','priority','No win? Then block','Black has no immediate five. White does. Find the required move.',[st(1,2,1),st(2,2,1),st(3,2,1),st(3,5,2),st(4,5,2),st(5,5,2),st(6,5,2),st(7,5,1)],[p(2,5)],'White’s right end is already blocked, so the left endpoint is the only immediate win and must be occupied.','After your win scan returns nothing, run the opponent win scan.'),
+  task('p5','priority','The scan saves time','Choose the move that ends the game instead of improving a different line.',[st(1,0,2),st(2,1,1),st(3,2,1),st(4,3,1),st(5,4,1),st(2,6,1),st(3,6,1),st(4,6,1),st(6,6,2)],[p(6,5)],'The diagonal has an immediate fifth stone. Development on the lower row is irrelevant once a win exists.','Do not compare strategic candidates until urgent tactics are cleared.')
+ ],
+ space:[
+  task('s1','space','Follow the open side','Which marked point continues the existing horizontal line into open space?',[st(2,4,2),st(3,4,1),st(4,4,1)],[p(5,4)],'The white stone blocks growth to the left, so the live continuation is on the right.','A blocker ends that direction of the row.',[p(5,4),p(1,4)]),
+  task('s2','space','Vertical open side','Which marked point extends the vertical chain away from the blocker?',[st(4,2,2),st(4,3,1),st(4,4,1)],[p(4,5)],'The upper side is closed by White. The line can still grow downward.','Trace the line away from the opponent stone.',[p(4,5),p(4,1)]),
+  task('s3','space','Diagonal open side','Choose the marked continuation that remains on the live diagonal.',[st(2,2,2),st(3,3,1),st(4,4,1)],[p(5,5)],'The down-right side stays open; the opposite side is blocked.','Keep following the same diagonal through empty space.',[p(5,5),p(1,1)]),
+  task('s4','space','Do not play behind the wall','Which candidate is actually connected to the active line?',[st(6,2,2),st(5,3,1),st(4,4,1)],[p(3,5)],'White cuts off the upper-right side. The lower-left candidate is the live continuation.','Opponent stones divide lines into separate regions.',[p(3,5),p(7,1)])
+ ],
+ crossing:[
+  task('x1','crossing','The crossing point','Which marked move strengthens two Black directions at once?',[st(4,2,1),st(4,3,1),st(2,4,1),st(3,4,1)],[p(4,4)],'The center candidate belongs to both the vertical and horizontal Black lines.','Look for the intersection shared by both lines.',[p(4,4),p(5,4)]),
+  task('x2','crossing','Horizontal + diagonal','Choose the point that belongs to two Black lines.',[st(2,4,1),st(3,4,1),st(3,3,1),st(2,2,1)],[p(4,4)],'Playing at the crossing extends the horizontal row and the down-right diagonal simultaneously.','Find where the two directions meet.',[p(4,4),p(1,4)]),
+  task('x3','crossing','Vertical + diagonal','Which candidate participates in both structures?',[st(5,2,1),st(5,3,1),st(3,2,1),st(4,3,1)],[p(5,4)],'The lower point continues the vertical line and the diagonal from the upper-left stones.','Trace both lines until they share an empty point.',[p(5,4),p(5,1)]),
+  task('x4','crossing','Efficient intersection','Choose the move that works in two directions rather than only one.',[st(2,5,1),st(3,5,1),st(2,3,1),st(3,4,1)],[p(4,5)],'This point extends the horizontal pair and completes the diagonal connection through the center.','A useful intersection can belong to two candidate lines.',[p(4,5),p(1,5)])
+ ]
+};
+function transform(t,mode,id){
+ const f=([x,y,c])=>{let a=x,b=y;if(mode==='r90')[a,b]=[N-1-y,x];else if(mode==='r180')[a,b]=[N-1-x,N-1-y];else if(mode==='mx')[a,b]=[N-1-x,y];else if(mode==='my')[a,b]=[x,N-1-y];return[a,b,c]};
+ const fp=i=>{const x=i%N,y=Math.floor(i/N),[a,b]=f([x,y,0]);return p(a,b)};
+ return {...t,id,stones:t.stones.map(f),answers:t.answers.map(fp),choices:t.choices?.map(fp)};
+}
+const CHECKPOINT=[
+ transform(LESSON_TASKS.wins[0],'r90','c1'),
+ transform(LESSON_TASKS.defense[2],'mx','c2'),
+ transform(LESSON_TASKS.priority[0],'r180','c3'),
+ transform(LESSON_TASKS.space[1],'mx','c4'),
+ transform(LESSON_TASKS.crossing[0],'r90','c5'),
+ transform(LESSON_TASKS.wins[4],'my','c6'),
+ transform(LESSON_TASKS.defense[0],'r90','c7'),
+ transform(LESSON_TASKS.priority[3],'mx','c8'),
+ transform(LESSON_TASKS.space[2],'r180','c9'),
+ transform(LESSON_TASKS.crossing[1],'my','c10'),
+ transform(LESSON_TASKS.directions[3],'mx','c11'),
+ transform(LESSON_TASKS.priority[2],'r90','c12')
+];
+LESSON_TASKS.checkpoint=CHECKPOINT;
+
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'?x:{}}catch{return{}}}
+let S=load();S.tasks=S.tasks&&typeof S.tasks==='object'?S.tasks:{};S.lesson=Number.isInteger(S.lesson)?Math.max(0,Math.min(L.length-1,S.lesson)):0;S.cursor=S.cursor&&typeof S.cursor==='object'?S.cursor:{};S.attemptLog=Array.isArray(S.attemptLog)?S.attemptLog.slice(-500):[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch{};renderCard();try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:report()}))}catch{}}
+function tasksFor(li){return LESSON_TASKS[L[li].id]||[]}
+function rec(id){return S.tasks[id]||{attempts:0,correct:false,firstTry:null,assisted:false}}
+function lessonReport(li){
+ const ts=tasksFor(li),rows=ts.map(t=>rec(t.id)),done=rows.filter(r=>r.correct).length,clean=rows.filter(r=>r.firstTry===true).length,attempted=rows.filter(r=>r.attempts>0||r.correct).length;
+ return {total:ts.length,done,complete:done===ts.length,clean,attempted,rate:attempted?clean/attempted:null};
+}
+function skillReport(){
+ const out={};for(const [key,label] of Object.entries(SKILLS)){const ts=Object.values(LESSON_TASKS).flat().filter(t=>t.skill===key),uniq=[...new Map(ts.map(t=>[t.id,t])).values()],rows=uniq.map(t=>rec(t.id)),attempted=rows.filter(r=>r.attempts>0||r.correct),clean=attempted.filter(r=>r.firstTry===true);out[key]={label,total:uniq.length,attempted:attempted.length,clean:clean.length,rate:attempted.length?clean.length/attempted.length:null};}return out;
+}
+function report(){
+ const lessons=L.map((x,i)=>({...x,...lessonReport(i)})),done=lessons.filter(x=>x.complete).length,base=lessons.slice(0,-1),checkpoint=lessons.at(-1),skills=skillReport();
+ const attempted=Object.values(S.tasks).filter(r=>r?.attempts>0||r?.correct),clean=attempted.filter(r=>r?.firstTry===true);
+ return {version:'1.0',chapter:1,title:'Seeing the Board',lessons,completedLessons:done,totalLessons:L.length,taskAttempts:attempted.length,firstTryRate:attempted.length?clean.length/attempted.length:null,checkpoint:checkpoint.rate,complete:done===L.length,skills};
+}
+function pct(v){return v==null?'—':Math.round(v*100)+'%'}
+let dialog=null,selected=-1,revealed=false,lastWrong=-1;
+
+function mount(){
+ if($('#ch1CourseCard'))return;
+ const home=$('v92ImproveHome');if(!home){setTimeout(mount,80);return;}
+ const card=document.createElement('section');card.id='ch1CourseCard';card.innerHTML='<div class="ch1-card-head"><div class="ch1-card-copy"><span class="ch1-kicker">COURSE · CHAPTER 1</span><h3>Seeing the Board</h3><p>Build the scan you should run before every move: see the four directions, find immediate wins, spot urgent defense and use intersections efficiently.</p></div><div class="ch1-progress-ring" id="ch1Ring"><span id="ch1RingText">0/7</span></div></div><div class="ch1-card-meta"><div><b id="ch1MetaLessons">0 / 7</b><span>steps complete</span></div><div><b id="ch1MetaAccuracy">—</b><span>first-try accuracy</span></div><div><b id="ch1MetaNext">Four directions</b><span>next lesson</span></div></div><div class="ch1-card-actions"><button class="v92-primary" id="ch1Start">Start Chapter 1</button><button class="v92-secondary" id="ch1Review">Review chapter</button></div>';
+ const path=$('v112LearnPath'),intro=home.querySelector('.v92-page-intro');(path||intro)?.insertAdjacentElement('afterend',card);
+ $('#ch1Start').onclick=()=>openCourse(nextLesson());$('#ch1Review').onclick=()=>openCourse(weakestLesson());
+ const h=intro?.querySelector('h2'),pp=intro?.querySelector('p:last-child');if(h)h.textContent='Learn Gomoku, then learn from your games';if(pp)pp.textContent='Start with the course to build board vision. Reviews and practice then turn your real games into targeted improvement.';
+ renderCard();
+ window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});
+}
+function nextLesson(){const i=L.findIndex((_,k)=>!lessonReport(k).complete);return i<0?L.length-1:i}
+function weakestLesson(){
+ const candidates=L.slice(0,-1).map((_,i)=>({i,...lessonReport(i)})).filter(x=>x.attempted);
+ if(!candidates.length)return 0;candidates.sort((a,b)=>(a.rate??1)-(b.rate??1)||a.i-b.i);return candidates[0].i;
+}
+function renderCard(){
+ const card=$('ch1CourseCard');if(!card)return;const r=report(),n=nextLesson(),progress=Math.round(r.completedLessons/r.totalLessons*100);
+ $('#ch1Ring').style.setProperty('--ch1-pct',progress+'%');$('#ch1RingText').textContent=r.completedLessons+'/'+r.totalLessons;$('#ch1MetaLessons').textContent=r.completedLessons+' / '+r.totalLessons;$('#ch1MetaAccuracy').textContent=pct(r.firstTryRate);$('#ch1MetaNext').textContent=r.complete?'Chapter complete':L[n].title;$('#ch1Start').textContent=r.complete?'Open Chapter 1':r.taskAttempts?'Continue Chapter 1':'Start Chapter 1';$('#ch1Review').disabled=!r.taskAttempts;
+}
+function ensureDialog(){
+ if(dialog)return dialog;dialog=document.createElement('dialog');dialog.id='ch1CourseDialog';dialog.setAttribute('aria-labelledby','ch1DialogTitle');dialog.innerHTML='<div class="ch1-shell"><header class="ch1-head"><div><span class="ch1-kicker">GOMOKU COURSE · CHAPTER 1</span><h2 id="ch1DialogTitle">Seeing the Board</h2><p>Build a reliable scan before learning deeper fours, threes and forcing sequences.</p></div><button class="ch1-close" id="ch1Close" aria-label="Close Chapter 1">×</button></header><div class="ch1-body"><nav class="ch1-nav" id="ch1Nav" aria-label="Chapter 1 lessons"></nav><main class="ch1-main" id="ch1Main"></main></div></div>';document.body.append(dialog);$('#ch1Close').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});return dialog;
+}
+function openCourse(li=0){ensureDialog();S.lesson=Math.max(0,Math.min(L.length-1,li));save();renderCourse();if(!dialog.open)dialog.showModal();}
+function renderNav(){
+ const nav=$('ch1Nav'),r=report();nav.replaceChildren();const sum=document.createElement('div');sum.className='ch1-nav-summary';sum.innerHTML='<b>'+r.completedLessons+' / '+r.totalLessons+' complete</b><span>First-try accuracy '+pct(r.firstTryRate)+'. Lessons stay unlocked; the score is guidance, not a gate.</span>';nav.append(sum);
+ L.forEach((l,i)=>{const lr=lessonReport(i),b=document.createElement('button');b.type='button';b.className=lr.complete?'done':'';b.setAttribute('aria-current',i===S.lesson?'step':'false');b.innerHTML='<span class="ch1-step-num">'+(lr.complete?'✓':i+1)+'</span><span class="ch1-step-copy"><b>'+l.title+'</b><span>'+lr.done+' / '+lr.total+' positions</span></span><span class="ch1-step-score">'+pct(lr.rate)+'</span>';b.onclick=()=>{S.lesson=i;save();renderCourse();};nav.append(b);});
+}
+function renderCourse(){
+ if(!dialog)return;renderNav();const li=S.lesson,l=L[li],ts=tasksFor(li),lr=lessonReport(li),main=$('ch1Main'),cursor=Math.max(0,Math.min(ts.length-1,Number(S.cursor[l.id])||0));selected=-1;revealed=false;lastWrong=-1;
+ main.innerHTML='<span class="ch1-breadcrumb">CHAPTER 1 · LESSON '+(li+1)+'</span><h3>'+l.title+'</h3><p class="ch1-lead">'+l.lead+'</p><div class="ch1-rule"><b>Key idea:</b> '+l.rule+'</div>'+(li===3||li===6?'<div class="ch1-scan"><div><b>1 · WIN</b><span>Can I end the game now?</span></div><div><b>2 · DEFEND</b><span>Can they win next move?</span></div><div><b>3 · FORCE</b><span>Can I create an urgent threat?</span></div><div><b>4 · IMPROVE</b><span>Which move helps several directions?</span></div></div>':'')+'<div id="ch1TaskHost"></div><div id="ch1LessonDone"></div>';
+ if(lr.complete)renderLessonDone(li);else renderTask(li,cursor);
+}
+function renderTask(li,ti){
+ const l=L[li],ts=tasksFor(li),t=ts[ti];S.cursor[l.id]=ti;save();const r=rec(t.id),host=$('ch1TaskHost');revealed=false;selected=-1;lastWrong=-1;
+ host.innerHTML='<section class="ch1-task-card"><div class="ch1-task-top"><div><small>'+(l.checkpoint?'CHECKPOINT':'GUIDED PRACTICE')+'</small><b>'+t.title+'</b></div><span class="ch1-task-count">'+(ti+1)+' / '+ts.length+'</span></div><div class="ch1-work"><div class="ch1-board-wrap"><div class="ch1-board" id="ch1Board" role="grid" aria-label="'+t.title+'" aria-rowcount="9" aria-colcount="9"></div></div><div class="ch1-task-copy"><h4>'+t.prompt+'</h4><p>'+(t.choices?'Only the marked candidate points are choices.':'Tap the intersection you would play.')+'</p><div class="ch1-hint" id="ch1Feedback">Run the scan before you tap.</div><div class="ch1-task-actions"><button class="btn ghost" id="ch1Reveal" type="button" hidden>Show answer</button><button class="btn" id="ch1NextTask" type="button" hidden>'+(ti+1<ts.length?'Next position':'Finish lesson')+'</button></div></div></div></section>';
+ renderBoard(t);$('#ch1Reveal').onclick=()=>reveal(t);$('#ch1NextTask').onclick=()=>{if(ti+1<ts.length){S.cursor[l.id]=ti+1;save();renderTask(li,ti+1);}else{renderNav();renderLessonDone(li);}};
+ if(r.correct){$('#ch1Feedback').className='ch1-hint good';$('#ch1Feedback').textContent=(r.assisted?'Previously completed with help. ':'Previously solved. ')+t.why;$('#ch1NextTask').hidden=false;disableBoard();}
+}
+function renderBoard(t){
+ const board=$('ch1Board'),map=new Map(t.stones.map(([x,y,c])=>[p(x,y),c])),choices=t.choices?new Set(t.choices):null;board.replaceChildren();
+ for(let i=0;i<N*N;i++){const b=document.createElement('button');b.type='button';b.className='ch1-cell';b.dataset.i=i;b.setAttribute('role','gridcell');const c=map.get(i);if(c){b.classList.add('occupied');b.disabled=true;const s=document.createElement('i');s.className='ch1-stone '+(c===1?'black':'white');b.append(s);b.setAttribute('aria-label',(c===1?'Black':'White')+' stone');}
+ else {const allowed=!choices||choices.has(i);b.disabled=!allowed;b.setAttribute('aria-label',allowed?'Empty intersection, choose move':'Empty intersection');if(choices?.has(i)){b.classList.add('choice');const lab=document.createElement('span');lab.className='ch1-choice-label';lab.textContent=String.fromCharCode(65+[...choices].indexOf(i));b.append(lab);}if(allowed)b.onclick=()=>answer(t,i,b);}board.append(b);}
+}
+function disableBoard(){for(const b of document.querySelectorAll('#ch1Board .ch1-cell'))b.disabled=true}
+function answer(t,i,b){
+ const old=rec(t.id);if(old.correct||revealed)return;const first=old.attempts===0,correct=t.answers.includes(i),next={...old,attempts:old.attempts+1};
+ S.attemptLog.push({at:now(),chapter:1,lesson:S.lesson,task:t.id,skill:t.skill,i,correct,assisted:false});S.attemptLog=S.attemptLog.slice(-500);
+ if(correct){next.correct=true;next.firstTry=first;next.assisted=false;next.lastAt=now();S.tasks[t.id]=next;b.classList.add('correct');disableBoard();const f=$('ch1Feedback');f.className='ch1-hint good';f.textContent='Correct. '+t.why;$('#ch1NextTask').hidden=false;save();renderNav();return;}
+ next.firstTry=false;next.lastAt=now();S.tasks[t.id]=next;b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');lastWrong=i;const f=$('ch1Feedback');f.className='ch1-hint bad';f.textContent=next.attempts>=2?'Not yet. Hint: '+t.hint:'Not this point. Run the scan again before choosing another move.';if(next.attempts>=2)$('#ch1Reveal').hidden=false;save();renderNav();
+}
+function reveal(t){
+ if(revealed)return;revealed=true;const r=rec(t.id),next={...r,correct:true,firstTry:false,assisted:true,lastAt:now()};S.tasks[t.id]=next;S.attemptLog.push({at:now(),chapter:1,lesson:S.lesson,task:t.id,skill:t.skill,i:null,correct:true,assisted:true});S.attemptLog=S.attemptLog.slice(-500);for(const i of t.answers){const b=$('ch1Board')?.querySelector('[data-i="'+i+'"]');b?.classList.add('revealed');}disableBoard();const f=$('ch1Feedback');f.className='ch1-hint good';f.textContent='Answer shown. '+t.why;$('#ch1Reveal').hidden=true;$('#ch1NextTask').hidden=false;save();renderNav();
+}
+function renderLessonDone(li){
+ const l=L[li],lr=lessonReport(li),host=$('ch1LessonDone');if(!host)return;const r=report(),next=li+1<L.length?li+1:null,skills=r.skills;
+ if(l.checkpoint){const passed=(lr.rate??0)>=.7;host.innerHTML='<section class="ch1-chapter-finish"><span class="ch1-kicker">CHAPTER 1 COMPLETE</span><h4>'+(passed?'Your board scan is established.':'Good first pass. Review the weak spots once more.')+'</h4><p>Checkpoint first-try score: <b>'+pct(lr.rate)+'</b>. This score is diagnostic, not a lock. Chapter 2 will build on this scan with fours and forcing threats.</p><div class="ch1-skill-grid" id="ch1Skills"></div><div class="ch1-card-actions"><button class="btn" id="ch1ReviewWeak">Review weakest lesson</button><button class="btn ghost" id="ch1CloseDone">Return to Learn</button></div></section>';renderSkills(skills);$('#ch1ReviewWeak').onclick=()=>{S.lesson=weakestLesson();save();renderCourse();};$('#ch1CloseDone').onclick=()=>dialog.close();return;}
+ host.innerHTML='<section class="ch1-lesson-done"><h4>Lesson complete · '+pct(lr.rate)+' first try</h4><p>'+(lr.rate===1?'Clean run. The important part is keeping this scan automatic in real games.':lr.rate>=.7?'Solid. A short review later will make the pattern more automatic.':'You finished the lesson. Revisit it once more before relying on speed.')+'</p><div class="ch1-card-actions">'+(next!=null?'<button class="btn" id="ch1NextLesson">Next · '+L[next].title+'</button>':'')+'<button class="btn ghost" id="ch1RedoLesson">Redo lesson</button></div></section>';$('#ch1NextLesson')?.addEventListener('click',()=>{S.lesson=next;save();renderCourse();});$('#ch1RedoLesson').onclick=()=>redoLesson(li);
+}
+function renderSkills(skills){
+ const host=$('ch1Skills');if(!host)return;host.replaceChildren();for(const x of Object.values(skills)){const el=document.createElement('div');el.className='ch1-skill';const rate=x.rate??0;el.innerHTML='<b><span>'+x.label+'</span><em>'+pct(x.rate)+'</em></b><span><i style="width:'+Math.round(rate*100)+'%"></i></span><small>'+x.clean+' clean / '+x.attempted+' attempted</small>';host.append(el);}
+}
+function redoLesson(li){const ts=tasksFor(li);for(const t of ts)delete S.tasks[t.id];S.cursor[L[li].id]=0;save();renderCourse();}
+mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});[400,1200,2500].forEach(ms=>setTimeout(mount,ms));
+})();
+</script>
 </body></html>
