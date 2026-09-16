@@ -6387,4 +6387,573 @@ window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nex
 mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});[400,1200,2500].forEach(ms=>setTimeout(mount,ms));
 })();
 </script>
+
+<style id="course-ch2-v1-style">
+#ch2CourseCard{
+  margin-top:14px;
+  border:1px solid var(--hair,#d9d5ce);
+  background:var(--paper,#fff);
+  box-shadow:0 10px 30px rgba(24,23,20,.055);
+  overflow:hidden;
+}
+#ch2CourseCard .ch2-card-main{display:grid;grid-template-columns:112px 1fr;gap:20px;padding:22px}
+#ch2CourseCard .ch2-ring{
+  --ch2-pct:0%;
+  width:92px;height:92px;border-radius:50%;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--seal,#222) var(--ch2-pct),color-mix(in srgb,var(--hair,#ddd) 72%,transparent) 0);
+  position:relative;
+}
+#ch2CourseCard .ch2-ring:after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--paper,#fff)}
+#ch2CourseCard .ch2-ring span{position:relative;z-index:1;font:700 14px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink,#171714)}
+#ch2CourseCard .ch2-kicker,.ch2-kicker{font:700 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--muted,#777)}
+#ch2CourseCard h3{margin:5px 0 6px;font-size:24px;line-height:1.08;color:var(--ink,#171714)}
+#ch2CourseCard .ch2-sub{margin:0;color:var(--muted,#6f6d68);font-size:13px;line-height:1.45}
+#ch2CourseCard .ch2-card-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+#ch2CourseCard .ch2-meta{border-top:1px solid var(--hair,#ddd);padding-top:8px;min-width:0}
+#ch2CourseCard .ch2-meta b{display:block;font-size:12px;color:var(--ink,#171714);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ch2CourseCard .ch2-meta span{display:block;margin-top:3px;font:600 9px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.09em;color:var(--muted,#777)}
+#ch2CourseCard .ch2-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:17px}
+#ch2CourseCard button,.ch2-course button{min-height:42px}
+.ch2-primary{background:var(--seal,#20201d)!important;color:var(--paper,#fff)!important;border-color:var(--seal,#20201d)!important}
+.ch2-course{
+  width:min(1120px,calc(100vw - 28px));max-width:1120px;height:min(820px,calc(100dvh - 28px));
+  padding:0!important;border:1px solid var(--hair,#d8d4cc)!important;border-radius:16px!important;
+  background:var(--paper,#fff)!important;color:var(--ink,#171714)!important;overflow:hidden!important;
+}
+.ch2-course::backdrop{background:rgba(16,16,14,.55);backdrop-filter:blur(3px)}
+.ch2-shell{display:grid;grid-template-rows:auto 1fr;height:100%;min-height:0}
+.ch2-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--hair,#ddd);background:var(--paper,#fff)}
+.ch2-head-copy{min-width:0;flex:1}
+.ch2-head h2{margin:2px 0 0;font-size:19px;line-height:1.15}
+.ch2-head .ch2-rule-note{margin:4px 0 0;font-size:11px;line-height:1.35;color:var(--muted,#6f6d68)}
+.ch2-close{width:42px;height:42px;padding:0!important;font-size:20px}
+.ch2-body{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:0}
+.ch2-nav{border-right:1px solid var(--hair,#ddd);padding:14px;overflow:auto;background:color-mix(in srgb,var(--paper,#fff) 94%,var(--ink,#111) 6%)}
+.ch2-nav-intro{font-size:11px;line-height:1.45;color:var(--muted,#6f6d68);margin:0 2px 12px}
+.ch2-nav-list{display:grid;gap:6px}
+.ch2-nav-btn{display:grid!important;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;width:100%;min-height:50px!important;padding:8px 9px!important;text-align:left!important;background:transparent!important;border:1px solid transparent!important;color:var(--ink,#171714)!important}
+.ch2-nav-btn[aria-current="true"]{border-color:var(--hair,#ccc)!important;background:var(--paper,#fff)!important}
+.ch2-nav-num{font:700 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted,#777)}
+.ch2-nav-title{font-size:11px;font-weight:700;line-height:1.2}
+.ch2-nav-score{font:700 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted,#777)}
+.ch2-main{overflow:auto;padding:24px;min-width:0}
+.ch2-lesson-top{max-width:760px;margin:0 auto 18px}
+.ch2-lesson-top h3{font-size:28px;line-height:1.05;margin:5px 0 8px}
+.ch2-lesson-top p{margin:0;color:var(--muted,#686762);font-size:13px;line-height:1.5}
+.ch2-task{max-width:850px;margin:0 auto}
+.ch2-task-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.ch2-task-copy{flex:1;min-width:0}
+.ch2-task-count{font:700 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;color:var(--muted,#777);text-transform:uppercase}
+.ch2-task-title{font-size:18px;font-weight:780;line-height:1.2;margin:4px 0}
+.ch2-task-prompt{font-size:13px;line-height:1.45;color:var(--muted,#686762)}
+.ch2-board-wrap{display:grid;grid-template-columns:minmax(280px,520px) minmax(210px,1fr);gap:22px;align-items:start}
+.ch2-board{
+  width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);
+  background:#d8b274;border:1px solid rgba(39,31,20,.45);box-shadow:0 12px 30px rgba(22,18,12,.11);touch-action:manipulation;
+}
+.ch2-cell{position:relative;min-width:0!important;min-height:0!important;width:100%;height:100%;padding:0!important;border:0!important;border-radius:0!important;background:
+ linear-gradient(to right,transparent calc(50% - .5px),rgba(52,39,23,.55) calc(50% - .5px),rgba(52,39,23,.55) calc(50% + .5px),transparent calc(50% + .5px)),
+ linear-gradient(to bottom,transparent calc(50% - .5px),rgba(52,39,23,.55) calc(50% - .5px),rgba(52,39,23,.55) calc(50% + .5px),transparent calc(50% + .5px))!important;box-shadow:none!important}
+.ch2-cell:disabled{opacity:1!important}
+.ch2-cell:not(:disabled){cursor:pointer}
+.ch2-cell:not(:disabled):hover:after,.ch2-cell:not(:disabled):focus-visible:after{content:"";position:absolute;inset:27%;border:2px solid rgba(25,22,17,.65);border-radius:50%;z-index:2}
+.ch2-cell.ch2-answer:after{content:"";position:absolute;inset:18%;border:3px solid #b42b26;border-radius:50%;z-index:5}
+.ch2-stone{position:absolute;inset:13%;border-radius:50%;z-index:3;box-shadow:0 2px 4px rgba(0,0,0,.25)}
+.ch2-stone.black{background:radial-gradient(circle at 34% 28%,#4b4b47,#191918 52%,#050505)}
+.ch2-stone.white{background:radial-gradient(circle at 35% 28%,#fff,#eee 56%,#bdbab3);border:1px solid rgba(40,35,28,.24)}
+.ch2-side{display:grid;gap:10px}
+.ch2-concept{border-left:3px solid var(--seal,#222);padding:10px 12px;background:color-mix(in srgb,var(--paper,#fff) 94%,var(--ink,#111) 6%);font-size:12px;line-height:1.5;color:var(--ink,#171714)}
+.ch2-feedback{min-height:72px;padding:11px 12px;border:1px solid var(--hair,#ddd);font-size:12px;line-height:1.45;background:var(--paper,#fff)}
+.ch2-feedback.good{border-color:color-mix(in srgb,#2b7a44 55%,var(--hair,#ddd));background:color-mix(in srgb,#2b7a44 7%,var(--paper,#fff))}
+.ch2-feedback.bad{border-color:color-mix(in srgb,#a9483d 45%,var(--hair,#ddd))}
+.ch2-controls{display:flex;gap:8px;flex-wrap:wrap}
+.ch2-controls button{flex:1 1 110px}
+.ch2-choice-list{display:grid;gap:8px}
+.ch2-choice{width:100%;text-align:left!important;padding:10px 12px!important;background:var(--paper,#fff)!important;color:var(--ink,#171714)!important;border:1px solid var(--hair,#ddd)!important}
+.ch2-choice.correct{border-color:#2f7a45!important;box-shadow:inset 3px 0 #2f7a45}
+.ch2-choice.wrong{border-color:#9d453c!important;box-shadow:inset 3px 0 #9d453c}
+.ch2-section-note{margin-top:12px;font-size:10px;line-height:1.45;color:var(--muted,#777)}
+.ch2-summary{max-width:800px;margin:0 auto}
+.ch2-summary h3{font-size:30px;margin:5px 0 8px}
+.ch2-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:18px 0}
+.ch2-stat{border:1px solid var(--hair,#ddd);padding:12px}
+.ch2-stat b{display:block;font-size:22px}
+.ch2-stat span{font:700 9px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,#777)}
+.ch2-skill-list{display:grid;gap:9px;margin-top:16px}
+.ch2-skill-row{display:grid;grid-template-columns:150px 1fr 42px;gap:10px;align-items:center;font-size:11px}
+.ch2-skill-track{height:7px;background:color-mix(in srgb,var(--hair,#ddd) 75%,transparent);overflow:hidden}
+.ch2-skill-fill{height:100%;background:var(--seal,#222)}
+.ch2-skill-pct{text-align:right;font:700 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+@media(max-width:760px){
+ #ch2CourseCard .ch2-card-main{grid-template-columns:80px 1fr;padding:16px;gap:14px}
+ #ch2CourseCard .ch2-ring{width:72px;height:72px}
+ #ch2CourseCard h3{font-size:20px}
+ #ch2CourseCard .ch2-card-meta{grid-template-columns:1fr 1fr}
+ #ch2CourseCard .ch2-meta:last-child{grid-column:1/-1}
+ .ch2-course{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important}
+ .ch2-head{padding:10px 12px}
+ .ch2-head h2{font-size:17px}
+ .ch2-head .ch2-rule-note{font-size:10px}
+ .ch2-body{display:block;overflow:auto}
+ .ch2-nav{position:sticky;top:0;z-index:4;border-right:0;border-bottom:1px solid var(--hair,#ddd);padding:8px;background:var(--paper,#fff);overflow-x:auto;overflow-y:hidden}
+ .ch2-nav-intro{display:none}
+ .ch2-nav-list{display:flex;gap:6px;width:max-content}
+ .ch2-nav-btn{width:auto!important;min-width:128px;grid-template-columns:22px 1fr;padding:6px 8px!important;min-height:44px!important}
+ .ch2-nav-score{display:none}
+ .ch2-main{padding:16px 10px 28px;overflow:visible}
+ .ch2-lesson-top{margin-bottom:14px}
+ .ch2-lesson-top h3{font-size:23px}
+ .ch2-board-wrap{display:block}
+ .ch2-board{width:min(100%,520px);margin:0 auto}
+ .ch2-side{margin-top:14px}
+ .ch2-controls{position:sticky;bottom:0;background:var(--paper,#fff);padding:8px 0 4px;z-index:3}
+ .ch2-summary-grid{grid-template-columns:1fr 1fr}
+ .ch2-skill-row{grid-template-columns:115px 1fr 38px}
+}
+@media(max-width:390px){
+ #ch2CourseCard .ch2-card-main{grid-template-columns:1fr}
+ #ch2CourseCard .ch2-ring{display:none}
+ .ch2-main{padding-inline:7px}
+ .ch2-task-title{font-size:17px}
+}
+</style>
+<script id="course-ch2-v1-script">
+(()=>{
+'use strict';
+if(window.__GomokuCourseChapter2Booted)return;
+window.__GomokuCourseChapter2Booted=true;
+
+const STORE='gomoku.course.chapter2.v1';
+const VERSION=1;
+const SKILLS={
+ recognition:'Four recognition',
+ open:'Open fours',
+ closed:'Closed fours',
+ broken:'Broken fours',
+ forcing:'Forcing play',
+ defense:'Defensive priority',
+ counter:'Counter-wins',
+ multi:'Multiple fours'
+};
+const C='ABCDEFGHI';
+const ix=c=>{const m=/^([A-I])([1-9])$/i.exec(c);if(!m)return-1;return (9-Number(m[2]))*9+C.indexOf(m[1].toUpperCase())};
+const co=i=>C[i%9]+(9-Math.floor(i/9));
+const A=x=>Array.isArray(x)?x:String(x||'').trim().split(/\s+/).filter(Boolean);
+const T=(id,title,prompt,black,white,answer,skill,opts={})=>({id,title,prompt,black:A(black||[]),white:A(white||[]),answers:A(answer),skill,kind:'move',...opts});
+const Q=(id,title,prompt,black,white,choices,answer,skill,opts={})=>({id,title,prompt,black:A(black||[]),white:A(white||[]),choices,answer,skill,kind:'choice',...opts});
+
+const sections=[
+ {
+  id:'recognition',title:'What makes a four',short:'Recognize fours',
+  intro:'A four is not “four stones that look close.” It is a position one move away from five. Count immediate winning points and notice whether the missing point is an endpoint or an internal gap.',
+  concept:'Recognition rule: ask “If this player moved again, where would five appear immediately?” Two winning points means an open four; one winning point can be a closed or broken four.',
+  tasks:[
+   Q('r1','Two live ends','Classify Black’s horizontal shape.','C5 D5 E5 F5','','Open four|Closed four|Broken four|Not a four'.split('|'),'Open four','recognition',{hint:'Both B5 and G5 would complete five. Two immediate winning points is the signature of an open four.',explain:'C5–F5 is a contiguous four with B5 and G5 both free, so Black has two immediate wins.'}),
+   Q('r2','One end is sealed','Classify Black’s shape now.','C5 D5 E5 F5','B5','Open four|Closed four|Broken four|Not a four'.split('|'),'Closed four','recognition',{hint:'B5 is occupied by White. Count how many winning endpoints remain.',explain:'Only G5 completes five. The four is contiguous but one end is blocked, so it is closed.'}),
+   Q('r3','The gap is inside','Classify Black’s shape.','C5 D5 F5 G5','','Open four|Closed four|Broken four|Not a four'.split('|'),'Broken four','recognition',{hint:'The stones are split, but E5 would immediately make C5–G5 five in a row.',explain:'The internal gap at E5 is the single immediate winning point, so this is a broken four.'}),
+   Q('r4','Do not promote a three','Classify Black’s shape.','C5 D5 E5','','Open four|Closed four|Broken four|Not a four'.split('|'),'Not a four','recognition',{hint:'Ask whether Black already has an immediate one-move win. It does not.',explain:'Three stones can become a four, but they are not yet one move away from five.'})
+  ]
+ },
+ {
+  id:'open',title:'Open fours',short:'Open fours',
+  intro:'An open four has two immediate winning points. Against ordinary Gomoku play, one defensive move cannot occupy both. The real battle is usually preventing the open four before it exists.',
+  concept:'Open four = two immediate wins. Creating one is normally decisive; defending one after it already exists is normally too late unless you can win immediately yourself.',
+  tasks:[
+   T('o1','Extend into two wins','Black has three in a row. Tap either move that creates an open four.','D5 E5 F5','', ['C5','G5'],'open',{candidates:['C5','G5'],hint:'Choose an endpoint of the three. After your move, both ends of the new four must remain free.',explain:'C5 or G5 creates a contiguous four with two open winning endpoints.'}),
+   T('o2','See it vertically','Create a vertical open four.','D3 D4 D5','',['D2','D6'],'open',{candidates:['D2','D6'],hint:'Extend the vertical three by one without touching the board edge.',explain:'Either D2 or D6 creates four consecutive stones with two live endpoints.'}),
+   Q('o3','Why one block fails','How many immediate winning points does an open four have?','C5 D5 E5 F5','','0|1|2|3'.split('|'),'2','open',{hint:'Look at both endpoints, B5 and G5.',explain:'An open four has two separate immediate winning completions.'}),
+   T('o4','Prevent it early','White has a live three. Black to move: occupy either endpoint so White cannot create an open four next move.','','D5 E5 F5',['C5','G5'],'defense',{candidates:['C5','G5'],hint:'Do not wait until White has four. Remove one of the two extension points now.',explain:'Taking C5 or G5 removes one route to an open four. White may still create a forcing closed four, but not an unstoppable open four.'}),
+   T('o5','Prefer the two-ended threat','Which candidate creates the stronger open four?','C5 D5 E5','A5','F5','open',{candidates:['B5','F5'],hint:'A5 is White. If you play B5, one side of your four is already blocked. What happens after F5?',explain:'F5 creates C5–F5 with B5 and G5 both open. B5 would create a closed four because A5 is occupied.'})
+  ]
+ },
+ {
+  id:'closed',title:'Closed fours',short:'Closed fours',
+  intro:'A closed four has exactly one immediate winning completion because the other end is blocked by a stone or the edge. It is still forcing: if the opponent cannot win now, that single point must be answered.',
+  concept:'Closed four = one endpoint win. Unlike an open four, one correct block can stop the immediate threat.',
+  tasks:[
+   T('c1','Find the only completion','Black has a closed four. Tap its only winning point.','C5 D5 E5 F5','B5','G5','closed',{hint:'B5 is unavailable, so inspect the opposite end.',explain:'G5 is the only move that makes five.'}),
+   T('c2','Vertical single endpoint','Find Black’s only winning completion.','D3 D4 D5 D6','D2','D7','closed',{hint:'The lower end D2 is occupied by White.',explain:'D7 is the sole completion of the vertical closed four.'}),
+   T('c3','The board edge blocks too','Black’s four begins at the left edge. Tap the only winning point.','A5 B5 C5 D5','','E5','closed',{hint:'There is no square left of A5. The edge behaves like a sealed end.',explain:'E5 is the only possible fifth stone.'}),
+   T('c4','Create a forcing closed four','Choose the move that creates a contiguous closed four, not a broken one.','C5 D5 E5','B5','F5','closed',{candidates:['F5','G5'],hint:'F5 makes C5–F5 contiguous. B5 is already blocked, leaving one winning endpoint.',explain:'F5 creates a closed four whose only completion is G5. G5 would instead create a broken-four shape with F5 as the gap.'}),
+   T('c5','One block is enough','White already has a closed four. Black must stop the immediate loss.','','C5 D5 E5 F5','G5','defense',{black:['B5'],hint:'B5 is already occupied by Black, so White has only one winning point.',explain:'G5 is the one required block. This is the key defensive difference from an open four.'})
+  ]
+ },
+ {
+  id:'broken',title:'Broken fours',short:'Broken fours',
+  intro:'Broken fours hide their winning point inside the line. They are easy to miss because the stones are not contiguous. Train your eye to scan gaps inside every five-cell window.',
+  concept:'Broken four = four stones inside a five-cell window with one internal empty point. Fill the gap and five appears immediately.',
+  tasks:[
+   T('b1','Middle gap','Find the immediate win.','C5 D5 F5 G5','','E5','broken',{hint:'Read C5–G5 as one five-cell window.',explain:'E5 fills the internal gap and completes five.'}),
+   T('b2','Early gap','Find the immediate win.','C5 E5 F5 G5','','D5','broken',{hint:'The missing point lies between C5 and E5.',explain:'D5 turns C5–G5 into five consecutive stones.'}),
+   T('b3','Late gap','Find the immediate win.','C5 D5 E5 G5','','F5','broken',{hint:'Look between E5 and G5.',explain:'F5 is the internal winning point.'}),
+   T('b4','Create the broken threat','Choose the move that deliberately creates a broken four.','C5 D5 F5','B5','G5','broken',{candidates:['E5','G5'],hint:'You want four stones with one internal gap, not a contiguous four.',explain:'G5 leaves E5 as the internal winning gap. E5 would create a contiguous closed four instead.'}),
+   T('b5','Diagonal gap','Broken fours are not only horizontal. Find Black’s diagonal win.','C3 D4 F6 G7','','E5','broken',{hint:'Trace the rising diagonal C3–G7.',explain:'E5 fills the center gap and completes the diagonal five.'})
+  ]
+ },
+ {
+  id:'forcing',title:'Force, then win',short:'Forcing play',
+  intro:'A four is valuable because it restricts the opponent’s reply. Strong attacking sequences repeatedly present immediate threats so the opponent spends moves answering you instead of improving their own position.',
+  concept:'Forcing discipline: prefer moves that threaten five immediately. But when five is already available, take the win—do not make another four for style.',
+  tasks:[
+   T('f1','Make the reply compulsory','Create a closed four that forces White to answer the only winning point.','B5 C5 D5','A5','E5','forcing',{candidates:['E5','E4'],hint:'The forcing move must threaten five on your very next turn.',explain:'E5 creates B5–E5. A5 is blocked, so White must address F5.'}),
+   Q('f2','What “forcing” means','After you create a closed four and the opponent has no immediate win, what is their normal priority?','B5 C5 D5 E5','A5','Block the only winning point|Build a distant three|Take the center|Ignore it and attack'.split('|'),'Block the only winning point','forcing',{hint:'If they play elsewhere, your next move is five.',explain:'A forcing threat dictates the reply because ignoring it loses immediately.'}),
+   T('f3','Continue with another four','White has just answered one threat. Find Black’s next forcing move.','C3 C4 C5 E6 F6 G6','C2 D6','C6','forcing',{candidates:['C6','H6'],hint:'Look for the line where one move creates four and an immediate next-turn win.',explain:'C6 creates a vertical closed four C3–C6; C2 is blocked, so C7 becomes the forced winning point.'}),
+   T('f4','Force before improving','Choose the move that makes an immediate four rather than a quiet positional improvement.','C5 D5 E5 C3','B5','F5','forcing',{candidates:['F5','D4'],hint:'Ask which move creates a threat that must be answered next turn.',explain:'F5 creates a closed four with G5 as the immediate winning point. D4 is useful but not forcing.'}),
+   T('f5','Five beats another four','Black can win now. Do not continue the forcing sequence—finish the game.','C5 D5 E5 F5 C3 D3 E3','B5','G5','forcing',{candidates:['G5','F3'],hint:'Run Chapter 1’s scan order: Win comes before Force.',explain:'G5 is five immediately. F3 would create another threat, but there is no reason to delay a current win.'})
+  ]
+ },
+ {
+  id:'defense',title:'Defend and counter-win',short:'Defense & tempo',
+  intro:'When the opponent has a four, tempo matters more than aesthetics. Block the unique winning point—unless you already have a win of your own. A counter-four that does not win immediately is often one move too slow.',
+  concept:'Priority under pressure: Win now → stop their immediate win → only then create your own forcing threat.',
+  tasks:[
+   Q('d1','Too late against an open four','White already has an open four. With no immediate Black win elsewhere, can one ordinary block save the position?','','C5 D5 E5 F5','Yes|No'.split('|'),'No','defense',{hint:'White has two winning points: B5 and G5.',explain:'One move can cover only one endpoint. White wins at the other.'}),
+   T('d2','Block the single point','White has a closed four. Make the required defense.','B5','C5 D5 E5 F5','G5','defense',{hint:'B5 is already blocked, leaving one White win.',explain:'G5 is mandatory unless Black can win immediately somewhere else.'}),
+   T('d3','Your win comes first','White threatens G5, but Black has an immediate win elsewhere. Take it.','B5 C3 D3 E3 F3','C5 D5 E5 F5',['B3','G3'],'counter',{candidates:['G5','B3','G3'],hint:'Chapter 1 scan order starts with your own immediate win.',explain:'B3 or G3 completes Black’s five immediately. Winning now outranks blocking White’s threat.'}),
+   T('d4','A counter-four is one tempo late','White threatens an immediate win at G5. Black could make a four on row 3, but what must Black play?','B5 C3 D3 E3','C5 D5 E5 F5','G5','defense',{candidates:['F3','G5'],hint:'If Black plays F3, does White have to answer it—or can White simply win first?',explain:'G5 is required. F3 creates a threat, but White already has the move and would win at G5.'}),
+   T('d5','Defend before the four exists','White has a live three. Occupy either extension point to prevent an open four next turn.','','D5 E5 F5',['C5','G5'],'defense',{candidates:['C5','G5'],hint:'Once White reaches an open four, one block is too late.',explain:'Early defense removes one of the two extension routes before the decisive open four exists.'})
+  ]
+ },
+ {
+  id:'multi',title:'Multiple four threats',short:'Multiple fours',
+  intro:'One move can create more than one four. In ordinary Gomoku or exact-five play this can be overwhelmingly strong. Renju is different: Black is forbidden from making a double-four, while White is not subject to that Black-only restriction.',
+  concept:'Rules matter. The geometry may be powerful, but legality depends on the ruleset. In Renju, Black double-four is forbidden.',
+  tasks:[
+   T('m1','Crossing double-four','Exact-five/Gomoku example: Black to move. Find the crossing move that creates a horizontal and vertical four at once.','C5 D5 F5 E3 E4 E6','','E5','multi',{rules:'Exact-five / Gomoku',candidates:['E5','G5'],hint:'Look for one empty intersection shared by the horizontal and vertical structures.',explain:'E5 simultaneously completes two four structures. In ordinary Gomoku this is a powerful multi-threat; do not assume the same Black move is legal in Renju.'}),
+   Q('m2','Renju legality check','Renju, Black to move: may Black legally make a move that creates two separate fours?','C5 D5 F5 E3 E4 E6','','Yes|No — Black double-four is forbidden'.split('|'),'No — Black double-four is forbidden','multi',{rules:'Renju · Black',hint:'Recall the Black-only forbidden moves: overline, double-four, and genuine double-three.',explain:'No. A Black double-four is a forbidden move in Renju.'}),
+   T('m3','White is unrestricted','Renju, White to move. Find White’s crossing multi-four move.','','C5 D5 F5 E3 E4 E6','E5','multi',{rules:'Renju · White',candidates:['E5','G5'],hint:'Renju forbidden-move restrictions apply to Black, not White.',explain:'E5 creates multiple White four threats. White is not subject to Black’s double-four prohibition.'}),
+   T('m4','One move, two directions','Gomoku example: choose the move that strengthens both directions at the same intersection.','C5 D5 F5 E3 E4 E6','','E5','multi',{rules:'Gomoku',candidates:['E5','B5'],hint:'The strongest candidate belongs to both the horizontal and vertical lines.',explain:'E5 is shared by both structures and creates simultaneous four threats.'}),
+   Q('m5','Why multiple fours matter','In ordinary Gomoku, why is a genuine multiple-four move usually decisive?','C5 D5 E5 E3 E4 E6','','It creates threats in more than one line|It automatically counts as five|It removes opponent stones|It changes who moves next'.split('|'),'It creates threats in more than one line','multi',{rules:'Gomoku concept',hint:'Think about how many separate immediate threats the defender must answer.',explain:'The move creates independent forcing threats; a single ordinary reply usually cannot cover all of them.'})
+  ]
+ },
+ {
+  id:'checkpoint',title:'Chapter checkpoint',short:'Checkpoint',
+  intro:'No lesson labels now. Run the full scan: immediate win, immediate defense, then evaluate what kind of four a move creates and whether the ruleset changes its legality.',
+  concept:'Mixed test · 12 positions. Assisted reveals count as completion, but never as clean first-try solves.',
+  checkpoint:true,
+  tasks:[
+   Q('cp1','Checkpoint 1','Classify Black’s shape.','C5 D5 E5 F5','','Open four|Closed four|Broken four|Not a four'.split('|'),'Open four','recognition',{hint:'Count the immediate winning endpoints.',explain:'B5 and G5 both win: open four.'}),
+   T('cp2','Checkpoint 2','Find Black’s only immediate win.','C5 D5 E5 F5','B5','G5','closed',{hint:'One endpoint is blocked.',explain:'G5 is the only completion.'}),
+   T('cp3','Checkpoint 3','Find the hidden immediate win.','C5 D5 F5 G5','','E5','broken',{hint:'Scan internal gaps inside five-cell windows.',explain:'E5 fills the broken four.'}),
+   T('cp4','Checkpoint 4','Which move creates an open four?','C5 D5 E5','A5','F5','open',{candidates:['B5','F5'],hint:'One candidate leaves two winning endpoints; the other has the A5 side sealed.',explain:'F5 creates the two-ended threat.'}),
+   T('cp5','Checkpoint 5','White threatens five. Defend correctly.','B5','C5 D5 E5 F5','G5','defense',{hint:'Find White’s only immediate winning point.',explain:'G5 must be blocked.'}),
+   T('cp6','Checkpoint 6','White threatens G5, but Black can end the game now. Choose Black’s move.','B5 C3 D3 E3 F3','C5 D5 E5 F5',['B3','G3'],'counter',{candidates:['G5','B3','G3'],hint:'Win comes before Defend.',explain:'B3 or G3 wins immediately.'}),
+   T('cp7','Checkpoint 7','A counter-threat is available, but White already has a one-move win. What must Black play?','B5 C3 D3 E3','C5 D5 E5 F5','G5','defense',{candidates:['F3','G5'],hint:'Compare which threat resolves first.',explain:'G5 blocks the current loss. F3 is one tempo too slow.'}),
+   Q('cp8','Checkpoint 8','How many immediate winning points does this Black shape have?','D5 E5 F5 G5','','0|1|2|3'.split('|'),'2','open',{hint:'Inspect C5 and H5.',explain:'Both endpoints complete five.'}),
+   T('cp9','Checkpoint 9','Find the diagonal winning gap.','B2 C3 E5 F6','','D4','broken',{hint:'Read B2–F6 as one diagonal window.',explain:'D4 completes five on the diagonal.'}),
+   T('cp10','Checkpoint 10','Exact-five/Gomoku: find the move that creates threats in two directions.','C5 D5 F5 E3 E4 E6','','E5','multi',{rules:'Exact-five / Gomoku',candidates:['E5','G5'],hint:'Find the shared intersection.',explain:'E5 creates horizontal and vertical four threats.'}),
+   Q('cp11','Checkpoint 11','Renju, Black to move: is that same double-four idea legal for Black?','C5 D5 F5 E3 E4 E6','','Yes|No — forbidden double-four'.split('|'),'No — forbidden double-four','multi',{rules:'Renju · Black',hint:'This is one of Renju Black’s forbidden moves.',explain:'Black may not play a double-four in Renju.'}),
+   T('cp12','Checkpoint 12','Finish the scan correctly: Black can win now or create another four. Choose the move.','C5 D5 E5 F5 C3 D3 E3','B5','G5','forcing',{candidates:['G5','F3'],hint:'Win → Defend → Force → Improve.',explain:'G5 is five immediately, so it outranks creating another four.'})
+  ]
+ }
+];
+
+const allTasks=sections.flatMap((s,si)=>s.tasks.map((t,ti)=>({...t,section:si,task:ti})));
+const totalTasks=allTasks.length;
+let dialog=null;
+let activeSection=0,activeTask=0,misses=0,lastWrong=null;
+let observer=null,ensureQueued=false;
+
+function blank(){return{version:VERSION,tasks:{},lastSection:0,lastTask:0,updatedAt:null}}
+function load(){
+ try{
+  const v=JSON.parse(localStorage.getItem(STORE)||'null');
+  if(v&&v.version===VERSION&&v.tasks)return Object.assign(blank(),v);
+ }catch{}
+ return blank();
+}
+function save(s){s.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify(s));try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:{chapter:2,report:report()}}))}catch{}}
+function result(id){return load().tasks[id]||null}
+function pct(n){return Number.isFinite(n)?Math.round(n*100)+'%':'—'}
+function sectionReport(si){
+ const s=sections[si],st=load(),rs=s.tasks.map(t=>st.tasks[t.id]).filter(Boolean);
+ const solved=s.tasks.filter(t=>st.tasks[t.id]?.correct).length;
+ const first=s.tasks.filter(t=>st.tasks[t.id]?.firstTry).length;
+ return{solved,total:s.tasks.length,complete:solved===s.tasks.length,rate:solved?first/solved:0,attempted:rs.length>0};
+}
+function report(){
+ const st=load();
+ const lessonReports=sections.map((s,i)=>({id:s.id,title:s.title,...sectionReport(i)}));
+ const solved=allTasks.filter(t=>st.tasks[t.id]?.correct).length;
+ const first=allTasks.filter(t=>st.tasks[t.id]?.firstTry).length;
+ const assisted=allTasks.filter(t=>st.tasks[t.id]?.assisted).length;
+ const attempts=allTasks.reduce((n,t)=>n+(st.tasks[t.id]?.attempts||0),0);
+ const skill={};
+ for(const [k,label] of Object.entries(SKILLS)){
+   const tt=allTasks.filter(t=>t.skill===k),done=tt.filter(t=>st.tasks[t.id]?.correct),clean=tt.filter(t=>st.tasks[t.id]?.firstTry);
+   skill[k]={label,solved:done.length,total:tt.length,rate:done.length?clean.length/done.length:0};
+ }
+ const completeLessons=lessonReports.filter(x=>x.complete).length;
+ return{
+   version:VERSION,totalTasks,solved,firstTry:first,firstTryRate:solved?first/solved:0,assisted,attempts,
+   completedLessons:completeLessons,totalLessons:sections.length,complete:solved===totalTasks,
+   lessons:lessonReports,skills:skill,lastSection:st.lastSection||0,lastTask:st.lastTask||0
+ };
+}
+function nextSection(){
+ const st=load();
+ for(let i=0;i<sections.length;i++)if(sections[i].tasks.some(t=>!st.tasks[t.id]?.correct))return i;
+ return 0;
+}
+function weakestSection(){
+ const reps=sections.slice(0,-1).map((s,i)=>({i,...sectionReport(i)})).filter(x=>x.attempted);
+ if(!reps.length)return nextSection();
+ reps.sort((a,b)=>(a.rate-b.rate)||(a.solved/a.total-b.solved/b.total));
+ return reps[0].i;
+}
+function ensureSingleCard(){
+ const cards=[...document.querySelectorAll('#ch2CourseCard')];
+ if(cards.length<=1)return cards[0]||null;
+ const owner=cards.find(x=>x.__gomokuCh2Owner)||cards[0];
+ owner.__gomokuCh2Owner=true;
+ cards.forEach(x=>{if(x!==owner)x.remove()});
+ return owner;
+}
+function cardHTML(){
+ return `<section id="ch2CourseCard" class="ch2-course-card" aria-labelledby="ch2CardTitle">
+  <div class="ch2-card-main">
+   <div class="ch2-ring" id="ch2Ring" aria-label="Chapter progress"><span id="ch2RingText">0/8</span></div>
+   <div>
+    <div class="ch2-kicker">Course · Chapter 2</div>
+    <h3 id="ch2CardTitle">Fours</h3>
+    <p class="ch2-sub">Recognize, create, force with, and defend every major four pattern. Includes the Renju double-four legality distinction.</p>
+    <div class="ch2-card-meta">
+     <div class="ch2-meta"><b id="ch2MetaLessons">0 / 8</b><span>Sections complete</span></div>
+     <div class="ch2-meta"><b id="ch2MetaAccuracy">—</b><span>First-try accuracy</span></div>
+     <div class="ch2-meta"><b id="ch2MetaNext">Recognize fours</b><span>Next</span></div>
+    </div>
+    <div class="ch2-card-actions">
+     <button class="btn ch2-primary" id="ch2Start">Start Chapter 2</button>
+     <button class="btn" id="ch2Review" disabled>Review weakest lesson</button>
+    </div>
+   </div>
+  </div>
+ </section>`;
+}
+function ensureCard(){
+ let card=ensureSingleCard();
+ const ch1=document.querySelector('#ch1CourseCard');
+ if(!ch1?.parentElement)return card;
+ if(!card){
+   const wrap=document.createElement('div');wrap.innerHTML=cardHTML().trim();card=wrap.firstElementChild;card.__gomokuCh2Owner=true;ch1.after(card);
+ }else{
+   card.__gomokuCh2Owner=true;
+   if(card.parentElement!==ch1.parentElement||card.previousElementSibling!==ch1)ch1.after(card);
+ }
+ renderCard();
+ return card;
+}
+function scheduleEnsure(){if(ensureQueued)return;ensureQueued=true;requestAnimationFrame(()=>{ensureQueued=false;ensureCard()})}
+function renderCard(){
+ const card=ensureSingleCard();if(!card)return;
+ const q=id=>card.querySelector('#'+id);
+ const r=report(),next=nextSection(),progress=Math.round(r.completedLessons/r.totalLessons*100);
+ q('ch2Ring')?.style.setProperty('--ch2-pct',progress+'%');
+ const text=(el,value)=>{if(el&&el.textContent!==String(value))el.textContent=String(value)};
+ text(q('ch2RingText'),r.completedLessons+'/'+r.totalLessons);
+ text(q('ch2MetaLessons'),r.completedLessons+' / '+r.totalLessons);
+ text(q('ch2MetaAccuracy'),pct(r.firstTryRate));
+ text(q('ch2MetaNext'),r.complete?'Chapter complete':sections[next].short);
+ text(q('ch2Start'),r.complete?'Open Chapter 2':r.attempts?'Continue Chapter 2':'Start Chapter 2');
+ if(q('ch2Review'))q('ch2Review').disabled=!r.attempts;
+}
+function ensureDialog(){
+ if(dialog?.isConnected)return dialog;
+ dialog=document.createElement('dialog');dialog.id='ch2CourseDialog';dialog.className='ch2-course';
+ dialog.innerHTML=`<div class="ch2-shell">
+  <header class="ch2-head">
+   <div class="ch2-head-copy">
+    <div class="ch2-kicker">Gomoku course · Chapter 2</div>
+    <h2>Fours</h2>
+    <p class="ch2-rule-note">Geometry examples use ordinary Gomoku / exact-five unless labeled otherwise. In Renju, Black double-four is forbidden.</p>
+   </div>
+   <button class="btn ch2-close" id="ch2Close" aria-label="Close Chapter 2">×</button>
+  </header>
+  <div class="ch2-body">
+   <nav class="ch2-nav" aria-label="Chapter 2 lessons">
+    <p class="ch2-nav-intro">All lessons are available immediately. A reveal completes a position as assisted, never as a clean solve.</p>
+    <div class="ch2-nav-list" id="ch2NavList"></div>
+   </nav>
+   <main class="ch2-main" id="ch2Main"></main>
+  </div>
+ </div>`;
+ const close=dialog.querySelector('#ch2Close');if(close)close.onclick=()=>dialog.close();
+ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+ document.body.append(dialog);
+ return dialog;
+}
+const $=id=>{
+ const key=String(id||'').replace(/^#/,'');
+ return dialog?.querySelector?.('#'+key)||document.getElementById(key);
+};
+function openCourse(si=nextSection(),ti=0){
+ ensureDialog();
+ activeSection=Math.max(0,Math.min(sections.length-1,Number(si)||0));
+ activeTask=Math.max(0,Math.min(sections[activeSection].tasks.length-1,Number(ti)||0));
+ misses=0;lastWrong=null;
+ const st=load();st.lastSection=activeSection;st.lastTask=activeTask;save(st);
+ renderCourse();
+ if(!dialog.open)dialog.showModal();
+ requestAnimationFrame(()=>dialog.querySelector('.ch2-main')?.scrollTo({top:0}));
+}
+function renderCourse(){
+ const nav=$('ch2NavList'),main=$('ch2Main');if(!nav||!main)return;
+ nav.innerHTML='';
+ sections.forEach((s,i)=>{
+  const rep=sectionReport(i),b=document.createElement('button');
+  b.className='ch2-nav-btn';b.type='button';b.setAttribute('aria-current',String(i===activeSection));
+  b.innerHTML=`<span class="ch2-nav-num">${String(i+1).padStart(2,'0')}</span><span class="ch2-nav-title">${s.short}</span><span class="ch2-nav-score">${rep.solved}/${rep.total}</span>`;
+  b.onclick=()=>{activeSection=i;activeTask=0;misses=0;lastWrong=null;const st=load();st.lastSection=i;st.lastTask=0;save(st);renderCourse()};
+  nav.append(b);
+ });
+ const s=sections[activeSection];
+ main.innerHTML=`<div class="ch2-lesson-top">
+  <div class="ch2-kicker">${s.checkpoint?'Chapter 2 assessment':'Lesson '+(activeSection+1)+' of '+(sections.length-1)}</div>
+  <h3>${s.title}</h3><p>${s.intro}</p>
+ </div><div id="ch2TaskHost"></div>`;
+ renderTask();
+}
+function boardState(t){
+ const board=Array(81).fill(0);
+ for(const c of t.black||[]){const i=ix(c);if(i>=0)board[i]=1}
+ for(const c of t.white||[]){const i=ix(c);if(i>=0)board[i]=2}
+ return board;
+}
+function renderBoard(t,solved=false){
+ const board=boardState(t),answers=t.kind==='move'?t.answers.map(ix):[],candidate=t.candidates?t.candidates.map(ix):null;
+ const el=document.createElement('div');el.className='ch2-board';el.id='ch2Board';el.setAttribute('role','grid');el.setAttribute('aria-label',t.title);
+ for(let i=0;i<81;i++){
+  const b=document.createElement('button');b.type='button';b.className='ch2-cell';b.dataset.i=i;b.dataset.coord=co(i);b.setAttribute('aria-label',co(i));
+  if(board[i]){b.disabled=true;const stone=document.createElement('span');stone.className='ch2-stone '+(board[i]===1?'black':'white');b.append(stone)}
+  else if(t.kind!=='move'||solved||(candidate&&!candidate.includes(i)))b.disabled=true;
+  if(solved&&answers.includes(i))b.classList.add('ch2-answer');
+  if(!b.disabled)b.onclick=()=>answerMove(i);
+  el.append(b);
+ }
+ return el;
+}
+function renderChoices(t,solved=false){
+ const box=document.createElement('div');box.className='ch2-choice-list';box.id='ch2Choices';
+ for(const choice of t.choices){
+  const b=document.createElement('button');b.type='button';b.className='ch2-choice';b.textContent=choice;
+  if(solved){b.disabled=true;if(choice===t.answer)b.classList.add('correct')}
+  else b.onclick=()=>answerChoice(choice,b);
+  box.append(b);
+ }
+ return box;
+}
+function renderTask(){
+ const host=$('ch2TaskHost');if(!host)return;
+ const s=sections[activeSection],t=s.tasks[activeTask],saved=result(t.id),solved=!!saved?.correct;
+ misses=0;lastWrong=null;
+ host.innerHTML=`<article class="ch2-task">
+  <div class="ch2-task-head"><div class="ch2-task-copy">
+   <div class="ch2-task-count">${activeTask+1} / ${s.tasks.length}${t.rules?' · '+t.rules:''}</div>
+   <div class="ch2-task-title">${t.title}</div>
+   <div class="ch2-task-prompt">${t.prompt}</div>
+  </div></div>
+  <div class="ch2-board-wrap">
+   <div id="ch2BoardSlot"></div>
+   <aside class="ch2-side">
+    <div class="ch2-concept">${s.concept}</div>
+    <div id="ch2ChoiceSlot"></div>
+    <div class="ch2-feedback${solved?' good':''}" id="ch2Feedback">${solved?'Completed. '+t.explain:'Choose your answer. First miss gives a rescan cue; after a second miss you may reveal the answer.'}</div>
+    <div class="ch2-controls">
+     <button class="btn" id="ch2Reveal" ${solved?'hidden':''}>Show answer</button>
+     <button class="btn ch2-primary" id="ch2NextTask" ${solved?'':'hidden'}>${activeTask===s.tasks.length-1?(activeSection===sections.length-1?'Chapter summary':'Next lesson'):'Next position'}</button>
+    </div>
+    <div class="ch2-section-note">${s.checkpoint?'Checkpoint prompts hide the concept label on purpose.':'Progress is local to this device. All lessons remain freely accessible.'}</div>
+   </aside>
+  </div>
+ </article>`;
+ $('ch2BoardSlot')?.append(renderBoard(t,solved));
+ if(t.kind==='choice')$('ch2ChoiceSlot')?.append(renderChoices(t,solved));
+ const reveal=$('ch2Reveal');if(reveal){reveal.hidden=solved||misses<2;reveal.onclick=()=>revealAnswer()}
+ const next=$('ch2NextTask');if(next)next.onclick=()=>advance();
+}
+function touchAttempt(t){
+ const st=load(),r=st.tasks[t.id]||{attempts:0,correct:false,firstTry:false,assisted:false};
+ r.attempts=(r.attempts||0)+1;st.tasks[t.id]=r;save(st);return{st,r};
+}
+function miss(t,detail){
+ const {st,r}=touchAttempt(t);misses++;lastWrong=detail;
+ st.tasks[t.id]=r;save(st);
+ const f=$('ch2Feedback');if(f){f.className='ch2-feedback bad';f.textContent=misses===1?'Not this. Re-run the scan: immediate win, immediate defense, then count the winning points created by the four.':t.hint}
+ const rv=$('ch2Reveal');if(rv&&misses>=2)rv.hidden=false;
+}
+function solve(t,assisted=false){
+ const st=load(),r=st.tasks[t.id]||{attempts:0,correct:false,firstTry:false,assisted:false};
+ if(!assisted)r.attempts=(r.attempts||0)+1;
+ if(!r.correct){r.correct=true;r.firstTry=!assisted&&misses===0;r.assisted=!!assisted;r.solvedAt=new Date().toISOString()}
+ else if(assisted)r.assisted=true;
+ st.tasks[t.id]=r;st.lastSection=activeSection;st.lastTask=activeTask;save(st);
+ renderCard();renderCourse();
+}
+function answerMove(i){
+ const t=sections[activeSection].tasks[activeTask];if(t.kind!=='move')return;
+ if(t.answers.map(ix).includes(i))solve(t,false);else miss(t,co(i));
+}
+function answerChoice(choice,button){
+ const t=sections[activeSection].tasks[activeTask];if(t.kind!=='choice')return;
+ if(choice===t.answer)solve(t,false);else{button?.classList.add('wrong');miss(t,choice)}
+}
+function revealAnswer(){
+ const t=sections[activeSection].tasks[activeTask];
+ if(misses<2)return;
+ solve(t,true);
+}
+function advance(){
+ const s=sections[activeSection];
+ if(activeTask<s.tasks.length-1){activeTask++;misses=0;lastWrong=null;const st=load();st.lastSection=activeSection;st.lastTask=activeTask;save(st);renderCourse();return}
+ if(activeSection<sections.length-1){activeSection++;activeTask=0;misses=0;lastWrong=null;const st=load();st.lastSection=activeSection;st.lastTask=0;save(st);renderCourse();return}
+ renderSummary();
+}
+function renderSummary(){
+ const main=$('ch2Main'),r=report();if(!main)return;
+ const skills=Object.values(r.skills);
+ main.innerHTML=`<section class="ch2-summary">
+  <div class="ch2-kicker">Chapter 2 summary</div>
+  <h3>${r.complete?'Fours complete':'Your four-pattern evidence'}</h3>
+  <p class="ch2-task-prompt">Completion measures positions solved. First-try accuracy excludes assisted reveals. Use the weakest skill below to decide what to revisit.</p>
+  <div class="ch2-summary-grid">
+   <div class="ch2-stat"><b>${r.solved}/${r.totalTasks}</b><span>Positions solved</span></div>
+   <div class="ch2-stat"><b>${pct(r.firstTryRate)}</b><span>First try</span></div>
+   <div class="ch2-stat"><b>${r.assisted}</b><span>Assisted</span></div>
+  </div>
+  <div class="ch2-skill-list">${skills.map(x=>`<div class="ch2-skill-row"><span>${x.label}</span><div class="ch2-skill-track"><div class="ch2-skill-fill" style="width:${Math.round(x.rate*100)}%"></div></div><span class="ch2-skill-pct">${x.solved?pct(x.rate):'—'}</span></div>`).join('')}</div>
+  <div class="ch2-card-actions" style="margin-top:20px">
+   <button class="btn ch2-primary" id="ch2SummaryReview">Review weakest lesson</button>
+   <button class="btn" id="ch2SummaryClose">Back to Learn</button>
+  </div>
+ </section>`;
+ $('ch2SummaryReview').onclick=()=>{activeSection=weakestSection();activeTask=0;renderCourse()};
+ $('ch2SummaryClose').onclick=()=>dialog.close();
+}
+function chapterLauncherClick(e){
+ const start=e.target.closest?.('#ch2Start'),review=e.target.closest?.('#ch2Review');
+ if(start){e.preventDefault();e.stopPropagation();openCourse(nextSection(),0)}
+ if(review&&!review.disabled){e.preventDefault();e.stopPropagation();openCourse(weakestSection(),0)}
+}
+document.addEventListener('click',chapterLauncherClick,true);
+
+window.GomokuCourseChapter2=Object.freeze({
+ version:'1.0',
+ open:()=>openCourse(nextSection(),0),
+ openSection:(section,task=0)=>openCourse(section,task),
+ report
+});
+
+function mount(){
+ ensureCard();
+ if(!observer){
+  observer=new MutationObserver(()=>scheduleEnsure());
+  observer.observe(document.body,{childList:true,subtree:true});
+ }
+}
+mount();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+</script>
+
 </body></html>
