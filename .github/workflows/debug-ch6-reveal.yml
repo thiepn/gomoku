@@ -1,0 +1,56 @@
+name: Debug Chapter 6 reveal visibility
+
+on:
+  push:
+    paths: ['.github/workflows/debug-ch6-reveal.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Inspect live reveal state
+        shell: bash
+        run: |
+          cat > .ch6-debug.mjs <<'JS'
+          import {chromium} from 'playwright-core';
+          const chrome=process.env.CHROME;if(!chrome)throw Error('Chrome missing');
+          const b=await chromium.launch({headless:true,executablePath:chrome});
+          const c=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const p=await c.newPage();p.setDefaultTimeout(15000);
+          await p.goto('https://thiepn.dev/gomoku/?ch6debug='+Date.now(),{waitUntil:'domcontentloaded'});
+          await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter6?.openSection==='function',null,{timeout:20000});
+          await p.addStyleTag({content:'#v112WelcomeDialog{display:none!important;pointer-events:none!important}'});
+          await p.evaluate(()=>document.querySelector('[data-v92-route="improve"]')?.click());await p.waitForTimeout(400);
+          await p.evaluate(()=>window.GomokuCourseChapter6.openSection(0,0));
+          const choose=n=>p.locator('#ch6CourseDialog[open]').getByRole('button',{name:n,exact:true}).click();
+          const snap=async label=>console.log(label,JSON.stringify(await p.evaluate(()=>{
+            const q=s=>document.querySelector(s),d=q('#ch6CourseDialog'),r=q('#ch6Reveal'),f=q('.ch6-bottom'),m=q('.ch6-main'),st=q('.ch6-stage');
+            const info=e=>{if(!e)return null;const x=e.getBoundingClientRect(),cs=getComputedStyle(e);return{rect:[x.left,x.top,x.right,x.bottom,x.width,x.height],display:cs.display,visibility:cs.visibility,opacity:cs.opacity,position:cs.position,overflow:cs.overflow,flex:cs.flex,client:[e.clientWidth,e.clientHeight],scroll:[e.scrollWidth,e.scrollHeight],hidden:e.hidden};};
+            const rr=r?.getBoundingClientRect();const cx=rr?(rr.left+rr.right)/2:0,cy=rr?(rr.top+rr.bottom)/2:0;const at=document.elementFromPoint(cx,cy);
+            return{viewport:[innerWidth,innerHeight],dialogOpen:d?.open,revealDisabled:r?.disabled,revealVisible:r?.checkVisibility?.(),reveal:info(r),footer:info(f),main:info(m),stage:info(st),atPoint:at?`${at.tagName}#${at.id}.${at.className}`:null,openDialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.id)};
+          }))));
+          await snap('BEFORE');
+          await choose('Five Black moves');await snap('AFTER_ONE');
+          await choose('Five threats plus five replies');await snap('AFTER_TWO');
+          console.log('PW_VISIBLE',await p.locator('#ch6Reveal').isVisible(),'PW_DISABLED',await p.locator('#ch6Reveal').isDisabled());
+          await c.close();await b.close();
+          JS
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          CHROME="$CHROME" node .ch6-debug.mjs
+      - name: Remove debug workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch6-debug.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/debug-ch6-reveal.yml
+          git commit -m 'Remove Chapter 6 reveal debug' || true
+          git push || true
