@@ -1,0 +1,127 @@
+name: Final certify Chapter 12 Advanced Renju and Forbidden-Move Strategy
+
+on:
+  push:
+    paths: ['.github/workflows/certify-ch12-course.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  certify:
+    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for this commit's Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 120); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Confirm live Chapter 12 source
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 40); do
+            curl -fsSL "https://thiepn.dev/gomoku/?ch12source=$(date +%s%N)" -o /tmp/live.html || true
+            if grep -q 'id="course-ch12-v1-script"' /tmp/live.html \
+              && grep -q 'function placeCard()' /tmp/live.html \
+              && grep -q 'function settleCardPlacement(attempt=0)' /tmp/live.html \
+              && grep -q 'function renderRenjuBoard(task)' /tmp/live.html \
+              && grep -q 'gomoku.course.chapter12.v1' /tmp/live.html; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" = 1
+          for n in $(seq 1 12); do
+            test "$(grep -o "id=\"course-ch${n}-v1-script\"" /tmp/live.html | wc -l)" = 1
+          done
+      - name: Certify live Chapter 12
+        shell: bash
+        run: |
+          cat > .ch12-cert.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const answers=[[{"id":"r1","type":"choice","answer":"Overline, double-four, and forbidden double-three"},{"id":"r2","type":"choice","answer":"White is not restricted by Black's forbidden-move rules and an overline counts as a win"},{"id":"r3","type":"choice","answer":"An unbroken row of six or more Black stones; it is forbidden unless the same move has already attained an exact five elsewhere"},{"id":"r4","type":"choice","answer":"It must have a legal continuation that can make a straight four"},{"id":"r5","type":"choice","answer":"A four-three fork"}],[{"id":"r6","type":"board","answer":"B5"},{"id":"r7","type":"board","answer":"G5"},{"id":"r8","type":"board","answer":"F5"},{"id":"r9","type":"board","answer":"G5"},{"id":"r10","type":"board","answer":"E5"}],[{"id":"r11","type":"board","answer":"E5"},{"id":"r12","type":"board","answer":"E5"},{"id":"r13","type":"board","answer":"E5"},{"id":"r14","type":"board","answer":"D4"},{"id":"r15","type":"board","answer":"E5"},{"id":"r16","type":"board","answer":"E5"}],[{"id":"r17","type":"board","answer":"E5"},{"id":"r18","type":"board","answer":"E5"},{"id":"r19","type":"board","answer":"E5"},{"id":"r20","type":"board","answer":"D4"},{"id":"r21","type":"board","answer":"E5"},{"id":"r22","type":"board","answer":"E5"}],[{"id":"r23","type":"board","answer":"E5"},{"id":"r24","type":"board","answer":"C5"},{"id":"r25","type":"board","answer":"E5"},{"id":"r26","type":"board","answer":"E5"},{"id":"r27","type":"board","answer":"E5"}],[{"id":"r28","type":"board","answer":"E5"},{"id":"r29","type":"board","answer":"E5"},{"id":"r30","type":"board","answer":"G5"},{"id":"r31","type":"board","answer":"E5"},{"id":"r32","type":"board","answer":"G5"}],[{"id":"r33","type":"board","answer":"E5"},{"id":"r34","type":"board","answer":"E5"},{"id":"r35","type":"board","answer":"E5"},{"id":"r36","type":"board","answer":"D4"}],[{"id":"r37","type":"choice","answer":"Overline, double-four, and forbidden double-three, subject to exact-five priority"},{"id":"r38","type":"choice","answer":"White has no forbidden-move restriction of this type and may win with an overline"},{"id":"r39","type":"choice","answer":"One apparent three may lack any legal continuation to a straight four, so it is not a true three"},{"id":"r40","type":"choice","answer":"Mentally follow each three toward a straight four and verify those continuation moves are themselves legal, recursively if necessary"},{"id":"r41","type":"choice","answer":"Four-three"},{"id":"r42","type":"choice","answer":"Exactly five in a row"},{"id":"r43","type":"choice","answer":"They are 9×9 local training diagrams; official Renju itself is played on 15×15"},{"id":"r44","type":"board","answer":"G5"},{"id":"r45","type":"board","answer":"E5"},{"id":"r46","type":"board","answer":"E5"},{"id":"r47","type":"board","answer":"E5"},{"id":"r48","type":"board","answer":"E5"}]];
+          const flat=answers.flat();
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const make=async()=>{
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            await ctx.addInitScript(()=>{const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}});
+            const p=await ctx.newPage(); p.setDefaultTimeout(15000); p.setDefaultNavigationTimeout(25000); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+            await p.goto(root+'?ch12cert='+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter12?.openSection==='function',null,{timeout:20000});
+            await p.evaluate(()=>{document.querySelectorAll('dialog[open]:not(#ch12CourseDialog)').forEach(d=>d.close?.());document.querySelector('[data-v92-route="improve"]')?.click()});
+            await p.waitForFunction(()=>document.querySelector('#ch12CourseCard')?.parentElement?.id==='v92ImproveHome'&&document.querySelector('#ch11CourseCard')?.nextElementSibling?.id==='ch12CourseCard',null,{timeout:10000});
+            return {ctx,p,errors};
+          };
+          const open=async(p,l,t)=>{await p.evaluate(()=>document.querySelectorAll('dialog[open]:not(#ch12CourseDialog)').forEach(d=>d.close?.()));await p.evaluate(([l,t])=>window.GomokuCourseChapter12.openSection(l,t),[l,t]);await p.waitForSelector('#ch12CourseDialog[open]')};
+          const assertStack=async p=>{const x=await p.evaluate(()=>{const cards=Array.from({length:12},(_,i)=>document.querySelector(`#ch${i+1}CourseCard`));const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));return{counts:cards.map((_,i)=>document.querySelectorAll(`#ch${i+1}CourseCard`).length),order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1])),parents:cards.map(c=>c?.parentElement?.id||null)}});if(x.counts.some(n=>n!==1)||!x.order||x.parents.some(v=>v!=='v92ImproveHome'))throw new Error('Course stack '+JSON.stringify(x));};
+          const assertMobile=async(p,label)=>{const g=await p.evaluate(()=>{const d=document.querySelector('#ch12CourseDialog'),f=d?.querySelector('.ch12-bottom'),r=document.querySelector('#ch12Reveal'),b=document.querySelector('#ch12Board');const fr=f?.getBoundingClientRect(),rr=r?.getBoundingClientRect(),br=b?.getBoundingClientRect();return{iw:innerWidth,ih:innerHeight,page:document.documentElement.scrollWidth,dialog:d?.scrollWidth,footer:fr?[fr.left,fr.top,fr.right,fr.bottom,fr.width,fr.height]:null,reveal:rr?[rr.left,rr.top,rr.right,rr.bottom,rr.width,rr.height]:null,board:br?[br.left,br.top,br.right,br.bottom,br.width,br.height]:null,rv:r?.checkVisibility?.()}});if(g.page>g.iw+2||g.dialog>g.iw+2||!g.footer||g.footer[4]<=1||g.footer[5]<=1||!g.reveal||g.reveal[4]<=1||g.reveal[5]<=1||!g.rv||g.reveal[0]<-1||g.reveal[2]>g.iw+1||g.reveal[1]<-1||g.reveal[3]>g.ih+1)throw new Error(label+' mobile geometry '+JSON.stringify(g));if(g.board&&g.board[4]>g.iw+2)throw new Error(label+' board overflow '+JSON.stringify(g));};
+
+          const A=await make(); await assertStack(A.p); let report=await A.p.evaluate(()=>window.GomokuCourseChapter12.report()); if(report.totalTasks!==48||report.totalLessons!==8)throw new Error('Report '+JSON.stringify(report));
+          await open(A.p,0,0); await assertMobile(A.p,'choice shell');
+          await A.p.locator('#ch12CourseDialog[open]').getByRole('button',{name:'Every fork, every six, and every center move',exact:true}).click();
+          if(!/Not this\./.test(await A.p.locator('#ch12Feedback').innerText())||!(await A.p.locator('#ch12Reveal').isDisabled()))throw new Error('First miss coaching');
+          await A.p.locator('#ch12CourseDialog[open]').getByRole('button',{name:'Any open four, any three, and any edge move',exact:true}).click();
+          if(await A.p.locator('#ch12Reveal').isDisabled())throw new Error('Reveal unavailable after second miss');
+          await A.p.locator('#ch12Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter12.v1')).tasks.r1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false)throw new Error('Assisted state '+JSON.stringify(assisted));
+          console.log('PASS structure + mobile + staged coaching + assisted accounting'); await A.ctx.close();
+
+          const B=await make(); await assertStack(B.p); await B.p.evaluate(()=>localStorage.removeItem('gomoku.course.chapter12.v1')); let count=0;
+          for(let l=0;l<answers.length;l++)for(let t=0;t<answers[l].length;t++){
+            const x=answers[l][t]; await open(B.p,l,t);
+            if(x.type==='choice') await B.p.locator('#ch12CourseDialog[open]').getByRole('button',{name:x.answer,exact:true}).click();
+            else {const cell=B.p.locator(`#ch12Board [data-coord="${x.answer}"]`);if(await cell.getAttribute('data-candidate')!=='1')throw new Error('Answer not candidate '+x.id);await cell.click();}
+            if(!/^Completed\./.test(await B.p.locator('#ch12Feedback').innerText()))throw new Error('Task failed '+x.id);
+            const rec=await B.p.evaluate(id=>JSON.parse(localStorage.getItem('gomoku.course.chapter12.v1')).tasks[id],x.id);
+            if(!rec?.correct||!rec.firstTry||rec.assisted)throw new Error('Task score '+x.id+' '+JSON.stringify(rec));
+            count++; if(x.id==='r6')await assertMobile(B.p,'board shell'); if(x.id==='r37'&&!/1 \/ 12/.test(await B.p.locator('.ch12-task-count').innerText()))throw new Error('Checkpoint count');
+          }
+          if(count!==48)throw new Error('Completion count '+count);
+          report=await B.p.evaluate(()=>window.GomokuCourseChapter12.report()); if(report.completed!==48||report.lessons.some(x=>!x.complete||x.rate!==1))throw new Error('Perfect report '+JSON.stringify(report));
+          const persisted=await B.p.evaluate(()=>({state:JSON.parse(localStorage.getItem('gomoku.course.chapter12.v1')),report:window.GomokuCourseChapter12.report(),markerCount:document.querySelectorAll('#course-ch12-v1-script').length,cardCount:document.querySelectorAll('#ch12CourseCard').length}));
+          for(const x of flat)if(!persisted.state?.tasks?.[x.id]?.correct||!persisted.state.tasks[x.id].firstTry||persisted.state.tasks[x.id].assisted)throw new Error('Persisted state '+x.id);
+          if(persisted.markerCount!==1||persisted.cardCount!==1)throw new Error('Chapter 12 duplication');
+          if(B.errors.some(x=>/ch12|chapter 12/i.test(x)))throw new Error('Chapter 12 page errors '+JSON.stringify(B.errors));
+          console.log('PASS all 48 tasks first try + perfect scoring + persisted localStorage state');
+          console.log('PASS unique ordered Chapters 1-12');
+          console.log('CHAPTER12_CERTIFIED');
+          await B.ctx.close(); await browser.close();
+          JS
+          node --check .ch12-cert.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 180s env CHROME="$CHROME" node .ch12-cert.mjs
+      - name: Remove certification workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch12-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/certify-ch12-course.yml
+          git commit -m 'Remove Chapter 12 certification' || true
+          git pull --rebase || true
+          git push || true
