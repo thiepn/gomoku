@@ -8458,4 +8458,505 @@ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded"
 else startObserver();
 })();
 </script>
+
+<script id="course-ch7-v1-script">
+(() => {
+"use strict";
+if (window.__gomokuCourseChapter7Loaded) return;
+window.__gomokuCourseChapter7Loaded = true;
+
+const STORAGE_KEY = "gomoku.course.chapter7.v1";
+const LETTERS = "ABCDEFGHJ";
+const SIZE = 9;
+const LESSONS = [{"title":"What Good Shape Means","subtitle":"Judge usefulness, not visual neatness or chain length.","tasks":[{"id":"s1","type":"choice","title":"Efficiency over appearance","prompt":"In a quiet position, what usually makes one stone placement more efficient than another?","choices":["It makes the longest-looking chain","It contributes to several realistic future lines while preserving space","It is adjacent to the most friendly stones","It is closest to the board edge"],"answer":1,"explain":"Good shape is about useful future work. A move that supports multiple live directions and leaves room to extend usually does more than a move that merely makes one line look longer."},{"id":"s2","type":"choice","title":"Active versus dead","prompt":"Which description best fits an active stone?","choices":["Any stone within two intersections of the center","A stone that still participates in realistic extensions, threats, defense, or future forks","Any stone connected directly to another stone","A stone that was played in the opening"],"answer":1,"explain":"Activity is functional, not cosmetic. A stone is active when it can still contribute to relevant future play; an isolated or blocked stone can be strategically dead even if it sits near other stones."},{"id":"s3","type":"choice","title":"Recognize overconcentration","prompt":"What is overconcentration in Gomoku shape?","choices":["Having too many stones near the center","Using several stones to do essentially the same job while leaving other directions undeveloped","Creating two threats at once","Placing stones one intersection apart"],"answer":1,"explain":"Overconcentration means spending too many moves on one narrow idea. Once several stones duplicate the same function, another direction or useful intersection often gives more value."},{"id":"s4","type":"choice","title":"Connection is not adjacency","prompt":"Two stones are separated by one empty intersection. Can they still form a useful connected shape?","choices":["No — connected stones must touch","Yes — gaps can preserve flexible extensions and future tactical links","Only on the main diagonal","Only if both stones are Black"],"answer":1,"explain":"Gomoku connection is about future move relationships, not physical adjacency. One-point and two-point gaps often create flexible shapes because the empty intersections can become threes, fours, or fork points."},{"id":"s5","type":"choice","title":"Evaluate a quiet move","prompt":"When there is no immediate win or forced defense, what should you compare first?","choices":["Only chain length","Only distance from the center","Live extension points, number of useful directions, opponent interference, and future tactical potential","How symmetrical the stones look"],"answer":2,"explain":"A positional move should be judged by what it enables and what remains usable afterward: extension space, direction count, interaction with the opponent, and routes toward future forcing threats."}]},{"title":"Efficient Connections","subtitle":"Connect stones through useful intersections rather than simply clustering them.","tasks":[{"id":"s6","type":"board","title":"Join two lines at once","prompt":"Black has useful stones on D5, F5, and E3. Which candidate connects the position most efficiently?","position":{"b":["D5","F5","E3"],"w":["C4","G4"]},"candidates":["E5","C5","E2"],"answer":"E5","explain":"E5 joins the horizontal D5–F5 structure and simultaneously extends the E-file from E3. One move improves two directions instead of only one.","principle":"Prefer intersections where one stone serves more than one live line."},{"id":"s7","type":"board","title":"Bridge and extend","prompt":"Which move best links C3 and E3 while also giving the D-file a future role with D5?","position":{"b":["C3","E3","D5"],"w":["B4","F4"]},"candidates":["D3","B3","F3"],"answer":"D3","explain":"D3 completes the useful C3–D3–E3 bridge and lines up with D5. The alternatives extend only one side and contribute to fewer future directions.","principle":"A bridge is strongest when it also points toward another active stone."},{"id":"s8","type":"board","title":"Use the shared intersection","prompt":"Black has E4, E6, and C5. Where should Black play to connect the vertical pair while keeping horizontal expansion available?","position":{"b":["E4","E6","C5"],"w":["G5","C7"]},"candidates":["E5","D5","F4"],"answer":"E5","explain":"E5 connects E4 and E6 immediately and still leaves the fifth rank open on both sides. It turns three scattered stones into one coherent central shape.","principle":"The shared intersection between existing lines often has unusually high positional value."},{"id":"s9","type":"board","title":"Diagonal bridge","prompt":"Which candidate activates the diagonal relationship between D4 and F6 without abandoning the nearby F4 stone?","position":{"b":["D4","F4","F6"],"w":["C6","G3"]},"candidates":["E5","F5","E6"],"answer":"E5","explain":"E5 sits exactly between D4 and F6, producing a live diagonal while remaining adjacent to F4. It gives one move two jobs.","principle":"Look for a bridge square that creates a new line and stays connected to the existing fight."},{"id":"s10","type":"board","title":"Connect toward the center","prompt":"Black's C6 and E6 are useful, but F4 is currently detached. Which move best unifies them?","position":{"b":["C6","E6","F4"],"w":["B5","G6"]},"candidates":["D6","E5","F3"],"answer":"E5","explain":"E5 links naturally to F4 and keeps contact with E6 while also pointing diagonally toward C7/D6 ideas. D6 only thickens the horizontal pair.","principle":"Connection quality improves when the new stone links separate groups instead of merely thickening one group."}]},{"title":"Active and Dead Stones","subtitle":"Spend moves where stones can still influence the real battle.","tasks":[{"id":"s11","type":"choice","title":"Dead is contextual","prompt":"If a stone currently has little influence, is it permanently dead?","choices":["Yes — once inactive, always inactive","No — later moves can reconnect or reactivate it, but you should not spend moves rescuing it without a concrete reason","Only edge stones can be reactivated","Only after an opponent mistake"],"answer":1,"explain":"Activity changes with the position. A remote stone may later become relevant, but positional discipline means investing where the board is active now unless a reconnection has real value."},{"id":"s12","type":"board","title":"Play near the live cluster","prompt":"Black's central stones are active while B9 is remote. Which candidate best improves the position now?","position":{"b":["D5","E5","F4","B9"],"w":["C6","F6","G5"]},"candidates":["E4","B8","A9"],"answer":"E4","explain":"E4 works directly with D5, E5, and F4 inside the contested central area. Building around B9 spends a tempo on a stone that currently has almost no relationship to the fight.","principle":"Do not let a remote stone pull your next move away from the relevant area."},{"id":"s13","type":"board","title":"Abandon the sealed direction","prompt":"Black's diagonal C3–D4–E5 is blocked at both ends by White. Which move best gives those stones a new job?","position":{"b":["C3","D4","E5"],"w":["B2","F6"]},"candidates":["E4","D5","A1"],"answer":"E4","explain":"The original diagonal cannot extend through B2 or F6. E4 reuses E5 and D4 in fresh horizontal, vertical, and diagonal possibilities instead of adding another useless move to the sealed line.","principle":"When one direction is dead, reuse the same stones in another direction."},{"id":"s14","type":"choice","title":"Central activity","prompt":"With no immediate tactics, why is a compact central broken shape often more active than the same number of stones on the edge?","choices":["Center stones are worth extra points","Central stones usually retain more extension directions and more ways to interact with future play","Edge stones cannot form fives","The center guarantees the first attack"],"answer":1,"explain":"Centrality is valuable because it preserves geometry: more directions remain available before the board boundary cuts them off. It is a flexibility advantage, not a guaranteed tactical advantage."},{"id":"s15","type":"board","title":"Reactivate two stones","prompt":"Black's D5 and F5 still have room, while H2 is detached. Which move gives the existing center the most new activity?","position":{"b":["D5","F5","H2"],"w":["C4","G6"]},"candidates":["E4","H3","C5"],"answer":"E4","explain":"E4 relates to both D5 and F5 through diagonals and opens vertical development through the E-file. H3 only tries to rescue the remote H2 stone.","principle":"Activity comes from joining useful stones into new directions, not from keeping every stone locally connected."}]},{"title":"Multiply Directions","subtitle":"The strongest quiet intersections often improve two lines at once.","tasks":[{"id":"s16","type":"board","title":"Central cross","prompt":"Which move gives Black the strongest multi-directional shape?","position":{"b":["C5","G5","E3","E7"],"w":["C3","G7"]},"candidates":["E5","D5","E4"],"answer":"E5","explain":"E5 is the shared intersection of the C5–G5 horizontal structure and the E3–E7 vertical structure. No other candidate adds comparable value in two directions at once.","principle":"Intersections shared by two live directions are premium shape points."},{"id":"s17","type":"board","title":"Two diagonals, one move","prompt":"Black controls four diagonal arms. Which candidate activates both diagonals simultaneously?","position":{"b":["C3","G7","C7","G3"],"w":["E2","E8"]},"candidates":["E5","D4","F4"],"answer":"E5","explain":"E5 is the common intersection of both diagonals. It coordinates all four Black stones and creates threats that can emerge in either diagonal direction.","principle":"A move that multiplies directions makes later defense harder because the opponent must respect more than one axis."},{"id":"s18","type":"board","title":"Vertical plus horizontal","prompt":"Which move links E2–E4 and also cooperates with C3–G3?","position":{"b":["E2","E4","C3","G3"],"w":["C5","G5"]},"candidates":["E3","D3","F4"],"answer":"E3","explain":"E3 fills the shared point: it develops the E-file while also sitting inside the horizontal C3–G3 framework. The move is useful even before any immediate tactic appears.","principle":"Multi-purpose stones reduce the number of preparatory moves needed for future threats."},{"id":"s19","type":"board","title":"Read the X","prompt":"Black has a diamond around E5. Which candidate turns both diagonal pairs into connected lines?","position":{"b":["D4","F4","D6","F6"],"w":["E3","E7"]},"candidates":["E5","D5","F5"],"answer":"E5","explain":"E5 joins D4–F6 and F4–D6 at the same time. One stone activates two diagonals and dramatically increases Black's future fork potential.","principle":"The center of an X-shape is often more valuable than extending either diagonal separately."},{"id":"s20","type":"board","title":"Choose the intersection, not the extension","prompt":"Which move gives C5, E5, and E3 the broadest combined future?","position":{"b":["C5","E5","E3"],"w":["G5","F2"]},"candidates":["D4","D5","E2"],"answer":"D4","explain":"D4 connects C5 to E3 diagonally while remaining adjacent to E5, creating multiple follow-up directions. D5 only extends the fifth rank and E2 only extends the E-file.","principle":"Prefer a move that creates a new relation between groups over a move that merely lengthens one existing relation."}]},{"title":"Space and Overconcentration","subtitle":"Do not spend three stones doing the work of two.","tasks":[{"id":"s21","type":"choice","title":"When not to thicken","prompt":"A line is blocked at both ends and has no immediate tactical use. What is usually better than adding another nearby stone to the same line?","choices":["Keep adding stones until the cluster is large","Develop a second live direction or a useful intersection","Move toward the nearest corner","Ignore all existing stones"],"answer":1,"explain":"Once a direction is structurally exhausted, extra stones nearby often duplicate work. A second direction can reuse the same stones and restore tactical potential."},{"id":"s22","type":"board","title":"Reuse a blocked row","prompt":"Black's C5–D5–E5 row is sealed by White at B5 and F5. Which candidate best converts the cluster into fresh shape?","position":{"b":["C5","D5","E5"],"w":["B5","F5"]},"candidates":["D4","C4","G5"],"answer":"D4","explain":"D4 gives D5 a vertical route and relates diagonally to C5 and E5. It turns a blocked horizontal mass into a multi-directional structure.","principle":"A blocked chain is not useless if its stones can be recycled into perpendicular or diagonal play."},{"id":"s23","type":"board","title":"Do not extend the sealed chain","prompt":"White has already sealed both sides of D4–E4–F4. Which move makes the best use of the middle stones?","position":{"b":["D4","E4","F4"],"w":["C4","G4"]},"candidates":["E5","D5","H4"],"answer":"E5","explain":"E5 creates a new vertical line through E4 and diagonal relationships with D4 and F4. H4 would merely hover beside a dead horizontal direction.","principle":"When the straight line is closed, build through its interior stones rather than beside its blocked ends."},{"id":"s24","type":"board","title":"Preserve breathing room","prompt":"Which move expands Black without packing all stones onto the same rank?","position":{"b":["C5","E5","F4"],"w":["B6","G5"]},"candidates":["D4","D5","F5"],"answer":"D4","explain":"D4 creates diagonal links to C5 and E5 and keeps several empty extension points available. D5 and F5 overfill the fifth rank and narrow the shape's future choices.","principle":"Good shape needs empty points. Space is not wasted; it is where future threats are created."},{"id":"s25","type":"choice","title":"Why gaps matter","prompt":"Why can a one-point gap between friendly stones be stronger than an immediately adjacent cluster?","choices":["Gaps make stones impossible to block","The empty point can serve as a flexible connector, extension, or future fork square","Adjacent stones never create threats","Gaps are worth extra score"],"answer":1,"explain":"A useful gap is stored potential. The opponent must consider what happens if it is filled, while you retain the option to use that point in more than one tactical pattern."}]},{"title":"Center, Edge, and the Relevant Area","subtitle":"Use geometry as a tie-breaker, but let urgent local play decide first.","tasks":[{"id":"s26","type":"choice","title":"Center is a principle, not a law","prompt":"Why are central moves often preferable in quiet positions?","choices":["They are automatically winning","They retain more extension space and useful directions before the board edge interferes","They cannot be blocked","They count as two moves"],"answer":1,"explain":"Centrality increases geometric freedom. It is a strong default when moves are otherwise comparable, but immediate wins, defenses, and concrete local tactics always outrank it."},{"id":"s27","type":"board","title":"Stay in the fight","prompt":"The active battle is around E5–F5. Which candidate keeps Black's next stone relevant?","position":{"b":["E5","F5","D4"],"w":["E6","F6","G4"]},"candidates":["D5","B2","H8"],"answer":"D5","explain":"D5 remains adjacent to the active center and extends the fifth rank without leaving the contested area. B2 and H8 spend a tempo far from the position that currently matters.","principle":"During an active local fight, relevance is usually more important than abstract board coverage."},{"id":"s28","type":"board","title":"Improve the contested zone","prompt":"Which move best supports Black's central stones while interfering with White's nearby shape?","position":{"b":["D5","F5","E3"],"w":["D6","F6","G5"]},"candidates":["E4","B8","J2"],"answer":"E4","explain":"E4 strengthens the E-file, connects toward D5/F5, and occupies a central intersection close to White's stones. The remote candidates do nothing to the current balance.","principle":"A positional move is stronger when it improves your shape and constrains the opponent in the same area."},{"id":"s29","type":"board","title":"Connect edge stones inward","prompt":"Black has B2 and C2 near the edge plus E5 in the center. Which move best keeps the edge group useful?","position":{"b":["B2","C2","E5"],"w":["A3","B4"]},"candidates":["D3","A2","B1"],"answer":"D3","explain":"D3 connects the edge group toward E4/E5 ideas and moves Black's influence inward. A2 and B1 deepen the commitment to a cramped edge where fewer directions exist.","principle":"If an edge group is worth developing, connect it toward open space rather than further into the boundary."},{"id":"s30","type":"choice","title":"When the edge wins","prompt":"Can an edge move still be the best move?","choices":["No — center always wins","Yes — concrete tactics, defense, or a strong local connection can outweigh centrality","Only for White","Only after move 30"],"answer":1,"explain":"Center preference is a positional tie-breaker, not a commandment. A winning threat, necessary defense, or clearly superior local shape near the edge should be played."}]},{"title":"Build the Future Fork","subtitle":"Arrange stones so the next strong move can threaten in more than one direction.","tasks":[{"id":"s31","type":"board","title":"Prepare two directions","prompt":"Which move best prepares Black to use both the fifth rank and the D-file later?","position":{"b":["C5","E5","D3"],"w":["F6","B4"]},"candidates":["D5","C4","E3"],"answer":"D5","explain":"D5 joins C5 and E5 while lining up with D3. It creates a compact shape where a later D4 or diagonal move can generate threats in more than one direction.","principle":"Forks are usually prepared by stones that share intersections across different directions."},{"id":"s32","type":"board","title":"Create a hinge","prompt":"Which candidate becomes the hinge between C4, E3, and E5?","position":{"b":["C4","E3","E5"],"w":["C6","F5"]},"candidates":["D4","D3","F4"],"answer":"D4","explain":"D4 connects diagonally to E3 and sits next to C4 and E5. It gives Black several future threat-building routes from one central hinge.","principle":"A hinge stone is valuable because several future tactical lines can pivot through it."},{"id":"s33","type":"board","title":"Build through the center","prompt":"Black has C3, E3, and C5. Which move best creates future fork geometry?","position":{"b":["C3","E3","C5"],"w":["F6","B2"]},"candidates":["D4","D3","C4"],"answer":"D4","explain":"D4 relates diagonally to C3 and C5 while also pointing toward E3. It creates a central network rather than a single straight chain.","principle":"Future forks come from overlapping lines, not from one isolated long line."},{"id":"s34","type":"board","title":"One move, several continuations","prompt":"Which move gives D4, F4, and D6 the best shared future?","position":{"b":["D4","F4","D6"],"w":["G6","C3"]},"candidates":["E5","E4","D5"],"answer":"E5","explain":"E5 sits between F4 and D6 diagonally and stays close to D4. It creates more future threat points than simply filling E4 or D5.","principle":"When comparing candidates, count meaningful follow-up directions, not just immediate neighbors."},{"id":"s35","type":"board","title":"Layer the shape","prompt":"Which move best links E4, E6, C4, and G6 into one flexible structure?","position":{"b":["E4","E6","C4","G6"],"w":["B5","H5"]},"candidates":["E5","D5","F6"],"answer":"E5","explain":"E5 ties the vertical E4–E6 pair together and also sits on the C3–D4–E5–F6–G7 diagonal family. It is the natural hub of the shape.","principle":"A hub move is strongest when it unifies existing stones without consuming all nearby extension space."},{"id":"s36","type":"board","title":"The fork nucleus","prompt":"Black has a diamond around E4. Which move creates the clearest two-direction tactical nucleus?","position":{"b":["D3","F3","D5","F5"],"w":["C4","G4"]},"candidates":["E4","D4","F4"],"answer":"E4","explain":"E4 completes both diagonals D3–E4–F5 and F3–E4–D5. The resulting shape can generate threats in two directions, which is exactly the geometry behind many forks.","principle":"The best positional preparation often looks like a future tactical intersection before it becomes a forcing move."}]},{"title":"Shape Checkpoint","subtitle":"Twelve mixed positions: choose the move or principle that keeps the position alive and flexible.","tasks":[{"id":"s37","type":"choice","title":"Checkpoint · useful stone","prompt":"Which stone is strategically most valuable in a quiet position?","choices":["The one closest to the center, always","The one participating in the greatest number of realistic live lines and future interactions","The oldest stone on the board","The one with the most adjacent friendly stones"],"answer":1,"explain":"Value comes from function: live directions, extension space, interaction, and tactical potential."},{"id":"s38","type":"board","title":"Checkpoint · shared point","prompt":"Which move best joins D5, F5, and E7?","position":{"b":["D5","F5","E7"],"w":["C3","G3"]},"candidates":["E5","E6","D6"],"answer":"E5","explain":"E5 connects the fifth rank while pointing directly toward E7 on the E-file. It is the highest-value shared intersection.","principle":"Find the point where separate lines can share one stone."},{"id":"s39","type":"board","title":"Checkpoint · blocked line","prompt":"White seals C4–D4–E4 horizontally. Where should Black redirect?","position":{"b":["C4","D4","E4"],"w":["B4","F4"]},"candidates":["D5","C5","G4"],"answer":"D5","explain":"D5 reuses the central D4 stone vertically and relates diagonally to C4/E4, giving the blocked group new life.","principle":"Closed ends are a signal to change direction, not to keep thickening the same line."},{"id":"s40","type":"board","title":"Checkpoint · relevant area","prompt":"The fight is centered around F5. Which move remains relevant?","position":{"b":["E5","F5","G4"],"w":["E6","G6","H5"]},"candidates":["F4","B2","A9"],"answer":"F4","explain":"F4 supports F5 vertically and stays adjacent to both central groups. The remote candidates abandon the active zone.","principle":"In a live local fight, choose moves that immediately interact with that fight."},{"id":"s41","type":"board","title":"Checkpoint · inward connection","prompt":"Which move best develops Black's C2–D2 edge pair toward the center?","position":{"b":["C2","D2","F5"],"w":["B1","B3"]},"candidates":["E3","B2","C1"],"answer":"E3","explain":"E3 continues the edge group inward and links toward central F4/F5 possibilities. The other candidates keep Black cramped near the boundary.","principle":"Develop useful edge stones toward open central space."},{"id":"s42","type":"board","title":"Checkpoint · avoid redundancy","prompt":"Black already has a blocked D6–E6–F6 row. Which move gives the cluster a new direction?","position":{"b":["D6","E6","F6"],"w":["C6","G6"]},"candidates":["E5","D5","H6"],"answer":"E5","explain":"E5 uses the middle stone E6 to develop vertically and keeps diagonal options through D6/F6.","principle":"When a line is exhausted, reuse its interior stones in another direction."},{"id":"s43","type":"choice","title":"Checkpoint · center rule","prompt":"Two moves are tactically equal. One is central with four potential directions; the other is on the edge with two. What is the normal positional preference?","choices":["The edge move because it is safer","The central move because it preserves more future options","Either is identical","Always choose the move closest to your last stone"],"answer":1,"explain":"When concrete tactics are equal, preserving more useful directions is a sound positional tie-breaker."},{"id":"s44","type":"board","title":"Checkpoint · diagonal hub","prompt":"Which move links C3, E3, C5, and E5 most efficiently?","position":{"b":["C3","E3","C5","E5"],"w":["B4","F4"]},"candidates":["D4","D3","C4"],"answer":"D4","explain":"D4 is the center of the square and creates diagonal relationships to all four Black stones. It is a classic multi-directional hub.","principle":"A hub that touches several lines is usually more efficient than extending one side."},{"id":"s45","type":"board","title":"Checkpoint · preserve space","prompt":"Which move improves Black without compressing every stone onto the fifth rank?","position":{"b":["C5","E5","G5"],"w":["B4","H6"]},"candidates":["E4","D5","F5"],"answer":"E4","explain":"E4 adds a second direction through E5 and leaves horizontal gaps available. D5 or F5 would simply pack more stones into the same row.","principle":"Flexible shape preserves useful empty points instead of filling them prematurely."},{"id":"s46","type":"board","title":"Checkpoint · future fork","prompt":"Which move best prepares overlapping diagonal and horizontal ideas?","position":{"b":["D4","F4","E6"],"w":["C6","G2"]},"candidates":["E5","D5","F5"],"answer":"E5","explain":"E5 sits between D4 and F4 horizontally and connects toward E6 vertically. It creates a compact nucleus for later multi-directional threats.","principle":"Build future forks by placing stones where two threat families can overlap."},{"id":"s47","type":"board","title":"Checkpoint · active group","prompt":"Which move strengthens the active center rather than rescuing the isolated A9 stone?","position":{"b":["D5","E4","F5","A9"],"w":["C6","G6"]},"candidates":["E5","A8","B9"],"answer":"E5","explain":"E5 participates immediately with D5, E4, and F5. A8 and B9 spend extra tempi around a stone that does not influence the current fight.","principle":"Do not pay repeated moves to make an irrelevant stone feel connected."},{"id":"s48","type":"board","title":"Checkpoint · positional synthesis","prompt":"No immediate tactic exists. Which candidate gives Black the best combination of connection, direction count, and central space?","position":{"b":["C4","E4","D6"],"w":["B7","F2"]},"candidates":["D5","C5","E6"],"answer":"D5","explain":"D5 connects C4 and E4 diagonally/horizontally, works with D6 vertically, and remains central with several extension points. It scores well on every major shape criterion at once.","principle":"The strongest quiet move often wins several small positional comparisons simultaneously: connection, directions, space, relevance, and future tactical potential."}]}];
+
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+function freshState(){
+  return {version:1,tasks:{},last:{lesson:0,task:0}};
+}
+function loadState(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if(!raw || raw.version !== 1 || typeof raw.tasks !== "object") return freshState();
+    raw.last ||= {lesson:0,task:0};
+    return raw;
+  }catch{return freshState();}
+}
+let state = loadState();
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
+  refreshCard();
+}
+function allTasks(){ return LESSONS.flatMap(x => x.tasks); }
+function taskRecord(id){ return state.tasks[id] || null; }
+function report(){
+  const lessonReports = LESSONS.map((lesson,index) => {
+    const done = lesson.tasks.filter(t => taskRecord(t.id)?.correct).length;
+    const firstTry = lesson.tasks.filter(t => taskRecord(t.id)?.firstTry).length;
+    const assisted = lesson.tasks.filter(t => taskRecord(t.id)?.assisted).length;
+    return {
+      index,
+      title: lesson.title,
+      total: lesson.tasks.length,
+      completed: done,
+      complete: done === lesson.tasks.length,
+      firstTry,
+      assisted,
+      rate: lesson.tasks.length ? firstTry / lesson.tasks.length : 0
+    };
+  });
+  const tasks = allTasks();
+  const completed = tasks.filter(t => taskRecord(t.id)?.correct).length;
+  return {
+    totalTasks: tasks.length,
+    totalLessons: LESSONS.length,
+    completed,
+    complete: completed === tasks.length,
+    firstTry: tasks.filter(t => taskRecord(t.id)?.firstTry).length,
+    assisted: tasks.filter(t => taskRecord(t.id)?.assisted).length,
+    lessons: lessonReports
+  };
+}
+
+function ensureStyles(){
+  if($("#ch7CourseStyles")) return;
+  const style = document.createElement("style");
+  style.id = "ch7CourseStyles";
+  style.textContent = `
+#ch7CourseCard,.ch7-dialog,.ch7-dialog *{box-sizing:border-box}
+#ch7CourseCard{position:relative;overflow:hidden;margin-top:14px;padding:18px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);background:linear-gradient(145deg,color-mix(in srgb,#537d69 10%,transparent),transparent 54%);font:inherit}
+#ch7CourseCard::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#537d69}
+.ch7-card-kicker{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.62}
+.ch7-card-row{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-top:8px}
+.ch7-card-copy{min-width:0}.ch7-card-copy h3{margin:0;font-size:20px;line-height:1.15}.ch7-card-copy p{margin:6px 0 0;max-width:650px;font-size:13px;line-height:1.45;opacity:.72}
+.ch7-card-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.ch7-progress{font-variant-numeric:tabular-nums;font-size:12px;opacity:.65;white-space:nowrap}
+#ch7Start{appearance:none;border:1px solid currentColor;background:currentColor;color:Canvas;padding:9px 14px;font:inherit;font-weight:750;cursor:pointer}
+@supports not (color:Canvas){#ch7Start{color:#fff;background:#171717}}
+.ch7-dialog{width:min(1050px,calc(100vw - 28px));max-width:none;height:min(860px,calc(100dvh - 28px));max-height:none;padding:0;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:Canvas;color:CanvasText;overflow:hidden;font:inherit}
+.ch7-dialog::backdrop{background:rgba(6,7,9,.72);backdrop-filter:blur(5px)}
+.ch7-shell{height:100%;min-width:0;display:flex;flex-direction:column;background:Canvas}
+.ch7-top{display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
+.ch7-top-copy{min-width:0;flex:1}.ch7-kicker{font-size:10px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:#446b59}.ch7-top h2{margin:3px 0 0;font-size:20px;line-height:1.1}.ch7-top-meta{font-size:12px;opacity:.58;white-space:nowrap}
+#ch7Close{appearance:none;width:36px;height:36px;border:1px solid color-mix(in srgb,currentColor 18%,transparent);background:transparent;color:inherit;font-size:22px;line-height:1;cursor:pointer}
+.ch7-main{min-height:0;flex:1;display:grid;grid-template-columns:230px minmax(0,1fr)}
+.ch7-lessons{min-width:0;overflow:auto;padding:10px;border-right:1px solid color-mix(in srgb,currentColor 12%,transparent);background:color-mix(in srgb,CanvasText 2.5%,Canvas)}
+.ch7-lesson-btn{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:center;padding:10px 8px;border:0;border-bottom:1px solid color-mix(in srgb,currentColor 8%,transparent);background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.ch7-lesson-btn[aria-current="true"]{background:color-mix(in srgb,#537d69 11%,transparent)}
+.ch7-lesson-num{width:24px;height:24px;display:grid;place-items:center;border:1px solid color-mix(in srgb,currentColor 18%,transparent);font-size:11px;font-weight:800}
+.ch7-lesson-copy{min-width:0}.ch7-lesson-copy strong{display:block;font-size:12px;line-height:1.2}.ch7-lesson-copy span{display:block;margin-top:3px;font-size:10px;opacity:.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch7-lesson-score{font-size:10px;font-variant-numeric:tabular-nums;opacity:.55}
+.ch7-stage{min-width:0;overflow:auto;padding:20px 22px 18px}
+.ch7-task-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;max-width:760px;margin:0 auto 14px}.ch7-task-copy{min-width:0}.ch7-task-copy h3{margin:0;font-size:18px}.ch7-task-copy p{margin:6px 0 0;font-size:13px;line-height:1.48;opacity:.75}.ch7-task-count{font-size:11px;font-weight:800;letter-spacing:.06em;white-space:nowrap;opacity:.58}
+.ch7-read-strip{max-width:760px;margin:0 auto 14px;padding:10px 12px;border-left:3px solid #537d69;background:color-mix(in srgb,#537d69 7%,transparent);font-size:12px;line-height:1.45}
+.ch7-workspace{max-width:760px;margin:0 auto;display:grid;grid-template-columns:minmax(280px,440px) minmax(180px,1fr);gap:20px;align-items:start}
+.ch7-board-wrap{min-width:0}.ch7-board{width:min(100%,440px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);background:#c99a55;border:1px solid #6f4b25;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.ch7-cell{position:relative;min-width:0;min-height:0;padding:0;border:0;border-right:1px solid rgba(60,36,14,.48);border-bottom:1px solid rgba(60,36,14,.48);background:transparent;color:#2d1d0e;cursor:default}
+.ch7-cell:nth-child(9n){border-right:0}.ch7-cell:nth-last-child(-n+9){border-bottom:0}
+.ch7-cell[data-candidate="1"]{cursor:pointer;background:rgba(255,255,255,.085)}
+.ch7-cell[data-candidate="1"]::after{content:"";position:absolute;inset:29%;border:2px solid rgba(53,34,15,.7);border-radius:50%}
+.ch7-cell[data-candidate="1"]:hover::after,.ch7-cell[data-candidate="1"]:focus-visible::after{inset:23%;border-width:3px}
+.ch7-stone{position:absolute;inset:14%;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.32)}
+.ch7-stone.black{background:radial-gradient(circle at 36% 30%,#555 0,#1a1a1a 42%,#030303 100%)}.ch7-stone.white{background:radial-gradient(circle at 34% 28%,#fff 0,#efefeb 58%,#c7c5bf 100%);border:1px solid rgba(0,0,0,.2)}
+.ch7-coord{position:absolute;right:2px;bottom:1px;font-size:8px;font-weight:800;opacity:.62}
+.ch7-side{min-width:0}.ch7-seq-label{font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.1em;opacity:.5}
+.ch7-ribbon{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 14px}.ch7-ply{padding:5px 7px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);font-size:10px;font-variant-numeric:tabular-nums}.ch7-ply.done{border-color:#537d69;background:color-mix(in srgb,#537d69 9%,transparent)}
+.ch7-rule{font-size:12px;line-height:1.5;opacity:.72}
+.ch7-choices{display:grid;gap:8px}.ch7-choice{width:100%;padding:10px 11px;border:1px solid color-mix(in srgb,currentColor 17%,transparent);background:transparent;color:inherit;text-align:left;font:inherit;font-size:12px;line-height:1.35;cursor:pointer}.ch7-choice:hover,.ch7-choice:focus-visible{border-color:#446b59;background:color-mix(in srgb,#537d69 7%,transparent)}.ch7-choice[data-wrong="1"]{opacity:.46;text-decoration:line-through}.ch7-choice[data-correct="1"]{border-color:#56805d;background:color-mix(in srgb,#56805d 10%,transparent)}
+.ch7-feedback{max-width:760px;min-height:44px;margin:16px auto 0;padding:11px 12px;border-top:1px solid color-mix(in srgb,currentColor 13%,transparent);font-size:12px;line-height:1.5}.ch7-feedback.good{border-top-color:#56805d}.ch7-feedback.bad{border-top-color:#a85a50}.ch7-feedback.reveal{border-top-color:#446b59}
+.ch7-bottom{display:flex;gap:9px;align-items:center;justify-content:flex-end;padding:11px 16px;border-top:1px solid color-mix(in srgb,currentColor 13%,transparent)}
+.ch7-bottom button{appearance:none;padding:8px 11px;border:1px solid color-mix(in srgb,currentColor 20%,transparent);background:transparent;color:inherit;font:inherit;font-size:12px;font-weight:750;cursor:pointer}.ch7-bottom button:disabled{opacity:.32;cursor:not-allowed}#ch7NextTask{background:currentColor;color:Canvas}@supports not (color:Canvas){#ch7NextTask{background:#171717;color:#fff}}
+.ch7-concept{min-height:260px;display:grid;place-items:center;padding:26px;border:1px solid color-mix(in srgb,currentColor 13%,transparent);background:linear-gradient(145deg,color-mix(in srgb,#537d69 7%,transparent),transparent)}.ch7-concept-inner{max-width:390px}.ch7-concept-mark{font-size:34px;font-weight:300;color:#446b59}.ch7-concept-inner p{font-size:13px;line-height:1.55;opacity:.72}
+
+#ch7CourseDialog .ch7-bottom{display:flex!important;visibility:visible!important}
+.ch7-principle{margin:8px 0 12px;padding:10px 11px;border-left:3px solid #537d69;background:color-mix(in srgb,#537d69 8%,transparent);font-size:12px;font-weight:700;line-height:1.45}
+.ch7-cell[data-wrong="1"]{opacity:.34;background:color-mix(in srgb,#a85a50 12%,transparent)!important}
+.ch7-cell[data-correct="1"]{background:color-mix(in srgb,#56805d 12%,transparent)!important}
+@media(max-width:760px){
+  #ch7CourseCard{padding:15px}.ch7-card-row{align-items:flex-start;flex-direction:column}.ch7-card-actions{width:100%;justify-content:space-between}
+  .ch7-dialog{width:100vw;height:100dvh;border:0;margin:0;max-width:none;max-height:none}
+  .ch7-top{padding:11px 12px}.ch7-top-meta{display:none}.ch7-main{display:flex;flex-direction:column}
+  .ch7-lessons{flex:0 0 auto;display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:8px;border-right:0;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+  .ch7-lesson-btn{width:150px;min-width:150px;grid-template-columns:24px minmax(0,1fr);padding:8px;border:1px solid color-mix(in srgb,currentColor 10%,transparent)}.ch7-lesson-score{display:none}.ch7-lesson-copy span{display:none}
+  .ch7-stage{padding:14px 12px}.ch7-task-head{margin-bottom:10px}.ch7-task-copy p{font-size:12px}.ch7-workspace{display:block}.ch7-board{width:min(100%,430px);margin:0 auto}.ch7-side{margin-top:14px}.ch7-concept{min-height:150px;padding:18px}
+  .ch7-bottom{padding:9px 10px;position:relative}.ch7-feedback{margin-top:12px}
+}
+@media(prefers-reduced-motion:reduce){.ch7-dialog *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+`;
+  document.head.append(style);
+}
+
+function makeCard(){
+  const card = document.createElement("section");
+  card.id = "ch7CourseCard";
+  card.setAttribute("aria-labelledby","ch7CardTitle");
+  card.innerHTML = `
+    <div class="ch7-card-kicker">Chapter 7 · Positional play</div>
+    <div class="ch7-card-row">
+      <div class="ch7-card-copy">
+        <h3 id="ch7CardTitle">Shape and Positional Play</h3>
+        <p>Build efficient connections, preserve extension space, multiply useful directions, and shape positions that naturally grow into future forks.</p>
+      </div>
+      <div class="ch7-card-actions">
+        <span class="ch7-progress" id="ch7CardProgress">0 / 48</span>
+        <button type="button" id="ch7Start">Start</button>
+      </div>
+    </div>`;
+  $("#ch7Start",card).addEventListener("click", () => {
+    const resume = findResume();
+    openSection(resume.lesson,resume.task);
+  });
+  return card;
+}
+
+function makeDialog(){
+  const dlg = document.createElement("dialog");
+  dlg.id = "ch7CourseDialog";
+  dlg.className = "ch7-dialog";
+  dlg.setAttribute("aria-labelledby","ch7DialogTitle");
+  dlg.innerHTML = `
+    <div class="ch7-shell">
+      <header class="ch7-top">
+        <div class="ch7-top-copy">
+          <div class="ch7-kicker">Chapter 7</div>
+          <h2 id="ch7DialogTitle">Shape and Positional Play</h2>
+        </div>
+        <div class="ch7-top-meta" id="ch7TopMeta">48 positions · 8 lessons</div>
+        <button type="button" id="ch7Close" aria-label="Close Shape and Positional Play course">×</button>
+      </header>
+      <div class="ch7-main">
+        <nav class="ch7-lessons" id="ch7Lessons" aria-label="Chapter 7 lessons"></nav>
+        <main class="ch7-stage" id="ch7Stage"></main>
+      </div>
+      <footer class="ch7-bottom">
+        <button type="button" id="ch7Reveal" disabled>Reveal line</button>
+        <button type="button" id="ch7NextTask" disabled>Next position</button>
+      </footer>
+    </div>`;
+  $("#ch7Close",dlg).addEventListener("click",()=>dlg.close());
+  dlg.addEventListener("cancel",()=>{});
+  $("#ch7Reveal",dlg).addEventListener("click", revealCurrent);
+  $("#ch7NextTask",dlg).addEventListener("click", nextTask);
+  return dlg;
+}
+
+function mountChapter7(){
+  if(document.body?.dataset?.ready !== "true") return false;
+  ensureStyles();
+  let dlg = $("#ch7CourseDialog");
+  if(!dlg){ dlg = makeDialog(); document.body.append(dlg); }
+  const anchor = $("#ch6CourseCard");
+  if(anchor){
+    let card = $("#ch7CourseCard");
+    if(!card){ card = makeCard(); anchor.insertAdjacentElement("afterend",card); }
+    else if(card.previousElementSibling !== anchor) anchor.insertAdjacentElement("afterend",card);
+  }
+  refreshCard();
+  return !!anchor;
+}
+
+function refreshCard(){
+  const p = report();
+  const progress = $("#ch7CardProgress");
+  if(progress) progress.textContent = `${p.completed} / ${p.totalTasks}`;
+  const start = $("#ch7Start");
+  if(start) start.textContent = p.complete ? "Review" : (p.completed ? "Continue" : "Start");
+}
+
+function findResume(){
+  const l = Math.max(0,Math.min(LESSONS.length-1,Number(state.last?.lesson)||0));
+  const t = Math.max(0,Math.min(LESSONS[l].tasks.length-1,Number(state.last?.task)||0));
+  if(!taskRecord(LESSONS[l].tasks[t].id)?.correct) return {lesson:l,task:t};
+  for(let li=0;li<LESSONS.length;li++){
+    for(let ti=0;ti<LESSONS[li].tasks.length;ti++){
+      if(!taskRecord(LESSONS[li].tasks[ti].id)?.correct) return {lesson:li,task:ti};
+    }
+  }
+  return {lesson:l,task:t};
+}
+
+let run = {lesson:0,task:0,misses:0,done:false,board:null};
+
+function clonePosition(pos){
+  return {b:[...(pos?.b||[])],w:[...(pos?.w||[])]};
+}
+function currentTask(){ return LESSONS[run.lesson].tasks[run.task]; }
+
+function open(){
+  const resume = findResume();
+  openSection(resume.lesson,resume.task);
+}
+function openSection(lessonIndex=0,taskIndex=0){
+  mountChapter7();
+  const dlg = $("#ch7CourseDialog");
+  if(!dlg) return false;
+  run.lesson = Math.max(0,Math.min(LESSONS.length-1,Number(lessonIndex)||0));
+  run.task = Math.max(0,Math.min(LESSONS[run.lesson].tasks.length-1,Number(taskIndex)||0));
+  const task = currentTask();
+  const rec = taskRecord(task.id);
+  run.misses = rec?.correct ? 0 : (rec?.attempts || 0);
+  run.done = false;
+  run.board = clonePosition(task.position);
+  state.last = {lesson:run.lesson,task:run.task};
+  saveState();
+  renderLessonNav();
+  renderTask();
+  if(!dlg.open) dlg.showModal();
+  return true;
+}
+
+function renderLessonNav(){
+  const nav = $("#ch7Lessons");
+  if(!nav) return;
+  nav.innerHTML = "";
+  LESSONS.forEach((lesson,li)=>{
+    const lr = report().lessons[li];
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ch7-lesson-btn";
+    btn.setAttribute("aria-current",li===run.lesson ? "true":"false");
+    btn.innerHTML = `
+      <span class="ch7-lesson-num">${li+1}</span>
+      <span class="ch7-lesson-copy"><strong>${esc(lesson.title)}</strong><span>${esc(lesson.subtitle)}</span></span>
+      <span class="ch7-lesson-score">${lr.completed}/${lr.total}</span>`;
+    btn.addEventListener("click",()=>{
+      const firstOpen = lesson.tasks.findIndex(t=>!taskRecord(t.id)?.correct);
+      openSection(li,firstOpen<0?0:firstOpen);
+    });
+    nav.append(btn);
+  });
+}
+
+function renderTask(){
+  const task = currentTask();
+  const lesson = LESSONS[run.lesson];
+  const stage = $("#ch7Stage");
+  if(!stage) return;
+  const completedBefore = !!taskRecord(task.id)?.correct;
+  stage.innerHTML = `
+    <div class="ch7-task-head">
+      <div class="ch7-task-copy">
+        <h3>${esc(task.title)}</h3>
+        <p>${esc(task.prompt)}</p>
+      </div>
+      <div class="ch7-task-count">${run.task+1} / ${lesson.tasks.length}</div>
+    </div>
+    <div class="ch7-read-strip"><strong>${esc(lesson.title)}.</strong> ${esc(lesson.subtitle)}</div>
+    <div id="ch7Work"></div>
+    <div class="ch7-feedback" id="ch7Feedback" aria-live="polite">${completedBefore ? "Completed before. Replay the position, or continue to the next one." : "Evaluate the whole shape first. Choose only after comparing connection, directions, space, and relevance."}</div>`;
+  if(task.type === "board") renderPositionalBoard();
+  else renderChoice();
+  updateControls();
+}
+
+function coordIndex(coord){
+  const m = /^([A-HJ])(\d+)$/.exec(coord||"");
+  if(!m) return -1;
+  const c = LETTERS.indexOf(m[1]), r = Number(m[2])-1;
+  return r>=0&&r<SIZE&&c>=0 ? r*SIZE+c : -1;
+}
+function hasStone(coord){
+  return run.board.b.includes(coord) || run.board.w.includes(coord);
+}
+function addStone(coord,color){
+  if(!coord || hasStone(coord)) return;
+  run.board[color==="b"?"b":"w"].push(coord);
+}
+
+function renderBoard(container,candidates=[]){
+  const board = document.createElement("div");
+  board.className = "ch7-board";
+  board.id = "ch7Board";
+  board.setAttribute("role","grid");
+  const candidateSet = new Set(candidates);
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const crd = `${LETTERS[c]}${r+1}`;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "ch7-cell";
+      cell.dataset.coord = crd;
+      cell.setAttribute("role","gridcell");
+      const black = run.board.b.includes(crd), white = run.board.w.includes(crd);
+      if(black || white){
+        const stone = document.createElement("span");
+        stone.className = `ch7-stone ${black?"black":"white"}`;
+        stone.setAttribute("aria-hidden","true");
+        cell.append(stone);
+        cell.disabled = true;
+        cell.setAttribute("aria-label",`${crd}: ${black?"Black":"White"} stone`);
+      }else if(candidateSet.has(crd)){
+        cell.dataset.candidate = "1";
+        cell.setAttribute("aria-label",`Play ${crd}`);
+        const label = document.createElement("span");
+        label.className = "ch7-coord";
+        label.textContent = crd;
+        cell.append(label);
+        cell.addEventListener("click",()=>answerBoard(crd,cell));
+      }else{
+        cell.disabled = true;
+        cell.setAttribute("aria-label",`${crd}: empty`);
+      }
+      board.append(cell);
+    }
+  }
+  container.append(board);
+}
+
+function renderPositionalBoard(){
+  const task=currentTask(), work=$("#ch7Work");
+  const candidates=run.done?[]:task.candidates;
+  work.innerHTML = `<div class="ch7-workspace"><div class="ch7-board-wrap"></div><div class="ch7-side"><div class="ch7-seq-label">Black to move · positional decision</div><div class="ch7-principle">${esc(task.principle)}</div><div class="ch7-rule">Compare every marked candidate. Prefer useful connections, multiple live directions, preserved extension space, and contact with the relevant area. There is no need to invent a forced tactical line where none exists.</div></div></div>`;
+  renderBoard($(".ch7-board-wrap",work),candidates);
+  if(run.done){
+    const cell=$(`#ch7Board [data-coord="${task.answer}"]`);
+    if(cell){
+      cell.disabled=true;
+      if(!cell.querySelector('.ch7-stone')){
+        const stone=document.createElement('span');stone.className='ch7-stone black';stone.setAttribute('aria-hidden','true');cell.prepend(stone);
+      }
+      cell.dataset.correct='1';
+    }
+  }
+}
+function answerBoard(coord,cell){
+  if(run.done) return;
+  const task=currentTask();
+  if(!task.candidates.includes(coord)) return;
+  if(coord!==task.answer){
+    cell.dataset.wrong='1';cell.disabled=true;
+    registerMiss('That square uses fewer live directions, wastes space, or contributes less to the relevant shape.');
+    return;
+  }
+  addStone(coord,'b');run.done=true;markComplete(false);renderPositionalBoard();
+  setFeedback(`Completed. ${task.explain}`,'good');updateControls();
+}
+
+function renderChoice(){
+  const task=currentTask(), work=$("#ch7Work");
+  work.innerHTML = `<div class="ch7-workspace"><div class="ch7-concept"><div class="ch7-concept-inner"><div class="ch7-concept-mark">◇</div><p>${esc(task.notation || "Shape is stored tactical potential: judge what a stone can become part of, not only what it touches now.")}</p></div></div><div class="ch7-side"><div class="ch7-seq-label">Choose the strongest principle</div><div class="ch7-choices" id="ch7Choices"></div></div></div>`;
+  const box=$("#ch7Choices");
+  task.choices.forEach((label,i)=>{
+    const btn=document.createElement("button");
+    btn.type="button";btn.className="ch7-choice";btn.textContent=label;
+    btn.addEventListener("click",()=>answerChoice(i,btn));
+    box.append(btn);
+  });
+}
+function answerChoice(index,btn){
+  if(run.done && !taskRecord(currentTask().id)?.correct) return;
+  const task=currentTask();
+  if(index !== task.answer){
+    btn.dataset.wrong="1";
+    btn.disabled=true;
+    registerMiss("That principle does not preserve the strongest positional logic here.");
+    return;
+  }
+  $$(".ch7-choice").forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.dataset.correct="1";});
+  run.done=true;
+  markComplete(false);
+  setFeedback(`Completed. ${task.explain}`,"good");
+  updateControls();
+}
+
+function registerMiss(prefix){
+  const task=currentTask(), rec=taskRecord(task.id);
+  run.misses++;
+  if(!rec?.correct){
+    state.tasks[task.id] = {...(rec||{}),correct:false,attempts:run.misses,firstTry:false,assisted:false};
+    saveState();
+  }
+  if(run.misses===1){
+    setFeedback(`Not this. ${prefix} Compare the candidates again by live directions, useful connections, extension space, and relevance.`,"bad");
+  }else{
+    setFeedback(`Still not the strongest shape. ${prefix} Reveal is now available; use it only after you have compared why the alternatives waste value.`,"bad");
+  }
+  updateControls();
+}
+
+function markComplete(assisted){
+  const task=currentTask(), prev=taskRecord(task.id);
+  if(prev?.correct) return;
+  state.tasks[task.id] = {
+    correct:true,
+    assisted:!!assisted,
+    firstTry:!assisted && run.misses===0,
+    attempts:run.misses,
+    completedAt:Date.now()
+  };
+  saveState();
+  renderLessonNav();
+}
+
+function revealCurrent(){
+  if(run.misses < 2 || run.done) return;
+  const task=currentTask();
+  if(task.type==="board"){
+    addStone(task.answer,'b');run.done=true;markComplete(true);renderPositionalBoard();
+    setFeedback(`Revealed. ${task.answer}. ${task.explain}`,'reveal');
+  }else{
+    const buttons=$$(".ch7-choice");
+    buttons.forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.dataset.correct="1";});
+    run.done=true;markComplete(true);
+    setFeedback(`Revealed. ${task.choices[task.answer]} ${task.explain}`,'reveal');
+  }
+  updateControls();
+}
+
+function setFeedback(text,kind=""){
+  const el=$("#ch7Feedback");if(!el)return;
+  el.className=`ch7-feedback ${kind}`;el.textContent=text;
+}
+
+function updateControls(){
+  const reveal=$("#ch7Reveal"),next=$("#ch7NextTask");
+  if(reveal){
+    reveal.disabled = run.done || run.misses < 2;
+    reveal.textContent = currentTask().type==="board" ? "Reveal move" : "Reveal answer";
+  }
+  if(next){
+    next.disabled = !run.done && !taskRecord(currentTask().id)?.correct;
+    const last = run.lesson===LESSONS.length-1 && run.task===LESSONS[run.lesson].tasks.length-1;
+    next.textContent = last ? "Finish chapter" : "Next position";
+  }
+}
+function nextTask(){
+  if(!run.done && !taskRecord(currentTask().id)?.correct) return;
+  if(run.task+1 < LESSONS[run.lesson].tasks.length){
+    openSection(run.lesson,run.task+1); return;
+  }
+  if(run.lesson+1 < LESSONS.length){
+    openSection(run.lesson+1,0); return;
+  }
+  $("#ch7CourseDialog")?.close();
+  refreshCard();
+}
+
+function reset(){
+  state=freshState();saveState();
+  if($("#ch7CourseDialog")?.open) openSection(0,0);
+  return report();
+}
+
+window.GomokuCourseChapter7 = {open,openSection,report,reset,mount:mountChapter7};
+
+let mountQueued=false;
+function queueMount(){
+  if(mountQueued)return;
+  mountQueued=true;
+  requestAnimationFrame(()=>{mountQueued=false;mountChapter7();});
+}
+const startObserver=()=>{
+  if(!document.body)return;
+  const observer=new MutationObserver(queueMount);
+  observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["data-ready"]});
+  queueMount();
+};
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",startObserver,{once:true});
+else startObserver();
+})();
+</script>
 </body></html>
