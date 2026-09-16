@@ -1,0 +1,121 @@
+name: Certify Chapter 3 Threes course
+
+on:
+  push:
+    paths:
+      - '.github/workflows/certify-ch3-course.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Confirm production source
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 45); do
+            curl -fsSL "https://thiepn.dev/gomoku/?ch3ready=$(date +%s%N)" -o /tmp/live.html || true
+            if grep -q 'course-ch3-v1-script' /tmp/live.html && grep -q 'gomoku.course.chapter3.v1' /tmp/live.html; then ok=1; break; fi
+            sleep 2
+          done
+          test "$ok" = 1
+          test "$(grep -o 'id=\"course-ch1-v1-script\"' /tmp/live.html | wc -l)" = 1
+          test "$(grep -o 'id=\"course-ch2-v1-script\"' /tmp/live.html | wc -l)" = 1
+          test "$(grep -o 'id=\"course-ch3-v1-script\"' /tmp/live.html | wc -l)" = 1
+      - name: Certify live Chapter 3
+        shell: bash
+        run: |
+          cat > .ch3-cert.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;if(!chrome)throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const make=async()=>{
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+            await p.goto(root+'?ch3qa='+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await p.waitForTimeout(900);
+            const close=p.locator('button[aria-label*="Close" i]:visible');if(await close.count())await close.first().click();
+            return{ctx,p,errors};
+          };
+          const toLearn=async p=>{
+            const l=p.getByRole('button',{name:/^learn$/i});
+            if(await l.count())await l.first().click();else await p.locator('[data-v92-route="improve"]').first().click();
+            await p.waitForTimeout(650);
+            const counts=await p.evaluate(()=>{
+              const a=document.querySelector('#ch1CourseCard'),b=document.querySelector('#ch2CourseCard'),c=document.querySelector('#ch3CourseCard');
+              return{ch1:document.querySelectorAll('#ch1CourseCard').length,ch2:document.querySelectorAll('#ch2CourseCard').length,ch3:document.querySelectorAll('#ch3CourseCard').length,
+                order:!!(a&&b&&c&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)&&(b.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING))};
+            });
+            if(counts.ch1!==1||counts.ch2!==1||counts.ch3!==1||!counts.order)throw new Error('Course stack '+JSON.stringify(counts));
+          };
+          const choice=async(p,name)=>p.locator('#ch3CourseDialog[open]').getByRole('button',{name,exact:true}).click();
+
+          const A=await make();await toLearn(A.p);
+          const api=await A.p.evaluate(()=>({open:typeof window.GomokuCourseChapter3?.open,section:typeof window.GomokuCourseChapter3?.openSection,report:window.GomokuCourseChapter3?.report?.()}));
+          if(api.open!=='function'||api.section!=='function'||api.report?.totalTasks!==46||api.report?.totalLessons!==8)throw new Error('Chapter 3 API/report '+JSON.stringify(api));
+          await A.p.locator('#ch1Start').click();await A.p.waitForSelector('#ch1CourseDialog[open] #ch1Board',{state:'visible',timeout:5000});await A.p.locator('#ch1CourseDialog[open] #ch1Close').click();
+          await A.p.locator('#ch2Start').click();await A.p.waitForSelector('#ch2CourseDialog[open] #ch2Board',{state:'visible',timeout:5000});await A.p.locator('#ch2CourseDialog[open] #ch2Close').click();
+          console.log('PASS Chapters 1–2 regression + ordered three-card stack');
+
+          await A.p.locator('#ch3Start').click();await A.p.waitForSelector('#ch3CourseDialog[open] #ch3Board',{state:'visible',timeout:5000});
+          const geo=await A.p.evaluate(()=>{const d=document.querySelector('#ch3CourseDialog');return{iw:innerWidth,sw:document.documentElement.scrollWidth,dw:d.scrollWidth,open:d.open}});
+          if(!geo.open||geo.sw>geo.iw+2||geo.dw>geo.iw+2)throw new Error('Mobile overflow '+JSON.stringify(geo));
+          await choice(A.p,'Broken three');if(!/Not this\./.test(await A.p.locator('#ch3Feedback').innerText()))throw new Error('First-miss coaching missing');
+          await choice(A.p,'Closed four');if(await A.p.locator('#ch3Reveal').isHidden())throw new Error('Reveal unavailable after second miss');
+          await A.p.locator('#ch3Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter3.v1')).tasks.r1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false)throw new Error('Assisted accounting '+JSON.stringify(assisted));
+          console.log('PASS mobile course + staged coaching + assisted accounting');await A.ctx.close();
+
+          const B=await make();await toLearn(B.p);await B.p.locator('#ch3Start').click();await B.p.waitForSelector('#ch3CourseDialog[open] #ch3Board',{state:'visible',timeout:5000});
+          for(const answer of ['Open three','Blocked three','Broken three','No — edge-cramped three']){
+            await choice(B.p,answer);
+            if(!/^Completed\./.test(await B.p.locator('#ch3Feedback').innerText()))throw new Error('Clean answer failed '+answer);
+            if(answer!=='No — edge-cramped three')await B.p.locator('#ch3NextTask').click();
+          }
+          let rep=await B.p.evaluate(()=>window.GomokuCourseChapter3.report());
+          if(!rep.lessons[0].complete||rep.lessons[0].rate!==1)throw new Error('Recognition lesson score '+JSON.stringify(rep.lessons[0]));
+          console.log('PASS clean first-try recognition lesson');
+
+          await B.p.evaluate(()=>window.GomokuCourseChapter3.openSection(1,0));await B.p.waitForTimeout(120);
+          const candidates=await B.p.locator('#ch3Board .ch3-cell[data-candidate="1"]:not(:disabled)').count();if(candidates!==3)throw new Error('Expected three move candidates, got '+candidates);
+          await B.p.locator('#ch3Board [data-coord="E6"]').click();if(!/^Completed\./.test(await B.p.locator('#ch3Feedback').innerText()))throw new Error('Open-three conversion failed');
+          await B.p.evaluate(()=>window.GomokuCourseChapter3.openSection(6,1));await B.p.waitForTimeout(120);await choice(B.p,'No — genuine double-three is forbidden');
+          if(!/forbidden/i.test(await B.p.locator('#ch3Feedback').innerText()))throw new Error('Renju genuine double-three distinction failed');
+          await B.p.evaluate(()=>window.GomokuCourseChapter3.openSection(6,3));await B.p.waitForTimeout(120);await choice(B.p,'No — both threats must be genuine');
+          if(!/not every|genuine|qualif/i.test(await B.p.locator('#ch3Feedback').innerText()))throw new Error('False double-three distinction failed');
+          await B.p.evaluate(()=>window.GomokuCourseChapter3.openSection(7,0));await B.p.waitForTimeout(120);
+          if(!/1 \/ 12/.test(await B.p.locator('.ch3-task-count').innerText()))throw new Error('Checkpoint is not 12 positions');
+          console.log('PASS move exercise + genuine/false Renju double-three + 12-position checkpoint');
+
+          await B.p.reload({waitUntil:'domcontentloaded'});await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true',{timeout:15000});await B.p.waitForTimeout(900);
+          rep=await B.p.evaluate(()=>window.GomokuCourseChapter3.report());if(!rep.lessons[0].complete)throw new Error('Progress persistence failed');
+          const close=B.p.locator('button[aria-label*="Close" i]:visible');if(await close.count())await close.first().click();await toLearn(B.p);
+          const finalCounts=await B.p.evaluate(()=>({ch1:document.querySelectorAll('#ch1CourseCard').length,ch2:document.querySelectorAll('#ch2CourseCard').length,ch3:document.querySelectorAll('#ch3CourseCard').length}));
+          if(finalCounts.ch1!==1||finalCounts.ch2!==1||finalCounts.ch3!==1)throw new Error('Duplicate cards '+JSON.stringify(finalCounts));
+          if(B.errors.some(x=>/ch3|chapter 3/i.test(x)))throw new Error('Chapter 3 page errors '+JSON.stringify(B.errors));
+          console.log('PASS persistence + rerender uniqueness');
+          await B.ctx.close();await browser.close();console.log('CHAPTER3_CERTIFIED');
+          JS
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          CHROME="$CHROME" node .ch3-cert.mjs
+      - name: Remove certification
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch3-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/certify-ch3-course.yml
+          git commit -m 'Remove Chapter 3 certification' || true
+          git push || true
