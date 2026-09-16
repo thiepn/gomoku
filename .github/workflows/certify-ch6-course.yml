@@ -1,0 +1,209 @@
+name: Final certify Chapter 6 Reading Sequences
+
+on:
+  push:
+    paths: ['.github/workflows/certify-ch6-course.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+
+      - name: Confirm patched live source
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 75); do
+            curl -fsSL "https://thiepn.dev/gomoku/?ch6final=$(date +%s%N)" -o /tmp/live.html || true
+            if grep -q 'id="course-ch6-v1-script"' /tmp/live.html \
+              && grep -q '#ch6CourseDialog .ch6-bottom{display:flex!important;visibility:visible!important' /tmp/live.html \
+              && grep -q 'function mountChapter6()' /tmp/live.html; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" = 1
+          for n in 1 2 3 4 5 6; do
+            test "$(grep -o "id=\"course-ch${n}-v1-script\"" /tmp/live.html | wc -l)" = 1
+          done
+
+      - name: Certify live Chapter 6
+        shell: bash
+        run: |
+          cat > .ch6-cert.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+
+          const make=async()=>{
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            const p=await ctx.newPage();
+            p.setDefaultTimeout(15000);
+            p.setDefaultNavigationTimeout(20000);
+            const errors=[];
+            p.on('pageerror',e=>errors.push(e.message));
+            await p.goto(root+'?ch6cert='+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true' && typeof window.GomokuCourseChapter6?.openSection==='function',null,{timeout:20000});
+            // Existing first-launch onboarding is unrelated to Chapter 6. Hide it only in QA.
+            await p.addStyleTag({content:'#v112WelcomeDialog{display:none!important;pointer-events:none!important}'});
+            await p.evaluate(()=>{
+              document.querySelector('[data-v92-route="improve"]')?.click();
+              document.querySelector('#v112WelcomeDialog')?.close?.();
+            });
+            await p.waitForTimeout(500);
+            await p.waitForSelector('#ch6CourseCard',{state:'attached'});
+            return {ctx,p,errors};
+          };
+
+          const assertCourseStack=async p=>{
+            const stack=await p.evaluate(()=>{
+              const cards=[1,2,3,4,5,6].map(n=>document.querySelector(`#ch${n}CourseCard`));
+              const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));
+              return {
+                counts:[1,2,3,4,5,6].map(n=>document.querySelectorAll(`#ch${n}CourseCard`).length),
+                order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1]))
+              };
+            });
+            if(stack.counts.some(n=>n!==1)||!stack.order) throw new Error('Course stack '+JSON.stringify(stack));
+          };
+
+          const choose=(p,name)=>p.locator('#ch6CourseDialog[open]').getByRole('button',{name,exact:true}).click();
+          const openSection=async(p,lesson,task)=>{
+            await p.evaluate(([l,t])=>window.GomokuCourseChapter6.openSection(l,t),[lesson,task]);
+            await p.waitForSelector('#ch6CourseDialog[open]');
+          };
+          const footerGeometry=async p=>p.evaluate(()=>{
+            const footer=document.querySelector('#ch6CourseDialog .ch6-bottom');
+            const reveal=document.querySelector('#ch6Reveal');
+            const dialog=document.querySelector('#ch6CourseDialog');
+            const fr=footer?.getBoundingClientRect();
+            const rr=reveal?.getBoundingClientRect();
+            const fs=footer?getComputedStyle(footer):null;
+            return {
+              viewport:[innerWidth,innerHeight],
+              pageWidth:document.documentElement.scrollWidth,
+              dialogWidth:dialog?.scrollWidth,
+              footerDisplay:fs?.display,
+              footerRect:fr?[fr.left,fr.top,fr.right,fr.bottom,fr.width,fr.height]:null,
+              revealRect:rr?[rr.left,rr.top,rr.right,rr.bottom,rr.width,rr.height]:null,
+              revealVisible:reveal?.checkVisibility?.(),
+              revealDisabled:reveal?.disabled
+            };
+          });
+          const assertFooterVisible=async(p,label)=>{
+            const g=await footerGeometry(p);
+            const [iw,ih]=g.viewport;
+            const f=g.footerRect,r=g.revealRect;
+            if(g.pageWidth>iw+2||g.dialogWidth>iw+2) throw new Error(label+' horizontal overflow '+JSON.stringify(g));
+            if(g.footerDisplay==='none'||!f||f[4]<=1||f[5]<=1) throw new Error(label+' footer hidden '+JSON.stringify(g));
+            if(!r||r[4]<=1||r[5]<=1||!g.revealVisible) throw new Error(label+' reveal hidden '+JSON.stringify(g));
+            if(r[0]<-1||r[1]<-1||r[2]>iw+1||r[3]>ih+1) throw new Error(label+' reveal outside viewport '+JSON.stringify(g));
+          };
+
+          // A: mobile shell, staged coaching and assisted accounting.
+          const A=await make();
+          await assertCourseStack(A.p);
+          let report=await A.p.evaluate(()=>window.GomokuCourseChapter6.report());
+          if(report.totalTasks!==48||report.totalLessons!==8) throw new Error('Chapter 6 report '+JSON.stringify(report));
+          await openSection(A.p,0,0);
+          await assertFooterVisible(A.p,'initial');
+          await choose(A.p,'Five Black moves');
+          if(!/Not this\./.test(await A.p.locator('#ch6Feedback').innerText())) throw new Error('First-miss coaching missing');
+          if(!(await A.p.locator('#ch6Reveal').isDisabled())) throw new Error('Reveal enabled after one miss');
+          await assertFooterVisible(A.p,'after first miss');
+          await choose(A.p,'Five threats plus five replies');
+          if(await A.p.locator('#ch6Reveal').isDisabled()) throw new Error('Reveal unavailable after second miss');
+          await assertFooterVisible(A.p,'after second miss');
+          await A.p.locator('#ch6Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter6.v1')).tasks.r1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false) throw new Error('Assisted accounting '+JSON.stringify(assisted));
+          console.log('PASS mobile footer + staged coaching + assisted accounting');
+          await A.ctx.close();
+
+          // B: clean conceptual lesson, short/medium/long forcing lines, VCT/Renju and persistence.
+          const B=await make();
+          await assertCourseStack(B.p);
+          await openSection(B.p,0,0);
+          const cleanAnswers=[
+            'Five individual moves total',
+            "Your immediate win, the opponent's immediate win, then forcing threats",
+            'No — the alternative reply must also be calculated',
+            'When the opponent has a viable unaccounted-for reply'
+          ];
+          for(let i=0;i<cleanAnswers.length;i++){
+            await choose(B.p,cleanAnswers[i]);
+            if(!/^Completed\./.test(await B.p.locator('#ch6Feedback').innerText())) throw new Error('Clean answer failed '+cleanAnswers[i]);
+            if(i<cleanAnswers.length-1) await B.p.locator('#ch6NextTask').click();
+          }
+          report=await B.p.evaluate(()=>window.GomokuCourseChapter6.report());
+          if(!report.lessons[0].complete||report.lessons[0].rate!==1) throw new Error('Lesson 1 clean score '+JSON.stringify(report.lessons[0]));
+          console.log('PASS clean first-try reading-discipline lesson');
+
+          await openSection(B.p,1,0);
+          await B.p.locator('#ch6Board [data-coord="D1"]').click();
+          if(await B.p.locator('#ch6Board [data-coord="D1"] .black').count()!==1) throw new Error('D1 attacker stone missing');
+          if(await B.p.locator('#ch6Board [data-coord="D2"] .white').count()!==1) throw new Error('Forced D2 defender stone missing');
+          await B.p.locator('#ch6Board [data-coord="C4"]').click();
+          if(!/^Completed\./.test(await B.p.locator('#ch6Feedback').innerText())) throw new Error('Three-ply line failed');
+          const r5=await B.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter6.v1')).tasks.r5);
+          if(!r5?.correct||!r5.firstTry||r5.assisted) throw new Error('Three-ply score '+JSON.stringify(r5));
+          console.log('PASS three-ply forced line');
+
+          await openSection(B.p,2,0);
+          for(const c of ['B7','H7','D6']) await B.p.locator(`#ch6Board [data-coord="${c}"]`).click();
+          if(!/^Completed\./.test(await B.p.locator('#ch6Feedback').innerText())) throw new Error('Five-ply line failed');
+          console.log('PASS five-ply forced line');
+
+          await openSection(B.p,5,0);
+          for(const c of ['E6','E9','D6','G6','F7']) await B.p.locator(`#ch6Board [data-coord="${c}"]`).click();
+          if(!/^Completed\./.test(await B.p.locator('#ch6Feedback').innerText())) throw new Error('Long VCF line failed');
+          const r26=await B.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter6.v1')).tasks.r26);
+          if(!r26?.correct||!r26.firstTry||r26.assisted) throw new Error('Long VCF score '+JSON.stringify(r26));
+          console.log('PASS nine-ply long VCF line');
+
+          await openSection(B.p,6,4);
+          await choose(B.p,'No — every Black move in the line must itself be legal');
+          if(!/legality/i.test(await B.p.locator('#ch6Feedback').innerText())) throw new Error('Renju legality bridge failed');
+          await openSection(B.p,7,0);
+          if(!/1 \/ 12/.test(await B.p.locator('.ch6-task-count').innerText())) throw new Error('Checkpoint is not 12 positions');
+          console.log('PASS VCT/Renju legality + 12-position checkpoint');
+
+          await B.p.reload({waitUntil:'domcontentloaded'});
+          await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true' && typeof window.GomokuCourseChapter6?.report==='function',null,{timeout:20000});
+          report=await B.p.evaluate(()=>window.GomokuCourseChapter6.report());
+          if(!report.lessons[0].complete||report.lessons[1].completed<1||report.lessons[5].completed<1) throw new Error('Progress persistence '+JSON.stringify(report));
+          const persisted=await B.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter6.v1')).tasks);
+          if(!persisted.r5?.correct||!persisted.r26?.correct) throw new Error('Task persistence failed');
+          if(B.errors.some(x=>/ch6|chapter 6/i.test(x))) throw new Error('Chapter 6 page errors '+JSON.stringify(B.errors));
+          console.log('PASS persistence + no Chapter 6 page errors');
+          await B.ctx.close();
+          await browser.close();
+          console.log('CHAPTER6_CERTIFIED');
+          JS
+          node --check .ch6-cert.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          CHROME="$CHROME" node .ch6-cert.mjs
+
+      - name: Remove certification workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch6-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/certify-ch6-course.yml
+          git commit -m 'Remove Chapter 6 certification' || true
+          git push || true
