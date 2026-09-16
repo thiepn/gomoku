@@ -1,0 +1,71 @@
+name: Install Chapter 13 Expert Calculation and Candidate Search
+
+on:
+  push:
+    paths: ['.github/workflows/install-ch13-course.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and validate Chapter 13 payload
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64,bz2,hashlib,re,json
+          enc=Path('.ch13-payload.b64').read_text(encoding='utf-8').strip()
+          data=bz2.decompress(base64.b64decode(enc))
+          expected='f2beaa1da8d76c98181cc1dedc47e90d24ce8fb6efb026e578102b9b28052934'
+          actual=hashlib.sha256(data).hexdigest()
+          if actual!=expected: raise SystemExit(f'hash mismatch {actual}')
+          text=data.decode('utf-8')
+          required=['id="course-ch13-v1-script"','gomoku.course.chapter13.v1','function mountChapter13()','function renderCalculationBoard(task)','function settleCardPlacement(attempt=0)','window.GomokuCourseChapter13','Advanced · Chapter 13']
+          missing=[x for x in required if x not in text]
+          if missing: raise SystemExit(f'missing markers {missing}')
+          m=re.search(r'const LESSONS = (\[.*?\]);\nconst TOTAL_TASKS',text,re.S)
+          if not m: raise SystemExit('LESSONS payload not found')
+          lessons=json.loads(m.group(1))
+          tasks=[t for l in lessons for t in l['tasks']]
+          if len(tasks)!=48 or len({t['id'] for t in tasks})!=48: raise SystemExit('task id/count validation failed')
+          if [len(l['tasks']) for l in lessons] != [5,5,6,6,5,5,4,12]: raise SystemExit('lesson split invalid')
+          if sum(t['type']=='choice' for t in tasks)!=12 or sum(t['type']=='board' for t in tasks)!=36: raise SystemExit('task type counts invalid')
+          for t in tasks:
+            if t['type']=='board':
+              occupied=set(t['black'])|set(t['white'])
+              if t['answer'] not in t['candidates'] or t['answer'] in occupied: raise SystemExit(f'bad board answer {t["id"]}')
+              if len(t['candidates'])!=len(set(t['candidates'])): raise SystemExit(f'duplicate candidates {t["id"]}')
+              for c in t['black']+t['white']+t['candidates']:
+                if not re.fullmatch(r'[A-I][1-9]',c): raise SystemExit(f'bad coord {t["id"]} {c}')
+          Path('/tmp/ch13-module.html').write_bytes(data)
+      - name: Install Chapter 13 into app
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          module=Path('/tmp/ch13-module.html').read_text(encoding='utf-8')
+          for n in range(1,13):
+              marker=f'id="course-ch{n}-v1-script"'
+              if s.count(marker)!=1: raise SystemExit(f'baseline marker count failed for Chapter {n}: {s.count(marker)}')
+          if s.count('id="course-ch13-v1-script"')!=0: raise SystemExit('Chapter 13 already installed')
+          idx=s.rfind('</body>')
+          if idx<0: raise SystemExit('closing body tag not found')
+          s=s[:idx]+'\n'+module+'\n'+s[idx:]
+          p.write_text(s,encoding='utf-8')
+          final=p.read_text(encoding='utf-8')
+          for n in range(1,14):
+              marker=f'id="course-ch{n}-v1-script"'
+              if final.count(marker)!=1: raise SystemExit(f'final marker count failed for Chapter {n}: {final.count(marker)}')
+      - name: Commit implementation and clean installer
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .ch13-payload.b64 .github/workflows/install-ch13-course.yml
+          git commit -m 'Implement Chapter 13 Expert Calculation and Candidate Search course'
+          git push
