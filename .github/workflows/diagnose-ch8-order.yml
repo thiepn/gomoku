@@ -1,0 +1,73 @@
+name: Diagnose Chapter 8 course order
+
+on:
+  push:
+    paths: ['.github/workflows/diagnose-ch8-order.yml']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  diagnose:
+    timeout-minutes: 4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for this commit's Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 90); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            [ "$state" = success ] && exit 0
+            { [ "$state" = failure ] || [ "$state" = cancelled ]; } && exit 1
+            sleep 2
+          done
+          exit 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Inspect course-card DOM order
+        shell: bash
+        run: |
+          cat > .ch8-order.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME});
+          const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const p=await ctx.newPage();
+          await p.goto('https://thiepn.dev/gomoku/?ch8order='+Date.now(),{waitUntil:'domcontentloaded',timeout:20000});
+          await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter8?.report==='function',null,{timeout:20000});
+          await p.addStyleTag({content:'#v112WelcomeDialog{display:none!important;pointer-events:none!important}'});
+          await p.evaluate(()=>{document.querySelector('[data-v92-route="improve"]')?.click();document.querySelector('#v112WelcomeDialog')?.close?.()});
+          await p.waitForTimeout(700);
+          const info=await p.evaluate(()=>{
+            const cards=[1,2,3,4,5,6,7,8].map(n=>document.querySelector(`#ch${n}CourseCard`));
+            const describe=e=>e?{id:e.id,tag:e.tagName,cls:e.className,parentId:e.parentElement?.id||null,parentCls:e.parentElement?.className||null,parentTag:e.parentElement?.tagName||null,top:e.getBoundingClientRect().top}:null;
+            const pairs=cards.slice(0,-1).map((c,i)=>({pair:`${i+1}->${i+2}`,follows:!!(c&&cards[i+1]&&(c.compareDocumentPosition(cards[i+1])&Node.DOCUMENT_POSITION_FOLLOWING)),relation:c&&cards[i+1]?c.compareDocumentPosition(cards[i+1]):null}));
+            const all=[...document.querySelectorAll('[id^="ch"][id$="CourseCard"]')].map(x=>x.id);
+            const uniqueParents=[...new Set(cards.filter(Boolean).map(c=>c.parentElement))].map(p=>({id:p.id||null,cls:p.className||null,tag:p.tagName,children:[...p.children].map(x=>x.id||`${x.tagName}.${x.className||''}`).filter(Boolean)}));
+            return {all,each:cards.map(describe),pairs,uniqueParents};
+          });
+          console.log('CH8_ORDER_DIAG='+JSON.stringify(info));
+          await browser.close();
+          JS
+          node --check .ch8-order.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 60s env CHROME="$CHROME" node .ch8-order.mjs
+      - name: Remove diagnostic workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch8-order.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/diagnose-ch8-order.yml
+          git commit -m 'Remove Chapter 8 order diagnostic' || true
+          git pull --rebase || true
+          git push || true
