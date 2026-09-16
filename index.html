@@ -9519,4 +9519,560 @@ if(document.body) observer.observe(document.body,{attributes:true,attributeFilte
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
 })();
 </script>
+<script id="course-ch9-v1-script">
+(() => {
+"use strict";
+if (window.__gomokuCourseChapter9Loaded) return;
+window.__gomokuCourseChapter9Loaded = true;
+
+const STORAGE_KEY = "gomoku.course.chapter9.v1";
+const VERSION = 1;
+const BOARD_SIZE = 9;
+const COLS = "ABCDEFGHI";
+
+const C = (id, prompt, options, answer, explain, hint1, hint2) => ({
+  id, type:"choice", prompt, options, answer, explain,
+  hint1: hint1 || "Ask what this move improves after the defender answers.",
+  hint2: hint2 || "Compare the surviving continuations after each candidate."
+});
+const B = (id, prompt, black, white, candidates, answer, explain, turn="black", hint1, hint2) => ({
+  id, type:"board", prompt, black, white, candidates, answer, explain, turn,
+  hint1: hint1 || "Compare candidates by threat quality, branching, and the defender's best reply.",
+  hint2: hint2 || "Prefer the move that strengthens the next forcing continuation instead of ending the attack."
+});
+
+const LESSONS = [
+  {
+    title:"Attack Blueprint",
+    kicker:"From pressure to a plan",
+    intro:"A strong attack is not a pile of aggressive moves. It is a sequence that upgrades threat quality while reducing the defender's useful replies. Start by identifying the target, the next forcing shape, and the branch you want to preserve.",
+    tasks:[
+      C("a1","What is the best definition of attack construction?",[
+        "Building a sequence in which each move increases concrete pressure or preserves multiple forcing continuations",
+        "Playing toward the opponent's largest group",
+        "Adding stones as close together as possible"
+      ],0,"Attack construction is about increasing forcing power while keeping future branches alive."),
+      C("a2","What should a good attacking move usually do besides create its immediate threat?",[
+        "Improve the next move as well",
+        "Use the center intersection whenever possible",
+        "Touch an opponent stone"
+      ],0,"The best attacks compound. A move should threaten now and improve the quality of the continuation."),
+      C("a3","Why is an attack with two credible continuations stronger than a one-line attack?",[
+        "The defender cannot solve the whole position with one predictable reply",
+        "Two continuations always mean an immediate win",
+        "It automatically creates a legal double-four"
+      ],0,"Branching attacks are harder to extinguish because one defense may leave another forcing route intact."),
+      C("a4","When should you stop adding quiet attacking stones and switch to forcing play?",[
+        "When the position already supports a concrete forcing sequence",
+        "Only after every nearby intersection is occupied",
+        "As soon as you have three stones anywhere"
+      ],0,"Once a real forcing sequence exists, extra preparation can waste the initiative."),
+      C("a5","What is the most common reason a promising attack collapses?",[
+        "The attacker spends tempo on a threat the defender can answer while improving their own position",
+        "The attacker uses diagonal lines",
+        "The attacker has too many connected stones"
+      ],0,"Weak forcing quality lets the defender solve the threat and improve at the same time.")
+    ]
+  },
+  {
+    title:"Create the First Forcing Move",
+    kicker:"Turn shape into obligation",
+    intro:"The first critical step is converting useful shape into a move the defender must respect. Prefer moves that create a four, a direct fork threat, or a continuation whose defense is highly constrained.",
+    tasks:[
+      B("a6","Black to move. Which candidate turns the horizontal shape into a four immediately?",
+        ["C5","D5","E5"],["C7","G6"],["B5","F5","E4"],"F5",
+        "F5 extends C5-D5-E5 into four consecutive stones, creating an immediate winning point at B5 or G5 depending on the next defense."),
+      B("a7","Black to move. Which candidate creates the strongest direct diagonal continuation?",
+        ["C3","D4","E5"],["C6","F5"],["F6","B2","E4"],"F6",
+        "F6 makes C3-D4-E5-F6, a four on the diagonal and therefore a forcing move."),
+      B("a8","Black to move. Which candidate upgrades a loose vertical shape into a forcing four?",
+        ["E3","E4","E5"],["C5","G5"],["E6","D6","F4"],"E6",
+        "E6 creates four vertically from E3 through E6. The other candidates improve shape but do not force an immediate reply."),
+      B("a9","Black to move. Which candidate creates the most forcing horizontal threat while keeping the diagonal branch alive?",
+        ["C4","D4","E4","E5"],["B6","G4"],["F4","D5","F5"],"F4",
+        "F4 creates a horizontal four while the E5 stone still supports a diagonal continuation. It improves both the current threat and the next branch."),
+      B("a10","Black to move. Which candidate creates a four instead of merely extending a three?",
+        ["B6","C6","D6"],["F4","G7"],["E6","A6","D5"],"E6",
+        "E6 completes B6-C6-D6-E6, forcing the defender to answer the immediate winning endpoint.")
+    ]
+  },
+  {
+    title:"Upgrade Threat Quality",
+    kicker:"Make every tempo harder to answer",
+    intro:"A weak threat can be defended with a useful move. A strong threat narrows the defender's choices. Learn to upgrade from loose threes to fours, from single-purpose pressure to multi-purpose moves, and from obvious lines to branching structures.",
+    tasks:[
+      B("a11","Black to move. Which candidate upgrades the row from a broken shape into four consecutive stones?",
+        ["B5","C5","E5"],["C7","F7"],["D5","F5","E4"],"D5",
+        "D5 fills the internal gap, producing B5-C5-D5-E5. Filling the gap is much stronger than extending elsewhere."),
+      B("a12","Black to move. Which candidate turns two crossing threes into the strongest shared attacking point?",
+        ["C5","D5","E4","E6"],["B7","G3"],["E5","F5","D4"],"E5",
+        "E5 connects the horizontal and vertical structures at once, so the next attack can continue in more than one direction."),
+      B("a13","Black to move. Which candidate creates a four while also occupying the defender's best central blocking square?",
+        ["C4","D4","E4"],["F6","G6"],["F4","D5","E5"],"F4",
+        "F4 creates the immediate four and consumes the square White would most like to use to blunt that wing."),
+      B("a14","Black to move. Which candidate is the cleanest threat upgrade on the diagonal?",
+        ["B2","C3","E5"],["C6","G5"],["D4","F6","E4"],"D4",
+        "D4 fills the missing diagonal point, converting the shape into four consecutive stones B2-C3-D4-E5."),
+      B("a15","Black to move. Which candidate creates the strongest vertical forcing move?",
+        ["D2","D3","D4"],["F5","G6"],["D5","E5","C5"],"D5",
+        "D5 extends the vertical chain to four. The side moves do not demand an immediate answer."),
+      B("a16","Black to move. Which candidate best upgrades both local density and forcing potential?",
+        ["C5","E5","D4"],["B7","G2"],["D5","F5","C4"],"D5",
+        "D5 occupies the central gap among the existing stones, creating multiple adjacent continuations instead of a single remote extension.")
+    ]
+  },
+  {
+    title:"Preserve Branches",
+    kicker:"Do not attack into a dead end",
+    intro:"The defender wants to funnel your attack into one predictable line. Strong attack construction keeps at least one second route alive. Choose moves that threaten now without sealing off your own useful intersections.",
+    tasks:[
+      B("a17","Black to move. Which candidate creates a horizontal four while preserving the diagonal stones as a second route?",
+        ["C5","D5","E5","E4"],["B7","G6"],["F5","D4","F4"],"F5",
+        "F5 forces on the row and leaves E4 available to support a diagonal follow-up."),
+      B("a18","Black to move. Which candidate keeps both the row and column attacks connected through one pivot?",
+        ["C5","D5","E4","E6"],["B2","G8"],["E5","F5","D4"],"E5",
+        "E5 is the shared pivot. It does not commit the attack to only one direction."),
+      B("a19","Black to move. Which candidate avoids blocking your own diagonal while still creating a forcing row threat?",
+        ["C4","D4","E4","F5"],["C7","G7"],["F4","E5","G4"],"F4",
+        "F4 completes the row threat without occupying E5, which remains useful for the diagonal branch."),
+      B("a20","Black to move. Which candidate creates the strongest branch point around the center?",
+        ["D4","F4","E3","E5"],["B8","H2"],["E4","D5","F5"],"E4",
+        "E4 connects four nearby stones and leaves horizontal, vertical, and diagonal continuations available."),
+      B("a21","Black to move. Which candidate forces on the diagonal without consuming the horizontal extension square F5?",
+        ["C2","D3","E4","E5"],["B6","G6"],["F5","D5","G4"],"F5",
+        "F5 completes the diagonal C2-D3-E4-F5 and simultaneously remains a horizontal extension point from E5."),
+      B("a22","Black to move. Which candidate best preserves two future winning directions?",
+        ["C5","D5","E4","F3"],["B8","H8"],["E5","F5","D4"],"E5",
+        "E5 ties the horizontal structure to the E4-F3 diagonal, creating two credible routes instead of one.")
+    ]
+  },
+  {
+    title:"Restrict the Defender",
+    kicker:"Make the reply awkward",
+    intro:"The best attack does more than create your threat: it takes away the defender's useful reply squares. A move that both attacks and occupies a key defensive intersection can dramatically improve conversion chances.",
+    tasks:[
+      B("a23","Black to move. Which candidate both creates a four and occupies White's natural central defense?",
+        ["C5","D5","E5"],["F7","G7"],["F5","D6","E4"],"F5",
+        "F5 creates the forcing four and claims the square White would otherwise use to contest that side."),
+      B("a24","Black to move. Which candidate creates the strongest diagonal threat while cutting through White's nearby defensive shape?",
+        ["C3","D4","E5"],["E6","G6"],["F6","D5","F5"],"F6",
+        "F6 completes the diagonal four and lands beside White's local stones, reducing comfortable defensive development."),
+      B("a25","Black to move. Which candidate fills the key gap before White can use it as a universal block?",
+        ["B5","C5","E5"],["C7","G7"],["D5","F5","D6"],"D5",
+        "D5 is the central gap in the attacking row. If White controls it first, several attacking ideas disappear at once."),
+      B("a26","Black to move. Which candidate creates a forcing vertical line and leaves White the least flexible reply?",
+        ["E2","E3","E4"],["C6","F6"],["E5","D5","F5"],"E5",
+        "E5 makes four vertically, converting broad defensive freedom into an immediate obligation."),
+      B("a27","Black to move. Which candidate claims the shared defensive intersection and keeps both attacking wings connected?",
+        ["D5","F5","E4","E6"],["C8","G2"],["E5","D4","F4"],"E5",
+        "E5 is both a connector and a denial move: White loses the central square that could address several lines at once.")
+    ]
+  },
+  {
+    title:"Convert Initiative",
+    kicker:"From forcing move to winning net",
+    intro:"Having the initiative is not the same as winning. Conversion means turning repeated forced replies into a position where the defender runs out of adequate answers. Avoid unnecessary resets and keep improving the quality of each forced response.",
+    tasks:[
+      B("a28","Black to move. Which candidate continues the forcing sequence instead of resetting to a quiet build?",
+        ["C5","D5","E5"],["B8","H8"],["F5","E4","D6"],"F5",
+        "F5 creates the four immediately. The remote candidates surrender the tempo that the current structure already earned."),
+      B("a29","Black to move. Which candidate converts a central cluster into the clearest direct threat?",
+        ["C4","D4","E4"],["B7","G7"],["F4","D5","F5"],"F4",
+        "F4 extends the row into four, turning positional control into a concrete forcing threat."),
+      B("a30","Black to move. Which candidate keeps the defender answering instead of allowing a free stabilizing move?",
+        ["C3","D4","E5"],["C7","G7"],["F6","D5","E4"],"F6",
+        "F6 creates an immediate diagonal four. It preserves tempo by demanding a direct response."),
+      B("a31","Black to move. Which candidate converts a broken row into the strongest forcing line?",
+        ["B6","C6","E6"],["G4","G7"],["D6","F6","E5"],"D6",
+        "D6 fills the break and produces B6-C6-D6-E6, which is far stronger than extending around the gap."),
+      B("a32","Black to move. Which candidate is the best conversion move from a cross-shaped cluster?",
+        ["D5","F5","E4","E6"],["B2","H8"],["E5","D4","F4"],"E5",
+        "E5 completes the central cross connection and creates multiple immediate continuation directions, converting shape into concrete pressure.")
+    ]
+  },
+  {
+    title:"Finish the Net",
+    kicker:"Close every escape",
+    intro:"Late in an attack, the goal changes. You no longer need the prettiest structure; you need the move that removes the defender's last adequate resource. Scan for the move that simultaneously completes your line and denies the final escape square.",
+    tasks:[
+      B("a33","Black to move. Which candidate completes five immediately?",
+        ["B5","C5","D5","E5"],["C7","G7"],["A5","F5","E4"],"A5",
+        "A5 completes five. Once the win exists, construction is over."),
+      B("a34","Black to move. Which candidate closes the diagonal net with an immediate five?",
+        ["B2","C3","D4","E5"],["C7","G7"],["F6","E4","F5"],"F6",
+        "F6 completes the five-stone diagonal B2-C3-D4-E5-F6."),
+      B("a35","Black to move. Which candidate completes the vertical five?",
+        ["E2","E3","E4","E5"],["C7","G7"],["E6","D5","F5"],"E6",
+        "E6 completes the vertical five and ends the attack immediately."),
+      B("a36","Black to move. Which candidate fills the only missing point in the winning row?",
+        ["B4","C4","E4","F4"],["C7","G7"],["D4","E5","D5"],"D4",
+        "D4 fills the internal gap and produces B4-C4-D4-E4-F4: five in a row.")
+    ]
+  },
+  {
+    title:"Attack Construction Checkpoint",
+    kicker:"Build, branch, restrict, convert",
+    intro:"Mixed positions now test the whole chapter. First decide whether you are still building, already forcing, preserving a branch, restricting the defense, or simply finishing the win.",
+    tasks:[
+      C("a37","Which sequence best describes disciplined attack construction?",[
+        "Build useful shape → create a forcing move → preserve branches → restrict replies → convert",
+        "Play toward the center → connect everything → hope for a fork",
+        "Create any threat → repeat it until the opponent blunders"
+      ],0,"Construction is a progression from useful shape to increasingly constrained defensive replies."),
+      C("a38","What is the strongest sign that a preparatory move is good?",[
+        "It improves more than one credible continuation without giving the defender a free tactical resource",
+        "It is adjacent to the most stones",
+        "It makes the board look symmetrical"
+      ],0,"Multi-purpose preparation is stronger because it preserves branching possibilities."),
+      C("a39","Why can a forcing move still be a bad attacking move?",[
+        "Its forced reply may solve your threat while improving the defender's position and killing your continuation",
+        "Forcing moves are always illegal in Renju",
+        "Forcing moves never create shape"
+      ],0,"Forcing quality depends on what remains after the forced reply, not just on demanding one answer."),
+      C("a40","When has initiative been successfully converted?",[
+        "When every relevant defense leads to another forcing continuation or an immediate win",
+        "When you have more stones than the opponent",
+        "When the opponent has played three defensive moves"
+      ],0,"Conversion is concrete: the defender no longer has a satisfactory branch."),
+      C("a41","What should you do when your current forcing line ends but your shape remains superior?",[
+        "Re-evaluate and build the next high-quality threat instead of forcing a fake continuation",
+        "Keep playing checks even if they are not forcing",
+        "Abandon the entire attacking side"
+      ],0,"A good attacker knows when to return from forcing play to construction."),
+      C("a42","Which attacking principle matters most when two moves create similar threats?",[
+        "Prefer the move that leaves more strong continuations and fewer useful defensive replies",
+        "Prefer the move closer to the edge",
+        "Prefer the move with the longer coordinate name"
+      ],0,"Future branching and defensive restriction break ties between otherwise similar threats."),
+      C("a43","What ends the attack-construction process?",[
+        "A concrete win or a position where the defender has no adequate reply",
+        "Five attacking moves in a row",
+        "Occupying the center"
+      ],0,"Construction is only a means to a concrete winning result."),
+      B("a44","Checkpoint: Black to move. Which candidate creates the first forcing four?",
+        ["C5","D5","E5"],["C7","G7"],["F5","E4","D6"],"F5",
+        "F5 is the direct conversion from shape into a forcing four."),
+      B("a45","Checkpoint: Black to move. Which candidate fills the critical gap and upgrades the threat?",
+        ["B6","C6","E6"],["C8","G8"],["D6","F6","E5"],"D6",
+        "D6 repairs the broken line and creates four consecutive stones."),
+      B("a46","Checkpoint: Black to move. Which candidate is the best branching pivot?",
+        ["D5","F5","E4","E6"],["B2","H8"],["E5","D4","F4"],"E5",
+        "E5 connects the cross and preserves multiple attack directions."),
+      B("a47","Checkpoint: Black to move. Which candidate keeps the forcing diagonal sequence alive?",
+        ["C3","D4","E5"],["C7","G7"],["F6","D5","F5"],"F6",
+        "F6 creates the four immediately and keeps the defender reacting."),
+      B("a48","Checkpoint: Black to move. Which candidate finishes the attack now?",
+        ["B5","C5","D5","E5"],["C7","G7"],["A5","F5","E4"],"A5",
+        "A5 completes five. Do not keep constructing after the win is available.")
+    ]
+  }
+];
+
+const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
+
+function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
+function loadState(){
+  try{
+    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    if(x && x.version===VERSION && x.tasks) return x;
+  }catch{}
+  return emptyState();
+}
+let state=loadState();
+function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+
+let currentLesson=0,currentTask=0,misses=0,selected=null;
+let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function coordIndex(c){return [COLS.indexOf(c[0]),Number(c.slice(1))-1];}
+function taskAt(){return LESSONS[currentLesson].tasks[currentTask];}
+function taskRecord(id){return state.tasks[id]||null;}
+function completedInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.correct).length;}
+function firstTryInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.firstTry).length;}
+function overallCompleted(){return LESSONS.reduce((n,l)=>n+l.tasks.filter(t=>state.tasks[t.id]?.correct).length,0);}
+
+function injectStyle(){
+  if(document.getElementById("ch9-course-style")) return;
+  const style=document.createElement("style");
+  style.id="ch9-course-style";
+  style.textContent=`
+#ch9CourseCard{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 78%,#d88722 22%);border-radius:18px;padding:18px;margin-top:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--panel,#fff) 95%,#d88722 5%),var(--panel,#fff));box-shadow:0 10px 28px rgba(20,20,30,.06)}
+#ch9CourseCard:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#d88722,#efb24f)}
+.ch9-card-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}.ch9-card-copy{min-width:0}.ch9-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.64}.ch9-card-title{font-size:18px;font-weight:800;line-height:1.15;margin-top:5px}.ch9-card-sub{font-size:13px;line-height:1.45;opacity:.72;margin-top:6px}.ch9-open{flex:none;min-height:40px;padding:0 15px;border-radius:11px;border:0;background:var(--text,#16161a);color:var(--bg,#fff);font-weight:750;cursor:pointer}.ch9-progress{height:7px;border-radius:999px;background:color-mix(in srgb,var(--text,#16161a) 10%,transparent);overflow:hidden;margin-top:15px}.ch9-progress>i{display:block;height:100%;background:linear-gradient(90deg,#d88722,#efb24f);width:0}.ch9-card-foot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:11px;opacity:.67}
+#ch9CourseDialog{width:min(760px,calc(100vw - 24px));height:min(760px,calc(100dvh - 24px));max-width:none;max-height:none;padding:0;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 75%,#d88722 25%);border-radius:20px;background:var(--panel,#fff);color:var(--text,#16161a);box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}
+#ch9CourseDialog::backdrop{background:rgba(8,8,12,.58);backdrop-filter:blur(5px)}
+.ch9-shell{height:100%;display:grid;grid-template-rows:auto 1fr auto;min-height:0}.ch9-head{padding:16px 18px 13px;border-bottom:1px solid var(--line,#ddd);display:flex;gap:14px;align-items:flex-start}.ch9-head-copy{min-width:0;flex:1}.ch9-head .ch9-eyebrow{color:#c97817;opacity:1}.ch9-title{font-size:20px;font-weight:850;line-height:1.15;margin-top:3px}.ch9-meta{font-size:12px;opacity:.64;margin-top:4px}.ch9-close{width:38px;height:38px;border-radius:50%;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-size:20px;cursor:pointer;flex:none}.ch9-body{min-height:0;overflow:auto;padding:18px}.ch9-lesson-intro{font-size:13px;line-height:1.55;padding:12px 13px;border-radius:12px;background:color-mix(in srgb,#d88722 7%,var(--panel,#fff));border:1px solid color-mix(in srgb,#d88722 18%,var(--line,#ddd));margin-bottom:15px}.ch9-task-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.ch9-task-count{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.58}.ch9-score{font-size:11px;opacity:.62}.ch9-prompt{font-size:17px;line-height:1.45;font-weight:750;margin-bottom:14px}.ch9-choices{display:grid;gap:9px}.ch9-choice{width:100%;text-align:left;padding:12px 13px;border-radius:12px;border:1px solid var(--line,#ddd);background:color-mix(in srgb,var(--panel,#fff) 96%,var(--text,#111) 4%);color:inherit;font:inherit;font-size:13px;line-height:1.4;cursor:pointer}.ch9-choice:hover{border-color:color-mix(in srgb,#d88722 55%,var(--line,#ddd))}.ch9-choice[disabled]{cursor:default}.ch9-choice.correct{border-color:#2f9d62;background:color-mix(in srgb,#2f9d62 10%,var(--panel,#fff))}.ch9-choice.wrong{border-color:#cf5656;background:color-mix(in srgb,#cf5656 9%,var(--panel,#fff))}
+.ch9-board-wrap{display:grid;gap:11px;justify-items:center;margin:2px 0 14px}.ch9-board{width:min(100%,430px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:1px solid color-mix(in srgb,var(--text,#111) 40%,transparent);border-radius:12px;overflow:hidden;background:#d4a85f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}.ch9-cell{position:relative;border-right:1px solid rgba(45,29,12,.34);border-bottom:1px solid rgba(45,29,12,.34);background:transparent;padding:0;min-width:0;color:#18130e}.ch9-cell:nth-child(9n){border-right:0}.ch9-cell:nth-last-child(-n+9){border-bottom:0}.ch9-cell[data-candidate="1"]{cursor:pointer;background:rgba(216,135,34,.11)}.ch9-cell[data-candidate="1"]:after{content:"";position:absolute;width:18%;aspect-ratio:1;border-radius:50%;background:#d88722;opacity:.65;left:41%;top:41%}.ch9-cell[data-candidate="1"]:hover{background:rgba(216,135,34,.19)}.ch9-stone{position:absolute;width:72%;aspect-ratio:1;border-radius:50%;left:14%;top:14%;box-shadow:0 2px 4px rgba(0,0,0,.35)}.ch9-stone.black{background:radial-gradient(circle at 35% 30%,#4a4a4a,#111 68%)}.ch9-stone.white{background:radial-gradient(circle at 35% 30%,#fff,#ddd 72%);border:1px solid rgba(0,0,0,.18)}.ch9-cell.answer{background:rgba(47,157,98,.20)!important}.ch9-coord{position:absolute;right:2px;bottom:1px;font-size:7px;font-weight:800;opacity:.34;pointer-events:none}.ch9-legend{font-size:11px;opacity:.62;text-align:center}
+.ch9-feedback{min-height:42px;margin-top:13px;padding:11px 12px;border-radius:11px;border:1px solid transparent;font-size:12.5px;line-height:1.45}.ch9-feedback:empty{display:none}.ch9-feedback.bad{display:block;border-color:color-mix(in srgb,#cf5656 34%,var(--line,#ddd));background:color-mix(in srgb,#cf5656 8%,var(--panel,#fff))}.ch9-feedback.good{display:block;border-color:color-mix(in srgb,#2f9d62 38%,var(--line,#ddd));background:color-mix(in srgb,#2f9d62 9%,var(--panel,#fff))}
+#ch9CourseDialog .ch9-bottom{display:flex!important;visibility:visible!important;align-items:center;gap:9px;padding:11px 14px;border-top:1px solid var(--line,#ddd);background:var(--panel,#fff);min-height:62px}.ch9-nav{display:flex;gap:8px;margin-right:auto}.ch9-btn{min-height:40px;padding:0 13px;border-radius:10px;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-weight:750;cursor:pointer}.ch9-btn:disabled{opacity:.36;cursor:default}.ch9-primary{background:var(--text,#16161a);color:var(--bg,#fff);border-color:var(--text,#16161a)}
+@media(max-width:560px){#ch9CourseDialog{width:100vw;height:100dvh;border:0;border-radius:0}.ch9-head{padding:13px 14px 11px}.ch9-body{padding:14px}.ch9-title{font-size:18px}.ch9-prompt{font-size:16px}.ch9-board{width:min(100%,390px)}#ch9CourseDialog .ch9-bottom{padding:9px 10px;gap:7px}.ch9-btn{padding:0 10px}.ch9-card-top{align-items:center}.ch9-open{padding:0 12px}}
+`;
+  document.head.appendChild(style);
+}
+
+function placeCard(){
+  card=card||document.getElementById("ch9CourseCard");
+  if(!card) return false;
+  const prev=document.getElementById("ch8CourseCard");
+  const improve=document.getElementById("v92ImproveHome");
+  if(prev&&prev.parentElement){
+    if(card.parentElement!==prev.parentElement||prev.nextElementSibling!==card) prev.insertAdjacentElement("afterend",card);
+    return true;
+  }
+  if(improve&&card.parentElement!==improve) improve.appendChild(card);
+  return false;
+}
+
+function buildCard(){
+  const existing=document.getElementById("ch9CourseCard");
+  if(existing){card=existing;placeCard();return existing;}
+  card=document.createElement("section");
+  card.id="ch9CourseCard";
+  card.setAttribute("aria-label","Chapter 9 Attack Construction and Conversion");
+  card.innerHTML=`
+    <div class="ch9-card-top">
+      <div class="ch9-card-copy">
+        <div class="ch9-eyebrow">Chapter 9</div>
+        <div class="ch9-card-title">Attack Construction &amp; Conversion</div>
+        <div class="ch9-card-sub">Build attacks that actually convert. Upgrade threat quality, preserve branches, restrict defensive resources, and finish the net.</div>
+      </div>
+      <button class="ch9-open" type="button">Open</button>
+    </div>
+    <div class="ch9-progress"><i></i></div>
+    <div class="ch9-card-foot"><span class="ch9-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
+  const improve=document.getElementById("v92ImproveHome")||document.querySelector("main")||document.body;
+  improve.appendChild(card);
+  placeCard();
+  card.querySelector(".ch9-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
+  return card;
+}
+
+function buildDialog(){
+  if(document.getElementById("ch9CourseDialog")) return document.getElementById("ch9CourseDialog");
+  dialog=document.createElement("dialog");
+  dialog.id="ch9CourseDialog";
+  dialog.innerHTML=`
+    <div class="ch9-shell">
+      <div class="ch9-head">
+        <div class="ch9-head-copy"><div class="ch9-eyebrow">Chapter 9</div><div class="ch9-title"></div><div class="ch9-meta"></div></div>
+        <button class="ch9-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="ch9-body">
+        <div class="ch9-lesson-intro"></div>
+        <div class="ch9-task-top"><div class="ch9-task-count"></div><div class="ch9-score"></div></div>
+        <div class="ch9-prompt"></div>
+        <div class="ch9-board-wrap"><div id="ch9Board" class="ch9-board"></div><div class="ch9-legend">Amber dots are candidate moves. Tap one.</div></div>
+        <div id="ch9Choices" class="ch9-choices"></div>
+        <div id="ch9Feedback" class="ch9-feedback" role="status"></div>
+      </div>
+      <div class="ch9-bottom">
+        <div class="ch9-nav"><button id="ch9PrevTask" class="ch9-btn" type="button">Back</button></div>
+        <button id="ch9Reveal" class="ch9-btn" type="button" disabled>Reveal</button>
+        <button id="ch9NextTask" class="ch9-btn ch9-primary" type="button">Next</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+  titleEl=dialog.querySelector(".ch9-title");
+  metaEl=dialog.querySelector(".ch9-meta");
+  bodyEl=dialog.querySelector(".ch9-body");
+  countEl=dialog.querySelector(".ch9-task-count");
+  feedbackEl=dialog.querySelector("#ch9Feedback");
+  revealBtn=dialog.querySelector("#ch9Reveal");
+  nextBtn=dialog.querySelector("#ch9NextTask");
+  boardEl=dialog.querySelector("#ch9Board");
+  choicesEl=dialog.querySelector("#ch9Choices");
+  dialog.querySelector(".ch9-close").addEventListener("click",()=>dialog.close());
+  dialog.querySelector("#ch9PrevTask").addEventListener("click",prevTask);
+  nextBtn.addEventListener("click",nextTask);
+  revealBtn.addEventListener("click",reveal);
+  dialog.addEventListener("cancel",()=>dialog.close());
+  return dialog;
+}
+
+function updateCard(){
+  card=card||document.getElementById("ch9CourseCard");
+  if(!card) return;
+  const done=overallCompleted();
+  card.querySelector(".ch9-progress i").style.width=`${Math.round(done/TOTAL_TASKS*100)}%`;
+  card.querySelector(".ch9-card-count").textContent=`${done} / ${TOTAL_TASKS} complete`;
+}
+
+function setFeedback(text,kind){
+  feedbackEl.textContent=text||"";
+  feedbackEl.className="ch9-feedback"+(kind?` ${kind}`:"");
+}
+function markComplete(task,assisted=false){
+  const prior=state.tasks[task.id];
+  if(!prior?.correct){
+    state.tasks[task.id]={correct:true,firstTry:misses===0&&!assisted,assisted:!!assisted};
+    saveState();
+  }
+  updateCard();
+}
+function fail(task){
+  misses++;
+  const msg=misses===1 ? `Not this. ${task.hint1}` : `Not this. ${task.hint2}`;
+  setFeedback(msg,"bad");
+  revealBtn.disabled=misses<2;
+}
+function complete(task){
+  markComplete(task,false);
+  setFeedback(`Completed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function renderChoice(task){
+  boardEl.parentElement.style.display="none";
+  choicesEl.style.display="grid";
+  choicesEl.innerHTML="";
+  task.options.forEach((opt,i)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="ch9-choice"; b.textContent=opt;
+    b.addEventListener("click",()=>{
+      if(state.tasks[task.id]?.correct) return;
+      if(i===task.answer){
+        b.classList.add("correct");
+        [...choicesEl.children].forEach(x=>x.disabled=true);
+        complete(task);
+      }else{
+        b.classList.add("wrong");
+        fail(task);
+      }
+    });
+    choicesEl.appendChild(b);
+  });
+  if(state.tasks[task.id]?.correct){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }
+}
+
+function renderAttackBoard(task){
+  boardEl.parentElement.style.display="grid";
+  choicesEl.style.display="none";
+  boardEl.innerHTML="";
+  const blacks=new Set(task.black), whites=new Set(task.white), candidates=new Set(task.candidates);
+  for(let r=BOARD_SIZE;r>=1;r--){
+    for(let c=0;c<BOARD_SIZE;c++){
+      const coord=COLS[c]+r;
+      const cell=document.createElement("button");
+      cell.type="button"; cell.className="ch9-cell"; cell.dataset.coord=coord;
+      if(candidates.has(coord)) cell.dataset.candidate="1";
+      if(blacks.has(coord)||whites.has(coord)){
+        const stone=document.createElement("i");
+        stone.className="ch9-stone "+(blacks.has(coord)?"black":"white");
+        cell.appendChild(stone);
+      }
+      const lab=document.createElement("span"); lab.className="ch9-coord"; lab.textContent=coord; cell.appendChild(lab);
+      if(candidates.has(coord) && !blacks.has(coord) && !whites.has(coord)){
+        cell.addEventListener("click",()=>boardGuess(task,coord,cell));
+      } else cell.disabled=true;
+      boardEl.appendChild(cell);
+    }
+  }
+  if(state.tasks[task.id]?.correct){
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){cell.classList.add("answer");cell.dataset.candidate="0";const stone=document.createElement("i");stone.className="ch9-stone "+task.turn;cell.appendChild(stone);}
+  }
+}
+function boardGuess(task,coord,cell){
+  if(state.tasks[task.id]?.correct) return;
+  if(coord===task.answer){
+    cell.classList.add("answer");
+    boardEl.querySelectorAll('[data-candidate="1"]').forEach(x=>x.dataset.candidate="0");
+    const stone=document.createElement("i"); stone.className="ch9-stone "+task.turn; cell.appendChild(stone);
+    complete(task);
+  }else{
+    cell.style.background="rgba(207,86,86,.16)";
+    fail(task);
+  }
+}
+
+function reveal(){
+  const task=taskAt();
+  if(misses<2 || state.tasks[task.id]?.correct) return;
+  markComplete(task,true);
+  if(task.type==="choice"){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }else{
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){
+      cell.classList.add("answer"); cell.dataset.candidate="0";
+      if(!cell.querySelector(".ch9-stone")){const stone=document.createElement("i");stone.className="ch9-stone "+task.turn;cell.appendChild(stone);}
+    }
+  }
+  setFeedback(`Revealed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function render(){
+  buildDialog();
+  const lesson=LESSONS[currentLesson], task=taskAt(), rec=taskRecord(task.id);
+  misses=0; selected=null;
+  titleEl.textContent=lesson.title;
+  metaEl.textContent=lesson.kicker;
+  dialog.querySelector(".ch9-lesson-intro").textContent=lesson.intro;
+  countEl.textContent=`${currentTask+1} / ${lesson.tasks.length}`;
+  dialog.querySelector(".ch9-score").textContent=`Lesson ${currentLesson+1} · ${completedInLesson(currentLesson)}/${lesson.tasks.length}`;
+  dialog.querySelector(".ch9-prompt").textContent=task.prompt;
+  setFeedback(rec?.correct ? `Completed${rec.assisted?" with reveal":rec.firstTry?" on first try":""}. ${task.explain}` : "","");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+  dialog.querySelector("#ch9PrevTask").disabled=currentLesson===0&&currentTask===0;
+  if(task.type==="choice") renderChoice(task); else renderAttackBoard(task);
+  state.last={lesson:currentLesson,task:currentTask}; saveState();
+  bodyEl.scrollTop=0;
+  updateCard();
+}
+
+function nextTask(){
+  if(currentTask<LESSONS[currentLesson].tasks.length-1) currentTask++;
+  else if(currentLesson<LESSONS.length-1){currentLesson++;currentTask=0;}
+  else {dialog.close();return;}
+  render();
+}
+function prevTask(){
+  if(currentTask>0) currentTask--;
+  else if(currentLesson>0){currentLesson--;currentTask=LESSONS[currentLesson].tasks.length-1;}
+  render();
+}
+function openSection(lesson=0,task=0){
+  mountChapter9();
+  currentLesson=Math.max(0,Math.min(LESSONS.length-1,Number(lesson)||0));
+  currentTask=Math.max(0,Math.min(LESSONS[currentLesson].tasks.length-1,Number(task)||0));
+  render();
+  if(!dialog.open) dialog.showModal();
+}
+function report(){
+  return {
+    totalTasks:TOTAL_TASKS,totalLessons:LESSONS.length,completed:overallCompleted(),
+    lessons:LESSONS.map((l,i)=>{
+      const completed=completedInLesson(i), first=firstTryInLesson(i);
+      return {title:l.title,total:l.tasks.length,completed,complete:completed===l.tasks.length,firstTry:first,rate:l.tasks.length?first/l.tasks.length:0};
+    })
+  };
+}
+let placementTimer=0;
+function settleCardPlacement(attempt=0){
+  if(placeCard()||attempt>=40){placementTimer=0;return;}
+  clearTimeout(placementTimer);
+  placementTimer=setTimeout(()=>settleCardPlacement(attempt+1),100);
+}
+function mountChapter9(){
+  injectStyle(); buildCard(); buildDialog(); updateCard(); settleCardPlacement();
+}
+window.GomokuCourseChapter9={openSection,report,mount:mountChapter9};
+
+const start=()=>{
+  if(document.body?.dataset?.ready==="true") mountChapter9();
+};
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start,{once:true});
+else start();
+const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter9();});
+if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
+else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+})();
+</script>
 </body></html>
