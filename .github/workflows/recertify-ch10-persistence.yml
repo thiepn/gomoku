@@ -1,0 +1,89 @@
+name: Re-certify Chapter 10 persistence
+
+on:
+  push:
+    paths: ['.github/workflows/recertify-ch10-persistence.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  recertify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for this commit's Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 100); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Certify same-origin persistence navigation
+        shell: bash
+        run: |
+          cat > .ch10-persist.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME});
+          const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const p=await ctx.newPage();
+          p.setDefaultTimeout(15000);
+          const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+          await p.addInitScript(()=>{const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}});
+          const ready=async()=>{
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter10?.openSection==='function',null,{timeout:20000});
+            await p.evaluate(()=>{document.querySelectorAll('dialog[open]:not(#ch10CourseDialog)').forEach(d=>d.close?.());document.querySelector('[data-v92-route="improve"]')?.click()});
+            await p.waitForFunction(()=>document.querySelector('#ch9CourseCard')?.nextElementSibling?.id==='ch10CourseCard',null,{timeout:10000});
+          };
+          await p.goto(root+'?ch10persistA='+Date.now(),{waitUntil:'domcontentloaded',timeout:20000});
+          await ready();
+          await p.evaluate(()=>localStorage.removeItem('gomoku.course.chapter10.v1'));
+          await p.evaluate(()=>window.GomokuCourseChapter10.openSection(0,0));
+          await p.waitForSelector('#ch10CourseDialog[open]');
+          await p.getByRole('button',{name:'Immediate wins, losses, and forcing threats for both sides before judging long-term plans',exact:true}).click();
+          if(!/^Completed\./.test(await p.locator('#ch10Feedback').innerText())) throw new Error('Choice completion failed');
+          await p.evaluate(()=>window.GomokuCourseChapter10.openSection(1,0));
+          await p.locator('#ch10Board [data-coord="E4"]').click();
+          if(!/^Completed\./.test(await p.locator('#ch10Feedback').innerText())) throw new Error('Board completion failed');
+          const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter10.v1')));
+          for(const id of ['p1','p6']) if(!before?.tasks?.[id]?.correct||!before.tasks[id].firstTry||before.tasks[id].assisted) throw new Error('Pre-navigation state '+id+' '+JSON.stringify(before?.tasks?.[id]));
+          await p.goto(root+'?ch10persistB='+Date.now(),{waitUntil:'commit',timeout:15000});
+          await ready();
+          const after=await p.evaluate(()=>({state:JSON.parse(localStorage.getItem('gomoku.course.chapter10.v1')),report:window.GomokuCourseChapter10.report(),counts:[1,2,3,4,5,6,7,8,9,10].map(n=>document.querySelectorAll(`#ch${n}CourseCard`).length)}));
+          for(const id of ['p1','p6']) if(!after.state?.tasks?.[id]?.correct||!after.state.tasks[id].firstTry||after.state.tasks[id].assisted) throw new Error('Persisted state '+id+' '+JSON.stringify(after.state?.tasks?.[id]));
+          if(after.report.totalTasks!==48||after.report.totalLessons!==8||after.report.lessons[0].completed<1||after.report.lessons[1].completed<1) throw new Error('Persisted report '+JSON.stringify(after.report));
+          if(after.counts.some(n=>n!==1)) throw new Error('Duplicate course cards '+JSON.stringify(after.counts));
+          if(errors.some(x=>/ch10|chapter 10/i.test(x))) throw new Error('Chapter 10 page errors '+JSON.stringify(errors));
+          console.log('PASS same-origin navigation persistence + ordered Chapters 1-10');
+          console.log('CHAPTER10_PERSISTENCE_CERTIFIED');
+          await ctx.close(); await browser.close();
+          JS
+          node --check .ch10-persist.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 90s env CHROME="$CHROME" node .ch10-persist.mjs
+      - name: Remove re-certification workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch10-persist.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/recertify-ch10-persistence.yml
+          git commit -m 'Remove Chapter 10 persistence certification' || true
+          git pull --rebase || true
+          git push || true
