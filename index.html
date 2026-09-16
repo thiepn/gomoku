@@ -10075,4 +10075,561 @@ if(document.body) observer.observe(document.body,{attributes:true,attributeFilte
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
 })();
 </script>
+
+<script id="course-ch10-v1-script">
+(() => {
+"use strict";
+if (window.__gomokuCourseChapter10Loaded) return;
+window.__gomokuCourseChapter10Loaded = true;
+
+const STORAGE_KEY = "gomoku.course.chapter10.v1";
+const VERSION = 1;
+const BOARD_SIZE = 9;
+const COLS = "ABCDEFGHI";
+
+const C = (id, prompt, options, answer, explain, hint1, hint2) => ({
+  id, type:"choice", prompt, options, answer, explain,
+  hint1: hint1 || "Ask which part of the board becomes more useful after this move.",
+  hint2: hint2 || "Compare the resulting positions after the opponent's best strategic reply."
+});
+const B = (id, prompt, black, white, candidates, answer, explain, turn="black", hint1, hint2) => ({
+  id, type:"board", prompt, black, white, candidates, answer, explain, turn,
+  hint1: hint1 || "Compare candidates by tactical safety, coordination, critical-zone impact, and the opponent's best reply.",
+  hint2: hint2 || "Prefer the move that improves several future options without ignoring a more urgent zone."
+});
+
+const LESSONS = [
+  {
+    title:"Evaluation Framework",
+    kicker:"Read the whole board before choosing a plan",
+    intro:"Strategic play begins when no immediate tactical sequence decides the move. Evaluate forcing threats first, then compare activity, coordination, space, vulnerable stones, and which side of the board contains the most important future fight.",
+    tasks:[
+      C("p1","What should you check first when evaluating a quiet-looking position?",[
+        "Immediate wins, losses, and forcing threats for both sides before judging long-term plans",
+        "Which player owns more center intersections",
+        "Which side has the prettier shape"
+      ],0,"Strategy only matters after tactical emergencies are ruled out."),
+      C("p2","What makes a stone strategically active?",[
+        "It contributes to realistic threats, connections, defense, or useful future expansion",
+        "It is close to the center regardless of context",
+        "It touches at least two friendly stones"
+      ],0,"Activity is functional: a stone should influence real future play."),
+      C("p3","What is a critical zone?",[
+        "The area where the next few moves can most strongly change the balance of threats, connections, or defense",
+        "Always the geometric center of the board",
+        "The side containing the most stones"
+      ],0,"The critical zone is defined by future impact, not by raw density."),
+      C("p4","If two plans are both safe, which one is usually stronger?",[
+        "The plan that improves your position while also reducing the opponent's best plan",
+        "The plan that adds the greatest number of adjacent stones",
+        "The plan that stays on the same wing as your last move"
+      ],0,"Two-purpose moves gain strategic tempo because they improve and restrict at once."),
+      C("p5","When should you abandon a local plan?",[
+        "When another part of the board becomes tactically or strategically more urgent",
+        "After exactly three moves on one side",
+        "Whenever the opponent plays near the center"
+      ],0,"Whole-board play requires updating priorities as the position changes.")
+    ]
+  },
+  {
+    title:"Find the Critical Zone",
+    kicker:"Play where the board matters most",
+    intro:"Not every unfinished shape deserves attention. Scan the whole board and identify the area where one move can change the most: stop a dangerous expansion, activate multiple stones, connect separated groups, or create the next real threat.",
+    tasks:[
+      B("p6","Black to move. Which candidate activates the largest number of nearby Black stones at once?",
+        ["C4","D4","D5","E6"],["G4","G5"],["E4","B7","H2"],"E4",
+        "E4 links the C4-D4 row to D5-E6 and makes the central cluster work as one unit. The remote moves affect fewer live directions."),
+      B("p7","Black to move. White is beginning a strong right-side build. Which candidate addresses the most important zone while improving Black too?",
+        ["C4","D4","E5"],["G4","G5","H5"],["F5","C6","B3"],"F5",
+        "F5 contests the right-side expansion while connecting to E5. It is both defensive and constructive."),
+      B("p8","Black to move. Which candidate best connects the lower-left group to the central stones?",
+        ["B3","C3","D4","E5"],["G6","H6"],["D3","F5","B6"],"D3",
+        "D3 bridges B3-C3 with D4-E5, turning two partial groups into one coordinated structure."),
+      B("p9","Black to move. Which candidate occupies the key intersection between White's upper pressure and Black's central shape?",
+        ["D4","E4","E5"],["F6","F7","G7"],["F5","C6","B4"],"F5",
+        "F5 sits between the two armies. It supports E5 while limiting White's easy expansion from F6-F7-G7."),
+      B("p10","Black to move. Which candidate is most urgent because it prevents White from linking two active groups?",
+        ["C5","D5","E4"],["F5","G5","G6"],["E5","B7","H3"],"E5",
+        "E5 occupies the bridge White wants between the right-side group and the center, while strengthening Black's D5-E4 structure.")
+    ]
+  },
+  {
+    title:"Compare Candidate Plans",
+    kicker:"Judge the future, not just the move",
+    intro:"Good strategic decisions come from comparing plans, not isolated intersections. Ask what each candidate enables next, what it gives the opponent, and whether it increases your number of useful future moves.",
+    tasks:[
+      B("p11","Black to move. Which candidate gives the central group the most future directions?",
+        ["D4","E4","E5"],["G5","H5"],["D5","F4","C6"],"D5",
+        "D5 keeps horizontal, vertical, and diagonal continuations available. F4 and C6 are more one-directional."),
+      B("p12","Black to move. Which candidate improves both connection and expansion space?",
+        ["C4","D4","E5"],["G6","H6"],["E4","C5","F5"],"E4",
+        "E4 connects C4-D4 toward E5 while preserving open space on both sides for later growth."),
+      B("p13","Black to move. Which candidate is the best long-term plan because it develops a new direction without abandoning the center?",
+        ["D5","E5","E4"],["G3","H3"],["F4","C6","B2"],"F4",
+        "F4 develops the right diagonal while staying attached to the central E4-E5-D5 structure."),
+      B("p14","Black to move. Which candidate avoids redundant overconcentration?",
+        ["C5","D5","E5","D4"],["G6","H6"],["F4","C4","E6"],"F4",
+        "F4 adds a new useful direction. C4 and E6 mostly reinforce jobs the central cluster already performs."),
+      B("p15","Black to move. Which candidate creates the best balance between attack potential and defensive coverage?",
+        ["D4","E4","F5"],["G4","G5"],["F4","C6","H6"],"F4",
+        "F4 supports the center, eyes the right side, and reduces White's easy growth from G4-G5."),
+      B("p16","Black to move. Which candidate keeps the most flexible plan after White replies?",
+        ["C4","D5","E5"],["F7","G7"],["E4","F5","B6"],"E4",
+        "E4 is a flexible pivot: it can support the row, diagonal, or a later right-side expansion depending on White's reply.")
+    ]
+  },
+  {
+    title:"Improve Weak Stones",
+    kicker:"Make every stone earn its place",
+    intro:"A weak stone is not necessarily bad; it is simply underused. Strategic improvement often means connecting an isolated stone, giving a blocked group a second direction, or turning a passive defender into an active participant.",
+    tasks:[
+      B("p17","Black to move. Which candidate best activates the isolated B3 stone?",
+        ["B3","D4","E5"],["G5","H5"],["C4","F5","B6"],"C4",
+        "C4 connects B3 to D4-E5 and turns the isolated stone into part of the central network."),
+      B("p18","Black to move. Which candidate gives the cramped central group a second direction?",
+        ["D4","E4","F4"],["D6","E6"],["E5","C5","G4"],"E5",
+        "E5 opens a diagonal/vertical route instead of stacking another stone on the already crowded row."),
+      B("p19","Black to move. Which candidate turns a passive defensive stone into an active connector?",
+        ["C5","E5","F6"],["G5","H5"],["D5","B6","E4"],"D5",
+        "D5 links C5 to E5-F6, so the stone that was merely defending now supports future expansion too."),
+      B("p20","Black to move. Which candidate best coordinates the two separated Black groups?",
+        ["B4","C4","F5","G5"],["D7","E7"],["E4","D5","H4"],"E4",
+        "E4 is the natural bridge between the left group and F5-G5, creating one coherent position."),
+      B("p21","Black to move. Which candidate gives the upper Black stones a useful route back toward the center?",
+        ["D6","E6","F6"],["C4","D4"],["E5","G5","B7"],"E5",
+        "E5 connects the upper row to the center and prevents those stones from becoming a detached wing."),
+      B("p22","Black to move. Which candidate improves the weakest Black stone without creating a new weakness elsewhere?",
+        ["B5","D5","E4","F4"],["G6","H6"],["C5","E5","B7"],"C5",
+        "C5 activates B5 and connects it to D5-E4 while keeping the rest of the position coordinated.")
+    ]
+  },
+  {
+    title:"Switch Wings",
+    kicker:"Do not attack where the board is already exhausted",
+    intro:"Strong players know when a local area has reached diminishing returns. If one wing is blocked or overdeveloped, switch to a fresh area while preserving enough central connection that the opponent cannot freely counterattack.",
+    tasks:[
+      B("p23","Black to move. The left side is crowded and blocked. Which candidate begins the healthiest switch to the right?",
+        ["B4","C4","D4"],["B5","C5","D5"],["E5","F5","B6"],"F5",
+        "F5 uses E5 as a bridge and starts a new right-side direction instead of adding another stone to the saturated left."),
+      B("p24","Black to move. Which candidate changes wings without losing central coordination?",
+        ["C5","D5","E5"],["B6","C6"],["F4","H4","B3"],"F4",
+        "F4 expands right while remaining connected to E5. H4 switches too far and becomes detached."),
+      B("p25","Black to move. Which candidate exploits White's overcommitment on the upper side?",
+        ["D5","E5","F5"],["D7","E7","F7"],["E4","C7","G7"],"E4",
+        "E4 develops below the central row where White has fewer stones, creating a fresh direction while preserving support."),
+      B("p26","Black to move. Which candidate is the best wing switch after White has sealed the right edge?",
+        ["E5","F5","G5"],["G4","H4"],["D5","E6","H6"],"D5",
+        "D5 redirects play toward the center-left while staying connected to E5-F5-G5."),
+      B("p27","Black to move. Which candidate creates a second front rather than reinforcing an already stable group?",
+        ["C4","D4","E4"],["C5","D5"],["F5","E5","B6"],"F5",
+        "F5 creates a new right-side front using E5 as the bridge. The other moves mostly reinforce the left cluster.")
+    ]
+  },
+  {
+    title:"Prophylaxis",
+    kicker:"Improve your position while denying theirs",
+    intro:"Prophylaxis means seeing the opponent's best improving move before it becomes a tactical problem. The strongest preventive moves usually do double duty: they interfere with the opponent while advancing your own plan.",
+    tasks:[
+      B("p28","Black to move. White wants to connect G4-G5 toward the center. Which move prevents that plan and improves Black?",
+        ["C4","D4","E5"],["G4","G5"],["F5","C6","B3"],"F5",
+        "F5 blocks White's natural bridge and extends Black from E5 at the same time."),
+      B("p29","Black to move. White's best next move is E5, connecting two groups. Which candidate is the strongest prophylactic occupation?",
+        ["C4","D4","E4"],["F5","F6"],["E5","B6","G3"],"E5",
+        "Occupying E5 removes White's best connector while joining Black's D4-E4 structure."),
+      B("p30","Black to move. Which candidate reduces White's diagonal expansion while keeping Black flexible?",
+        ["D4","E4","E5"],["F6","G7"],["F5","C6","B5"],"F5",
+        "F5 sits on White's preferred diagonal route from F6-G7 and also supports Black's central E5."),
+      B("p31","Black to move. Which candidate prevents White from creating a strong central pivot next move?",
+        ["C5","D5","E4"],["F5","G5"],["E5","B7","H7"],"E5",
+        "E5 denies the central pivot and strengthens Black's D5-E4 structure at the same time."),
+      B("p32","Black to move. Which candidate is best because it answers White's plan without becoming purely passive?",
+        ["D4","E4","F4"],["G5","H5"],["F5","C6","B2"],"F5",
+        "F5 checks White's right-side growth while creating a new active direction for Black.")
+    ]
+  },
+  {
+    title:"Build a Multi-Move Plan",
+    kicker:"Choose a direction that survives the next reply",
+    intro:"A plan is more than a target square. It is a sequence of intentions: improve a weak group, create a second front, force the opponent to react, then reassess. The first move should keep the second move useful under several reasonable replies.",
+    tasks:[
+      B("p33","Black to move. Which candidate is the best first move of a plan to connect left and center, then expand right?",
+        ["B4","C4","E5"],["G6","H6"],["D4","F5","B7"],"D4",
+        "D4 connects B4-C4 toward E5 and prepares F5 as a natural next expansion."),
+      B("p34","Black to move. Which candidate starts a plan of centralize first, then create a second wing?",
+        ["C3","D4","F5"],["G6","H6"],["E5","B6","H3"],"E5",
+        "E5 unifies D4 and F5; after that, Black can choose which side to expand depending on White's reply."),
+      B("p35","Black to move. Which candidate best prepares two possible follow-up plans instead of committing to one?",
+        ["D5","E4","F5"],["C7","G7"],["E5","D4","F4"],"E5",
+        "E5 is a flexible pivot that can support either a horizontal plan through D5-F5 or a diagonal plan through E4."),
+      B("p36","Black to move. Which candidate begins the most resilient plan when White has pressure on the right?",
+        ["C4","D4","E5"],["G4","G5"],["F5","C6","B3"],"F5",
+        "F5 simultaneously slows White, connects to E5, and preserves a future central or right-side continuation.")
+    ]
+  },
+  {
+    title:"Whole-Board Planning Checkpoint",
+    kicker:"Evaluate, prioritize, plan, reassess",
+    intro:"The checkpoint mixes tactical safety with strategic judgment. Identify the critical zone, compare plans by future value, improve weak stones, deny the opponent's best idea, and know when to switch fronts.",
+    tasks:[
+      C("p37","What is the correct order for evaluating a non-forced position?",[
+        "Check tactical emergencies → identify the critical zone → compare candidate plans → choose the move with the best future balance",
+        "Count stones → choose the emptiest area → connect toward it",
+        "Pick a wing → keep playing there until it closes"
+      ],0,"Tactical safety comes first, then whole-board strategic comparison."),
+      C("p38","What is the best reason to switch wings?",[
+        "The current area offers diminishing returns while another area can improve more or become urgent",
+        "You have already played two moves on the current wing",
+        "The opposite side has more empty intersections"
+      ],0,"Wing switches are driven by changing value, not by a fixed move count."),
+      C("p39","What is the strongest type of prophylactic move?",[
+        "A move that interferes with the opponent's best plan while advancing your own",
+        "A move that only blocks one square",
+        "A move far away from every opponent stone"
+      ],0,"Good prophylaxis wins tempo by combining prevention with improvement."),
+      C("p40","How should you compare two strategic candidate moves?",[
+        "Compare the positions and useful follow-ups they create after the opponent's best reply",
+        "Choose the move with more adjacent friendly stones",
+        "Choose the move nearest the board center"
+      ],0,"Strategic comparison is about resulting positions, not superficial geometry."),
+      C("p41","What makes a multi-move plan resilient?",[
+        "Its first move keeps several useful follow-ups available under reasonable opponent replies",
+        "Every move is decided before the opponent responds",
+        "It never changes sides of the board"
+      ],0,"A resilient plan has direction without being rigid."),
+      C("p42","What should happen after the opponent makes an unexpected strong move?",[
+        "Re-evaluate the whole board and update priorities before continuing the old plan",
+        "Continue the old plan so you do not lose tempo",
+        "Immediately abandon every stone involved in the old plan"
+      ],0,"Plans are hypotheses; the board must be re-evaluated when new information changes priorities."),
+      C("p43","What is the clearest sign that a stone is strategically weak?",[
+        "It contributes little to realistic threats, connections, defense, or future expansion",
+        "It is located near an edge",
+        "It has no adjacent friendly stone"
+      ],0,"Strategic weakness is about low functional contribution, not location alone."),
+      B("p44","Checkpoint: Black to move. Which candidate identifies the critical central zone?",
+        ["C4","D4","E5"],["G4","G5","H5"],["F5","B7","H2"],"F5",
+        "F5 is where White's right-side pressure meets Black's center, so it changes the most important future fight."),
+      B("p45","Checkpoint: Black to move. Which candidate best improves an isolated stone?",
+        ["B3","D4","E5"],["G6","H6"],["C4","F5","B7"],"C4",
+        "C4 activates B3 by linking it to D4-E5."),
+      B("p46","Checkpoint: Black to move. Which candidate is the best switch to a fresh wing?",
+        ["B4","C4","D4"],["B5","C5"],["E5","F5","B6"],"F5",
+        "F5 uses E5 as a bridge to a less crowded right side."),
+      B("p47","Checkpoint: Black to move. Which candidate is the strongest prophylactic connector?",
+        ["C5","D5","E4"],["F5","G5"],["E5","B7","H7"],"E5",
+        "E5 both denies White's central connector and improves Black's own coordination."),
+      B("p48","Checkpoint: Black to move. Which candidate begins the most flexible multi-move plan?",
+        ["D5","E4","F5"],["C7","G7"],["E5","D4","F4"],"E5",
+        "E5 is the pivot that preserves several credible follow-ups, making the plan robust to White's next move.")
+    ]
+  }
+];
+
+const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
+
+function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
+function loadState(){
+  try{
+    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    if(x && x.version===VERSION && x.tasks) return x;
+  }catch{}
+  return emptyState();
+}
+let state=loadState();
+function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+
+let currentLesson=0,currentTask=0,misses=0,selected=null;
+let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function coordIndex(c){return [COLS.indexOf(c[0]),Number(c.slice(1))-1];}
+function taskAt(){return LESSONS[currentLesson].tasks[currentTask];}
+function taskRecord(id){return state.tasks[id]||null;}
+function completedInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.correct).length;}
+function firstTryInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.firstTry).length;}
+function overallCompleted(){return LESSONS.reduce((n,l)=>n+l.tasks.filter(t=>state.tasks[t.id]?.correct).length,0);}
+
+function injectStyle(){
+  if(document.getElementById("ch10-course-style")) return;
+  const style=document.createElement("style");
+  style.id="ch10-course-style";
+  style.textContent=`
+#ch10CourseCard{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 78%,#3b72d9 22%);border-radius:18px;padding:18px;margin-top:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--panel,#fff) 95%,#3b72d9 5%),var(--panel,#fff));box-shadow:0 10px 28px rgba(20,20,30,.06)}
+#ch10CourseCard:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#3b72d9,#69a7ff)}
+.ch10-card-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}.ch10-card-copy{min-width:0}.ch10-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.64}.ch10-card-title{font-size:18px;font-weight:800;line-height:1.15;margin-top:5px}.ch10-card-sub{font-size:13px;line-height:1.45;opacity:.72;margin-top:6px}.ch10-open{flex:none;min-height:40px;padding:0 15px;border-radius:11px;border:0;background:var(--text,#16161a);color:var(--bg,#fff);font-weight:750;cursor:pointer}.ch10-progress{height:7px;border-radius:999px;background:color-mix(in srgb,var(--text,#16161a) 10%,transparent);overflow:hidden;margin-top:15px}.ch10-progress>i{display:block;height:100%;background:linear-gradient(90deg,#3b72d9,#69a7ff);width:0}.ch10-card-foot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:11px;opacity:.67}
+#ch10CourseDialog{width:min(760px,calc(100vw - 24px));height:min(760px,calc(100dvh - 24px));max-width:none;max-height:none;padding:0;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 75%,#3b72d9 25%);border-radius:20px;background:var(--panel,#fff);color:var(--text,#16161a);box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}
+#ch10CourseDialog::backdrop{background:rgba(8,8,12,.58);backdrop-filter:blur(5px)}
+.ch10-shell{height:100%;display:grid;grid-template-rows:auto 1fr auto;min-height:0}.ch10-head{padding:16px 18px 13px;border-bottom:1px solid var(--line,#ddd);display:flex;gap:14px;align-items:flex-start}.ch10-head-copy{min-width:0;flex:1}.ch10-head .ch10-eyebrow{color:#2d5fbf;opacity:1}.ch10-title{font-size:20px;font-weight:850;line-height:1.15;margin-top:3px}.ch10-meta{font-size:12px;opacity:.64;margin-top:4px}.ch10-close{width:38px;height:38px;border-radius:50%;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-size:20px;cursor:pointer;flex:none}.ch10-body{min-height:0;overflow:auto;padding:18px}.ch10-lesson-intro{font-size:13px;line-height:1.55;padding:12px 13px;border-radius:12px;background:color-mix(in srgb,#3b72d9 7%,var(--panel,#fff));border:1px solid color-mix(in srgb,#3b72d9 18%,var(--line,#ddd));margin-bottom:15px}.ch10-task-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.ch10-task-count{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.58}.ch10-score{font-size:11px;opacity:.62}.ch10-prompt{font-size:17px;line-height:1.45;font-weight:750;margin-bottom:14px}.ch10-choices{display:grid;gap:9px}.ch10-choice{width:100%;text-align:left;padding:12px 13px;border-radius:12px;border:1px solid var(--line,#ddd);background:color-mix(in srgb,var(--panel,#fff) 96%,var(--text,#111) 4%);color:inherit;font:inherit;font-size:13px;line-height:1.4;cursor:pointer}.ch10-choice:hover{border-color:color-mix(in srgb,#3b72d9 55%,var(--line,#ddd))}.ch10-choice[disabled]{cursor:default}.ch10-choice.correct{border-color:#2f9d62;background:color-mix(in srgb,#2f9d62 10%,var(--panel,#fff))}.ch10-choice.wrong{border-color:#cf5656;background:color-mix(in srgb,#cf5656 9%,var(--panel,#fff))}
+.ch10-board-wrap{display:grid;gap:11px;justify-items:center;margin:2px 0 14px}.ch10-board{width:min(100%,430px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:1px solid color-mix(in srgb,var(--text,#111) 40%,transparent);border-radius:12px;overflow:hidden;background:#d4a85f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}.ch10-cell{position:relative;border-right:1px solid rgba(45,29,12,.34);border-bottom:1px solid rgba(45,29,12,.34);background:transparent;padding:0;min-width:0;color:#18130e}.ch10-cell:nth-child(9n){border-right:0}.ch10-cell:nth-last-child(-n+9){border-bottom:0}.ch10-cell[data-candidate="1"]{cursor:pointer;background:rgba(59,114,217,.11)}.ch10-cell[data-candidate="1"]:after{content:"";position:absolute;width:18%;aspect-ratio:1;border-radius:50%;background:#3b72d9;opacity:.65;left:41%;top:41%}.ch10-cell[data-candidate="1"]:hover{background:rgba(59,114,217,.19)}.ch10-stone{position:absolute;width:72%;aspect-ratio:1;border-radius:50%;left:14%;top:14%;box-shadow:0 2px 4px rgba(0,0,0,.35)}.ch10-stone.black{background:radial-gradient(circle at 35% 30%,#4a4a4a,#111 68%)}.ch10-stone.white{background:radial-gradient(circle at 35% 30%,#fff,#ddd 72%);border:1px solid rgba(0,0,0,.18)}.ch10-cell.answer{background:rgba(47,157,98,.20)!important}.ch10-coord{position:absolute;right:2px;bottom:1px;font-size:7px;font-weight:800;opacity:.34;pointer-events:none}.ch10-legend{font-size:11px;opacity:.62;text-align:center}
+.ch10-feedback{min-height:42px;margin-top:13px;padding:11px 12px;border-radius:11px;border:1px solid transparent;font-size:12.5px;line-height:1.45}.ch10-feedback:empty{display:none}.ch10-feedback.bad{display:block;border-color:color-mix(in srgb,#cf5656 34%,var(--line,#ddd));background:color-mix(in srgb,#cf5656 8%,var(--panel,#fff))}.ch10-feedback.good{display:block;border-color:color-mix(in srgb,#2f9d62 38%,var(--line,#ddd));background:color-mix(in srgb,#2f9d62 9%,var(--panel,#fff))}
+#ch10CourseDialog .ch10-bottom{display:flex!important;visibility:visible!important;align-items:center;gap:9px;padding:11px 14px;border-top:1px solid var(--line,#ddd);background:var(--panel,#fff);min-height:62px}.ch10-nav{display:flex;gap:8px;margin-right:auto}.ch10-btn{min-height:40px;padding:0 13px;border-radius:10px;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-weight:750;cursor:pointer}.ch10-btn:disabled{opacity:.36;cursor:default}.ch10-primary{background:var(--text,#16161a);color:var(--bg,#fff);border-color:var(--text,#16161a)}
+@media(max-width:560px){#ch10CourseDialog{width:100vw;height:100dvh;border:0;border-radius:0}.ch10-head{padding:13px 14px 11px}.ch10-body{padding:14px}.ch10-title{font-size:18px}.ch10-prompt{font-size:16px}.ch10-board{width:min(100%,390px)}#ch10CourseDialog .ch10-bottom{padding:9px 10px;gap:7px}.ch10-btn{padding:0 10px}.ch10-card-top{align-items:center}.ch10-open{padding:0 12px}}
+`;
+  document.head.appendChild(style);
+}
+
+function placeCard(){
+  card=card||document.getElementById("ch10CourseCard");
+  if(!card) return false;
+  const prev=document.getElementById("ch9CourseCard");
+  const improve=document.getElementById("v92ImproveHome");
+  if(prev&&prev.parentElement){
+    if(card.parentElement!==prev.parentElement||prev.nextElementSibling!==card) prev.insertAdjacentElement("afterend",card);
+    return true;
+  }
+  if(improve&&card.parentElement!==improve) improve.appendChild(card);
+  return false;
+}
+
+function buildCard(){
+  const existing=document.getElementById("ch10CourseCard");
+  if(existing){card=existing;placeCard();return existing;}
+  card=document.createElement("section");
+  card.id="ch10CourseCard";
+  card.setAttribute("aria-label","Chapter 10 Whole-Board Evaluation and Planning");
+  card.innerHTML=`
+    <div class="ch10-card-top">
+      <div class="ch10-card-copy">
+        <div class="ch10-eyebrow">Chapter 10</div>
+        <div class="ch10-card-title">Whole-Board Evaluation &amp; Planning</div>
+        <div class="ch10-card-sub">Read the entire position. Find the critical zone, compare plans, improve weak stones, switch wings, and anticipate the opponent.</div>
+      </div>
+      <button class="ch10-open" type="button">Open</button>
+    </div>
+    <div class="ch10-progress"><i></i></div>
+    <div class="ch10-card-foot"><span class="ch10-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
+  const improve=document.getElementById("v92ImproveHome")||document.querySelector("main")||document.body;
+  improve.appendChild(card);
+  placeCard();
+  card.querySelector(".ch10-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
+  return card;
+}
+
+function buildDialog(){
+  if(document.getElementById("ch10CourseDialog")) return document.getElementById("ch10CourseDialog");
+  dialog=document.createElement("dialog");
+  dialog.id="ch10CourseDialog";
+  dialog.innerHTML=`
+    <div class="ch10-shell">
+      <div class="ch10-head">
+        <div class="ch10-head-copy"><div class="ch10-eyebrow">Chapter 10</div><div class="ch10-title"></div><div class="ch10-meta"></div></div>
+        <button class="ch10-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="ch10-body">
+        <div class="ch10-lesson-intro"></div>
+        <div class="ch10-task-top"><div class="ch10-task-count"></div><div class="ch10-score"></div></div>
+        <div class="ch10-prompt"></div>
+        <div class="ch10-board-wrap"><div id="ch10Board" class="ch10-board"></div><div class="ch10-legend">Blue dots are candidate moves. Tap one.</div></div>
+        <div id="ch10Choices" class="ch10-choices"></div>
+        <div id="ch10Feedback" class="ch10-feedback" role="status"></div>
+      </div>
+      <div class="ch10-bottom">
+        <div class="ch10-nav"><button id="ch10PrevTask" class="ch10-btn" type="button">Back</button></div>
+        <button id="ch10Reveal" class="ch10-btn" type="button" disabled>Reveal</button>
+        <button id="ch10NextTask" class="ch10-btn ch10-primary" type="button">Next</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+  titleEl=dialog.querySelector(".ch10-title");
+  metaEl=dialog.querySelector(".ch10-meta");
+  bodyEl=dialog.querySelector(".ch10-body");
+  countEl=dialog.querySelector(".ch10-task-count");
+  feedbackEl=dialog.querySelector("#ch10Feedback");
+  revealBtn=dialog.querySelector("#ch10Reveal");
+  nextBtn=dialog.querySelector("#ch10NextTask");
+  boardEl=dialog.querySelector("#ch10Board");
+  choicesEl=dialog.querySelector("#ch10Choices");
+  dialog.querySelector(".ch10-close").addEventListener("click",()=>dialog.close());
+  dialog.querySelector("#ch10PrevTask").addEventListener("click",prevTask);
+  nextBtn.addEventListener("click",nextTask);
+  revealBtn.addEventListener("click",reveal);
+  dialog.addEventListener("cancel",()=>dialog.close());
+  return dialog;
+}
+
+function updateCard(){
+  card=card||document.getElementById("ch10CourseCard");
+  if(!card) return;
+  const done=overallCompleted();
+  card.querySelector(".ch10-progress i").style.width=`${Math.round(done/TOTAL_TASKS*100)}%`;
+  card.querySelector(".ch10-card-count").textContent=`${done} / ${TOTAL_TASKS} complete`;
+}
+
+function setFeedback(text,kind){
+  feedbackEl.textContent=text||"";
+  feedbackEl.className="ch10-feedback"+(kind?` ${kind}`:"");
+}
+function markComplete(task,assisted=false){
+  const prior=state.tasks[task.id];
+  if(!prior?.correct){
+    state.tasks[task.id]={correct:true,firstTry:misses===0&&!assisted,assisted:!!assisted};
+    saveState();
+  }
+  updateCard();
+}
+function fail(task){
+  misses++;
+  const msg=misses===1 ? `Not this. ${task.hint1}` : `Not this. ${task.hint2}`;
+  setFeedback(msg,"bad");
+  revealBtn.disabled=misses<2;
+}
+function complete(task){
+  markComplete(task,false);
+  setFeedback(`Completed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function renderChoice(task){
+  boardEl.parentElement.style.display="none";
+  choicesEl.style.display="grid";
+  choicesEl.innerHTML="";
+  task.options.forEach((opt,i)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="ch10-choice"; b.textContent=opt;
+    b.addEventListener("click",()=>{
+      if(state.tasks[task.id]?.correct) return;
+      if(i===task.answer){
+        b.classList.add("correct");
+        [...choicesEl.children].forEach(x=>x.disabled=true);
+        complete(task);
+      }else{
+        b.classList.add("wrong");
+        fail(task);
+      }
+    });
+    choicesEl.appendChild(b);
+  });
+  if(state.tasks[task.id]?.correct){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }
+}
+
+function renderPlanningBoard(task){
+  boardEl.parentElement.style.display="grid";
+  choicesEl.style.display="none";
+  boardEl.innerHTML="";
+  const blacks=new Set(task.black), whites=new Set(task.white), candidates=new Set(task.candidates);
+  for(let r=BOARD_SIZE;r>=1;r--){
+    for(let c=0;c<BOARD_SIZE;c++){
+      const coord=COLS[c]+r;
+      const cell=document.createElement("button");
+      cell.type="button"; cell.className="ch10-cell"; cell.dataset.coord=coord;
+      if(candidates.has(coord)) cell.dataset.candidate="1";
+      if(blacks.has(coord)||whites.has(coord)){
+        const stone=document.createElement("i");
+        stone.className="ch10-stone "+(blacks.has(coord)?"black":"white");
+        cell.appendChild(stone);
+      }
+      const lab=document.createElement("span"); lab.className="ch10-coord"; lab.textContent=coord; cell.appendChild(lab);
+      if(candidates.has(coord) && !blacks.has(coord) && !whites.has(coord)){
+        cell.addEventListener("click",()=>boardGuess(task,coord,cell));
+      } else cell.disabled=true;
+      boardEl.appendChild(cell);
+    }
+  }
+  if(state.tasks[task.id]?.correct){
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){cell.classList.add("answer");cell.dataset.candidate="0";const stone=document.createElement("i");stone.className="ch10-stone "+task.turn;cell.appendChild(stone);}
+  }
+}
+function boardGuess(task,coord,cell){
+  if(state.tasks[task.id]?.correct) return;
+  if(coord===task.answer){
+    cell.classList.add("answer");
+    boardEl.querySelectorAll('[data-candidate="1"]').forEach(x=>x.dataset.candidate="0");
+    const stone=document.createElement("i"); stone.className="ch10-stone "+task.turn; cell.appendChild(stone);
+    complete(task);
+  }else{
+    cell.style.background="rgba(207,86,86,.16)";
+    fail(task);
+  }
+}
+
+function reveal(){
+  const task=taskAt();
+  if(misses<2 || state.tasks[task.id]?.correct) return;
+  markComplete(task,true);
+  if(task.type==="choice"){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }else{
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){
+      cell.classList.add("answer"); cell.dataset.candidate="0";
+      if(!cell.querySelector(".ch10-stone")){const stone=document.createElement("i");stone.className="ch10-stone "+task.turn;cell.appendChild(stone);}
+    }
+  }
+  setFeedback(`Revealed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function render(){
+  buildDialog();
+  const lesson=LESSONS[currentLesson], task=taskAt(), rec=taskRecord(task.id);
+  misses=0; selected=null;
+  titleEl.textContent=lesson.title;
+  metaEl.textContent=lesson.kicker;
+  dialog.querySelector(".ch10-lesson-intro").textContent=lesson.intro;
+  countEl.textContent=`${currentTask+1} / ${lesson.tasks.length}`;
+  dialog.querySelector(".ch10-score").textContent=`Lesson ${currentLesson+1} · ${completedInLesson(currentLesson)}/${lesson.tasks.length}`;
+  dialog.querySelector(".ch10-prompt").textContent=task.prompt;
+  setFeedback(rec?.correct ? `Completed${rec.assisted?" with reveal":rec.firstTry?" on first try":""}. ${task.explain}` : "","");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+  dialog.querySelector("#ch10PrevTask").disabled=currentLesson===0&&currentTask===0;
+  if(task.type==="choice") renderChoice(task); else renderPlanningBoard(task);
+  state.last={lesson:currentLesson,task:currentTask}; saveState();
+  bodyEl.scrollTop=0;
+  updateCard();
+}
+
+function nextTask(){
+  if(currentTask<LESSONS[currentLesson].tasks.length-1) currentTask++;
+  else if(currentLesson<LESSONS.length-1){currentLesson++;currentTask=0;}
+  else {dialog.close();return;}
+  render();
+}
+function prevTask(){
+  if(currentTask>0) currentTask--;
+  else if(currentLesson>0){currentLesson--;currentTask=LESSONS[currentLesson].tasks.length-1;}
+  render();
+}
+function openSection(lesson=0,task=0){
+  mountChapter10();
+  currentLesson=Math.max(0,Math.min(LESSONS.length-1,Number(lesson)||0));
+  currentTask=Math.max(0,Math.min(LESSONS[currentLesson].tasks.length-1,Number(task)||0));
+  render();
+  if(!dialog.open) dialog.showModal();
+}
+function report(){
+  return {
+    totalTasks:TOTAL_TASKS,totalLessons:LESSONS.length,completed:overallCompleted(),
+    lessons:LESSONS.map((l,i)=>{
+      const completed=completedInLesson(i), first=firstTryInLesson(i);
+      return {title:l.title,total:l.tasks.length,completed,complete:completed===l.tasks.length,firstTry:first,rate:l.tasks.length?first/l.tasks.length:0};
+    })
+  };
+}
+let placementTimer=0;
+function settleCardPlacement(attempt=0){
+  if(placeCard()||attempt>=40){placementTimer=0;return;}
+  clearTimeout(placementTimer);
+  placementTimer=setTimeout(()=>settleCardPlacement(attempt+1),100);
+}
+function mountChapter10(){
+  injectStyle(); buildCard(); buildDialog(); updateCard(); settleCardPlacement();
+}
+window.GomokuCourseChapter10={openSection,report,mount:mountChapter10};
+
+const start=()=>{
+  if(document.body?.dataset?.ready==="true") mountChapter10();
+};
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start,{once:true});
+else start();
+const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter10();});
+if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
+else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+})();
+</script>
 </body></html>
