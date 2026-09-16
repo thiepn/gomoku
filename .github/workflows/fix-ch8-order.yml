@@ -1,0 +1,116 @@
+name: Fix Chapter 8 course-card placement
+
+on:
+  push:
+    paths: ['.github/workflows/fix-ch8-order.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Chapter 8 placement logic
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='''function buildCard(){
+  if(document.getElementById("ch8CourseCard")) return document.getElementById("ch8CourseCard");
+  card=document.createElement("section");
+  card.id="ch8CourseCard";
+  card.setAttribute("aria-label","Chapter 8 Initiative and Move Priority");
+  card.innerHTML=`
+    <div class="ch8-card-top">
+      <div class="ch8-card-copy">
+        <div class="ch8-eyebrow">Chapter 8</div>
+        <div class="ch8-card-title">Initiative and Move Priority</div>
+        <div class="ch8-card-sub">Play the move that matters first. Learn threat hierarchy, tempo, active defense, and when forcing play really ends.</div>
+      </div>
+      <button class="ch8-open" type="button">Open</button>
+    </div>
+    <div class="ch8-progress"><i></i></div>
+    <div class="ch8-card-foot"><span class="ch8-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
+  const prev=document.getElementById("ch7CourseCard");
+  if(prev) prev.insertAdjacentElement("afterend",card);
+  else{
+    const improve=document.querySelector('[data-v92-route="improve"]')?.closest("main,section,div") || document.querySelector("main") || document.body;
+    improve.appendChild(card);
+  }
+  card.querySelector(".ch8-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
+  return card;
+}'''
+          new='''function placeCard(){
+  card=card||document.getElementById("ch8CourseCard");
+  if(!card) return false;
+  const prev=document.getElementById("ch7CourseCard");
+  const improve=document.getElementById("v92ImproveHome");
+  if(prev&&prev.parentElement){
+    if(card.parentElement!==prev.parentElement||prev.nextElementSibling!==card) prev.insertAdjacentElement("afterend",card);
+    return true;
+  }
+  if(improve&&card.parentElement!==improve) improve.appendChild(card);
+  return false;
+}
+
+function buildCard(){
+  const existing=document.getElementById("ch8CourseCard");
+  if(existing){card=existing;placeCard();return existing;}
+  card=document.createElement("section");
+  card.id="ch8CourseCard";
+  card.setAttribute("aria-label","Chapter 8 Initiative and Move Priority");
+  card.innerHTML=`
+    <div class="ch8-card-top">
+      <div class="ch8-card-copy">
+        <div class="ch8-eyebrow">Chapter 8</div>
+        <div class="ch8-card-title">Initiative and Move Priority</div>
+        <div class="ch8-card-sub">Play the move that matters first. Learn threat hierarchy, tempo, active defense, and when forcing play really ends.</div>
+      </div>
+      <button class="ch8-open" type="button">Open</button>
+    </div>
+    <div class="ch8-progress"><i></i></div>
+    <div class="ch8-card-foot"><span class="ch8-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
+  const improve=document.getElementById("v92ImproveHome")||document.querySelector("main")||document.body;
+  improve.appendChild(card);
+  placeCard();
+  card.querySelector(".ch8-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
+  return card;
+}'''
+          if s.count(old)!=1:
+              raise SystemExit(f'Expected exactly one Chapter 8 buildCard block, found {s.count(old)}')
+          s=s.replace(old,new,1)
+          old_mount='''function mountChapter8(){
+  injectStyle(); buildCard(); buildDialog(); updateCard();
+}'''
+          new_mount='''let placementTimer=0;
+function settleCardPlacement(attempt=0){
+  if(placeCard()||attempt>=40){placementTimer=0;return;}
+  clearTimeout(placementTimer);
+  placementTimer=setTimeout(()=>settleCardPlacement(attempt+1),100);
+}
+function mountChapter8(){
+  injectStyle(); buildCard(); buildDialog(); updateCard(); settleCardPlacement();
+}'''
+          if s.count(old_mount)!=1:
+              raise SystemExit(f'Expected exactly one Chapter 8 mount block, found {s.count(old_mount)}')
+          s=s.replace(old_mount,new_mount,1)
+          p.write_text(s,encoding='utf-8')
+          final=p.read_text(encoding='utf-8')
+          checks=['function placeCard()','document.getElementById("v92ImproveHome")','function settleCardPlacement(attempt=0)','settleCardPlacement();','id="course-ch8-v1-script"']
+          missing=[x for x in checks if x not in final]
+          if missing: raise SystemExit(f'Missing patched markers: {missing}')
+          for n in range(1,9):
+              marker=f'id="course-ch{n}-v1-script"'
+              if final.count(marker)!=1: raise SystemExit(f'Course marker count failed for Chapter {n}')
+      - name: Commit fix and clean workflow
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/fix-ch8-order.yml
+          git commit -m 'Fix Chapter 8 course-card placement'
+          git push
