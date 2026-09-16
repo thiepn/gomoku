@@ -1,0 +1,157 @@
+name: Final certify Chapter 11 Openings and Early-Game Principles
+
+on:
+  push:
+    paths: ['.github/workflows/certify-ch11-course.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  certify:
+    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for this commit's Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 120); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Confirm live Chapter 11 source
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 40); do
+            curl -fsSL "https://thiepn.dev/gomoku/?ch11source=$(date +%s%N)" -o /tmp/live.html || true
+            if grep -q 'id="course-ch11-v1-script"' /tmp/live.html \
+              && grep -q 'function placeCard()' /tmp/live.html \
+              && grep -q 'function settleCardPlacement(attempt=0)' /tmp/live.html \
+              && grep -q 'function renderOpeningBoard(task)' /tmp/live.html \
+              && grep -q 'gomoku.course.chapter11.v1' /tmp/live.html; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" = 1
+          for n in $(seq 1 11); do
+            test "$(grep -o "id=\"course-ch${n}-v1-script\"" /tmp/live.html | wc -l)" = 1
+          done
+      - name: Certify live Chapter 11
+        shell: bash
+        run: |
+          cat > .ch11-cert.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const answers=[[{"id":"o1","type":"choice","answer":"Build a flexible position that can create or answer several future threats"},{"id":"o2","type":"choice","answer":"They can influence more lines and connect to more future directions"},{"id":"o3","type":"choice","answer":"Several early stones all serve one narrow plan before the opponent has forced that commitment"},{"id":"o4","type":"choice","answer":"How many useful future connections, threats, and responses each move preserves"},{"id":"o5","type":"choice","answer":"The opponent creates a more urgent tactical or positional demand elsewhere"}],[{"id":"o6","type":"board","answer":"E5"},{"id":"o7","type":"board","answer":"E5"},{"id":"o8","type":"board","answer":"D4"},{"id":"o9","type":"board","answer":"E5"},{"id":"o10","type":"board","answer":"E5"}],[{"id":"o11","type":"board","answer":"E4"},{"id":"o12","type":"board","answer":"E5"},{"id":"o13","type":"board","answer":"E4"},{"id":"o14","type":"board","answer":"F4"},{"id":"o15","type":"board","answer":"F5"},{"id":"o16","type":"board","answer":"E5"}],[{"id":"o17","type":"board","answer":"E4"},{"id":"o18","type":"board","answer":"F4"},{"id":"o19","type":"board","answer":"F4"},{"id":"o20","type":"board","answer":"F4"},{"id":"o21","type":"board","answer":"E4"},{"id":"o22","type":"board","answer":"E6"}],[{"id":"o23","type":"board","answer":"E5"},{"id":"o24","type":"board","answer":"E4"},{"id":"o25","type":"board","answer":"F5"},{"id":"o26","type":"board","answer":"D5"},{"id":"o27","type":"board","answer":"F4"}],[{"id":"o28","type":"board","answer":"E5"},{"id":"o29","type":"board","answer":"E4"},{"id":"o30","type":"board","answer":"F4"},{"id":"o31","type":"board","answer":"E5"},{"id":"o32","type":"board","answer":"E5"}],[{"id":"o33","type":"board","answer":"F5"},{"id":"o34","type":"board","answer":"E5"},{"id":"o35","type":"board","answer":"F4"},{"id":"o36","type":"board","answer":"F5"}],[{"id":"o37","type":"choice","answer":"Tactical safety → central/flexible development → respond to the opponent → transition into concrete plans"},{"id":"o38","type":"choice","answer":"Because the opponent has not yet revealed enough of their plan to justify a narrow commitment"},{"id":"o39","type":"choice","answer":"As a way to understand equivalent spaces until the actual position creates a reason to break it"},{"id":"o40","type":"choice","answer":"Several stones become redundant while other important areas remain undeveloped"},{"id":"o41","type":"choice","answer":"The move improves your position even if the opponent answers correctly"},{"id":"o42","type":"choice","answer":"Concrete threats, critical zones, and move priorities become more important than generic development"},{"id":"o43","type":"choice","answer":"The one that keeps more useful future plans and responses available"},{"id":"o44","type":"board","answer":"E5"},{"id":"o45","type":"board","answer":"E4"},{"id":"o46","type":"board","answer":"F4"},{"id":"o47","type":"board","answer":"E5"},{"id":"o48","type":"board","answer":"F5"}]];
+          const flat=answers.flat();
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const makeContext=async()=>{
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            await ctx.addInitScript(()=>{
+              const original=HTMLDialogElement.prototype.showModal;
+              HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog') return; return original.call(this)};
+            });
+            return ctx;
+          };
+          const prepare=async(p)=>{
+            p.setDefaultTimeout(15000); p.setDefaultNavigationTimeout(25000);
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter11?.openSection==='function',null,{timeout:20000});
+            await p.evaluate(()=>{document.querySelectorAll('dialog[open]:not(#ch11CourseDialog)').forEach(d=>d.close?.());document.querySelector('[data-v92-route="improve"]')?.click()});
+            await p.waitForFunction(()=>document.querySelector('#ch11CourseCard')?.parentElement?.id==='v92ImproveHome'&&document.querySelector('#ch10CourseCard')?.nextElementSibling?.id==='ch11CourseCard',null,{timeout:10000});
+          };
+          const assertStack=async p=>{
+            const x=await p.evaluate(()=>{const cards=[1,2,3,4,5,6,7,8,9,10,11].map(n=>document.querySelector(`#ch${n}CourseCard`));const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));return{counts:cards.map((_,i)=>document.querySelectorAll(`#ch${i+1}CourseCard`).length),order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1])),parents:cards.map(c=>c?.parentElement?.id||null)}});
+            if(x.counts.some(n=>n!==1)||!x.order||x.parents.some(v=>v!=='v92ImproveHome')) throw new Error('Course stack '+JSON.stringify(x));
+          };
+          const open=async(p,l,t)=>{await p.evaluate(()=>document.querySelectorAll('dialog[open]:not(#ch11CourseDialog)').forEach(d=>d.close?.()));await p.evaluate(([l,t])=>window.GomokuCourseChapter11.openSection(l,t),[l,t]);await p.waitForSelector('#ch11CourseDialog[open]')};
+          const assertMobile=async(p,label)=>{
+            const g=await p.evaluate(()=>{const d=document.querySelector('#ch11CourseDialog'),f=d?.querySelector('.ch11-bottom'),r=document.querySelector('#ch11Reveal'),b=document.querySelector('#ch11Board');const fr=f?.getBoundingClientRect(),rr=r?.getBoundingClientRect(),br=b?.getBoundingClientRect();return{iw:innerWidth,ih:innerHeight,page:document.documentElement.scrollWidth,dialog:d?.scrollWidth,footer:fr?[fr.left,fr.top,fr.right,fr.bottom,fr.width,fr.height]:null,reveal:rr?[rr.left,rr.top,rr.right,rr.bottom,rr.width,rr.height]:null,board:br?[br.left,br.top,br.right,br.bottom,br.width,br.height]:null,rv:r?.checkVisibility?.()}});
+            if(g.page>g.iw+2||g.dialog>g.iw+2||!g.footer||g.footer[4]<=1||g.footer[5]<=1||!g.reveal||g.reveal[4]<=1||g.reveal[5]<=1||!g.rv||g.reveal[0]<-1||g.reveal[2]>g.iw+1||g.reveal[1]<-1||g.reveal[3]>g.ih+1) throw new Error(label+' mobile geometry '+JSON.stringify(g));
+            if(g.board&&g.board[4]>g.iw+2) throw new Error(label+' board overflow '+JSON.stringify(g));
+          };
+
+          // Assisted/coaching path
+          const A=await makeContext(); const a=await A.newPage(); const aerr=[]; a.on('pageerror',e=>aerr.push(e.message));
+          await a.goto(root+'?ch11cert-a='+Date.now(),{waitUntil:'domcontentloaded'}); await prepare(a); await assertStack(a);
+          let report=await a.evaluate(()=>window.GomokuCourseChapter11.report());
+          if(report.totalTasks!==48||report.totalLessons!==8) throw new Error('Report '+JSON.stringify(report));
+          await open(a,0,0); await assertMobile(a,'choice shell');
+          await a.locator('#ch11CourseDialog[open]').getByRole('button',{name:'Force a five immediately, even if the sequence is unsound',exact:true}).click();
+          if(!/Not this\./.test(await a.locator('#ch11Feedback').innerText())||!(await a.locator('#ch11Reveal').isDisabled())) throw new Error('First miss coaching');
+          await a.locator('#ch11CourseDialog[open]').getByRole('button',{name:'Occupy as many edge intersections as possible',exact:true}).click();
+          if(await a.locator('#ch11Reveal').isDisabled()) throw new Error('Reveal unavailable after second miss');
+          await a.locator('#ch11Reveal').click();
+          const assisted=await a.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter11.v1')).tasks.o1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false) throw new Error('Assisted state '+JSON.stringify(assisted));
+          if(aerr.some(x=>/ch11|chapter 11/i.test(x))) throw new Error('Assisted page errors '+JSON.stringify(aerr));
+          console.log('PASS structure + mobile + staged coaching + assisted accounting');
+          await A.close();
+
+          // Full clean pass and persistence into a brand-new page in the same context.
+          const B=await makeContext(); const p1=await B.newPage(); const errors=[]; p1.on('pageerror',e=>errors.push(e.message));
+          await p1.goto(root+'?ch11cert-b='+Date.now(),{waitUntil:'domcontentloaded'}); await prepare(p1); await assertStack(p1);
+          await p1.evaluate(()=>localStorage.removeItem('gomoku.course.chapter11.v1'));
+          let count=0;
+          for(let l=0;l<answers.length;l++) for(let t=0;t<answers[l].length;t++){
+            const x=answers[l][t]; await open(p1,l,t);
+            if(x.type==='choice') await p1.locator('#ch11CourseDialog[open]').getByRole('button',{name:x.answer,exact:true}).click();
+            else { const cell=p1.locator(`#ch11Board [data-coord="${x.answer}"]`); if(await cell.getAttribute('data-candidate')!=='1') throw new Error('Answer not candidate '+x.id); await cell.click(); }
+            if(!/^Completed\./.test(await p1.locator('#ch11Feedback').innerText())) throw new Error('Task failed '+x.id);
+            const rec=await p1.evaluate(id=>JSON.parse(localStorage.getItem('gomoku.course.chapter11.v1')).tasks[id],x.id);
+            if(!rec?.correct||!rec.firstTry||rec.assisted) throw new Error('Task score '+x.id+' '+JSON.stringify(rec));
+            count++;
+            if(x.id==='o6') await assertMobile(p1,'board shell');
+            if(x.id==='o37'&&!/1 \/ 12/.test(await p1.locator('.ch11-task-count').innerText())) throw new Error('Checkpoint count');
+          }
+          if(count!==48) throw new Error('Completion count '+count);
+          report=await p1.evaluate(()=>window.GomokuCourseChapter11.report());
+          if(report.completed!==48||report.lessons.some(x=>!x.complete||x.rate!==1)) throw new Error('Perfect report '+JSON.stringify(report));
+          for(const x of flat){const r=await p1.evaluate(id=>JSON.parse(localStorage.getItem('gomoku.course.chapter11.v1')).tasks[id],x.id);if(!r?.correct||!r.firstTry||r.assisted)throw new Error('State mismatch '+x.id)}
+          console.log('PASS all 48 tasks first try + perfect lesson scoring');
+          await p1.close();
+
+          const p2=await B.newPage(); p2.on('pageerror',e=>errors.push(e.message));
+          await p2.goto(root+'?ch11cert-c='+Date.now(),{waitUntil:'domcontentloaded'}); await prepare(p2); await assertStack(p2);
+          const persisted=await p2.evaluate(()=>({report:window.GomokuCourseChapter11.report(),state:JSON.parse(localStorage.getItem('gomoku.course.chapter11.v1')),markerCount:document.querySelectorAll('#course-ch11-v1-script').length,cardCount:document.querySelectorAll('#ch11CourseCard').length}));
+          if(persisted.report.completed!==48||persisted.report.lessons.some(x=>!x.complete||x.rate!==1)) throw new Error('Persistence report '+JSON.stringify(persisted.report));
+          for(const x of flat) if(!persisted.state?.tasks?.[x.id]?.correct) throw new Error('Missing persisted '+x.id);
+          if(persisted.markerCount!==1||persisted.cardCount!==1) throw new Error('Chapter 11 duplication '+JSON.stringify(persisted));
+          if(errors.some(x=>/ch11|chapter 11/i.test(x))) throw new Error('Chapter 11 page errors '+JSON.stringify(errors));
+          console.log('PASS cross-page persistence + unique ordered Chapters 1-11');
+          console.log('CHAPTER11_CERTIFIED');
+          await B.close(); await browser.close();
+          JS
+          node --check .ch11-cert.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 180s env CHROME="$CHROME" node .ch11-cert.mjs
+      - name: Remove certification workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch11-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/certify-ch11-course.yml
+          git commit -m 'Remove Chapter 11 certification' || true
+          git pull --rebase || true
+          git push || true
