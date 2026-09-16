@@ -10632,4 +10632,330 @@ if(document.body) observer.observe(document.body,{attributes:true,attributeFilte
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
 })();
 </script>
+
+<script id="course-ch11-v1-script">
+(() => {
+"use strict";
+if (window.__gomokuCourseChapter11Loaded) return;
+window.__gomokuCourseChapter11Loaded = true;
+
+const STORAGE_KEY = "gomoku.course.chapter11.v1";
+const VERSION = 1;
+const BOARD_SIZE = 9;
+const COLS = "ABCDEFGHI";
+const LESSONS = [{"title":"Opening Priorities","kicker":"Start with flexibility, safety, and future potential","intro":"The opening is not about forcing a win immediately. It is about placing early stones where they can participate in several future plans. Before committing to a local attack, value central influence, flexible connections, tactical safety, and the ability to respond to the opponent without wasting tempo.","tasks":[{"type":"choice","id":"o1","prompt":"What is the main purpose of the opening in a normal Gomoku game?","options":["Build a flexible position that can create or answer several future threats","Force a five immediately, even if the sequence is unsound","Occupy as many edge intersections as possible"],"answer":0,"explain":"A strong opening creates useful future options. Early stones should support multiple plans rather than demand an immediate attack."},{"type":"choice","id":"o2","prompt":"Why are central early stones usually valuable?","options":["They can influence more lines and connect to more future directions","They automatically guarantee the first attack","They make every later move forcing"],"answer":0,"explain":"Central stones typically have more available directions, so they remain useful under more possible continuations."},{"type":"choice","id":"o3","prompt":"What is the clearest sign of premature opening commitment?","options":["Several early stones all serve one narrow plan before the opponent has forced that commitment","A central stone supports two diagonals","A move keeps both attack and defense available"],"answer":0,"explain":"Overcommitting early makes the position rigid and lets the opponent redirect play while your stones lose flexibility."},{"type":"choice","id":"o4","prompt":"When comparing two quiet opening moves, what should matter most?","options":["How many useful future connections, threats, and responses each move preserves","Which move is closest to the previous move","Which move makes the densest local cluster immediately"],"answer":0,"explain":"Opening value comes from future utility. A move that keeps several credible plans alive is usually more useful than a one-purpose move."},{"type":"choice","id":"o5","prompt":"What should make you abandon a preferred opening shape?","options":["The opponent creates a more urgent tactical or positional demand elsewhere","The shape is not perfectly symmetrical","You have already used three central intersections"],"answer":0,"explain":"Opening ideas are plans, not obligations. New threats or stronger zones can change the correct priority immediately."}]},{"title":"Center Influence & First Stones","kicker":"Place early stones where they can work in several directions","intro":"In sparse positions, every stone should have room to grow. Central influence matters because it preserves horizontal, vertical, and diagonal possibilities while making it easier to connect future stones without wasting moves.","tasks":[{"type":"board","id":"o6","prompt":"Black to move early. Which candidate gives the broadest central influence from this sparse position?","black":["D5"],"white":["G6"],"candidates":["E5","B2","H8"],"answer":"E5","explain":"E5 stays central, connects naturally with D5, and preserves several horizontal and diagonal continuations."},{"type":"board","id":"o7","prompt":"Black to move. Which candidate develops toward the center without crowding the existing stones?","black":["C4","D5"],"white":["G5"],"candidates":["E5","C5","B4"],"answer":"E5","explain":"E5 extends the position into the center and keeps multiple lines available. C5 and B4 cluster too tightly around existing work."},{"type":"board","id":"o8","prompt":"Black to move. Which candidate turns two separated early stones into one useful central framework?","black":["C3","E5"],"white":["G6"],"candidates":["D4","B6","H3"],"answer":"D4","explain":"D4 bridges C3 and E5 diagonally, making both stones more active while preserving further expansion."},{"type":"board","id":"o9","prompt":"Black to move. Which candidate keeps the opening balanced between left and right development?","black":["D5","E4"],"white":["G5"],"candidates":["E5","B5","H4"],"answer":"E5","explain":"E5 reinforces the center without committing to either wing, so Black can still react to White's next direction."},{"type":"board","id":"o10","prompt":"Black to move. Which candidate creates the strongest central pivot for future lines?","black":["D4","F5"],"white":["G7"],"candidates":["E5","C7","H2"],"answer":"E5","explain":"E5 connects the two existing stones and can support horizontal, vertical, and diagonal growth from the same point."}]},{"title":"Flexible Early Shapes","kicker":"Build structures that can change direction","intro":"A good opening shape is not merely connected; it is adaptable. Stones should cooperate without becoming redundant. Flexible shapes preserve more than one useful follow-up, so the opponent cannot neutralize the entire plan with one convenient reply.","tasks":[{"type":"board","id":"o11","prompt":"Black to move. Which candidate creates a flexible triangle rather than a straight one-directional chain?","black":["D4","E5"],"white":["G6"],"candidates":["E4","F6","C3"],"answer":"E4","explain":"E4 forms a compact but flexible triangle with D4-E5, supporting several future directions instead of extending only one line."},{"type":"board","id":"o12","prompt":"Black to move. Which candidate gives the current shape two credible follow-up directions?","black":["D5","E4"],"white":["G4"],"candidates":["E5","F4","C5"],"answer":"E5","explain":"E5 connects the structure while preserving horizontal, vertical, and diagonal follow-ups."},{"type":"board","id":"o13","prompt":"Black to move. Which candidate improves coordination without putting three early stones on the same short segment?","black":["C4","D5"],"white":["G6"],"candidates":["E4","E6","B3"],"answer":"E4","explain":"E4 supports both C4 and D5 from a new direction. E6 and B3 extend more narrowly."},{"type":"board","id":"o14","prompt":"Black to move. Which candidate makes the opening structure hardest to neutralize with one block?","black":["D4","E5"],"white":["G5"],"candidates":["F4","F6","C3"],"answer":"F4","explain":"F4 creates another live direction through E5 while keeping D4 relevant, so one defensive move is less likely to solve the whole structure."},{"type":"board","id":"o15","prompt":"Black to move. Which candidate adds useful spacing instead of overpacking the center?","black":["D4","E4","E5"],"white":["G6"],"candidates":["F5","D5","C4"],"answer":"F5","explain":"F5 extends the shape into fresh space. D5 and C4 mostly reinforce an area that already has enough support."},{"type":"board","id":"o16","prompt":"Black to move. Which candidate preserves the best option to switch plans after White's reply?","black":["D5","E4"],"white":["F7","G7"],"candidates":["E5","C6","H4"],"answer":"E5","explain":"E5 remains a central pivot. It can support defense, a right-side response, or a left-side expansion depending on White's next move."}]},{"title":"Symmetry & Response","kicker":"Use symmetry as information, not as an autopilot","intro":"Symmetrical openings can help you understand equivalent spaces, but copying the opponent blindly is dangerous. The moment one move creates a tactical or positional asymmetry, evaluate the actual board rather than preserving visual balance.","tasks":[{"type":"board","id":"o17","prompt":"White to move. Black has taken a central point. Which candidate contests the center while keeping White flexible?","black":["E5"],"white":[],"candidates":["E4","A1","I9"],"answer":"E4","turn":"white","explain":"E4 immediately contests central influence and stays connected to several future lines. The corners concede too much central flexibility."},{"type":"board","id":"o18","prompt":"White to move. Black has developed on the left. Which candidate responds symmetrically enough to stay balanced without simply copying?","black":["D5","C4"],"white":["F5"],"candidates":["F4","G6","B6"],"answer":"F4","turn":"white","explain":"F4 gives White a comparable central structure and keeps several directions open without reproducing Black's exact geometry."},{"type":"board","id":"o19","prompt":"White to move. Black's last move created right-side pressure. Which candidate should break symmetry to address the real position?","black":["E5","F5","G4"],"white":["E4","D5"],"candidates":["F4","C4","D6"],"answer":"F4","turn":"white","explain":"F4 addresses the side where Black's influence is growing. Maintaining visual symmetry elsewhere would ignore the actual pressure."},{"type":"board","id":"o20","prompt":"Black to move. Which candidate is best even though it makes the opening less symmetrical?","black":["D4","E5"],"white":["F5","F6"],"candidates":["F4","C6","D6"],"answer":"F4","explain":"F4 directly influences White's active side and supports E5. Strategic value matters more than preserving a mirrored shape."},{"type":"board","id":"o21","prompt":"White to move. Which candidate uses the opponent's symmetry to claim a useful central break point?","black":["D4","F4"],"white":["E6"],"candidates":["E4","C6","G6"],"answer":"E4","turn":"white","explain":"E4 occupies the central gap between Black's symmetric stones and gives White a strong flexible pivot."},{"type":"board","id":"o22","prompt":"Black to move. The position began symmetrically, but White has shifted upward. Which candidate responds to the new asymmetry?","black":["D4","E5"],"white":["F4","F6"],"candidates":["E6","C5","G5"],"answer":"E6","explain":"E6 meets White's upward shift while remaining tied to the central E5 stone. The board has changed, so the plan should change too."}]},{"title":"Avoid Early Overcommitment","kicker":"Do not spend the opening proving one idea too early","intro":"Early overconcentration makes stones redundant and gives the opponent easy targets elsewhere. Strong openings leave enough spacing that each new stone creates fresh possibilities instead of merely repeating the job of stones already placed.","tasks":[{"type":"board","id":"o23","prompt":"Black to move. Which candidate avoids adding another redundant stone to the already-dense left cluster?","black":["C4","D4","C5","D5"],"white":["G6"],"candidates":["E5","B4","C6"],"answer":"E5","explain":"E5 expands into fresh central space and connects the cluster to new future lines instead of overpacking the left side."},{"type":"board","id":"o24","prompt":"Black to move. Which candidate prevents an early one-wing commitment?","black":["D5","C5","C4"],"white":["F6"],"candidates":["E4","B5","B4"],"answer":"E4","explain":"E4 develops a new central direction. B5 and B4 keep investing in the same already-developed wing."},{"type":"board","id":"o25","prompt":"Black to move. Which candidate gives the opening more useful spacing?","black":["D4","E4","E5"],"white":["G5"],"candidates":["F5","D5","E6"],"answer":"F5","explain":"F5 opens a new right-side direction. D5 and E6 add density to a center that is already well supported."},{"type":"board","id":"o26","prompt":"Black to move. Which candidate avoids turning the opening into a narrow straight-line commitment?","black":["C4","D4"],"white":["G6"],"candidates":["D5","E4","B4"],"answer":"D5","explain":"D5 gives the shape a second dimension. E4 and B4 mostly lengthen the same horizontal line."},{"type":"board","id":"o27","prompt":"Black to move. Which candidate is the healthiest expansion when the central stones already support one another?","black":["D4","E4","E5","D5"],"white":["G6"],"candidates":["F4","C5","E6"],"answer":"F4","explain":"F4 takes the established center into fresh space and gives the position another active direction."}]},{"title":"Early Threats Without Overforcing","kicker":"Create pressure only when the opening position supports it","intro":"An early threat is useful when it improves the position even if the opponent answers correctly. Avoid fake forcing moves that spend tempo, reduce flexibility, or leave the defender better organized. Pressure should grow naturally from sound opening shape.","tasks":[{"type":"board","id":"o28","prompt":"Black to move. Which candidate creates real early pressure while still improving the central shape?","black":["C5","D5","E4"],"white":["G6","H6"],"candidates":["E5","F3","B7"],"answer":"E5","explain":"E5 links the central stones and creates multiple future line possibilities. It improves the position even before any forcing sequence exists."},{"type":"board","id":"o29","prompt":"Black to move. Which candidate increases pressure without abandoning flexibility?","black":["D4","E5","F4"],"white":["G6"],"candidates":["E4","G4","C6"],"answer":"E4","explain":"E4 strengthens several intersecting lines through the existing shape. G4 commits farther right and C6 is less connected."},{"type":"board","id":"o30","prompt":"Black to move. Which candidate is a sound developing threat rather than a speculative edge attack?","black":["D5","E5","E4"],"white":["G5"],"candidates":["F4","H5","B2"],"answer":"F4","explain":"F4 extends from a supported center and creates real future pressure. H5 attacks from too far away from the existing structure."},{"type":"board","id":"o31","prompt":"Black to move. Which candidate keeps the initiative potential without forcing prematurely?","black":["C4","D5","E4"],"white":["F6","G6"],"candidates":["E5","F4","B6"],"answer":"E5","explain":"E5 consolidates the center and prepares several strong follow-ups. It creates pressure without pretending the position is already forcing."},{"type":"board","id":"o32","prompt":"Black to move. Which candidate turns good opening shape into the strongest next-stage attacking platform?","black":["D4","E4","F5"],"white":["G6","C6"],"candidates":["E5","G4","B4"],"answer":"E5","explain":"E5 becomes the central pivot connecting the existing stones and prepares multiple credible attacking continuations."}]},{"title":"Transition to the Middlegame","kicker":"Know when opening principles have done their job","intro":"The opening ends when concrete threats, critical zones, and move priorities become more important than generic development. At that point, stop asking where a stone would look flexible and start calculating the actual tactical and strategic demands of the position.","tasks":[{"type":"board","id":"o33","prompt":"Black to move. Which candidate marks the cleanest transition from development into a concrete central plan?","black":["C4","D4","E5"],"white":["F6","G6"],"candidates":["F5","B3","H7"],"answer":"F5","explain":"F5 turns the opening framework into direct interaction with White's active side. The game is now about the critical zone, not generic development."},{"type":"board","id":"o34","prompt":"Black to move. Which candidate converts flexible opening stones into a coordinated middlegame structure?","black":["D4","E4","F5"],"white":["G5","G6"],"candidates":["E5","C7","H3"],"answer":"E5","explain":"E5 unifies the central stones and creates a concrete platform for attack or defense depending on White's response."},{"type":"board","id":"o35","prompt":"Black to move. Which candidate shows that the opening is over and the most important task is now contesting White's active zone?","black":["D5","E4","E5"],"white":["F5","G5","G6"],"candidates":["F4","C6","B3"],"answer":"F4","explain":"F4 directly contests the emerging fight around F5-G5-G6. Continuing quiet development elsewhere would miss the new priority."},{"type":"board","id":"o36","prompt":"Black to move. Which candidate best converts early central influence into a concrete next plan?","black":["C4","D5","E4","E5"],"white":["F6","G7"],"candidates":["F5","B6","C7"],"answer":"F5","explain":"F5 uses the whole central framework and begins a concrete right-side plan. The position is ready to move beyond generic opening development."}]},{"title":"Opening Principles Checkpoint","kicker":"Develop, stay flexible, then recognize when the real game begins","intro":"The checkpoint mixes first-move judgment, center influence, flexible shapes, symmetry, overcommitment, sound early pressure, and the transition into middlegame priorities.","tasks":[{"type":"choice","id":"o37","prompt":"What is the best general opening sequence of priorities?","options":["Tactical safety → central/flexible development → respond to the opponent → transition into concrete plans","Choose one wing → fill it densely → attack immediately","Mirror every opponent move until a five appears"],"answer":0,"explain":"Opening principles should create flexibility first, then give way to concrete calculation as the position becomes more defined."},{"type":"choice","id":"o38","prompt":"Why is flexibility especially valuable in the first few moves?","options":["Because the opponent has not yet revealed enough of their plan to justify a narrow commitment","Because flexible stones cannot be blocked","Because every flexible move is automatically central"],"answer":0,"explain":"Early information is limited. Flexible stones reduce the cost of being surprised by the opponent's direction."},{"type":"choice","id":"o39","prompt":"When is symmetry useful?","options":["As a way to understand equivalent spaces until the actual position creates a reason to break it","As a rule that should be preserved at all costs","Only when both players use edge openings"],"answer":0,"explain":"Symmetry is a reference point, not a command. Concrete threats and positional differences override it."},{"type":"choice","id":"o40","prompt":"What is the main danger of overconcentration in the opening?","options":["Several stones become redundant while other important areas remain undeveloped","The stones become illegal","The opponent automatically gains the center"],"answer":0,"explain":"Overconcentration wastes early tempo by making multiple stones perform the same limited job."},{"type":"choice","id":"o41","prompt":"What makes an early threat sound?","options":["The move improves your position even if the opponent answers correctly","The opponent has to look at it immediately","It is played near the board edge"],"answer":0,"explain":"Good early pressure is backed by useful development. A fake threat that only spends tempo is not real progress."},{"type":"choice","id":"o42","prompt":"What signals that the opening phase is ending?","options":["Concrete threats, critical zones, and move priorities become more important than generic development","Exactly ten stones have been played","Both players have touched the center"],"answer":0,"explain":"The transition is positional, not move-count based. Once concrete demands dominate, middlegame calculation takes over."},{"type":"choice","id":"o43","prompt":"Which opening move is usually more valuable when both are tactically safe?","options":["The one that keeps more useful future plans and responses available","The one that creates the densest local group","The one that is farthest from the opponent"],"answer":0,"explain":"Future utility is the central opening metric: development should preserve options rather than reduce them unnecessarily."},{"type":"board","id":"o44","prompt":"Checkpoint: Black to move. Which candidate gives the best central opening influence?","black":["D5"],"white":["G6"],"candidates":["E5","B2","H8"],"answer":"E5","explain":"E5 stays central, supports D5, and preserves several future lines."},{"type":"board","id":"o45","prompt":"Checkpoint: Black to move. Which candidate creates the most flexible early shape?","black":["D4","E5"],"white":["G6"],"candidates":["E4","F6","C3"],"answer":"E4","explain":"E4 creates a flexible triangle with multiple future directions."},{"type":"board","id":"o46","prompt":"Checkpoint: White to move. Which candidate correctly breaks symmetry to answer the active zone?","black":["E5","F5","G4"],"white":["E4","D5"],"candidates":["F4","C4","D6"],"answer":"F4","turn":"white","explain":"F4 addresses Black's growing right-side influence instead of preserving irrelevant visual symmetry."},{"type":"board","id":"o47","prompt":"Checkpoint: Black to move. Which candidate avoids early overconcentration?","black":["C4","D4","C5","D5"],"white":["G6"],"candidates":["E5","B4","C6"],"answer":"E5","explain":"E5 moves the position into fresh central space rather than crowding an already-developed cluster."},{"type":"board","id":"o48","prompt":"Checkpoint: Black to move. Which candidate best transitions from opening development into a concrete middlegame plan?","black":["C4","D4","E5"],"white":["F6","G6"],"candidates":["F5","B3","H7"],"answer":"F5","explain":"F5 directly engages the critical zone and converts the opening framework into a concrete plan."}]}];
+const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
+
+function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
+function loadState(){
+  try{
+    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    if(x && x.version===VERSION && x.tasks) return x;
+  }catch{}
+  return emptyState();
+}
+let state=loadState();
+function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+
+let currentLesson=0,currentTask=0,misses=0;
+let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
+
+function taskAt(){return LESSONS[currentLesson].tasks[currentTask];}
+function taskRecord(id){return state.tasks[id]||null;}
+function completedInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.correct).length;}
+function firstTryInLesson(li){return LESSONS[li].tasks.filter(t=>state.tasks[t.id]?.firstTry).length;}
+function overallCompleted(){return LESSONS.reduce((n,l)=>n+l.tasks.filter(t=>state.tasks[t.id]?.correct).length,0);}
+function hint1(task){
+  return task.hint1 || (task.type==="choice"
+    ? "Ask which option preserves the most useful future play without ignoring an immediate demand."
+    : "Compare the candidates by central influence, flexibility, tactical safety, and how many future directions remain useful.");
+}
+function hint2(task){
+  return task.hint2 || (task.type==="choice"
+    ? "Prefer the principle that still works after the opponent chooses a strong reply."
+    : "Avoid redundant development. Prefer the move that improves the position even if the opponent responds correctly.");
+}
+
+function injectStyle(){
+  if(document.getElementById("ch11-course-style")) return;
+  const style=document.createElement("style");
+  style.id="ch11-course-style";
+  style.textContent=`
+#ch11CourseCard{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 76%,#d87b2b 24%);border-radius:18px;padding:18px;margin-top:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--panel,#fff) 94%,#d87b2b 6%),var(--panel,#fff));box-shadow:0 10px 28px rgba(20,20,30,.06)}
+#ch11CourseCard:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#d87b2b,#f0b34d)}
+.ch11-card-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}.ch11-card-copy{min-width:0}.ch11-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.68}.ch11-card-title{font-size:18px;font-weight:800;line-height:1.15;margin-top:5px}.ch11-card-sub{font-size:13px;line-height:1.45;opacity:.72;margin-top:6px}.ch11-open{flex:none;min-height:40px;padding:0 15px;border-radius:11px;border:0;background:var(--text,#16161a);color:var(--bg,#fff);font-weight:750;cursor:pointer}.ch11-progress{height:7px;border-radius:999px;background:color-mix(in srgb,var(--text,#16161a) 10%,transparent);overflow:hidden;margin-top:15px}.ch11-progress>i{display:block;height:100%;background:linear-gradient(90deg,#d87b2b,#f0b34d);width:0}.ch11-card-foot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:11px;opacity:.67}
+#ch11CourseDialog{width:min(760px,calc(100vw - 24px));height:min(760px,calc(100dvh - 24px));max-width:none;max-height:none;padding:0;border:1px solid color-mix(in srgb,var(--line,#d8d8d8) 75%,#d87b2b 25%);border-radius:20px;background:var(--panel,#fff);color:var(--text,#16161a);box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}
+#ch11CourseDialog::backdrop{background:rgba(8,8,12,.58);backdrop-filter:blur(5px)}
+.ch11-shell{height:100%;display:grid;grid-template-rows:auto 1fr auto;min-height:0}.ch11-head{padding:16px 18px 13px;border-bottom:1px solid var(--line,#ddd);display:flex;gap:14px;align-items:flex-start}.ch11-head-copy{min-width:0;flex:1}.ch11-head .ch11-eyebrow{color:#b86116;opacity:1}.ch11-title{font-size:20px;font-weight:850;line-height:1.15;margin-top:3px}.ch11-meta{font-size:12px;opacity:.64;margin-top:4px}.ch11-close{width:38px;height:38px;border-radius:50%;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-size:20px;cursor:pointer;flex:none}.ch11-body{min-height:0;overflow:auto;padding:18px}.ch11-lesson-intro{font-size:13px;line-height:1.55;padding:12px 13px;border-radius:12px;background:color-mix(in srgb,#d87b2b 7%,var(--panel,#fff));border:1px solid color-mix(in srgb,#d87b2b 18%,var(--line,#ddd));margin-bottom:15px}.ch11-task-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.ch11-task-count{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.58}.ch11-score{font-size:11px;opacity:.62}.ch11-prompt{font-size:17px;line-height:1.45;font-weight:750;margin-bottom:14px}.ch11-choices{display:grid;gap:9px}.ch11-choice{width:100%;text-align:left;padding:12px 13px;border-radius:12px;border:1px solid var(--line,#ddd);background:color-mix(in srgb,var(--panel,#fff) 96%,var(--text,#111) 4%);color:inherit;font:inherit;font-size:13px;line-height:1.4;cursor:pointer}.ch11-choice:hover{border-color:color-mix(in srgb,#d87b2b 55%,var(--line,#ddd))}.ch11-choice[disabled]{cursor:default}.ch11-choice.correct{border-color:#2f9d62;background:color-mix(in srgb,#2f9d62 10%,var(--panel,#fff))}.ch11-choice.wrong{border-color:#cf5656;background:color-mix(in srgb,#cf5656 9%,var(--panel,#fff))}
+.ch11-board-wrap{display:grid;gap:11px;justify-items:center;margin:2px 0 14px}.ch11-board{width:min(100%,430px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:1px solid color-mix(in srgb,var(--text,#111) 40%,transparent);border-radius:12px;overflow:hidden;background:#d4a85f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}.ch11-cell{position:relative;border-right:1px solid rgba(45,29,12,.34);border-bottom:1px solid rgba(45,29,12,.34);background:transparent;padding:0;min-width:0;color:#18130e}.ch11-cell:nth-child(9n){border-right:0}.ch11-cell:nth-last-child(-n+9){border-bottom:0}.ch11-cell[data-candidate="1"]{cursor:pointer;background:rgba(216,123,43,.12)}.ch11-cell[data-candidate="1"]:after{content:"";position:absolute;width:18%;aspect-ratio:1;border-radius:50%;background:#d87b2b;opacity:.7;left:41%;top:41%}.ch11-cell[data-candidate="1"]:hover{background:rgba(216,123,43,.21)}.ch11-stone{position:absolute;width:72%;aspect-ratio:1;border-radius:50%;left:14%;top:14%;box-shadow:0 2px 4px rgba(0,0,0,.35)}.ch11-stone.black{background:radial-gradient(circle at 35% 30%,#4a4a4a,#111 68%)}.ch11-stone.white{background:radial-gradient(circle at 35% 30%,#fff,#ddd 72%);border:1px solid rgba(0,0,0,.18)}.ch11-cell.answer{background:rgba(47,157,98,.20)!important}.ch11-coord{position:absolute;right:2px;bottom:1px;font-size:7px;font-weight:800;opacity:.34;pointer-events:none}.ch11-legend{font-size:11px;opacity:.62;text-align:center}
+.ch11-feedback{min-height:42px;margin-top:13px;padding:11px 12px;border-radius:11px;border:1px solid transparent;font-size:12.5px;line-height:1.45}.ch11-feedback:empty{display:none}.ch11-feedback.bad{display:block;border-color:color-mix(in srgb,#cf5656 34%,var(--line,#ddd));background:color-mix(in srgb,#cf5656 8%,var(--panel,#fff))}.ch11-feedback.good{display:block;border-color:color-mix(in srgb,#2f9d62 38%,var(--line,#ddd));background:color-mix(in srgb,#2f9d62 9%,var(--panel,#fff))}
+#ch11CourseDialog .ch11-bottom{display:flex!important;visibility:visible!important;align-items:center;gap:9px;padding:11px 14px;border-top:1px solid var(--line,#ddd);background:var(--panel,#fff);min-height:62px}.ch11-nav{display:flex;gap:8px;margin-right:auto}.ch11-btn{min-height:40px;padding:0 13px;border-radius:10px;border:1px solid var(--line,#ddd);background:transparent;color:inherit;font-weight:750;cursor:pointer}.ch11-btn:disabled{opacity:.36;cursor:default}.ch11-primary{background:var(--text,#16161a);color:var(--bg,#fff);border-color:var(--text,#16161a)}
+@media(max-width:560px){#ch11CourseDialog{width:100vw;height:100dvh;border:0;border-radius:0}.ch11-head{padding:13px 14px 11px}.ch11-body{padding:14px}.ch11-title{font-size:18px}.ch11-prompt{font-size:16px}.ch11-board{width:min(100%,390px)}#ch11CourseDialog .ch11-bottom{padding:9px 10px;gap:7px}.ch11-btn{padding:0 10px}.ch11-card-top{align-items:center}.ch11-open{padding:0 12px}}
+`;
+  document.head.appendChild(style);
+}
+
+function placeCard(){
+  card=card||document.getElementById("ch11CourseCard");
+  if(!card) return false;
+  const prev=document.getElementById("ch10CourseCard");
+  const improve=document.getElementById("v92ImproveHome");
+  if(prev&&prev.parentElement){
+    if(card.parentElement!==prev.parentElement||prev.nextElementSibling!==card) prev.insertAdjacentElement("afterend",card);
+    return true;
+  }
+  if(improve&&card.parentElement!==improve) improve.appendChild(card);
+  return false;
+}
+
+function buildCard(){
+  const existing=document.getElementById("ch11CourseCard");
+  if(existing){card=existing;placeCard();return existing;}
+  card=document.createElement("section");
+  card.id="ch11CourseCard";
+  card.setAttribute("aria-label","Advanced Chapter 11 Openings and Early-Game Principles");
+  card.innerHTML=`
+    <div class="ch11-card-top">
+      <div class="ch11-card-copy">
+        <div class="ch11-eyebrow">Advanced · Chapter 11</div>
+        <div class="ch11-card-title">Openings &amp; Early-Game Principles</div>
+        <div class="ch11-card-sub">Build flexible early shapes, use central influence, respond intelligently to symmetry, avoid overcommitment, and know when development becomes a concrete middlegame plan.</div>
+      </div>
+      <button class="ch11-open" type="button">Open</button>
+    </div>
+    <div class="ch11-progress"><i></i></div>
+    <div class="ch11-card-foot"><span class="ch11-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
+  const improve=document.getElementById("v92ImproveHome")||document.querySelector("main")||document.body;
+  improve.appendChild(card);
+  placeCard();
+  card.querySelector(".ch11-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
+  return card;
+}
+
+function buildDialog(){
+  if(document.getElementById("ch11CourseDialog")) return document.getElementById("ch11CourseDialog");
+  dialog=document.createElement("dialog");
+  dialog.id="ch11CourseDialog";
+  dialog.innerHTML=`
+    <div class="ch11-shell">
+      <div class="ch11-head">
+        <div class="ch11-head-copy"><div class="ch11-eyebrow">Advanced · Chapter 11</div><div class="ch11-title"></div><div class="ch11-meta"></div></div>
+        <button class="ch11-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="ch11-body">
+        <div class="ch11-lesson-intro"></div>
+        <div class="ch11-task-top"><div class="ch11-task-count"></div><div class="ch11-score"></div></div>
+        <div class="ch11-prompt"></div>
+        <div class="ch11-board-wrap"><div id="ch11Board" class="ch11-board"></div><div class="ch11-legend">Orange dots are candidate moves. Tap one.</div></div>
+        <div id="ch11Choices" class="ch11-choices"></div>
+        <div id="ch11Feedback" class="ch11-feedback" role="status"></div>
+      </div>
+      <div class="ch11-bottom">
+        <div class="ch11-nav"><button id="ch11PrevTask" class="ch11-btn" type="button">Back</button></div>
+        <button id="ch11Reveal" class="ch11-btn" type="button" disabled>Reveal</button>
+        <button id="ch11NextTask" class="ch11-btn ch11-primary" type="button">Next</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+  titleEl=dialog.querySelector(".ch11-title");
+  metaEl=dialog.querySelector(".ch11-meta");
+  bodyEl=dialog.querySelector(".ch11-body");
+  countEl=dialog.querySelector(".ch11-task-count");
+  feedbackEl=dialog.querySelector("#ch11Feedback");
+  revealBtn=dialog.querySelector("#ch11Reveal");
+  nextBtn=dialog.querySelector("#ch11NextTask");
+  boardEl=dialog.querySelector("#ch11Board");
+  choicesEl=dialog.querySelector("#ch11Choices");
+  dialog.querySelector(".ch11-close").addEventListener("click",()=>dialog.close());
+  dialog.querySelector("#ch11PrevTask").addEventListener("click",prevTask);
+  nextBtn.addEventListener("click",nextTask);
+  revealBtn.addEventListener("click",reveal);
+  dialog.addEventListener("cancel",()=>dialog.close());
+  return dialog;
+}
+
+function updateCard(){
+  card=card||document.getElementById("ch11CourseCard");
+  if(!card) return;
+  const done=overallCompleted();
+  card.querySelector(".ch11-progress i").style.width=`${Math.round(done/TOTAL_TASKS*100)}%`;
+  card.querySelector(".ch11-card-count").textContent=`${done} / ${TOTAL_TASKS} complete`;
+}
+function setFeedback(text,kind){
+  feedbackEl.textContent=text||"";
+  feedbackEl.className="ch11-feedback"+(kind?` ${kind}`:"");
+}
+function markComplete(task,assisted=false){
+  const prior=state.tasks[task.id];
+  if(!prior?.correct){
+    state.tasks[task.id]={correct:true,firstTry:misses===0&&!assisted,assisted:!!assisted};
+    saveState();
+  }
+  updateCard();
+}
+function fail(task){
+  misses++;
+  setFeedback(`Not this. ${misses===1?hint1(task):hint2(task)}`,"bad");
+  revealBtn.disabled=misses<2;
+}
+function complete(task){
+  markComplete(task,false);
+  setFeedback(`Completed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function renderChoice(task){
+  boardEl.parentElement.style.display="none";
+  choicesEl.style.display="grid";
+  choicesEl.innerHTML="";
+  task.options.forEach((opt,i)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="ch11-choice"; b.textContent=opt;
+    b.addEventListener("click",()=>{
+      if(state.tasks[task.id]?.correct) return;
+      if(i===task.answer){
+        b.classList.add("correct");
+        [...choicesEl.children].forEach(x=>x.disabled=true);
+        complete(task);
+      }else{
+        b.classList.add("wrong");
+        fail(task);
+      }
+    });
+    choicesEl.appendChild(b);
+  });
+  if(state.tasks[task.id]?.correct){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }
+}
+
+function renderOpeningBoard(task){
+  boardEl.parentElement.style.display="grid";
+  choicesEl.style.display="none";
+  boardEl.innerHTML="";
+  const blacks=new Set(task.black), whites=new Set(task.white), candidates=new Set(task.candidates);
+  for(let r=BOARD_SIZE;r>=1;r--){
+    for(let c=0;c<BOARD_SIZE;c++){
+      const coord=COLS[c]+r;
+      const cell=document.createElement("button");
+      cell.type="button"; cell.className="ch11-cell"; cell.dataset.coord=coord;
+      if(candidates.has(coord)) cell.dataset.candidate="1";
+      if(blacks.has(coord)||whites.has(coord)){
+        const stone=document.createElement("i");
+        stone.className="ch11-stone "+(blacks.has(coord)?"black":"white");
+        cell.appendChild(stone);
+      }
+      const lab=document.createElement("span"); lab.className="ch11-coord"; lab.textContent=coord; cell.appendChild(lab);
+      if(candidates.has(coord) && !blacks.has(coord) && !whites.has(coord)){
+        cell.addEventListener("click",()=>boardGuess(task,coord,cell));
+      } else cell.disabled=true;
+      boardEl.appendChild(cell);
+    }
+  }
+  if(state.tasks[task.id]?.correct){
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){
+      cell.classList.add("answer");cell.dataset.candidate="0";
+      const stone=document.createElement("i");stone.className="ch11-stone "+(task.turn||"black");cell.appendChild(stone);
+    }
+  }
+}
+function boardGuess(task,coord,cell){
+  if(state.tasks[task.id]?.correct) return;
+  if(coord===task.answer){
+    cell.classList.add("answer");
+    boardEl.querySelectorAll('[data-candidate="1"]').forEach(x=>x.dataset.candidate="0");
+    const stone=document.createElement("i"); stone.className="ch11-stone "+(task.turn||"black"); cell.appendChild(stone);
+    complete(task);
+  }else{
+    cell.style.background="rgba(207,86,86,.16)";
+    fail(task);
+  }
+}
+
+function reveal(){
+  const task=taskAt();
+  if(misses<2 || state.tasks[task.id]?.correct) return;
+  markComplete(task,true);
+  if(task.type==="choice"){
+    [...choicesEl.children].forEach((b,i)=>{b.disabled=true;if(i===task.answer)b.classList.add("correct")});
+  }else{
+    const cell=boardEl.querySelector(`[data-coord="${task.answer}"]`);
+    if(cell){
+      cell.classList.add("answer"); cell.dataset.candidate="0";
+      if(!cell.querySelector(".ch11-stone")){const stone=document.createElement("i");stone.className="ch11-stone "+(task.turn||"black");cell.appendChild(stone);}
+    }
+  }
+  setFeedback(`Revealed. ${task.explain}`,"good");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+}
+
+function render(){
+  buildDialog();
+  const lesson=LESSONS[currentLesson], task=taskAt(), rec=taskRecord(task.id);
+  misses=0;
+  titleEl.textContent=lesson.title;
+  metaEl.textContent=lesson.kicker;
+  dialog.querySelector(".ch11-lesson-intro").textContent=lesson.intro;
+  countEl.textContent=`${currentTask+1} / ${lesson.tasks.length}`;
+  dialog.querySelector(".ch11-score").textContent=`Lesson ${currentLesson+1} · ${completedInLesson(currentLesson)}/${lesson.tasks.length}`;
+  dialog.querySelector(".ch11-prompt").textContent=task.prompt;
+  setFeedback(rec?.correct ? `Completed${rec.assisted?" with reveal":rec.firstTry?" on first try":""}. ${task.explain}` : "","");
+  revealBtn.disabled=true;
+  nextBtn.disabled=false;
+  dialog.querySelector("#ch11PrevTask").disabled=currentLesson===0&&currentTask===0;
+  if(task.type==="choice") renderChoice(task); else renderOpeningBoard(task);
+  state.last={lesson:currentLesson,task:currentTask}; saveState();
+  bodyEl.scrollTop=0;
+  updateCard();
+}
+
+function nextTask(){
+  if(currentTask<LESSONS[currentLesson].tasks.length-1) currentTask++;
+  else if(currentLesson<LESSONS.length-1){currentLesson++;currentTask=0;}
+  else {dialog.close();return;}
+  render();
+}
+function prevTask(){
+  if(currentTask>0) currentTask--;
+  else if(currentLesson>0){currentLesson--;currentTask=LESSONS[currentLesson].tasks.length-1;}
+  render();
+}
+function openSection(lesson=0,task=0){
+  mountChapter11();
+  currentLesson=Math.max(0,Math.min(LESSONS.length-1,Number(lesson)||0));
+  currentTask=Math.max(0,Math.min(LESSONS[currentLesson].tasks.length-1,Number(task)||0));
+  render();
+  if(!dialog.open) dialog.showModal();
+}
+function report(){
+  return {
+    totalTasks:TOTAL_TASKS,totalLessons:LESSONS.length,completed:overallCompleted(),
+    lessons:LESSONS.map((l,i)=>{
+      const completed=completedInLesson(i), first=firstTryInLesson(i);
+      return {title:l.title,total:l.tasks.length,completed,complete:completed===l.tasks.length,firstTry:first,rate:l.tasks.length?first/l.tasks.length:0};
+    })
+  };
+}
+let placementTimer=0;
+function settleCardPlacement(attempt=0){
+  if(placeCard()||attempt>=40){placementTimer=0;return;}
+  clearTimeout(placementTimer);
+  placementTimer=setTimeout(()=>settleCardPlacement(attempt+1),100);
+}
+function mountChapter11(){
+  injectStyle(); buildCard(); buildDialog(); updateCard(); settleCardPlacement();
+}
+window.GomokuCourseChapter11={openSection,report,mount:mountChapter11};
+
+const start=()=>{if(document.body?.dataset?.ready==="true") mountChapter11();};
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start,{once:true});
+else start();
+const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter11();});
+if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
+else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+})();
+</script>
 </body></html>
