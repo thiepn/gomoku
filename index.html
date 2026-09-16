@@ -9255,8 +9255,22 @@ function injectStyle(){
   document.head.appendChild(style);
 }
 
+function placeCard(){
+  card=card||document.getElementById("ch8CourseCard");
+  if(!card) return false;
+  const prev=document.getElementById("ch7CourseCard");
+  const improve=document.getElementById("v92ImproveHome");
+  if(prev&&prev.parentElement){
+    if(card.parentElement!==prev.parentElement||prev.nextElementSibling!==card) prev.insertAdjacentElement("afterend",card);
+    return true;
+  }
+  if(improve&&card.parentElement!==improve) improve.appendChild(card);
+  return false;
+}
+
 function buildCard(){
-  if(document.getElementById("ch8CourseCard")) return document.getElementById("ch8CourseCard");
+  const existing=document.getElementById("ch8CourseCard");
+  if(existing){card=existing;placeCard();return existing;}
   card=document.createElement("section");
   card.id="ch8CourseCard";
   card.setAttribute("aria-label","Chapter 8 Initiative and Move Priority");
@@ -9271,12 +9285,9 @@ function buildCard(){
     </div>
     <div class="ch8-progress"><i></i></div>
     <div class="ch8-card-foot"><span class="ch8-card-count"></span><span>8 lessons · 48 tasks</span></div>`;
-  const prev=document.getElementById("ch7CourseCard");
-  if(prev) prev.insertAdjacentElement("afterend",card);
-  else{
-    const improve=document.querySelector('[data-v92-route="improve"]')?.closest("main,section,div") || document.querySelector("main") || document.body;
-    improve.appendChild(card);
-  }
+  const improve=document.getElementById("v92ImproveHome")||document.querySelector("main")||document.body;
+  improve.appendChild(card);
+  placeCard();
   card.querySelector(".ch8-open").addEventListener("click",()=>openSection(state.last?.lesson||0,state.last?.task||0));
   return card;
 }
@@ -9487,8 +9498,14 @@ function report(){
     })
   };
 }
+let placementTimer=0;
+function settleCardPlacement(attempt=0){
+  if(placeCard()||attempt>=40){placementTimer=0;return;}
+  clearTimeout(placementTimer);
+  placementTimer=setTimeout(()=>settleCardPlacement(attempt+1),100);
+}
 function mountChapter8(){
-  injectStyle(); buildCard(); buildDialog(); updateCard();
+  injectStyle(); buildCard(); buildDialog(); updateCard(); settleCardPlacement();
 }
 window.GomokuCourseChapter8={openSection,report,mount:mountChapter8};
 
