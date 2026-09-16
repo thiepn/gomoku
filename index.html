@@ -7632,4 +7632,294 @@ window.GomokuCourseChapter4={
 })();
 </script>
 
+
+<style id="course-ch5-v1-style">
+#ch5CourseCard{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;margin:14px 0;padding:18px;border:1px solid color-mix(in srgb,var(--border,#64748b) 58%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--surface,#111827) 92%,#14b8a6 8%),color-mix(in srgb,var(--surface,#111827) 96%,#3b82f6 4%));box-shadow:0 16px 38px rgba(0,0,0,.12);border-radius:20px;overflow:hidden}
+#ch5CourseCard:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#14b8a6,#3b82f6)}
+.ch5-card-copy{min-width:0}.ch5-eyebrow,.ch5-kicker{font-size:11px;line-height:1.2;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#94a3b8)}
+.ch5-card-copy h3{margin:5px 0 6px;font-size:20px;line-height:1.15}.ch5-card-copy p{margin:0;color:var(--muted,#94a3b8);font-size:13px;line-height:1.5}
+.ch5-card-progress{display:flex;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}.ch5-meter{width:min(260px,54vw);height:7px;border-radius:999px;background:color-mix(in srgb,var(--border,#64748b) 28%,transparent);overflow:hidden}.ch5-meter>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#14b8a6,#3b82f6);transition:width .25s ease}.ch5-card-stat{font-size:12px;font-weight:700;color:var(--muted,#94a3b8)}
+.ch5-card-actions{display:flex;flex-direction:column;gap:8px}.ch5-btn{min-height:42px;padding:0 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border,#64748b) 62%,transparent);background:var(--surface-2,var(--surface,#111827));color:var(--text,#f8fafc);font:inherit;font-weight:750;cursor:pointer}.ch5-btn:hover{border-color:#14b8a6}.ch5-btn.primary{border-color:transparent;color:#071312;background:linear-gradient(135deg,#5eead4,#60a5fa)}.ch5-btn:disabled{opacity:.45;cursor:not-allowed}
+#ch5CourseDialog{width:min(1080px,calc(100vw - 28px));max-height:min(900px,calc(100dvh - 28px));padding:0;border:1px solid color-mix(in srgb,var(--border,#64748b) 68%,transparent);border-radius:24px;background:var(--bg,#0b1220);color:var(--text,#f8fafc);box-shadow:0 30px 90px rgba(0,0,0,.48);overflow:hidden}
+#ch5CourseDialog::backdrop{background:rgba(2,6,23,.72);backdrop-filter:blur(8px)}
+.ch5-shell{display:grid;grid-template-columns:244px minmax(0,1fr);height:min(820px,calc(100dvh - 32px))}
+.ch5-nav{padding:20px 14px;border-right:1px solid color-mix(in srgb,var(--border,#64748b) 50%,transparent);overflow:auto;background:color-mix(in srgb,var(--surface,#111827) 87%,transparent)}
+.ch5-nav-head{padding:0 6px 16px}.ch5-nav-head h2{font-size:20px;line-height:1.1;margin:5px 0 6px}.ch5-nav-head p{margin:0;color:var(--muted,#94a3b8);font-size:12px;line-height:1.45}
+.ch5-lessons{display:grid;gap:7px}.ch5-lesson-btn{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:9px 10px;border-radius:12px;border:1px solid transparent;background:transparent;color:inherit;cursor:pointer}.ch5-lesson-btn:hover{background:color-mix(in srgb,var(--surface-2,#1f2937) 76%,transparent)}.ch5-lesson-btn.active{background:color-mix(in srgb,#14b8a6 11%,var(--surface-2,#1f2937));border-color:color-mix(in srgb,#14b8a6 35%,transparent)}.ch5-lesson-index{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:color-mix(in srgb,var(--border,#64748b) 22%,transparent);font-size:11px;font-weight:800}.ch5-lesson-name{font-size:12px;line-height:1.25;font-weight:700}.ch5-lesson-score{font-size:10px;color:var(--muted,#94a3b8);font-variant-numeric:tabular-nums}
+.ch5-main{display:flex;min-width:0;flex-direction:column;overflow:hidden}.ch5-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid color-mix(in srgb,var(--border,#64748b) 48%,transparent);background:color-mix(in srgb,var(--surface,#111827) 86%,transparent)}.ch5-title-wrap{min-width:0}.ch5-title{font-weight:850;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ch5-task-count{font-size:11px;color:var(--muted,#94a3b8);margin-top:2px}.ch5-close{width:38px;height:38px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border,#64748b) 55%,transparent);background:transparent;color:inherit;font-size:20px;cursor:pointer}
+.ch5-content{padding:20px;overflow:auto;overscroll-behavior:contain}.ch5-intro{max-width:780px;margin:0 auto 14px}.ch5-kicker{color:#2dd4bf}.ch5-prompt{margin:6px 0 0;font-size:19px;line-height:1.36;font-weight:780}.ch5-principle{margin:10px 0 0;padding:10px 12px;border-left:3px solid #14b8a6;background:color-mix(in srgb,#14b8a6 8%,transparent);border-radius:0 10px 10px 0;color:var(--muted,#94a3b8);font-size:12px;line-height:1.45}
+.ch5-workspace{display:grid;grid-template-columns:minmax(280px,520px) minmax(240px,1fr);gap:20px;align-items:start;max-width:940px;margin:0 auto}.ch5-board-wrap{display:grid;place-items:center;padding:12px;border-radius:20px;background:linear-gradient(145deg,color-mix(in srgb,#d9a75f 88%,#fff),color-mix(in srgb,#a86f32 88%,#000));box-shadow:inset 0 0 0 1px rgba(40,20,4,.2),0 14px 38px rgba(0,0,0,.18)}
+#ch5Board{display:grid;grid-template-columns:repeat(11,1fr);width:min(100%,500px);aspect-ratio:1;border:1px solid rgba(49,28,8,.65);background-image:linear-gradient(rgba(55,30,9,.55) 1px,transparent 1px),linear-gradient(90deg,rgba(55,30,9,.55) 1px,transparent 1px);background-size:10% 10%;background-position:5% 5%;background-color:#c9914d;border-radius:8px;overflow:hidden}
+.ch5-cell{position:relative;display:grid;place-items:center;min-width:0;border:0;background:transparent;padding:0;touch-action:manipulation}.ch5-cell:disabled{cursor:default}.ch5-cell[data-candidate="1"]:not(:disabled){cursor:pointer}.ch5-cell[data-candidate="1"]:not(:disabled):after{content:"";width:24%;aspect-ratio:1;border-radius:50%;background:rgba(15,118,110,.48);box-shadow:0 0 0 4px rgba(20,184,166,.13)}.ch5-cell[data-candidate="1"]:not(:disabled):hover:after{background:#14b8a6}.ch5-cell.answer:after{background:#22c55e!important;box-shadow:0 0 0 5px rgba(34,197,94,.18)!important}.ch5-stone{width:72%;aspect-ratio:1;border-radius:50%;box-shadow:inset 0 2px 3px rgba(255,255,255,.22),0 2px 5px rgba(0,0,0,.32)}.ch5-stone.black{background:radial-gradient(circle at 34% 28%,#52525b,#09090b 62%)}.ch5-stone.white{background:radial-gradient(circle at 34% 28%,#fff,#dbe4ea 68%);border:1px solid rgba(15,23,42,.16)}
+.ch5-side{display:grid;gap:12px}.ch5-choices{display:grid;gap:8px}.ch5-choice{min-height:45px;padding:10px 12px;border-radius:12px;text-align:left;border:1px solid color-mix(in srgb,var(--border,#64748b) 55%,transparent);background:color-mix(in srgb,var(--surface,#111827) 88%,transparent);color:inherit;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.ch5-choice:hover{border-color:#14b8a6}.ch5-choice.correct{border-color:#22c55e;background:color-mix(in srgb,#22c55e 9%,var(--surface,#111827))}
+.ch5-feedback{min-height:72px;padding:12px 13px;border-radius:14px;border:1px solid color-mix(in srgb,var(--border,#64748b) 42%,transparent);background:color-mix(in srgb,var(--surface-2,#1f2937) 74%,transparent);font-size:12px;line-height:1.5;color:var(--muted,#cbd5e1)}.ch5-feedback strong{color:var(--text,#f8fafc)}.ch5-feedback.good{border-color:color-mix(in srgb,#22c55e 45%,transparent)}.ch5-feedback.bad{border-color:color-mix(in srgb,#f59e0b 48%,transparent)}
+.ch5-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ch5-actions .wide{grid-column:1/-1}.ch5-evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:2px}.ch5-evidence>div{padding:9px;border:1px solid color-mix(in srgb,var(--border,#64748b) 36%,transparent);border-radius:11px;text-align:center}.ch5-evidence b{display:block;font-size:16px}.ch5-evidence span{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,#94a3b8)}
+.ch5-complete{max-width:760px;margin:28px auto;padding:22px;border-radius:20px;border:1px solid color-mix(in srgb,#14b8a6 35%,transparent);background:color-mix(in srgb,#14b8a6 7%,var(--surface,#111827))}.ch5-complete h3{margin:0 0 6px}.ch5-skill-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}.ch5-skill{padding:11px;border-radius:12px;background:color-mix(in srgb,var(--surface-2,#1f2937) 76%,transparent)}.ch5-skill-row{display:flex;justify-content:space-between;gap:10px;font-size:11px}.ch5-skill-bar{height:6px;margin-top:7px;border-radius:99px;background:color-mix(in srgb,var(--border,#64748b) 30%,transparent);overflow:hidden}.ch5-skill-bar span{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#60a5fa)}
+@media(max-width:760px){
+ #ch5CourseCard{grid-template-columns:1fr;padding:16px}.ch5-card-actions{display:grid;grid-template-columns:1fr 1fr}.ch5-card-actions .ch5-btn{width:100%}
+ #ch5CourseDialog{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}
+ .ch5-shell{grid-template-columns:1fr;height:100dvh}.ch5-nav{display:none}.ch5-main{height:100dvh}.ch5-topbar{padding:10px 12px}.ch5-content{padding:12px 12px calc(18px + env(safe-area-inset-bottom))}
+ .ch5-prompt{font-size:17px}.ch5-workspace{grid-template-columns:1fr;gap:12px}.ch5-board-wrap{padding:8px;border-radius:16px}.ch5-side{gap:9px}.ch5-feedback{min-height:58px}.ch5-actions{position:sticky;bottom:0;padding-top:6px;background:linear-gradient(transparent,var(--bg,#0b1220) 24%)}.ch5-skill-grid{grid-template-columns:1fr}
+}
+@media(max-width:390px){.ch5-content{padding-inline:9px}.ch5-choice{min-height:43px}.ch5-evidence{gap:5px}.ch5-card-actions{grid-template-columns:1fr}}
+</style>
+
+
+<script id="course-ch5-v1-script">
+(()=>{
+"use strict";
+if(window.__gomokuCourseChapter5Booted)return;
+window.__gomokuCourseChapter5Booted=true;
+const STORAGE="gomoku.course.chapter5.v1";
+const lessons=[{"key":"scan","name":"Immediate threat scan","intro":"Before looking for a clever move, establish whether the board contains an immediate win for either side.","tasks":[{"id":"r1","skill":"threatScan","type":"choice","title":"Closed four","prompt":"White has one legal winning point. What is Black's first obligation?","stones":[["C6","B"],["D6","W"],["E6","W"],["F6","W"],["G6","W"]],"choices":["Block now","Create a counter-three","No immediate threat"],"answer":"Block now","hint":"Count White's winning points before judging your own attack.","explanation":"H6 is White's only immediate winning point. Black must occupy it unless Black can win immediately elsewhere.","principle":"Scan order: win now → stop their immediate win → then consider counterplay."},{"id":"r2","skill":"threatScan","type":"choice","title":"Open four","prompt":"White has an open four. What does one ordinary block accomplish?","stones":[["D6","W"],["E6","W"],["F6","W"],["G6","W"]],"choices":["It saves the game","Two winning points — one block is not enough","White has no direct win"],"answer":"Two winning points — one block is not enough","hint":"Count both ends of the four.","explanation":"C6 and H6 are both winning points. A single passive block leaves the other one, so Black needs an immediate counter-win or the position is lost.","principle":"An open four is usually already too late to defend with one block."},{"id":"r3","skill":"priority","type":"choice","title":"Win before defending","prompt":"Black can finish five now while White also threatens. What has priority?","stones":[["C4","B"],["D4","B"],["E4","B"],["F4","B"],["D7","W"],["E7","W"],["F7","W"],["G7","W"]],"choices":["Win now","Block White first","Play a quiet improving move"],"answer":"Win now","hint":"The scan starts with your own immediate legal win.","explanation":"G4 ends the game now. You do not defend a threat after the game is already won.","principle":"A legal immediate win outranks every non-winning defensive move."},{"id":"r4","skill":"threatScan","type":"choice","title":"Not every attack is immediate","prompt":"White has three stones but no four. What should Black conclude?","stones":[["E6","W"],["F6","W"],["G6","W"],["C4","B"],["D4","B"]],"choices":["Block any endpoint immediately","No immediate win — scan the next forcing threat","White has already won"],"answer":"No immediate win — scan the next forcing threat","hint":"A three can become dangerous, but it is not yet a one-move win.","explanation":"White has potential, not an immediate winning point. Black should now identify White's strongest extension and compare forcing counterplay.","principle":"Distinguish 'must answer now' from 'must prevent before it becomes forcing'."}]},{"key":"correctBlock","name":"Find the defensive point","intro":"Blocking the visible line is not enough; identify the exact winning square or the move that covers every immediate obligation.","tasks":[{"id":"p1","skill":"correctBlock","type":"move","title":"Fill the internal gap","prompt":"White's broken four has one winning point. Defend it.","stones":[["D6","W"],["E6","W"],["G6","W"],["H6","W"]],"candidates":["C6","F6","I6"],"answer":"F6","hint":"Look inside the line, not only at its endpoints.","explanation":"F6 completes White's five immediately, so F6 is the required defensive point.","principle":"Internal gaps are winning points too."},{"id":"p2","skill":"correctBlock","type":"move","title":"One live diagonal end","prompt":"D4 is already occupied by Black. Where is White's remaining diagonal winning point?","stones":[["D4","B"],["E5","W"],["F6","W"],["G7","W"],["H8","W"]],"candidates":["C3","D4","I9"],"answer":"I9","hint":"One end is dead because D4 is occupied.","explanation":"I9 is White's only legal continuation to five. Blocking a dead end accomplishes nothing.","principle":"Board occupancy removes candidate winning points."},{"id":"p3","skill":"multiDefense","type":"move","title":"One square, two obligations","prompt":"Two White four-lines share the same winning square. Find the defensive intersection.","stones":[["B6","B"],["C6","W"],["D6","W"],["E6","W"],["G6","W"],["F2","B"],["F3","W"],["F4","W"],["F5","W"],["F7","W"]],"candidates":["B5","F6","H6"],"answer":"F6","hint":"Search for a square that lies on both threats.","explanation":"F6 is the common winning point of both White lines. One move there neutralizes both immediate obligations.","principle":"Prefer a single move that covers multiple threats when the geometry allows it."},{"id":"p4","skill":"correctBlock","type":"move","title":"Edge compresses the line","prompt":"White's four reaches the left edge. Defend the only remaining winning point.","stones":[["A5","W"],["B5","W"],["C5","W"],["D5","W"]],"candidates":["A6","E5","E6"],"answer":"E5","hint":"The board edge cannot be used as a second endpoint.","explanation":"E5 is the only square that completes the edge four.","principle":"Edges reduce defensive choices, but they also make the winning point easier to identify."},{"id":"p5","skill":"correctBlock","type":"move","title":"Do not block the decoration","prompt":"Which point actually completes White's five?","stones":[["C8","W"],["D8","W"],["E8","W"],["G8","W"],["H5","B"]],"candidates":["B8","F8","H8"],"answer":"F8","hint":"Trace a five-cell segment through the internal gap.","explanation":"F8 is the immediate winning point. B8 or H8 may affect future shape, but neither answers the present threat.","principle":"Defend the winning point, not the visually attractive endpoint."}]},{"key":"prophylaxis","name":"Defend before the fork","intro":"Many positions are defendable one move before the fork and hopeless one move after it. Learn to occupy the fork seed.","tasks":[{"id":"f1","skill":"prophylaxis","type":"move","title":"Occupy the crossing point","prompt":"White wants F6 to create two forcing lines. Stop the fork before it exists.","stones":[["D6","W"],["E6","W"],["G6","W"],["F4","W"],["F5","W"],["F7","W"],["C3","B"]],"candidates":["E5","F6","H6"],"answer":"F6","hint":"Ask where one White stone would strengthen two directions at once.","explanation":"F6 is the crossing point. Once White owns it, both horizontal and vertical threats become much harder to answer.","principle":"Fork defense often means occupying the intersection one move early."},{"id":"f2","skill":"prophylaxis","type":"move","title":"Stop the four–three seed","prompt":"White's next F6 would create a four in one direction and a strong three in another. Prevent it.","stones":[["C6","W"],["D6","W"],["E6","W"],["F4","W"],["F5","W"],["G7","B"]],"candidates":["F6","G6","E5"],"answer":"F6","hint":"Find the move that would simultaneously upgrade two White lines.","explanation":"F6 is the compound-threat seed. Taking it now is simpler than trying to defend the resulting four–three.","principle":"Prevent the compound threat before it acquires tempo."},{"id":"f3","skill":"prophylaxis","type":"move","title":"Shared future intersection","prompt":"Which point is most urgent because it feeds two future White attacks?","stones":[["D5","W"],["E5","W"],["G5","W"],["F3","W"],["F4","W"],["B8","B"]],"candidates":["C5","F5","H5"],"answer":"F5","hint":"Look for the empty square shared by the horizontal and vertical structures.","explanation":"F5 strengthens two lines at once. A prophylactic block there removes the most efficient White continuation.","principle":"Defensive value rises when a point participates in several opponent lines."},{"id":"f4","skill":"prophylaxis","type":"move","title":"Edge fork prevention","prompt":"White is building near the edge. Which point prevents the strongest two-direction continuation?","stones":[["A4","W"],["B4","W"],["C4","W"],["D2","W"],["D3","W"],["H8","B"]],"candidates":["D4","E4","C3"],"answer":"D4","hint":"The edge removes space on one side, so focus on the crossing square still available.","explanation":"D4 is where White's horizontal and vertical structures meet.","principle":"Edges change geometry but not the principle: remove the efficient intersection."},{"id":"f5","skill":"prophylaxis","type":"choice","title":"Recognize the timing","prompt":"If your opponent can create an unavoidable fork next move, when should you defend?","stones":[["D6","W"],["E6","W"],["G6","W"],["F4","W"],["F5","W"]],"choices":["After the fork appears","Before the fork appears","Only after you create your own three"],"answer":"Before the fork appears","hint":"After a true fork, one move may no longer cover both branches.","explanation":"Prophylactic defense removes the fork seed while a single move still solves the problem.","principle":"The best defensive move is often played before anything looks immediately fatal."}]},{"key":"activeDefense","name":"Active defense & counterplay","intro":"The best defense often blocks the threat while creating a forcing problem for the opponent.","tasks":[{"id":"a1","skill":"activeDefense","type":"move","title":"Block with purpose","prompt":"Both candidates stop White's immediate line. Which also creates a Black four?","stones":[["C6","W"],["D6","W"],["E6","W"],["G6","W"],["F3","B"],["F4","B"],["F5","B"]],"candidates":["F6","H6","B6"],"answer":"F6","hint":"Prefer the block that also extends Black's vertical stones.","explanation":"F6 fills White's gap and simultaneously gives Black a vertical four. That turns defense into tempo.","principle":"When two blocks are legal, prefer the one that creates a forcing reply."},{"id":"a2","skill":"priority","type":"move","title":"Counter-win, not counter-threat","prompt":"Black can win immediately. Play the winning move instead of defending White's lesser threat.","stones":[["C4","B"],["D4","B"],["E4","B"],["F4","B"],["D7","W"],["E7","W"],["F7","W"]],"candidates":["G4","G7","C7"],"answer":"G4","hint":"A win is stronger than a block or a threat.","explanation":"G4 ends the game immediately. Spending the move on defense would throw away the highest-priority move.","principle":"Counterplay only replaces defense when it is at least as forcing as the threat."},{"id":"a3","skill":"activeDefense","type":"choice","title":"Is a counter-four enough?","prompt":"White has a closed four and wins next move. Black cannot win now but can create a closed four elsewhere. Is that sufficient?","stones":[["C6","B"],["D6","W"],["E6","W"],["F6","W"],["G6","W"],["C3","B"],["D3","B"],["E3","B"]],"choices":["Yes — any four seizes the initiative","No — White's immediate win still has priority","Only in Renju"],"answer":"No — White's immediate win still has priority","hint":"A threat that does not end the game now does not erase the opponent's existing win.","explanation":"If Black merely creates another one-ended four, White can play H6 and win. Black must neutralize White's immediate winning point unless Black has a win now.","principle":"A counter-threat must actually outrank the opponent's threat."},{"id":"a4","skill":"activeDefense","type":"choice","title":"A three is not emergency defense","prompt":"White has an immediate winning point. Black can create an attractive open three. What should Black do?","stones":[["C7","B"],["D7","W"],["E7","W"],["F7","W"],["G7","W"],["D4","B"],["E4","B"]],"choices":["Create the open three","Block White's winning point","Ignore both and improve shape"],"answer":"Block White's winning point","hint":"Compare time-to-win, not visual beauty.","explanation":"White wins in one; Black's three does not. The immediate winning point must be removed.","principle":"Do not answer a one-move win with a slower threat."},{"id":"a5","skill":"activeDefense","type":"move","title":"Active block controls the center","prompt":"Choose the block that also claims the important intersection for Black's future lines.","stones":[["C5","W"],["D5","W"],["E5","W"],["G5","W"],["F3","B"],["F4","B"],["F7","B"]],"candidates":["F5","H5","B5"],"answer":"F5","hint":"One defensive square is also Black's central connection point.","explanation":"F5 answers the broken four and connects Black's vertical structure, retaining future attacking chances.","principle":"Good defense improves your own position when possible."}]},{"key":"candidateCompare","name":"Compare defensive candidates","intro":"Do not stop after finding one move that works. Compare defensive candidates by coverage, forcing value, and the opponent's next best reply.","tasks":[{"id":"c1","skill":"candidateCompare","type":"choice","title":"Passive vs active","prompt":"Two moves both stop the immediate threat. What is the better tie-break?","stones":[["D6","W"],["E6","W"],["F6","W"],["G6","W"],["F3","B"],["F4","B"],["F5","B"]],"choices":["Choose the move that creates your own forcing threat","Always choose the edge move","Choose randomly because both block"],"answer":"Choose the move that creates your own forcing threat","hint":"Once safety is equal, compare what each block accomplishes for you.","explanation":"An active block can force the opponent to respond, reducing their freedom after the crisis is solved.","principle":"Safety first; activity second."},{"id":"c2","skill":"multiDefense","type":"choice","title":"Coverage beats appearance","prompt":"Move A blocks one White threat. Move B blocks two independent White winning points at their shared square. Which is better?","stones":[["C6","W"],["D6","W"],["E6","W"],["G6","W"],["F3","W"],["F4","W"],["F5","W"],["F7","W"]],"choices":["Move A — one clean line is enough","Move B — cover both obligations","They are equivalent"],"answer":"Move B — cover both obligations","hint":"Count the threats left after your move.","explanation":"A defensive move is only sufficient if no immediate winning point remains. The shared-square defense solves both at once.","principle":"Evaluate the resulting position, not the move's appearance."},{"id":"c3","skill":"candidateCompare","type":"move","title":"Preserve flexibility","prompt":"Which legal defensive point also keeps Black connected to the center?","stones":[["D7","W"],["E7","W"],["F7","W"],["H7","W"],["G4","B"],["G5","B"],["G6","B"]],"candidates":["G7","I7","C7"],"answer":"G7","hint":"The internal gap is both the urgent block and Black's strongest connection.","explanation":"G7 removes White's immediate completion and reinforces Black's vertical line.","principle":"Among sufficient moves, prefer the move with useful secondary effects."},{"id":"c4","skill":"candidateCompare","type":"move","title":"Remove the fork seed","prompt":"White has no win yet. Which candidate best reduces White's next-move tactical ceiling?","stones":[["D6","W"],["E6","W"],["G6","W"],["F4","W"],["F5","W"],["C8","B"]],"candidates":["F6","H6","E5"],"answer":"F6","hint":"Ask which White reply would create the most simultaneous obligations.","explanation":"F6 is the fork seed. Other moves may improve shape, but they allow White's most dangerous compound continuation.","principle":"Compare candidates against the opponent's strongest reply."},{"id":"c5","skill":"candidateCompare","type":"choice","title":"One question after every block","prompt":"After finding a defensive move, what should you check before playing it?","stones":[["E6","W"],["F6","W"],["G6","W"],["C4","B"],["D4","B"]],"choices":["Whether it looks central","Whether the opponent still has a win or fork afterward","Whether it uses the same row as the last move"],"answer":"Whether the opponent still has a win or fork afterward","hint":"Defense is evaluated by the position it leaves behind.","explanation":"A move that blocks one line but leaves another immediate win is not a successful defense.","principle":"Always perform a post-move threat scan mentally."}]},{"key":"tempo","name":"Defensive tempo","intro":"Strong defense is about move order. Know when you must answer, when you can seize the initiative, and when a forcing move buys the tempo you need.","tasks":[{"id":"t1","skill":"tempo","type":"move","title":"Must answer now","prompt":"White's four has one winning point. Play the tempo-critical defense.","stones":[["C6","B"],["D6","W"],["E6","W"],["F6","W"],["G6","W"],["D3","B"]],"candidates":["H6","E3","F3"],"answer":"H6","hint":"There is no spare tempo while the opponent wins next move.","explanation":"H6 is mandatory because White's threat is immediate.","principle":"A direct win threat consumes your move unless you can win first."},{"id":"t2","skill":"priority","type":"move","title":"Your tempo ends the game","prompt":"Black has a direct win. Use it.","stones":[["C4","B"],["D4","B"],["E4","B"],["F4","B"],["E7","W"],["F7","W"],["G7","W"]],"candidates":["G4","D7","H7"],"answer":"G4","hint":"The strongest forcing move is the one that ends the game.","explanation":"G4 wins immediately. There is no reason to spend tempo defending a slower White attack.","principle":"Re-run 'Can I win now?' before every defensive decision."},{"id":"t3","skill":"tempo","type":"choice","title":"Seize tempo against a three","prompt":"White has only a three. Black can create an immediate four. Is Black allowed to take the initiative?","stones":[["E7","W"],["F7","W"],["G7","W"],["D4","B"],["E4","B"],["F4","B"]],"choices":["Yes — if Black's move is forcing and White has no immediate win","No — every three must be blocked first","Only near the center"],"answer":"Yes — if Black's move is forcing and White has no immediate win","hint":"A three is dangerous, but not yet a one-move win.","explanation":"Because White has no direct win now, Black can often play a forcing four and make White respond. Re-check that White has no counter-win.","principle":"Tempo can be seized when the opponent's threat is not yet immediate."},{"id":"t4","skill":"tempo","type":"choice","title":"Non-forcing attack loses time","prompt":"White wins next move. Black's proposed attack creates only a three. What is wrong?","stones":[["C8","B"],["D8","W"],["E8","W"],["F8","W"],["G8","W"],["D4","B"],["E4","B"]],"choices":["Nothing — attack is always best","The attack is too slow to answer a one-move win","The attack is illegal"],"answer":"The attack is too slow to answer a one-move win","hint":"Compare how many moves each threat needs.","explanation":"White needs one move; Black's new three needs more than one. Black loses the race.","principle":"Defensive tempo is a race: slower threats do not buy time."},{"id":"t5","skill":"tempo","type":"choice","title":"Move-order discipline","prompt":"Which scan order best protects against tactical oversights?","stones":[["E6","W"],["F6","W"],["G6","W"],["C4","B"],["D4","B"]],"choices":["Improve shape → attack → defend → win","Win now → stop immediate win → forcing counterplay → prophylaxis","Always defend first, even if you can win"],"answer":"Win now → stop immediate win → forcing counterplay → prophylaxis","hint":"Order the checks by urgency.","explanation":"First take a legal win. If none, remove opponent wins. Then compare forcing counterplay, then preventive defense.","principle":"A fixed scan order prevents attractive but losing moves."}]},{"key":"renjuDefense","name":"Renju defensive resources","intro":"Under Renju, Black's forbidden moves change defensive geometry. White can use those illegal Black points as tactical resources, while Black must defend without stepping into a foul.","tasks":[{"id":"j1","skill":"renjuDefense","type":"choice","title":"Overline as a poisoned point","prompt":"In Renju, Black's only apparent defensive reply would create six in a row. Can Black use it?","stones":[["B6","B"],["C6","B"],["D6","B"],["E6","B"],["F6","B"],["H6","W"],["H7","W"],["H8","W"]],"choices":["Yes — defense overrides the rule","No — Black cannot legally use an overline point","Only if White agrees"],"answer":"No — Black cannot legally use an overline point","hint":"Forbidden moves remain forbidden even when used defensively.","explanation":"Black cannot escape by making an overline. White can sometimes shape threats around such poisoned defensive points.","principle":"Renju legality is part of the defensive calculation."},{"id":"j2","skill":"renjuDefense","type":"choice","title":"Double-four defense is still forbidden","prompt":"Black can block White, but that Black move simultaneously creates two fours. What does Renju require?","stones":[["D6","B"],["E6","B"],["G6","B"],["F4","B"],["F5","B"],["F7","B"],["C9","W"],["D9","W"],["E9","W"]],"choices":["Forbidden — find another defense","Legal because it blocks White","Automatically wins for Black"],"answer":"Forbidden — find another defense","hint":"The purpose of the move does not cancel a Black foul.","explanation":"A Black double-four is forbidden in Renju even if the move also blocks an opponent threat.","principle":"Defensive necessity does not legalize a forbidden Black move."},{"id":"j3","skill":"renjuDefense","type":"choice","title":"Genuine double-three defense","prompt":"A Black defensive move would create two genuine threes. Is the move legal?","stones":[["D6","B"],["E6","B"],["G6","B"],["F4","B"],["F5","B"],["H8","W"]],"choices":["Yes — defense has an exception","No — genuine double-three is forbidden","Always legal if neither line is a four"],"answer":"No — genuine double-three is forbidden","hint":"Both new three branches matter if they genuinely qualify under Renju.","explanation":"A genuine Black double-three is forbidden. Black must search for a different legal defensive resource.","principle":"Legality must be checked before evaluating defensive strength."},{"id":"j4","skill":"renjuDefense","type":"choice","title":"Four–three is not automatically a foul","prompt":"A Black defensive move creates one four and one three, but not a double-four or genuine double-three. Is four–three itself forbidden?","stones":[["D6","B"],["E6","B"],["G6","B"],["F4","B"],["F5","B"],["C9","W"]],"choices":["Yes — every compound threat is forbidden","No — four–three alone is not automatically forbidden","Only White may create it"],"answer":"No — four–three alone is not automatically forbidden","hint":"Renju forbids specific Black patterns, not every powerful fork.","explanation":"A four–three can be legal if it does not also constitute another forbidden pattern such as overline, double-four, or genuine double-three.","principle":"Do not confuse tactical strength with Renju illegality."},{"id":"j5","skill":"renjuDefense","type":"choice","title":"White can exploit forbidden points","prompt":"Can White deliberately create a threat whose natural Black reply lies on a forbidden Black point?","stones":[["C6","B"],["D6","B"],["E6","B"],["F6","B"],["G6","B"],["I6","W"],["I7","W"],["I8","W"]],"choices":["Yes — forbidden Black points can become defensive constraints","No — forbidden points are ignored tactically","Only during openings"],"answer":"Yes — forbidden Black points can become defensive constraints","hint":"A move Black cannot legally play is effectively unavailable as a defensive resource.","explanation":"White can exploit Black's forbidden-move restrictions by steering threats toward poisoned intersections.","principle":"Under Renju, legality changes the set of available defensive moves."}]},{"key":"checkpoint","name":"Chapter checkpoint","intro":"No concept labels now. Run the full defensive scan yourself: win, immediate danger, coverage, counterplay, prevention, legality.","checkpoint":true,"tasks":[{"id":"k1","skill":"correctBlock","type":"move","title":"Checkpoint 1","prompt":"White's broken four has one winning point. Defend.","stones":[["D6","W"],["E6","W"],["G6","W"],["H6","W"]],"candidates":["C6","F6","I6"],"answer":"F6","hint":"Find the square that completes five.","explanation":"F6 is the internal winning point.","principle":""},{"id":"k2","skill":"threatScan","type":"choice","title":"Checkpoint 2","prompt":"White has an open four. What is true?","stones":[["D6","W"],["E6","W"],["F6","W"],["G6","W"]],"choices":["One ordinary block is enough","Two winning points remain","There is no immediate threat"],"answer":"Two winning points remain","hint":"Count both endpoints.","explanation":"C6 and H6 are independent winning points.","principle":""},{"id":"k3","skill":"priority","type":"move","title":"Checkpoint 3","prompt":"Black can win now. Choose the move.","stones":[["C4","B"],["D4","B"],["E4","B"],["F4","B"],["D8","W"],["E8","W"],["F8","W"],["G8","W"]],"candidates":["G4","C8","H8"],"answer":"G4","hint":"Check your own win before defending.","explanation":"G4 ends the game immediately.","principle":""},{"id":"k4","skill":"prophylaxis","type":"move","title":"Checkpoint 4","prompt":"White has no immediate win, but one move creates a fork. Prevent it.","stones":[["D6","W"],["E6","W"],["G6","W"],["F4","W"],["F5","W"]],"candidates":["F6","H6","E5"],"answer":"F6","hint":"Find the shared intersection.","explanation":"F6 is the fork seed.","principle":""},{"id":"k5","skill":"activeDefense","type":"move","title":"Checkpoint 5","prompt":"Choose the defensive move that also creates a Black four.","stones":[["C6","W"],["D6","W"],["E6","W"],["G6","W"],["F3","B"],["F4","B"],["F5","B"]],"candidates":["F6","H6","B6"],"answer":"F6","hint":"Compare secondary effects after safety.","explanation":"F6 blocks and creates a forcing vertical four.","principle":""},{"id":"k6","skill":"tempo","type":"choice","title":"Checkpoint 6","prompt":"White has only a three; Black can create a forcing four. What is the best principle?","stones":[["E7","W"],["F7","W"],["G7","W"],["D4","B"],["E4","B"],["F4","B"]],"choices":["Always block the three","Take forcing counterplay if White has no immediate win","Play quietly"],"answer":"Take forcing counterplay if White has no immediate win","hint":"A three is not yet a one-move win.","explanation":"Black can seize tempo with a stronger forcing move.","principle":""},{"id":"k7","skill":"multiDefense","type":"move","title":"Checkpoint 7","prompt":"Find the square that covers both White obligations.","stones":[["B6","B"],["C6","W"],["D6","W"],["E6","W"],["G6","W"],["F2","B"],["F3","W"],["F4","W"],["F5","W"],["F7","W"]],"candidates":["F6","H6","F8"],"answer":"F6","hint":"Look for the common winning point.","explanation":"F6 covers both lines.","principle":""},{"id":"k8","skill":"candidateCompare","type":"choice","title":"Checkpoint 8","prompt":"After identifying a possible block, what must you verify?","stones":[["E6","W"],["F6","W"],["G6","W"]],"choices":["That the opponent has no remaining immediate win","That the block is near the center","That it creates exactly three stones"],"answer":"That the opponent has no remaining immediate win","hint":"Evaluate the resulting board.","explanation":"A block is only successful if the threat scan is clean afterward.","principle":""},{"id":"k9","skill":"renjuDefense","type":"choice","title":"Checkpoint 9","prompt":"Renju Black's defensive move would make an overline. Can Black use it?","stones":[["B6","B"],["C6","B"],["D6","B"],["E6","B"],["F6","B"],["H7","W"],["H8","W"],["H9","W"]],"choices":["Yes","No — it is forbidden","Only if it blocks a four"],"answer":"No — it is forbidden","hint":"Defense does not override Black's foul rules.","explanation":"Overline remains forbidden for Black.","principle":""},{"id":"k10","skill":"renjuDefense","type":"choice","title":"Checkpoint 10","prompt":"Renju Black's proposed block makes one four and one three, without another foul. Is four–three itself forbidden?","stones":[["D6","B"],["E6","B"],["G6","B"],["F4","B"],["F5","B"]],"choices":["Yes","No — not automatically","All compound threats are forbidden"],"answer":"No — not automatically","hint":"Recall the specific forbidden patterns.","explanation":"Four–three alone is not automatically forbidden.","principle":""},{"id":"k11","skill":"correctBlock","type":"move","title":"Checkpoint 11","prompt":"The edge leaves White one winning point. Block it.","stones":[["A5","W"],["B5","W"],["C5","W"],["D5","W"]],"candidates":["E5","A6","B6"],"answer":"E5","hint":"The edge is not an empty endpoint.","explanation":"E5 is the only winning point.","principle":""},{"id":"k12","skill":"tempo","type":"choice","title":"Checkpoint 12","prompt":"Which defensive scan order is strongest?","stones":[["E6","W"],["F6","W"],["G6","W"],["C4","B"],["D4","B"]],"choices":["Win → immediate defense → forcing counterplay → prevention","Prevention → quiet move → attack → win","Block everything before checking your win"],"answer":"Win → immediate defense → forcing counterplay → prevention","hint":"Order decisions by tactical urgency.","explanation":"The fixed order catches wins first, then emergencies, then tempo, then prophylaxis.","principle":""}]}];
+const totalTasks=lessons.reduce((n,l)=>n+l.tasks.length,0);
+const skillNames={
+ threatScan:"Immediate threat scan",priority:"Tactical priority",correctBlock:"Correct defensive point",
+ multiDefense:"Multi-threat coverage",prophylaxis:"Fork prevention",activeDefense:"Active defense",
+ candidateCompare:"Candidate comparison",tempo:"Defensive tempo",renjuDefense:"Renju defense"
+};
+let state=load(),section=0,taskIndex=0,dialog=null,wrong=0,revealed=false;
+
+function load(){
+ try{
+   const raw=JSON.parse(localStorage.getItem(STORAGE)||"null");
+   if(raw&&raw.v===1&&raw.tasks&&typeof raw.tasks==="object")return raw;
+ }catch{}
+ return {v:1,tasks:{},last:{section:0,task:0},startedAt:Date.now()};
+}
+function save(){
+ state.last={section,task:taskIndex};
+ try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch{}
+ updateCard();
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function q(id){
+ const clean=String(id).replace(/^#/,"");
+ try{const inside=dialog?.querySelector("#"+CSS.escape(clean));if(inside)return inside;}catch{}
+ return document.getElementById(clean);
+}
+function task(){return lessons[section]?.tasks?.[taskIndex]||null;}
+function solved(t){return !!state.tasks[t.id]?.correct;}
+function sectionReport(i){
+ const l=lessons[i],recs=l.tasks.map(t=>state.tasks[t.id]).filter(Boolean);
+ const done=l.tasks.filter(solved).length,first=l.tasks.filter(t=>state.tasks[t.id]?.firstTry).length,assist=l.tasks.filter(t=>state.tasks[t.id]?.assisted).length;
+ return {done,total:l.tasks.length,complete:done===l.tasks.length,firstTry:first,assisted:assist,rate:done?first/done:0,attempts:recs.reduce((n,r)=>n+(r.attempts||0),0)};
+}
+function report(){
+ const tasks=lessons.flatMap(l=>l.tasks),done=tasks.filter(solved).length,first=tasks.filter(t=>state.tasks[t.id]?.firstTry).length,assist=tasks.filter(t=>state.tasks[t.id]?.assisted).length;
+ const skillMap={};
+ for(const t of tasks){
+   const r=state.tasks[t.id];if(!r?.correct)continue;
+   const s=skillMap[t.skill]||(skillMap[t.skill]={skill:t.skill,label:skillNames[t.skill]||t.skill,solved:0,firstTry:0,assisted:0});
+   s.solved++;if(r.firstTry)s.firstTry++;if(r.assisted)s.assisted++;
+ }
+ const skills=Object.values(skillMap).map(s=>({...s,rate:s.solved?s.firstTry/s.solved:0})).sort((a,b)=>a.rate-b.rate||a.label.localeCompare(b.label));
+ return {totalTasks,totalLessons:lessons.length,solved:done,firstTry:first,assisted:assist,rate:done?first/done:0,lessons:lessons.map((l,i)=>({name:l.name,...sectionReport(i)})),skills};
+}
+function weakestSection(){
+ let best=0,bestScore=Infinity;
+ lessons.slice(0,-1).forEach((l,i)=>{const r=sectionReport(i);const score=(r.complete?r.rate-.2:r.done/r.total-1);if(score<bestScore){bestScore=score;best=i;}});
+ return best;
+}
+function ensureDialog(){
+ if(dialog&&document.body.contains(dialog))return dialog;
+ dialog=document.getElementById("ch5CourseDialog");
+ if(dialog)return dialog;
+ dialog=document.createElement("dialog");dialog.id="ch5CourseDialog";
+ dialog.innerHTML=`
+ <div class="ch5-shell">
+   <aside class="ch5-nav">
+     <div class="ch5-nav-head"><div class="ch5-kicker">Chapter 5</div><h2>Defense</h2><p>Survive correctly. Coverage before appearance, tempo before comfort.</p></div>
+     <div class="ch5-lessons" id="ch5Lessons"></div>
+   </aside>
+   <main class="ch5-main">
+     <div class="ch5-topbar">
+       <div class="ch5-title-wrap"><div class="ch5-title" id="ch5Title">Defense</div><div class="ch5-task-count">1 / 1</div></div>
+       <button class="ch5-close" id="ch5Close" aria-label="Close Chapter 5">×</button>
+     </div>
+     <div class="ch5-content" id="ch5Content">
+       <div class="ch5-intro">
+         <div class="ch5-kicker" id="ch5Kicker">Lesson</div>
+         <div class="ch5-prompt" id="ch5Prompt"></div>
+         <div class="ch5-principle" id="ch5Principle"></div>
+       </div>
+       <div class="ch5-workspace">
+         <div class="ch5-board-wrap"><div id="ch5Board" aria-label="Chapter 5 teaching board"></div></div>
+         <div class="ch5-side">
+           <div class="ch5-choices" id="ch5Choices"></div>
+           <div class="ch5-feedback" id="ch5Feedback" aria-live="polite"><strong>Defensive scan:</strong> Can I win? Can they win? What survives after my move?</div>
+           <div class="ch5-evidence" id="ch5Evidence"></div>
+           <div class="ch5-actions">
+             <button class="ch5-btn" id="ch5Reveal" disabled>Show answer</button>
+             <button class="ch5-btn" id="ch5Retry">Retry</button>
+             <button class="ch5-btn primary wide" id="ch5NextTask">Next position</button>
+           </div>
+         </div>
+       </div>
+     </div>
+   </main>
+ </div>`;
+ document.body.appendChild(dialog);
+ dialog.addEventListener("close",()=>updateCard());
+ q("ch5Close").addEventListener("click",()=>dialog.close());
+ q("ch5Reveal").addEventListener("click",reveal);
+ q("ch5Retry").addEventListener("click",()=>renderTask());
+ q("ch5NextTask").addEventListener("click",nextTask);
+ q("ch5Lessons").addEventListener("click",e=>{const b=e.target.closest("[data-section]");if(b)openSection(Number(b.dataset.section),0);});
+ return dialog;
+}
+function cardParent(){
+ const prev=document.querySelector("#ch4CourseCard");
+ if(prev?.parentElement)return {parent:prev.parentElement,prev};
+ const p3=document.querySelector("#ch3CourseCard");
+ if(p3?.parentElement)return {parent:p3.parentElement,prev:p3};
+ const route=document.querySelector('[data-v92-route="improve"]');
+ if(route)return {parent:route,prev:null};
+ return null;
+}
+function ensureCard(){
+ const mount=cardParent();if(!mount)return;
+ let cards=[...document.querySelectorAll("#ch5CourseCard")];
+ if(cards.length>1){cards.slice(1).forEach(x=>x.remove());cards=cards.slice(0,1);}
+ let card=cards[0];
+ if(card){
+   if(mount.prev&&card.previousElementSibling!==mount.prev)mount.prev.insertAdjacentElement("afterend",card);
+   return;
+ }
+ card=document.createElement("section");card.id="ch5CourseCard";card.setAttribute("aria-label","Chapter 5 Defense");
+ card.innerHTML=`
+  <div class="ch5-card-copy">
+    <div class="ch5-eyebrow">Chapter 5 · Defense</div>
+    <h3>Survive the threat, then take the tempo.</h3>
+    <p>Immediate blocks, multi-threat coverage, fork prevention, active defense, move order, and Renju defensive resources.</p>
+    <div class="ch5-card-progress"><div class="ch5-meter"><span id="ch5CardBar"></span></div><span class="ch5-card-stat" id="ch5CardStat">0 / ${totalTasks}</span></div>
+  </div>
+  <div class="ch5-card-actions">
+    <button class="ch5-btn primary" id="ch5Start">Start chapter</button>
+    <button class="ch5-btn" id="ch5Review">Review weakest</button>
+  </div>`;
+ if(mount.prev)mount.prev.insertAdjacentElement("afterend",card);else mount.parent.prepend(card);
+ updateCard();
+}
+function updateCard(){
+ const card=document.querySelector("#ch5CourseCard");if(!card)return;
+ const r=report(),pct=Math.round(100*r.solved/r.totalTasks);
+ const bar=card.querySelector("#ch5CardBar"),stat=card.querySelector("#ch5CardStat"),start=card.querySelector("#ch5Start");
+ if(bar&&bar.style.width!==pct+"%")bar.style.width=pct+"%";
+ const s=`${r.solved} / ${r.totalTasks} · ${r.solved?Math.round(r.rate*100):0}% first-try`;
+ if(stat&&stat.textContent!==s)stat.textContent=s;
+ if(start){const label=r.solved?"Continue chapter":"Start chapter";if(start.textContent!==label)start.textContent=label;}
+}
+function renderNav(){
+ const box=q("ch5Lessons");if(!box)return;
+ box.innerHTML=lessons.map((l,i)=>{const r=sectionReport(i);return `<button class="ch5-lesson-btn${i===section?" active":""}" data-section="${i}"><span class="ch5-lesson-index">${i+1}</span><span class="ch5-lesson-name">${esc(l.name)}</span><span class="ch5-lesson-score">${r.done}/${r.total}</span></button>`}).join("");
+}
+function boardCoord(x,y){return "ABCDEFGHIJK"[x]+(y+1);}
+function renderBoard(t){
+ const board=q("ch5Board");if(!board)return;
+ const map=new Map((t.stones||[]).map(([c,col])=>[c,col]));
+ const candidates=new Set(t.candidates||[]);
+ let html="";
+ for(let y=0;y<11;y++)for(let x=0;x<11;x++){
+   const c=boardCoord(x,y),stone=map.get(c),candidate=t.type==="move"&&candidates.has(c)&&!stone;
+   html+=`<button class="ch5-cell" data-coord="${c}"${candidate?' data-candidate="1"':""}${candidate?"":" disabled"} aria-label="${c}${stone?stone==="B"?" black stone":" white stone":candidate?" candidate move":""}">${stone?`<span class="ch5-stone ${stone==="B"?"black":"white"}"></span>`:""}</button>`;
+ }
+ board.innerHTML=html;
+ if(t.type==="move")board.querySelectorAll('[data-candidate="1"]').forEach(b=>b.addEventListener("click",()=>submit(b.dataset.coord,b)));
+}
+function renderTask(){
+ ensureDialog();const t=task();if(!t)return;
+ wrong=0;revealed=false;
+ q("ch5Title").textContent=lessons[section].name;
+ q("ch5Kicker").textContent=`${lessons[section].checkpoint?"Checkpoint":"Lesson "+(section+1)} · ${t.title}`;
+ q("ch5Prompt").textContent=t.prompt;
+ q("ch5Principle").textContent=t.principle||lessons[section].intro;
+ document.querySelector("#ch5CourseDialog .ch5-task-count").textContent=`${taskIndex+1} / ${lessons[section].tasks.length}`;
+ const fb=q("ch5Feedback");fb.className="ch5-feedback";fb.innerHTML="<strong>Defensive scan:</strong> Can I win? Can they win? What survives after my move?";
+ const reveal=q("ch5Reveal");reveal.disabled=true;
+ const rec=state.tasks[t.id];
+ q("ch5NextTask").textContent=(taskIndex===lessons[section].tasks.length-1)?"Finish lesson":"Next position";
+ renderBoard(t);
+ const choices=q("ch5Choices");choices.innerHTML="";
+ if(t.type==="choice"){
+   choices.innerHTML=t.choices.map(c=>`<button class="ch5-choice" data-choice="${esc(c)}">${esc(c)}</button>`).join("");
+   choices.querySelectorAll(".ch5-choice").forEach(b=>b.addEventListener("click",()=>submit(b.dataset.choice,b)));
+ }else{
+   choices.innerHTML=`<div class="ch5-principle">Tap one of the marked intersections on the board.</div>`;
+ }
+ q("ch5Evidence").innerHTML=`<div><b>${report().solved}</b><span>Chapter solved</span></div><div><b>${report().firstTry}</b><span>First try</span></div><div><b>${report().assisted}</b><span>Assisted</span></div>`;
+ if(rec?.correct){
+   fb.className="ch5-feedback good";fb.innerHTML=`<strong>Previously solved.</strong> ${esc(t.explanation)}`;
+   markAnswer(t);
+ }
+ renderNav();state.last={section,task:taskIndex};save();
+}
+function record(t,correct,assisted=false){
+ const prev=state.tasks[t.id]||{attempts:0,misses:0,correct:false,assisted:false,firstTry:false};
+ if(correct){
+   prev.correct=true;prev.assisted=!!assisted;prev.firstTry=!assisted&&prev.attempts===0&&prev.misses===0;prev.solvedAt=Date.now();
+ }else{prev.attempts++;prev.misses++;}
+ state.tasks[t.id]=prev;save();return prev;
+}
+function submit(value,el){
+ const t=task();if(!t||solved(t))return;
+ if(value===t.answer){
+   record(t,true,false);const fb=q("ch5Feedback");fb.className="ch5-feedback good";fb.innerHTML=`<strong>Completed.</strong> ${esc(t.explanation)}`;
+   if(el)el.classList.add("correct");markAnswer(t);q("ch5Reveal").disabled=true;refreshEvidence();
+ }else{
+   record(t,false,false);wrong++;
+   const fb=q("ch5Feedback");fb.className="ch5-feedback bad";
+   if(wrong===1)fb.innerHTML="<strong>Not this.</strong> Re-run the scan: win now, their immediate wins, threat coverage, then counterplay.";
+   else{fb.innerHTML=`<strong>Look deeper.</strong> ${esc(t.hint)}`;q("ch5Reveal").disabled=false;}
+   refreshEvidence();
+ }
+}
+function reveal(){
+ const t=task();if(!t||solved(t))return;
+ record(t,true,true);revealed=true;markAnswer(t);
+ const fb=q("ch5Feedback");fb.className="ch5-feedback good";fb.innerHTML=`<strong>Answer shown.</strong> ${esc(t.explanation)} <span style="opacity:.75">This solve is recorded as assisted.</span>`;
+ q("ch5Reveal").disabled=true;refreshEvidence();
+}
+function markAnswer(t){
+ if(t.type==="choice"){
+   q("ch5Choices")?.querySelectorAll(".ch5-choice").forEach(b=>{if(b.dataset.choice===t.answer)b.classList.add("correct");});
+ }else{
+   const b=q("ch5Board")?.querySelector(`[data-coord="${CSS.escape(t.answer)}"]`);if(b)b.classList.add("answer");
+ }
+}
+function refreshEvidence(){
+ const r=report();q("ch5Evidence").innerHTML=`<div><b>${r.solved}</b><span>Chapter solved</span></div><div><b>${r.firstTry}</b><span>First try</span></div><div><b>${r.assisted}</b><span>Assisted</span></div>`;renderNav();updateCard();
+}
+function nextTask(){
+ if(taskIndex<lessons[section].tasks.length-1){taskIndex++;renderTask();return;}
+ if(section<lessons.length-1){section++;taskIndex=0;renderTask();return;}
+ renderComplete();
+}
+function renderComplete(){
+ const content=q("ch5Content"),r=report(),skills=r.skills;
+ content.innerHTML=`<div class="ch5-complete"><div class="ch5-kicker">Chapter 5 complete</div><h3>Defense is a decision process, not a reflex block.</h3><p>You solved ${r.solved}/${r.totalTasks} positions with ${r.solved?Math.round(r.rate*100):0}% clean first-try accuracy.</p><div class="ch5-skill-grid">${skills.map(s=>`<div class="ch5-skill"><div class="ch5-skill-row"><span>${esc(s.label)}</span><b>${Math.round(s.rate*100)}%</b></div><div class="ch5-skill-bar"><span style="width:${Math.round(s.rate*100)}%"></span></div></div>`).join("")}</div><button class="ch5-btn primary" id="ch5ReviewWeak">Review weakest lesson</button></div>`;
+ q("ch5ReviewWeak")?.addEventListener("click",()=>openSection(weakestSection(),0));
+}
+function openSection(i=0,j=0){
+ ensureDialog();section=Math.max(0,Math.min(lessons.length-1,Number(i)||0));taskIndex=Math.max(0,Math.min(lessons[section].tasks.length-1,Number(j)||0));
+ renderTask();if(!dialog.open)dialog.showModal();
+}
+function open(){
+ ensureDialog();const last=state.last||{section:0,task:0};openSection(last.section,last.task);
+}
+function reset(){
+ state={v:1,tasks:{},last:{section:0,task:0},startedAt:Date.now()};save();openSection(0,0);
+}
+document.addEventListener("click",e=>{
+ const start=e.target.closest("#ch5Start"),review=e.target.closest("#ch5Review");
+ if(start){e.preventDefault();open();}
+ if(review){e.preventDefault();openSection(weakestSection(),0);}
+});
+ensureDialog();ensureCard();updateCard();
+const obs=new MutationObserver(()=>ensureCard());
+obs.observe(document.body,{childList:true,subtree:true});
+window.GomokuCourseChapter5={open,openSection,report,reset};
+})();
+</script>
+
 </body></html>
