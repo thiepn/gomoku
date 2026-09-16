@@ -7915,10 +7915,25 @@ document.addEventListener("click",e=>{
  if(start){e.preventDefault();open();}
  if(review){e.preventDefault();openSection(weakestSection(),0);}
 });
-ensureDialog();ensureCard();updateCard();
-const obs=new MutationObserver(()=>ensureCard());
-obs.observe(document.body,{childList:true,subtree:true});
 window.GomokuCourseChapter5={open,openSection,report,reset};
+let ch5Mounted=false;
+function mountChapter5(){
+ if(ch5Mounted)return;
+ ch5Mounted=true;
+ ensureDialog();ensureCard();updateCard();
+ const obs=new MutationObserver(()=>ensureCard());
+ obs.observe(document.body,{childList:true,subtree:true});
+}
+if(document.body?.dataset?.ready==="true")setTimeout(mountChapter5,0);
+else{
+ const readyObs=new MutationObserver(()=>{
+  if(document.body?.dataset?.ready==="true"){readyObs.disconnect();setTimeout(mountChapter5,0);}
+ });
+ readyObs.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
+ window.addEventListener("load",()=>{
+  if(document.body?.dataset?.ready==="true"){readyObs.disconnect();setTimeout(mountChapter5,0);}
+ },{once:true});
+}
 })();
 </script>
 
