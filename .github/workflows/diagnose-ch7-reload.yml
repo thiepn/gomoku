@@ -1,0 +1,86 @@
+name: Diagnose Chapter 7 reload
+
+on:
+  push:
+    paths: ['.github/workflows/diagnose-ch7-reload.yml']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  diagnose:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for Pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 60); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            [ "$state" = success ] && exit 0
+            [ "$state" = failure ] && exit 1
+            sleep 2
+          done
+          exit 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Diagnose reload state
+        shell: bash
+        run: |
+          cat > /tmp/ch7-diag.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME});
+          const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const p=await ctx.newPage();
+          const errors=[];
+          p.on('pageerror',e=>errors.push(e.message));
+          const snapshot=()=>p.evaluate(()=>({
+            ready:document.body?.dataset?.ready,
+            api:typeof window.GomokuCourseChapter7?.report,
+            loaded:window.__gomokuCourseChapter7Loaded,
+            marker:!!document.getElementById('course-ch7-v1-script'),
+            cards:[1,2,3,4,5,6,7].map(n=>document.querySelectorAll(`#ch${n}CourseCard`).length),
+            state:localStorage.getItem('gomoku.course.chapter7.v1'),
+            href:location.href,
+            title:document.title,
+            controller:navigator.serviceWorker?.controller?.scriptURL||null
+          }));
+          await p.goto(root+'?ch7diag='+Date.now(),{waitUntil:'domcontentloaded',timeout:15000});
+          await p.waitForTimeout(3000);
+          const first=await snapshot();
+          console.log('FIRST',JSON.stringify(first));
+          if(first.api!=='function'||!first.marker) throw new Error('Initial Chapter 7 unavailable '+JSON.stringify(first));
+          await p.evaluate(()=>localStorage.setItem('gomoku.course.chapter7.v1',JSON.stringify({version:1,tasks:{s6:{correct:true,firstTry:true,assisted:false}},last:{lesson:1,task:0}})));
+          try{await p.reload({waitUntil:'domcontentloaded',timeout:15000});}catch(e){console.log('RELOAD_ERROR',e.message)}
+          await p.waitForTimeout(4000);
+          const second=await snapshot();
+          console.log('SECOND',JSON.stringify(second));
+          console.log('PAGE_ERRORS',JSON.stringify(errors));
+          const network=await p.evaluate(async()=>{try{const t=await fetch('./?networkprobe='+Date.now(),{cache:'no-store'}).then(r=>r.text());return {marker:t.includes('course-ch7-v1-script'),len:t.length}}catch(e){return {error:String(e)}}});
+          console.log('NETWORK',JSON.stringify(network));
+          if(second.api!=='function'||!second.marker||second.ready!=='true') throw new Error('Reload lost Chapter 7 '+JSON.stringify(second)+' errors='+JSON.stringify(errors)+' network='+JSON.stringify(network));
+          if(!JSON.parse(second.state||'null')?.tasks?.s6?.correct) throw new Error('Stored progress lost');
+          console.log('CHAPTER7_RELOAD_DIAGNOSTIC_PASS');
+          await browser.close();
+          JS
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 60s env CHROME="$CHROME" node /tmp/ch7-diag.mjs
+      - name: Remove diagnostic workflow
+        if: always()
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/diagnose-ch7-reload.yml
+          git commit -m 'Remove Chapter 7 reload diagnostic' || true
+          git pull --rebase || true
+          git push || true
