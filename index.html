@@ -7294,4 +7294,342 @@ window.GomokuCourseChapter3={
 </script>
 
 
+
+
+<!-- Chapter 4 — Forks & Double Threats -->
+
+<style id="course-ch4-v1-style">
+#ch4CourseCard{box-sizing:border-box;position:relative;overflow:hidden;margin-top:14px;padding:20px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:18px;background:color-mix(in srgb,var(--surface,#fff) 94%,#5d8790 6%);color:inherit;box-shadow:0 8px 28px rgba(0,0,0,.07)}
+#ch4CourseCard::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#5d8790,#37535a)}
+.ch4-card-top{display:flex;gap:18px;align-items:flex-start;justify-content:space-between}
+.ch4-kicker{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.62}
+#ch4CourseCard h3{margin:5px 0 7px;font-size:1.35rem;line-height:1.15}
+#ch4CourseCard p{margin:0;max-width:68ch;font-size:.91rem;line-height:1.55;opacity:.76}
+.ch4-card-stat{flex:0 0 auto;min-width:86px;text-align:right}
+.ch4-card-stat strong{display:block;font-size:1.35rem;line-height:1}
+.ch4-card-stat span{font-size:.72rem;opacity:.6}
+.ch4-progress{height:6px;margin:16px 0 9px;border-radius:99px;background:color-mix(in srgb,currentColor 10%,transparent);overflow:hidden}
+.ch4-progress>i{display:block;height:100%;width:0;border-radius:inherit;background:currentColor;opacity:.72;transition:width .25s ease}
+.ch4-card-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.75rem;opacity:.66}
+.ch4-card-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.ch4-btn{min-height:42px;padding:0 15px;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:11px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+.ch4-btn:hover{background:color-mix(in srgb,currentColor 7%,transparent)}
+.ch4-btn.primary{background:currentColor;color:var(--surface,#fff)}
+.ch4-btn.primary span{filter:invert(1)}
+#ch4CourseDialog{box-sizing:border-box;width:min(940px,calc(100vw - 24px));max-height:min(92dvh,900px);padding:0;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:20px;background:var(--surface,#fff);color:var(--text,#171717);box-shadow:0 30px 90px rgba(0,0,0,.32);overflow:hidden}
+#ch4CourseDialog::backdrop{background:rgba(10,10,10,.58);backdrop-filter:blur(3px)}
+.ch4-shell{display:grid;grid-template-rows:auto auto minmax(0,1fr);max-height:min(92dvh,900px)}
+.ch4-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px 13px;border-bottom:1px solid color-mix(in srgb,currentColor 11%,transparent)}
+.ch4-head-copy{min-width:0}.ch4-head-copy b{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.56}.ch4-head-copy h2{margin:3px 0 0;font-size:1.25rem}
+#ch4Close{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:50%;background:transparent;color:inherit;font-size:1.25rem;cursor:pointer}
+.ch4-lessons{display:flex;gap:7px;padding:10px 14px;overflow-x:auto;border-bottom:1px solid color-mix(in srgb,currentColor 9%,transparent);scrollbar-width:none}
+.ch4-lessons::-webkit-scrollbar{display:none}
+.ch4-lesson-chip{flex:0 0 auto;padding:8px 11px;border:1px solid color-mix(in srgb,currentColor 13%,transparent);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:.76rem;cursor:pointer;white-space:nowrap}
+.ch4-lesson-chip.active{background:currentColor;color:var(--surface,#fff)}
+.ch4-lesson-chip.done::after{content:" ✓";font-weight:900}
+.ch4-main{display:grid;grid-template-columns:minmax(310px,42%) 1fr;min-height:0;overflow:auto}
+.ch4-board-pane{display:flex;flex-direction:column;gap:10px;padding:18px;border-right:1px solid color-mix(in srgb,currentColor 10%,transparent);background:color-mix(in srgb,#5d8790 8%,transparent)}
+.ch4-board-wrap{width:min(100%,430px);margin:auto;aspect-ratio:1;position:relative}
+#ch4Board{display:grid;grid-template-columns:repeat(11,1fr);width:100%;height:100%;border:1px solid rgba(63,43,27,.32);background:#d8b27e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
+.ch4-cell{position:relative;display:grid;place-items:center;min-width:0;min-height:0;padding:0;border:0;border-right:1px solid rgba(67,45,29,.27);border-bottom:1px solid rgba(67,45,29,.27);background:transparent;cursor:default}
+.ch4-cell:nth-child(11n){border-right:0}
+.ch4-cell:nth-last-child(-n+11){border-bottom:0}
+.ch4-cell[data-candidate="1"]{cursor:pointer;background:rgba(255,255,255,.18)}
+.ch4-cell[data-candidate="1"]:hover,.ch4-cell[data-candidate="1"]:focus-visible{outline:2px solid rgba(36,27,20,.76);outline-offset:-3px;background:rgba(255,255,255,.34)}
+.ch4-stone{width:72%;aspect-ratio:1;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.28)}
+.ch4-stone.black{background:radial-gradient(circle at 32% 28%,#555,#111 62%,#000)}
+.ch4-stone.white{background:radial-gradient(circle at 32% 28%,#fff,#ece8e0 65%,#c9c2b7);border:1px solid rgba(0,0,0,.16)}
+.ch4-candidate-dot{width:22%;aspect-ratio:1;border-radius:50%;background:rgba(58,40,27,.38)}
+.ch4-coord{position:absolute;right:2px;bottom:1px;font-size:8px;color:rgba(45,31,22,.38);pointer-events:none}
+.ch4-board-note{display:flex;justify-content:space-between;gap:8px;font-size:.73rem;opacity:.63}
+.ch4-content{display:flex;flex-direction:column;min-width:0;padding:19px}
+.ch4-task-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ch4-task-top .ch4-kicker{margin-bottom:4px}
+#ch4TaskTitle{margin:0;font-size:1.18rem;line-height:1.25}
+.ch4-task-count{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,currentColor 7%,transparent);font-size:.72rem;font-weight:750}
+#ch4Prompt{margin:14px 0 0;font-size:.98rem;line-height:1.6}
+.ch4-rule{display:inline-flex;align-self:flex-start;margin-top:10px;padding:5px 8px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:8px;font-size:.7rem;font-weight:750;opacity:.66}
+#ch4Choices{display:grid;gap:8px;margin-top:16px}
+.ch4-choice{width:100%;min-height:44px;padding:10px 12px;text-align:left;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:11px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.ch4-choice:hover:not(:disabled){background:color-mix(in srgb,currentColor 6%,transparent)}
+.ch4-choice:disabled{cursor:default;opacity:.72}
+#ch4Feedback{min-height:46px;margin-top:15px;padding:11px 12px;border-radius:11px;background:color-mix(in srgb,currentColor 6%,transparent);font-size:.85rem;line-height:1.48}
+#ch4Feedback.good{background:color-mix(in srgb,#2f8a50 13%,transparent)}
+#ch4Feedback.miss{background:color-mix(in srgb,#b2762a 13%,transparent)}
+.ch4-content-actions{display:flex;gap:8px;align-items:center;margin-top:auto;padding-top:16px;flex-wrap:wrap}
+#ch4Reveal[hidden]{display:none}
+#ch4NextTask{margin-left:auto}
+.ch4-lesson-copy{margin-top:9px;font-size:.78rem;line-height:1.45;opacity:.61}
+@media(max-width:680px){
+  #ch4CourseDialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:16px}
+  .ch4-shell{max-height:calc(100dvh - 12px)}
+  .ch4-head{padding:13px 14px 10px}
+  .ch4-lessons{padding:8px 10px}
+  .ch4-main{display:block;overflow:auto}
+  .ch4-board-pane{padding:11px 13px;border-right:0;border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent)}
+  .ch4-board-wrap{width:min(100%,350px)}
+  .ch4-content{padding:14px 14px 18px}
+  #ch4Prompt{margin-top:11px}
+  .ch4-card-top{gap:10px}
+  .ch4-card-stat{min-width:70px}
+  .ch4-choice,.ch4-btn{min-height:46px}
+}
+</style>
+
+
+<script id="course-ch4-v1-script">
+(()=>{
+'use strict';
+if(window.GomokuCourseChapter4)return;
+const COURSE={"lessons":[{"title":"Recognize forks","eyebrow":"Lesson 1","description":"A real fork creates two independent defensive obligations. Learn to separate true forks from shapes one move can answer at once."},{"title":"Four–four forks","eyebrow":"Lesson 2","description":"Create two immediate four threats with one move so one defense cannot cover both lines."},{"title":"Four–three forks","eyebrow":"Lesson 3","description":"Combine an immediate four with a second growing threat and judge when the pair keeps the initiative."},{"title":"Three–three forks","eyebrow":"Lesson 4","description":"Build two genuine threes in ordinary Gomoku, then verify that both branches really have useful continuations."},{"title":"Defend forks","eyebrow":"Lesson 5","description":"Stop the fork point before it is played, or identify the rare forcing resource that outruns the opponent’s combination."},{"title":"Counter-forks & priority","eyebrow":"Lesson 6","description":"Compare threats by urgency: wins and forcing fours come before slower fork ideas, and counterplay only works if it forces a reply."},{"title":"Forks in Renju","eyebrow":"Lesson 7","description":"Apply Black’s forbidden-move rules to double-fours and genuine double-threes without treating every multi-line move as illegal."},{"title":"Chapter checkpoint","eyebrow":"Checkpoint","description":"Twelve mixed positions covering fork recognition, creation, defense, priority, fake forks and Renju legality."}],"tasks":[{"id":"r1","lesson":0,"title":"Two independent wins","prompt":"Black threatens to win on two different lines, and each line needs a different defensive point. What is this?","kind":"choice","board":{"black":["D6","E6","F6","G6","F3","F4","F5"],"white":[]},"choices":["A true fork","A single threat","A fake fork","A pass position"],"correct":["A true fork"],"candidates":[],"hint1":"Ask whether one defensive move can cover both winning lines.","hint2":"The horizontal and vertical threats demand different answers.","explanation":"A fork is powerful because the defender cannot satisfy two independent obligations with one ordinary move.","rule":"Pattern"},{"id":"r2","lesson":0,"title":"One block covers both","prompt":"Two apparent threats both depend on the same empty point H6. Is this automatically a true fork?","kind":"choice","board":{"black":["D6","E6","F6","G6","H3","H4","H5"],"white":[]},"choices":["Yes — two lines are visible","No — one move can answer both","Only in Renju","Only for White"],"correct":["No — one move can answer both"],"candidates":[],"hint1":"Count defensive obligations, not just attack lines.","hint2":"If H6 is the critical point for both ideas, a single move there can neutralize both.","explanation":"Two lines do not make a true fork when the defender has one common answer to both.","rule":"True vs fake"},{"id":"r3","lesson":0,"title":"Four plus three","prompt":"One move has produced an immediate four on one line and a genuine open three on another. What family of tactic is this?","kind":"choice","board":{"black":["E6","F6","G6","H6","F5","F7"],"white":[]},"choices":["Four–three fork","Double overline","Single blocked three","No threat"],"correct":["Four–three fork"],"candidates":[],"hint1":"Classify the two branches separately.","hint2":"One branch is an immediate four; the other is a growing three.","explanation":"A four–three fork combines an immediate forcing threat with a second branch that can become forcing next.","rule":"Pattern"},{"id":"r4","lesson":0,"title":"Potential is not enough","prompt":"A move creates two three-like shapes, but one branch is edge-cramped and cannot grow into a useful four. Is it a robust three–three fork?","kind":"choice","board":{"black":["A2","B2","C2","B1","B3"],"white":[]},"choices":["Yes","No — both branches must be functional","Always in Renju","Only if Black"],"correct":["No — both branches must be functional"],"candidates":[],"hint1":"A fork needs two real continuations.","hint2":"A decorative second line does not split the defense if it cannot become forcing.","explanation":"Strong fork recognition is functional: both branches must create meaningful independent continuations.","rule":"True vs fake"},{"id":"ff1","lesson":1,"title":"Cross fork","prompt":"Which move creates open fours horizontally and vertically at once?","kind":"move","board":{"black":["E6","G6","H6","F4","F5","F7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","I6"],"hint1":"F6 connects both axes.","hint2":"Check what the move does on the row and column.","explanation":"F6 creates E6–H6 horizontally and F4–F7 vertically, producing two independent four threats.","rule":"Four–four"},{"id":"ff2","lesson":1,"title":"Diagonal cross","prompt":"Find the move that creates two diagonal fours simultaneously.","kind":"move","board":{"black":["D4","E5","G7","D8","E7","G5"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","C3","H8"],"hint1":"Look for the shared intersection of both diagonals.","hint2":"Both diagonal patterns are one stone short at the same center.","explanation":"F6 completes four-stone threats on both diagonals; the winning points lie on different ends.","rule":"Four–four"},{"id":"ff3","lesson":1,"title":"Offset horizontal and diagonal","prompt":"Which move produces a four on the row and a second four on the diagonal?","kind":"move","board":{"black":["C6","D6","E6","G6","D4","E5","G7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","B6","H8"],"hint1":"The gap at F6 belongs to both candidate lines.","hint2":"Project F6 along the row and the down-right diagonal.","explanation":"F6 simultaneously completes two four threats in different directions.","rule":"Four–four"},{"id":"ff4","lesson":1,"title":"Vertical and diagonal","prompt":"Find Black’s fork move.","kind":"move","board":{"black":["F3","F4","F5","F7","D4","E5","G7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","F2","H8"],"hint1":"The central gap participates in both lines.","hint2":"Try F6 and count four stones on each axis.","explanation":"F6 creates a vertical four and a diagonal four with separate winning continuations.","rule":"Four–four"},{"id":"ff5","lesson":1,"title":"Independent obligations","prompt":"Which move gives the defender two different immediate problems?","kind":"move","board":{"black":["E6","G6","H6","E5","G7","H8"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","I9"],"hint1":"Look for one move that strengthens two directions.","hint2":"F6 bridges the horizontal and diagonal structures.","explanation":"F6 creates two four threats whose defensive points are not the same, which is the essence of a four–four fork.","rule":"Four–four"},{"id":"ft1","lesson":2,"title":"Force and grow","prompt":"Which move creates a horizontal four and a vertical open three?","kind":"move","board":{"black":["E6","G6","H6","F5","F7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","F4"],"hint1":"One branch needs three existing stones; the other needs two.","hint2":"F6 belongs to both the horizontal gap and the vertical pair.","explanation":"F6 makes E6–H6 a four while F5–F7 becomes a vertical three with growth on both sides.","rule":"Four–three"},{"id":"ft2","lesson":2,"title":"Diagonal support","prompt":"Find the move that creates a diagonal four plus a horizontal three.","kind":"move","board":{"black":["D4","E5","G7","E6","G6"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","H8","D6"],"hint1":"The center is shared by the diagonal triplet and horizontal pair.","hint2":"Count the stones after F6 on each direction.","explanation":"F6 creates a diagonal four and a horizontal three, forcing first on the four while preserving a second branch.","rule":"Four–three"},{"id":"ft3","lesson":2,"title":"Vertical force","prompt":"Which move creates a vertical four and a diagonal three?","kind":"move","board":{"black":["F3","F4","F5","E5","G7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","F2","D4"],"hint1":"The four branch should become immediate.","hint2":"F6 extends the vertical line to four and links the diagonal pair.","explanation":"F6 is the four–three fork point.","rule":"Four–three"},{"id":"ft4","lesson":2,"title":"Not every pair is equal","prompt":"Which move creates the strongest four–three combination?","kind":"move","board":{"black":["D6","E6","G6","E5","G7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","C6","H8"],"hint1":"Prefer the move that makes the first branch immediately forcing.","hint2":"F6 completes D6–G6 while also building the diagonal.","explanation":"F6 creates the forcing four first and leaves the diagonal three as follow-up potential.","rule":"Four–three"},{"id":"ft5","lesson":2,"title":"Why the four matters","prompt":"In a four–three fork, which branch normally dictates the defender’s next move first?","kind":"choice","board":{"black":["E6","F6","G6","H6","F5","F7"],"white":[]},"choices":["The four","The three","Neither","The older branch"],"correct":["The four"],"candidates":[],"hint1":"Immediate threats take priority over potential.","hint2":"A four threatens a win on the next move; a three usually needs another step.","explanation":"The four is the forcing branch. The three matters because it can become the next forcing threat after the compulsory defense.","rule":"Threat priority"},{"id":"tt1","lesson":3,"title":"Basic cross","prompt":"Which move creates genuine open threes horizontally and vertically in ordinary Gomoku?","kind":"move","board":{"black":["E6","G6","F5","F7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","F4"],"hint1":"Look for the shared center of two pairs.","hint2":"After F6, both axes contain three stones with room to grow.","explanation":"F6 creates two open-three branches, a classic ordinary-Gomoku three–three fork.","rule":"Three–three"},{"id":"tt2","lesson":3,"title":"Diagonal pair","prompt":"Find the center move that creates two diagonal threes.","kind":"move","board":{"black":["E5","G7","E7","G5"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D4","H8"],"hint1":"Both diagonal pairs cross at one empty point.","hint2":"F6 joins each pair into a three.","explanation":"F6 produces genuine three threats on both diagonals in ordinary Gomoku.","rule":"Three–three"},{"id":"tt3","lesson":3,"title":"Row and diagonal","prompt":"Which move creates two useful three branches?","kind":"move","board":{"black":["E6","G6","E5","G7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","H8"],"hint1":"One point belongs to both pairs.","hint2":"Check row E6–G6 and diagonal E5–G7 after the move.","explanation":"F6 creates two independent growing threats.","rule":"Three–three"},{"id":"tt4","lesson":3,"title":"Fake second branch","prompt":"Black can play F6. The horizontal branch becomes a genuine three, but White already blocks the vertical growth point F8. Is this automatically a full three–three fork?","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":["F8"]},"choices":["Yes","No — verify both branches","Only for White","Always in freestyle"],"correct":["No — verify both branches"],"candidates":[],"hint1":"Do not count shapes without checking continuations.","hint2":"The vertical branch has lost one of its clean growth resources.","explanation":"A convincing three–three fork requires two functional branches; a blocked or dead second branch can make the apparent fork much weaker.","rule":"True vs fake"},{"id":"tt5","lesson":3,"title":"Ordinary Gomoku status","prompt":"In ordinary Gomoku, creating two genuine open threes with one move is generally…","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":[]},"choices":["Legal","Forbidden","A forced pass","An overline"],"correct":["Legal"],"candidates":[],"hint1":"Separate Gomoku rules from Renju restrictions.","hint2":"Double-three is specifically a Black restriction in Renju.","explanation":"Ordinary Gomoku generally allows the tactic.","rule":"Gomoku rules"},{"id":"d1","lesson":4,"title":"Stop the fork point","prompt":"White threatens to play F6 next and create two four threats. Where should Black defend now?","kind":"move","board":{"black":["B2"],"white":["E6","G6","H6","F4","F5","F7"]},"choices":[],"correct":["F6"],"candidates":["F6","D6","F3"],"hint1":"Defend the move that creates both branches, not one branch after the fork exists.","hint2":"F6 is White’s shared construction point.","explanation":"Occupying F6 prevents the double-four fork before it appears.","rule":"Defense"},{"id":"d2","lesson":4,"title":"Diagonal fork point","prompt":"White’s next move at F6 would create two diagonal fours. What is Black’s clean preventive move?","kind":"move","board":{"black":["B2"],"white":["D4","E5","G7","D8","E7","G5"]},"choices":[],"correct":["F6"],"candidates":["F6","C3","H8"],"hint1":"Find the intersection of the two white patterns.","hint2":"Both diagonal threats depend on the center.","explanation":"Black should take F6 before White can create the fork.","rule":"Defense"},{"id":"d3","lesson":4,"title":"Already forked","prompt":"White has already created two independent open-four threats with different winning points. Does Black usually have one quiet blocking move that solves both?","kind":"choice","board":{"black":["B2"],"white":["D6","E6","F6","G6","F3","F4","F5"]},"choices":["Yes","No","Only at the edge","Only in Renju"],"correct":["No"],"candidates":[],"hint1":"Independent obligations are what make a fork decisive.","hint2":"Blocking one line leaves the other immediate threat.","explanation":"Once two truly independent immediate threats exist, a single ordinary block normally cannot answer both.","rule":"Defense"},{"id":"d4","lesson":4,"title":"Do not defend the wrong end","prompt":"White is preparing a fork through F6. Which defense is more important than blocking only H6?","kind":"move","board":{"black":["B2"],"white":["E6","G6","F5","F7"]},"choices":[],"correct":["F6"],"candidates":["F6","H6","F4"],"hint1":"Stop the construction square itself.","hint2":"H6 addresses only one future branch.","explanation":"F6 removes the common fork point and prevents both branches from forming.","rule":"Defense"},{"id":"d5","lesson":4,"title":"Timing principle","prompt":"When is the best time to defend a predictable fork?","kind":"choice","board":{"black":[],"white":[]},"choices":["Before the fork move","After both immediate threats exist","Only after a miss","Never"],"correct":["Before the fork move"],"candidates":[],"hint1":"Fork defense is mostly about timing.","hint2":"Once two independent immediate threats exist, one move is often too late.","explanation":"Prevent the fork point or break one branch before the double obligation appears.","rule":"Defense timing"},{"id":"p1","lesson":5,"title":"Win before defending","prompt":"Opponent threatens a fork next move, but you have an immediate winning move now. What has priority?","kind":"choice","board":{"black":["D6","E6","F6","G6"],"white":["F4","F5","F7"]},"choices":["Play the immediate win","Defend the future fork","Pass","Create a slower three"],"correct":["Play the immediate win"],"candidates":[],"hint1":"Compare time-to-win, not visual complexity.","hint2":"A win now ends the game before the opponent can execute the fork.","explanation":"An immediate legal win outranks a future fork threat.","rule":"Priority"},{"id":"p2","lesson":5,"title":"Counter-four","prompt":"Opponent threatens to build a fork, but you can make a forcing four that demands an answer. When is that counterplay useful?","kind":"choice","board":{"black":["E5","F5","G5"],"white":["E6","G6","F5","F7"]},"choices":["When the four truly forces a reply","Whenever it looks aggressive","Only if it is a three","Never"],"correct":["When the four truly forces a reply"],"candidates":[],"hint1":"Counterplay must change the opponent’s move.","hint2":"A non-forcing attack does not buy time.","explanation":"A counter-threat is valuable only if the opponent must respond before executing the fork.","rule":"Counterplay"},{"id":"p3","lesson":5,"title":"Forcing order","prompt":"Which ordering is generally correct when comparing tactical urgency?","kind":"choice","board":{"black":[],"white":[]},"choices":["Immediate win → immediate four → fork preparation","Fork preparation → three → win","Any order is equal","Three → pass → four"],"correct":["Immediate win → immediate four → fork preparation"],"candidates":[],"hint1":"Ask how many moves each threat needs.","hint2":"The fewer moves to a forced result, the higher the urgency.","explanation":"Immediate wins come first, then forcing four threats, then slower fork-building ideas.","rule":"Priority"},{"id":"p4","lesson":5,"title":"Fake counterattack","prompt":"You ignore an opponent’s imminent four–four fork to make a non-forcing three elsewhere. Is that usually sound?","kind":"choice","board":{"black":[],"white":[]},"choices":["Yes","No","Only on move one","Always in freestyle"],"correct":["No"],"candidates":[],"hint1":"Does your move force the opponent to respond?","hint2":"A mere three usually does not stop an immediate fork construction.","explanation":"Non-forcing counterplay does not solve a more urgent tactical threat.","rule":"Counterplay"},{"id":"p5","lesson":5,"title":"Split one branch","prompt":"If you cannot occupy the fork point directly, what is the next defensive idea?","kind":"choice","board":{"black":[],"white":[]},"choices":["Break one branch so the fork is no longer double","Ignore both branches","Create an edge stone","Pass"],"correct":["Break one branch so the fork is no longer double"],"candidates":[],"hint1":"A fork needs two working branches.","hint2":"If one branch is neutralized in advance, the future move may create only one obligation.","explanation":"When direct occupation is impossible, reducing two threats to one can make the position defensible.","rule":"Defense resource"},{"id":"j1","lesson":6,"title":"Black double-four","prompt":"In Renju, Black makes one move that creates two distinct fours. What is the ruling?","kind":"choice","board":{"black":["E6","G6","H6","F4","F5","F7"],"white":[]},"choices":["Legal","Forbidden — double-four","Only forbidden for White","A draw"],"correct":["Forbidden — double-four"],"candidates":[],"hint1":"Recall Black’s forbidden patterns.","hint2":"Two distinct fours created by one Black move constitute a double-four.","explanation":"A Black double-four is forbidden in Renju.","rule":"Renju"},{"id":"j2","lesson":6,"title":"Black genuine double-three","prompt":"In Renju, Black makes one move that creates two genuine open threes and no five. What is the ruling?","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":[]},"choices":["Legal","Forbidden — double-three","White wins immediately","A forced pass"],"correct":["Forbidden — double-three"],"candidates":[],"hint1":"Both branches are genuine threes.","hint2":"Renju restricts this multi-three construction for Black.","explanation":"A genuine Black double-three is forbidden in Renju.","rule":"Renju"},{"id":"j3","lesson":6,"title":"Four–three is not automatically illegal","prompt":"Black creates exactly one four and one genuine three, with no overline and no second four/three. Is the move forbidden merely because it is a fork?","kind":"choice","board":{"black":["E6","G6","H6","F5","F7"],"white":[]},"choices":["Yes","No","Only if White","Always on the center"],"correct":["No"],"candidates":[],"hint1":"Renju forbids specific patterns, not the word “fork.”","hint2":"One four plus one three is not itself double-four or double-three.","explanation":"A four–three move is not automatically forbidden; legality still depends on whether any actual Black forbidden condition is created.","rule":"Renju"},{"id":"j4","lesson":6,"title":"White double-four","prompt":"In Renju, White creates a four–four fork. Is White restricted by Black’s double-four prohibition?","kind":"choice","board":{"black":[],"white":["E6","G6","H6","F4","F5","F7"]},"choices":["Yes","No","Only after move 30","Only on diagonals"],"correct":["No"],"candidates":[],"hint1":"Renju forbidden moves apply asymmetrically.","hint2":"The double-four restriction is a Black restriction.","explanation":"White is not subject to Black’s forbidden-move rules.","rule":"Renju"},{"id":"j5","lesson":6,"title":"Apparent double-three","prompt":"Black creates two three-like lines, but one branch is not a genuine three because its continuations do not qualify. Is the move automatically forbidden as double-three?","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":["F8"]},"choices":["Yes","No — both threes must be genuine","Only if White agrees","Always at the edge"],"correct":["No — both threes must be genuine"],"candidates":[],"hint1":"Renju three evaluation is functional.","hint2":"A visual three that cannot qualify does not automatically count as a genuine branch.","explanation":"Double-three requires genuine qualifying threes; appearance alone is not enough.","rule":"Renju"},{"id":"c1","lesson":7,"title":"Checkpoint · true fork","prompt":"What makes a fork tactically real?","kind":"choice","board":{"black":[],"white":[]},"choices":["Two independent defensive obligations","Any two lines","Any center move","Two adjacent stones"],"correct":["Two independent defensive obligations"],"candidates":[],"hint1":"Count required defensive moves.","hint2":"A true fork splits the defender between different answers.","explanation":"The core property is independence: one ordinary defense cannot cover both threats.","rule":"Checkpoint"},{"id":"c2","lesson":7,"title":"Checkpoint · make the fork","prompt":"Which move creates simultaneous horizontal and vertical four threats?","kind":"move","board":{"black":["E6","G6","H6","F4","F5","F7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","F8"],"hint1":"Use the shared center.","hint2":"F6 completes both lines.","explanation":"F6 creates the four–four fork.","rule":"Checkpoint"},{"id":"c3","lesson":7,"title":"Checkpoint · fake fork","prompt":"Two apparent threats share one defensive point. Is that automatically a true fork?","kind":"choice","board":{"black":[],"white":[]},"choices":["Yes","No","Only in Renju","Only for Black"],"correct":["No"],"candidates":[],"hint1":"One answer may cover both.","hint2":"Independence matters more than the number of visible lines.","explanation":"A shared defense can make the apparent fork fake or much weaker.","rule":"Checkpoint"},{"id":"c4","lesson":7,"title":"Checkpoint · four–three","prompt":"Which move creates a horizontal four plus a vertical three?","kind":"move","board":{"black":["E6","G6","H6","F5","F7"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","D6","F4"],"hint1":"One move belongs to both branches.","hint2":"F6 completes the row and links the column pair.","explanation":"F6 is the four–three fork move.","rule":"Checkpoint"},{"id":"c5","lesson":7,"title":"Checkpoint · ordinary Gomoku","prompt":"In ordinary Gomoku, a genuine three–three fork is generally…","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":[]},"choices":["Legal","Forbidden","An overline","A pass"],"correct":["Legal"],"candidates":[],"hint1":"Do not import Renju restrictions into Gomoku.","hint2":"Double-three is a Black Renju restriction.","explanation":"Ordinary Gomoku generally allows genuine three–three forks.","rule":"Checkpoint · Gomoku"},{"id":"c6","lesson":7,"title":"Checkpoint · Renju double-three","prompt":"In Renju, Black creates two genuine threes with one move. The move is…","kind":"choice","board":{"black":["E6","G6","F5","F7"],"white":[]},"choices":["Legal","Forbidden","A draw","White’s move"],"correct":["Forbidden"],"candidates":[],"hint1":"Recall Black’s forbidden moves.","hint2":"Genuine double-three is prohibited.","explanation":"A genuine Black double-three is forbidden in Renju.","rule":"Checkpoint · Renju"},{"id":"c7","lesson":7,"title":"Checkpoint · Renju double-four","prompt":"In Renju, Black creates two fours with one move. The move is…","kind":"choice","board":{"black":["E6","G6","H6","F4","F5","F7"],"white":[]},"choices":["Legal","Forbidden","Only illegal for White","Always a win"],"correct":["Forbidden"],"candidates":[],"hint1":"Two fours trigger another Black restriction.","hint2":"This is double-four.","explanation":"Black double-four is forbidden in Renju.","rule":"Checkpoint · Renju"},{"id":"c8","lesson":7,"title":"Checkpoint · White","prompt":"White creates the same four–four geometry in Renju. Is White forbidden by the Black double-four rule?","kind":"choice","board":{"black":[],"white":["E6","G6","H6","F4","F5","F7"]},"choices":["Yes","No","Only at center","Only if overline"],"correct":["No"],"candidates":[],"hint1":"The forbidden-move rules are asymmetric.","hint2":"Double-four restriction applies to Black.","explanation":"White is not restricted by Black’s double-four prohibition.","rule":"Checkpoint · Renju"},{"id":"c9","lesson":7,"title":"Checkpoint · defend early","prompt":"White will fork at F6 next move. What is Black’s best preventive square?","kind":"move","board":{"black":["B2"],"white":["E6","G6","F5","F7"]},"choices":[],"correct":["F6"],"candidates":["F6","D6","H6"],"hint1":"Stop the construction point.","hint2":"F6 is shared by both future branches.","explanation":"Taking F6 prevents the fork before it exists.","rule":"Checkpoint · Defense"},{"id":"c10","lesson":7,"title":"Checkpoint · priority","prompt":"You can win immediately while the opponent only threatens a fork next move. What should you prioritize?","kind":"choice","board":{"black":[],"white":[]},"choices":["The immediate win","The future fork defense","A slower three","A pass"],"correct":["The immediate win"],"candidates":[],"hint1":"Compare move counts to the result.","hint2":"Winning now ends the game first.","explanation":"Immediate legal wins outrank slower tactical threats.","rule":"Checkpoint · Priority"},{"id":"c11","lesson":7,"title":"Checkpoint · break a branch","prompt":"You cannot take the fork point, but you can permanently neutralize one of the two branches before the fork is played. Why can that work?","kind":"choice","board":{"black":[],"white":[]},"choices":["The future move may create only one real obligation","It guarantees a draw by rule","Forks require three branches","It changes stone color"],"correct":["The future move may create only one real obligation"],"candidates":[],"hint1":"A fork needs two functional branches.","hint2":"Remove one branch and the defender may face only one threat.","explanation":"Breaking a branch can convert a future fork into a single defendable threat.","rule":"Checkpoint · Defense"},{"id":"c12","lesson":7,"title":"Checkpoint · core principle","prompt":"What is the central tactical lesson of Chapter 4?","kind":"choice","board":{"black":[],"white":[]},"choices":["Create or prevent independent simultaneous threats","Every two-line shape wins","Ignore threat timing","All forks are legal in Renju"],"correct":["Create or prevent independent simultaneous threats"],"candidates":[],"hint1":"Think in defensive obligations.","hint2":"Forks work because one move creates more urgent answers than the defender can satisfy.","explanation":"Fork play is about splitting the defense—and preventing that split before it becomes unavoidable.","rule":"Checkpoint"}]};
+const KEY='gomoku.course.chapter4.v1';
+const VERSION=1;
+const COLS='ABCDEFGHIJK'.split('');
+const lessonTasks=COURSE.lessons.map((_,i)=>COURSE.tasks.filter(t=>t.lesson===i));
+let currentLesson=0,currentTask=0,attempts=0,answered=false,mountQueued=false;
+
+function fresh(){return{version:VERSION,tasks:{},lastLesson:0,lastTask:0}}
+function load(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(raw&&raw.version===VERSION&&raw.tasks)return raw;
+  }catch{}
+  return fresh();
+}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}}
+function resultFor(id){return load().tasks[id]||null}
+function taskRecord(id,patch){
+  const s=load(),prev=s.tasks[id]||{attempts:0,correct:false,assisted:false,firstTry:false};
+  s.tasks[id]={...prev,...patch,updatedAt:Date.now()};
+  s.lastLesson=currentLesson;s.lastTask=currentTask;save(s);return s.tasks[id];
+}
+function report(){
+  const s=load();
+  const per=COURSE.lessons.map((lesson,i)=>{
+    const list=lessonTasks[i],records=list.map(t=>s.tasks[t.id]).filter(Boolean);
+    const solved=list.filter(t=>s.tasks[t.id]?.correct).length;
+    const firstTry=list.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.firstTry).length;
+    const assisted=list.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.assisted).length;
+    return{title:lesson.title,total:list.length,solved,firstTry,assisted,complete:solved===list.length,rate:solved?firstTry/solved:0};
+  });
+  const solved=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct).length;
+  const firstTry=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.firstTry).length;
+  const assisted=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.assisted).length;
+  return{totalTasks:COURSE.tasks.length,totalLessons:COURSE.lessons.length,solved,firstTry,assisted,complete:solved===COURSE.tasks.length,lessons:per};
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ensureDialog(){
+  let d=document.getElementById('ch4CourseDialog');
+  if(d)return d;
+  d=document.createElement('dialog');d.id='ch4CourseDialog';
+  d.innerHTML=`<div class="ch4-shell">
+    <header class="ch4-head">
+      <div class="ch4-head-copy"><b>Gomoku course · Chapter 4</b><h2>Forks & Double Threats</h2></div>
+      <button id="ch4Close" aria-label="Close Chapter 4">×</button>
+    </header>
+    <nav class="ch4-lessons" id="ch4LessonNav" aria-label="Chapter 4 lessons"></nav>
+    <div class="ch4-main">
+      <section class="ch4-board-pane">
+        <div class="ch4-board-wrap"><div id="ch4Board" role="grid" aria-label="Training board"></div></div>
+        <div class="ch4-board-note"><span>● Black</span><span>○ White</span><span id="ch4MoveHint">Study the position</span></div>
+      </section>
+      <section class="ch4-content">
+        <div class="ch4-task-top"><div><div class="ch4-kicker" id="ch4LessonLabel"></div><h3 id="ch4TaskTitle"></h3></div><span class="ch4-task-count"></span></div>
+        <p id="ch4Prompt"></p><span class="ch4-rule" id="ch4Rule"></span>
+        <div id="ch4Choices"></div>
+        <div id="ch4Feedback" aria-live="polite">Study every relevant line before answering.</div>
+        <div class="ch4-lesson-copy" id="ch4LessonCopy"></div>
+        <div class="ch4-content-actions">
+          <button class="ch4-btn" id="ch4PrevTask">Previous</button>
+          <button class="ch4-btn" id="ch4Reveal" hidden>Show answer</button>
+          <button class="ch4-btn" id="ch4NextTask">Next</button>
+        </div>
+      </section>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+  d.querySelector('#ch4Close').addEventListener('click',()=>d.close());
+  d.addEventListener('click',e=>{if(e.target===d)d.close()});
+  d.querySelector('#ch4PrevTask').addEventListener('click',prevTask);
+  d.querySelector('#ch4NextTask').addEventListener('click',nextTask);
+  d.querySelector('#ch4Reveal').addEventListener('click',reveal);
+  return d;
+}
+function stoneMap(task){
+  const map=new Map();
+  (task.board?.black||[]).forEach(c=>map.set(c,'black'));
+  (task.board?.white||[]).forEach(c=>map.set(c,'white'));
+  return map;
+}
+function renderBoard(task){
+  const board=document.getElementById('ch4Board');if(!board)return;
+  const stones=stoneMap(task),candidates=new Set(task.kind==='move'?task.candidates||[]:[]);
+  board.innerHTML='';
+  for(let row=1;row<=11;row++)for(let col=0;col<11;col++){
+    const coord=COLS[col]+row,cell=document.createElement('button');
+    cell.className='ch4-cell';cell.type='button';cell.dataset.coord=coord;
+    const color=stones.get(coord);
+    if(color){cell.disabled=true;cell.innerHTML=`<i class="ch4-stone ${color}" aria-hidden="true"></i>`;cell.setAttribute('aria-label',`${coord} ${color} stone`)}
+    else if(candidates.has(coord)){
+      cell.dataset.candidate='1';cell.innerHTML='<i class="ch4-candidate-dot" aria-hidden="true"></i>';
+      cell.setAttribute('aria-label',`Play ${coord}`);cell.addEventListener('click',()=>answer(coord));
+    } else {cell.disabled=true;cell.setAttribute('aria-label',`${coord} empty`)}
+    if((row===1&&col%2===0)||(col===0&&row%2===0)){const label=document.createElement('small');label.className='ch4-coord';label.textContent=coord;cell.appendChild(label)}
+    board.appendChild(cell);
+  }
+  document.getElementById('ch4MoveHint').textContent=task.kind==='move'?'Choose a marked point':'Read the pattern';
+}
+function renderLessons(){
+  const nav=document.getElementById('ch4LessonNav');if(!nav)return;
+  const rep=report();
+  nav.innerHTML=COURSE.lessons.map((l,i)=>`<button class="ch4-lesson-chip${i===currentLesson?' active':''}${rep.lessons[i].complete?' done':''}" data-l="${i}">${i===7?'Checkpoint':`L${i+1} · ${esc(l.title)}`}</button>`).join('');
+  nav.querySelectorAll('[data-l]').forEach(b=>b.addEventListener('click',()=>openSection(Number(b.dataset.l),0)));
+}
+function current(){return lessonTasks[currentLesson][currentTask]}
+function render(){
+  const d=ensureDialog(),task=current(),lesson=COURSE.lessons[currentLesson],old=resultFor(task.id);
+  attempts=old?.correct?Math.max(0,old.attempts||0):Math.max(0,old?.attempts||0);
+  answered=!!old?.correct;
+  renderLessons();renderBoard(task);
+  d.querySelector('#ch4LessonLabel').textContent=lesson.eyebrow;
+  d.querySelector('#ch4TaskTitle').textContent=task.title;
+  d.querySelector('.ch4-task-count').textContent=`${currentTask+1} / ${lessonTasks[currentLesson].length}`;
+  d.querySelector('#ch4Prompt').textContent=task.prompt;
+  d.querySelector('#ch4Rule').textContent=task.rule;
+  d.querySelector('#ch4LessonCopy').textContent=lesson.description;
+  const choices=d.querySelector('#ch4Choices');
+  choices.innerHTML='';
+  if(task.kind==='choice'){
+    task.choices.forEach(label=>{
+      const b=document.createElement('button');b.className='ch4-choice';b.type='button';b.textContent=label;b.disabled=answered;
+      b.addEventListener('click',()=>answer(label));choices.appendChild(b);
+    });
+  }
+  const feedback=d.querySelector('#ch4Feedback');feedback.className='';
+  if(answered){feedback.className='good';feedback.textContent=`Previously completed. ${task.explanation}`}
+  else {feedback.textContent='Study every relevant line before answering.'}
+  const reveal=d.querySelector('#ch4Reveal');reveal.hidden=answered||attempts<2;
+  d.querySelector('#ch4PrevTask').disabled=currentLesson===0&&currentTask===0;
+  const last=currentLesson===COURSE.lessons.length-1&&currentTask===lessonTasks[currentLesson].length-1;
+  d.querySelector('#ch4NextTask').disabled=last;
+  d.querySelector('#ch4NextTask').textContent=last?'Chapter end':(currentTask===lessonTasks[currentLesson].length-1?'Next lesson':'Next');
+  updateCard();
+}
+function answer(value){
+  if(answered)return;
+  const task=current(),isCorrect=task.correct.includes(value),nextAttempts=attempts+1;
+  attempts=nextAttempts;
+  if(isCorrect){
+    answered=true;
+    taskRecord(task.id,{correct:true,assisted:false,firstTry:nextAttempts===1,attempts:nextAttempts});
+    const f=document.getElementById('ch4Feedback');f.className='good';f.textContent=`Completed. ${task.explanation}`;
+    document.getElementById('ch4Reveal').hidden=true;
+    document.querySelectorAll('#ch4Choices button').forEach(b=>b.disabled=true);
+    document.querySelectorAll('#ch4Board .ch4-cell[data-candidate="1"]').forEach(b=>b.disabled=true);
+    renderLessons();updateCard();
+  }else{
+    taskRecord(task.id,{correct:false,assisted:false,firstTry:false,attempts:nextAttempts});
+    const f=document.getElementById('ch4Feedback');f.className='miss';
+    f.textContent=nextAttempts===1?`Not this. ${task.hint1}`:`Still not. ${task.hint2}`;
+    document.getElementById('ch4Reveal').hidden=nextAttempts<2;
+  }
+}
+function answerText(task){
+  if(task.kind==='move')return task.correct.join(' or ');
+  return task.correct[0];
+}
+function reveal(){
+  if(answered)return;
+  const task=current();answered=true;
+  taskRecord(task.id,{correct:true,assisted:true,firstTry:false,attempts:Math.max(2,attempts)});
+  const f=document.getElementById('ch4Feedback');f.className='good';f.textContent=`Answer shown: ${answerText(task)}. ${task.explanation}`;
+  document.getElementById('ch4Reveal').hidden=true;
+  document.querySelectorAll('#ch4Choices button').forEach(b=>b.disabled=true);
+  document.querySelectorAll('#ch4Board .ch4-cell[data-candidate="1"]').forEach(b=>b.disabled=true);
+  renderLessons();updateCard();
+}
+function nextTask(){
+  if(currentTask<lessonTasks[currentLesson].length-1)currentTask++;
+  else if(currentLesson<COURSE.lessons.length-1){currentLesson++;currentTask=0}
+  else return;
+  remember();render();
+}
+function prevTask(){
+  if(currentTask>0)currentTask--;
+  else if(currentLesson>0){currentLesson--;currentTask=lessonTasks[currentLesson].length-1}
+  else return;
+  remember();render();
+}
+function remember(){
+  const s=load();s.lastLesson=currentLesson;s.lastTask=currentTask;save(s);
+}
+function openSection(lesson=0,task=0){
+  currentLesson=Math.max(0,Math.min(COURSE.lessons.length-1,Number(lesson)||0));
+  currentTask=Math.max(0,Math.min(lessonTasks[currentLesson].length-1,Number(task)||0));
+  remember();const d=ensureDialog();render();
+  try{if(!d.open)d.showModal()}catch{d.setAttribute('open','')}
+}
+function openCourse(){
+  const s=load();openSection(Number(s.lastLesson)||0,Number(s.lastTask)||0);
+}
+function weakestIndex(){
+  const rep=report();
+  let best=0,bestScore=Infinity;
+  rep.lessons.slice(0,7).forEach((l,i)=>{
+    const completion=l.solved/l.total;
+    const score=completion*.72+l.rate*.28;
+    if(!l.complete&&score<bestScore){bestScore=score;best=i}
+  });
+  if(bestScore===Infinity){
+    rep.lessons.slice(0,7).forEach((l,i)=>{if(l.rate<bestScore){bestScore=l.rate;best=i}});
+  }
+  return best;
+}
+function updateCard(){
+  const card=document.getElementById('ch4CourseCard');if(!card)return;
+  const rep=report(),pct=Math.round(rep.solved/rep.totalTasks*100),weak=weakestIndex();
+  const fill=card.querySelector('.ch4-progress i');if(fill)fill.style.width=pct+'%';
+  const n=card.querySelector('[data-ch4-solved]');if(n)n.textContent=rep.solved;
+  const p=card.querySelector('[data-ch4-pct]');if(p)p.textContent=pct+'%';
+  const w=card.querySelector('[data-ch4-weak]');if(w)w.textContent=COURSE.lessons[weak].title;
+  const start=card.querySelector('#ch4Start');if(start)start.textContent=rep.solved?'Continue chapter':'Start chapter';
+}
+function makeCard(){
+  const card=document.createElement('section');card.id='ch4CourseCard';
+  card.innerHTML=`<div class="ch4-card-top"><div><div class="ch4-kicker">Chapter 4 · Tactical combinations</div><h3>Forks & Double Threats</h3><p>Create two independent obligations with one move, distinguish true forks from fake ones, defend before the split, and apply Renju fork legality correctly.</p></div><div class="ch4-card-stat"><strong><span data-ch4-solved>0</span>/46</strong><span>positions</span></div></div>
+  <div class="ch4-progress" aria-hidden="true"><i></i></div>
+  <div class="ch4-card-meta"><span><b data-ch4-pct>0%</b> complete</span><span>Review focus: <b data-ch4-weak>Recognize forks</b></span></div>
+  <div class="ch4-card-actions"><button class="ch4-btn primary" id="ch4Start"><span>Start chapter</span></button><button class="ch4-btn" id="ch4Review">Review weakest</button></div>`;
+  card.querySelector('#ch4Start').addEventListener('click',openCourse);
+  card.querySelector('#ch4Review').addEventListener('click',()=>openSection(weakestIndex(),0));
+  return card;
+}
+function mountCard(){
+  const existing=document.getElementById('ch4CourseCard');
+  const ch3=document.getElementById('ch3CourseCard');
+  if(existing){
+    if(ch3&&existing.previousElementSibling!==ch3)ch3.insertAdjacentElement('afterend',existing);
+    return;
+  }
+  const anchor=ch3||document.getElementById('ch2CourseCard')||document.getElementById('ch1CourseCard');
+  if(!anchor)return;
+  anchor.insertAdjacentElement('afterend',makeCard());updateCard();
+}
+function scheduleMount(){
+  if(mountQueued)return;mountQueued=true;
+  queueMicrotask(()=>{mountQueued=false;mountCard()});
+}
+const observer=new MutationObserver(scheduleMount);
+function boot(){
+  ensureDialog();mountCard();observer.observe(document.body,{childList:true,subtree:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.GomokuCourseChapter4={
+  open:openCourse,openSection,report,
+  reset(){localStorage.removeItem(KEY);currentLesson=0;currentTask=0;render();updateCard()},
+  version:VERSION
+};
+})();
+</script>
+
 </body></html>
