@@ -7270,7 +7270,7 @@ function mountCard(){
   const ch2=document.getElementById('ch2CourseCard');
   if(existing){
     if(ch2&&existing.previousElementSibling!==ch2)ch2.insertAdjacentElement('afterend',existing);
-    updateCard();return;
+    return;
   }
   const anchor=ch2||document.getElementById('ch1CourseCard');
   if(!anchor)return;
