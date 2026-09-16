@@ -1,0 +1,60 @@
+name: Install Chapter 10 Whole-Board Evaluation and Planning
+
+on:
+  push:
+    paths: ['.github/workflows/install-ch10-course.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and validate Chapter 10 payload
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64,bz2,hashlib,re
+          enc=Path('.ch10-payload.b64').read_text(encoding='utf-8').strip()
+          data=bz2.decompress(base64.b64decode(enc))
+          expected='03ec2583c70bfcc3c1798eb10267ea7e0512c7d81429387c8234381252553080'
+          actual=hashlib.sha256(data).hexdigest()
+          if actual!=expected: raise SystemExit(f'hash mismatch {actual}')
+          text=data.decode('utf-8')
+          required=['id="course-ch10-v1-script"','gomoku.course.chapter10.v1','function mountChapter10()','function renderPlanningBoard(task)','function settleCardPlacement(attempt=0)','window.GomokuCourseChapter10']
+          missing=[x for x in required if x not in text]
+          if missing: raise SystemExit(f'missing markers {missing}')
+          ids=re.findall(r'\b[CB]\("([^"]+)"',text)
+          if len(ids)!=48 or len(set(ids))!=48: raise SystemExit(f'task ids invalid {len(ids)} {len(set(ids))}')
+          if len(re.findall(r'\bC\("',text))!=12 or len(re.findall(r'\bB\("',text))!=36: raise SystemExit('task type counts invalid')
+          Path('/tmp/ch10-module.html').write_bytes(data)
+      - name: Install Chapter 10 into app
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          module=Path('/tmp/ch10-module.html').read_text(encoding='utf-8')
+          for n in range(1,10):
+              marker=f'id="course-ch{n}-v1-script"'
+              if s.count(marker)!=1: raise SystemExit(f'baseline marker count failed for Chapter {n}: {s.count(marker)}')
+          if s.count('id="course-ch10-v1-script"')!=0: raise SystemExit('Chapter 10 already installed')
+          idx=s.rfind('</body>')
+          if idx<0: raise SystemExit('closing body tag not found')
+          s=s[:idx]+'\n'+module+'\n'+s[idx:]
+          p.write_text(s,encoding='utf-8')
+          final=p.read_text(encoding='utf-8')
+          for n in range(1,11):
+              marker=f'id="course-ch{n}-v1-script"'
+              if final.count(marker)!=1: raise SystemExit(f'final marker count failed for Chapter {n}: {final.count(marker)}')
+      - name: Commit implementation and clean installer
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .ch10-payload.b64 .github/workflows/install-ch10-course.yml
+          git commit -m 'Implement Chapter 10 Whole-Board Evaluation and Planning course'
+          git push
