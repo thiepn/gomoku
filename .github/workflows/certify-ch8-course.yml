@@ -1,0 +1,205 @@
+name: Final certify Chapter 8 Initiative and Move Priority
+
+on:
+  push:
+    paths: ['.github/workflows/certify-ch8-course.yml']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  certify:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Wait for this commit's Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 100); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+
+      - name: Confirm patched live source
+        shell: bash
+        run: |
+          ok=0
+          for i in $(seq 1 30); do
+            curl -fsSL "https://thiepn.dev/gomoku/?ch8source=$(date +%s%N)" -o /tmp/live.html || true
+            if grep -q 'id="course-ch8-v1-script"' /tmp/live.html \
+              && grep -q 'function mountChapter8()' /tmp/live.html \
+              && grep -q 'function renderPriorityBoard(' /tmp/live.html \
+              && grep -q 'gomoku.course.chapter8.v1' /tmp/live.html; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" = 1
+          for n in 1 2 3 4 5 6 7 8; do
+            test "$(grep -o "id=\"course-ch${n}-v1-script\"" /tmp/live.html | wc -l)" = 1
+          done
+
+      - name: Certify live Chapter 8
+        shell: bash
+        run: |
+          cat > .ch8-cert.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+
+          const make=async()=>{
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            const p=await ctx.newPage();
+            p.setDefaultTimeout(15000);
+            p.setDefaultNavigationTimeout(20000);
+            const errors=[];
+            p.on('pageerror',e=>errors.push(e.message));
+            await p.goto(root+'?ch8cert='+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true' && typeof window.GomokuCourseChapter8?.openSection==='function',null,{timeout:20000});
+            await p.addStyleTag({content:'#v112WelcomeDialog{display:none!important;pointer-events:none!important}'});
+            await p.evaluate(()=>{
+              document.querySelector('[data-v92-route="improve"]')?.click();
+              document.querySelector('#v112WelcomeDialog')?.close?.();
+            });
+            await p.waitForTimeout(400);
+            await p.waitForSelector('#ch8CourseCard',{state:'attached'});
+            return {ctx,p,errors};
+          };
+
+          const assertStack=async p=>{
+            const x=await p.evaluate(()=>{
+              const cards=[1,2,3,4,5,6,7,8].map(n=>document.querySelector(`#ch${n}CourseCard`));
+              const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));
+              return {counts:[1,2,3,4,5,6,7,8].map(n=>document.querySelectorAll(`#ch${n}CourseCard`).length),order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1]))};
+            });
+            if(x.counts.some(n=>n!==1)||!x.order) throw new Error('Course stack '+JSON.stringify(x));
+          };
+          const open=async(p,l,t)=>{
+            await p.evaluate(([l,t])=>window.GomokuCourseChapter8.openSection(l,t),[l,t]);
+            await p.waitForSelector('#ch8CourseDialog[open]');
+          };
+          const choose=(p,name)=>p.locator('#ch8CourseDialog[open]').getByRole('button',{name,exact:true}).click();
+          const boardMove=(p,c)=>p.locator(`#ch8Board [data-coord="${c}"]`).click();
+          const completeText=async p=>/^Completed\./.test(await p.locator('#ch8Feedback').innerText());
+          const assertMobile=async(p,label)=>{
+            const g=await p.evaluate(()=>{
+              const d=document.querySelector('#ch8CourseDialog');
+              const f=d?.querySelector('.ch8-bottom');
+              const r=document.querySelector('#ch8Reveal');
+              const fr=f?.getBoundingClientRect(), rr=r?.getBoundingClientRect();
+              return {iw:innerWidth,ih:innerHeight,page:document.documentElement.scrollWidth,dialog:d?.scrollWidth,footer:fr?[fr.left,fr.top,fr.right,fr.bottom,fr.width,fr.height]:null,reveal:rr?[rr.left,rr.top,rr.right,rr.bottom,rr.width,rr.height]:null,display:f?getComputedStyle(f).display:null,visible:r?.checkVisibility?.()};
+            });
+            if(g.page>g.iw+2||g.dialog>g.iw+2) throw new Error(label+' horizontal overflow '+JSON.stringify(g));
+            if(!g.footer||g.footer[4]<=1||g.footer[5]<=1||g.display==='none') throw new Error(label+' footer hidden '+JSON.stringify(g));
+            if(!g.reveal||g.reveal[4]<=1||g.reveal[5]<=1||!g.visible||g.reveal[0]<-1||g.reveal[2]>g.iw+1||g.reveal[1]<-1||g.reveal[3]>g.ih+1) throw new Error(label+' reveal geometry '+JSON.stringify(g));
+          };
+
+          // A — shell, structure, staged coaching and assisted accounting.
+          const A=await make();
+          await assertStack(A.p);
+          let report=await A.p.evaluate(()=>window.GomokuCourseChapter8.report());
+          if(report.totalTasks!==48||report.totalLessons!==8) throw new Error('Report '+JSON.stringify(report));
+          await open(A.p,0,0);
+          await assertMobile(A.p,'initial');
+          await choose(A.p,'The longest-looking friendly chain');
+          if(!/Not this\./.test(await A.p.locator('#ch8Feedback').innerText())) throw new Error('First miss coaching');
+          if(!(await A.p.locator('#ch8Reveal').isDisabled())) throw new Error('Reveal enabled after first miss');
+          await choose(A.p,'A move toward the center');
+          if(await A.p.locator('#ch8Reveal').isDisabled()) throw new Error('Reveal not enabled after second miss');
+          await assertMobile(A.p,'after misses');
+          await A.p.locator('#ch8Reveal').click();
+          const assisted=await A.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter8.v1')).tasks.i1);
+          if(!assisted?.correct||!assisted.assisted||assisted.firstTry!==false) throw new Error('Assisted state '+JSON.stringify(assisted));
+          console.log('PASS structure + mobile shell + staged coaching');
+          await A.ctx.close();
+
+          // B — clean lesson, tactical hierarchy, initiative categories, checkpoint and persistence.
+          const B=await make();
+          await assertStack(B.p);
+          await open(B.p,0,0);
+          const clean=[
+            'Your immediate win, then the opponent\'s immediate win',
+            'Your moves keep creating problems the opponent must answer',
+            'A move whose threat cannot be ignored without a concrete loss',
+            'Stop the one-move win',
+            'Forcing threats and active moves that restrict the opponent\'s replies'
+          ];
+          for(let i=0;i<clean.length;i++){
+            await choose(B.p,clean[i]);
+            if(!(await completeText(B.p))) throw new Error('Clean answer failed '+clean[i]);
+            if(i<clean.length-1) await B.p.locator('#ch8NextTask').click();
+          }
+          report=await B.p.evaluate(()=>window.GomokuCourseChapter8.report());
+          if(!report.lessons[0].complete||report.lessons[0].rate!==1) throw new Error('Lesson 1 score '+JSON.stringify(report.lessons[0]));
+          console.log('PASS clean priority-discipline lesson');
+
+          await open(B.p,1,0);
+          if(await B.p.locator('#ch8Board [data-candidate="1"]').count()!==3) throw new Error('i6 candidate count');
+          await boardMove(B.p,'A5');
+          if(!(await completeText(B.p))) throw new Error('Immediate win i6');
+          const i6=await B.p.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter8.v1')).tasks.i6);
+          if(!i6?.correct||!i6.firstTry||i6.assisted) throw new Error('i6 score '+JSON.stringify(i6));
+          await open(B.p,1,1); await boardMove(B.p,'F7'); if(!(await completeText(B.p))) throw new Error('Mandatory block i7');
+          console.log('PASS threat hierarchy boards');
+
+          await open(B.p,3,0); await boardMove(B.p,'F4'); if(!(await completeText(B.p))) throw new Error('Counter-threat i17');
+          await open(B.p,4,0); await boardMove(B.p,'F6'); if(!(await completeText(B.p))) throw new Error('Candidate ordering i23');
+          await open(B.p,5,1); await boardMove(B.p,'E5'); if(!(await completeText(B.p))) throw new Error('Reset board i29');
+          await open(B.p,6,0); await boardMove(B.p,'E4'); if(!(await completeText(B.p))) throw new Error('Shape conversion i33');
+          console.log('PASS counter-threat + ordering + reset + conversion boards');
+
+          await open(B.p,7,0);
+          if(!/1 \/ 12/.test(await B.p.locator('.ch8-task-count').innerText())) throw new Error('Checkpoint count');
+          await choose(B.p,'Win now → stop immediate loss → forcing candidates → active defense → positional improvement');
+          if(!(await completeText(B.p))) throw new Error('Checkpoint first task');
+          console.log('PASS 12-task checkpoint entry');
+
+          await B.p.reload({waitUntil:'domcontentloaded',timeout:20000});
+          await B.p.waitForFunction(()=>document.body?.dataset?.ready==='true' && typeof window.GomokuCourseChapter8?.report==='function',null,{timeout:20000});
+          const persisted=await B.p.evaluate(()=>({report:window.GomokuCourseChapter8.report(),state:JSON.parse(localStorage.getItem('gomoku.course.chapter8.v1')),counts:[1,2,3,4,5,6,7,8].map(n=>document.querySelectorAll(`#ch${n}CourseCard`).length)}));
+          if(!persisted.report.lessons[0].complete||persisted.report.lessons[1].completed<2||persisted.report.lessons[3].completed<1||persisted.report.lessons[6].completed<1) throw new Error('Progress persistence '+JSON.stringify(persisted.report));
+          for(const id of ['i6','i7','i17','i23','i29','i33','i37']) if(!persisted.state?.tasks?.[id]?.correct) throw new Error('Missing persisted '+id);
+          if(persisted.counts.some(n=>n!==1)) throw new Error('Duplicate cards after reload '+JSON.stringify(persisted.counts));
+          if(B.errors.some(x=>/ch8|chapter 8/i.test(x))) throw new Error('Chapter 8 page errors '+JSON.stringify(B.errors));
+          await assertStack(B.p);
+          console.log('PASS reload persistence + unique Chapters 1-8 + no Chapter 8 errors');
+          await B.ctx.close();
+          await browser.close();
+          console.log('CHAPTER8_CERTIFIED');
+          JS
+          node --check .ch8-cert.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 100s env CHROME="$CHROME" node .ch8-cert.mjs
+
+      - name: Remove certification workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch8-cert.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/certify-ch8-course.yml
+          git commit -m 'Remove Chapter 8 certification' || true
+          git pull --rebase || true
+          git push || true
