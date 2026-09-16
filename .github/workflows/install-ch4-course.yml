@@ -1,0 +1,72 @@
+name: Install Chapter 4 Forks course
+
+on:
+  push:
+    paths:
+      - '.github/workflows/install-ch4-course.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct Chapter 4 module
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64, gzip, hashlib
+          raw = Path('.ch4-module.b64').read_text(encoding='utf-8').strip()
+          data = gzip.decompress(base64.b64decode(raw))
+          expected = '42254751cec5569260dd8cec1f498cc4b2444efd58dd9228eabb27288f4c6b31'
+          actual = hashlib.sha256(data).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'Chapter 4 payload hash mismatch: {actual}')
+          Path('/tmp/ch4_module.html').write_bytes(data)
+      - name: Install module
+        shell: python
+        run: |
+          from pathlib import Path
+          app = Path('index.html')
+          s = app.read_text(encoding='utf-8')
+          module = Path('/tmp/ch4_module.html').read_text(encoding='utf-8')
+          if s.count('id="course-ch3-v1-script"') != 1:
+              raise SystemExit('Chapter 3 baseline must exist exactly once')
+          if 'course-ch4-v1-script' in s or 'course-ch4-v1-style' in s:
+              raise SystemExit('Chapter 4 already exists')
+          if module.count('id="course-ch4-v1-script"') != 1 or module.count('id="course-ch4-v1-style"') != 1:
+              raise SystemExit('Invalid Chapter 4 module markers')
+          i = s.rfind('</body>')
+          if i < 0:
+              raise SystemExit('Missing closing body tag')
+          s = s[:i] + '\n' + module.rstrip() + '\n\n' + s[i:]
+          app.write_text(s, encoding='utf-8')
+      - name: Validate app
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          for n in range(1,5):
+              marker=f'id="course-ch{n}-v1-script"'
+              assert s.count(marker)==1, (n,s.count(marker))
+          assert s.count('id="course-ch4-v1-style"')==1
+          assert 'gomoku.course.chapter4.v1' in s
+          m=re.search(r'<script id="course-ch4-v1-script">\s*(.*?)\s*</script>',s,re.S)
+          assert m
+          Path('/tmp/ch4.js').write_text(m.group(1),encoding='utf-8')
+          PY
+          node --check /tmp/ch4.js
+          git diff --check
+      - name: Commit clean implementation
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .ch4-module.b64 .github/workflows/install-ch4-course.yml
+          git commit -m 'Implement Chapter 4 Forks and Double Threats course'
+          git push
