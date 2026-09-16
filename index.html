@@ -6956,4 +6956,342 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<!-- Chapter 3 — Threes -->
+
+<style id="course-ch3-v1-style">
+#ch3CourseCard{box-sizing:border-box;position:relative;overflow:hidden;margin-top:14px;padding:20px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:18px;background:color-mix(in srgb,var(--surface,#fff) 94%,#b98b55 6%);color:inherit;box-shadow:0 8px 28px rgba(0,0,0,.07)}
+#ch3CourseCard::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#b98b55,#786044)}
+.ch3-card-top{display:flex;gap:18px;align-items:flex-start;justify-content:space-between}
+.ch3-kicker{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.62}
+#ch3CourseCard h3{margin:5px 0 7px;font-size:1.35rem;line-height:1.15}
+#ch3CourseCard p{margin:0;max-width:68ch;font-size:.91rem;line-height:1.55;opacity:.76}
+.ch3-card-stat{flex:0 0 auto;min-width:86px;text-align:right}
+.ch3-card-stat strong{display:block;font-size:1.35rem;line-height:1}
+.ch3-card-stat span{font-size:.72rem;opacity:.6}
+.ch3-progress{height:6px;margin:16px 0 9px;border-radius:99px;background:color-mix(in srgb,currentColor 10%,transparent);overflow:hidden}
+.ch3-progress>i{display:block;height:100%;width:0;border-radius:inherit;background:currentColor;opacity:.72;transition:width .25s ease}
+.ch3-card-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.75rem;opacity:.66}
+.ch3-card-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.ch3-btn{min-height:42px;padding:0 15px;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:11px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+.ch3-btn:hover{background:color-mix(in srgb,currentColor 7%,transparent)}
+.ch3-btn.primary{background:currentColor;color:var(--surface,#fff)}
+.ch3-btn.primary span{filter:invert(1)}
+#ch3CourseDialog{box-sizing:border-box;width:min(940px,calc(100vw - 24px));max-height:min(92dvh,900px);padding:0;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:20px;background:var(--surface,#fff);color:var(--text,#171717);box-shadow:0 30px 90px rgba(0,0,0,.32);overflow:hidden}
+#ch3CourseDialog::backdrop{background:rgba(10,10,10,.58);backdrop-filter:blur(3px)}
+.ch3-shell{display:grid;grid-template-rows:auto auto minmax(0,1fr);max-height:min(92dvh,900px)}
+.ch3-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px 13px;border-bottom:1px solid color-mix(in srgb,currentColor 11%,transparent)}
+.ch3-head-copy{min-width:0}.ch3-head-copy b{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.56}.ch3-head-copy h2{margin:3px 0 0;font-size:1.25rem}
+#ch3Close{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:50%;background:transparent;color:inherit;font-size:1.25rem;cursor:pointer}
+.ch3-lessons{display:flex;gap:7px;padding:10px 14px;overflow-x:auto;border-bottom:1px solid color-mix(in srgb,currentColor 9%,transparent);scrollbar-width:none}
+.ch3-lessons::-webkit-scrollbar{display:none}
+.ch3-lesson-chip{flex:0 0 auto;padding:8px 11px;border:1px solid color-mix(in srgb,currentColor 13%,transparent);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:.76rem;cursor:pointer;white-space:nowrap}
+.ch3-lesson-chip.active{background:currentColor;color:var(--surface,#fff)}
+.ch3-lesson-chip.done::after{content:" ✓";font-weight:900}
+.ch3-main{display:grid;grid-template-columns:minmax(310px,42%) 1fr;min-height:0;overflow:auto}
+.ch3-board-pane{display:flex;flex-direction:column;gap:10px;padding:18px;border-right:1px solid color-mix(in srgb,currentColor 10%,transparent);background:color-mix(in srgb,#b98b55 8%,transparent)}
+.ch3-board-wrap{width:min(100%,430px);margin:auto;aspect-ratio:1;position:relative}
+#ch3Board{display:grid;grid-template-columns:repeat(11,1fr);width:100%;height:100%;border:1px solid rgba(63,43,27,.32);background:#d7ae79;box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
+.ch3-cell{position:relative;display:grid;place-items:center;min-width:0;min-height:0;padding:0;border:0;border-right:1px solid rgba(67,45,29,.27);border-bottom:1px solid rgba(67,45,29,.27);background:transparent;cursor:default}
+.ch3-cell:nth-child(11n){border-right:0}
+.ch3-cell:nth-last-child(-n+11){border-bottom:0}
+.ch3-cell[data-candidate="1"]{cursor:pointer;background:rgba(255,255,255,.18)}
+.ch3-cell[data-candidate="1"]:hover,.ch3-cell[data-candidate="1"]:focus-visible{outline:2px solid rgba(36,27,20,.76);outline-offset:-3px;background:rgba(255,255,255,.34)}
+.ch3-stone{width:72%;aspect-ratio:1;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.28)}
+.ch3-stone.black{background:radial-gradient(circle at 32% 28%,#555,#111 62%,#000)}
+.ch3-stone.white{background:radial-gradient(circle at 32% 28%,#fff,#ece8e0 65%,#c9c2b7);border:1px solid rgba(0,0,0,.16)}
+.ch3-candidate-dot{width:22%;aspect-ratio:1;border-radius:50%;background:rgba(58,40,27,.38)}
+.ch3-coord{position:absolute;right:2px;bottom:1px;font-size:8px;color:rgba(45,31,22,.38);pointer-events:none}
+.ch3-board-note{display:flex;justify-content:space-between;gap:8px;font-size:.73rem;opacity:.63}
+.ch3-content{display:flex;flex-direction:column;min-width:0;padding:19px}
+.ch3-task-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ch3-task-top .ch3-kicker{margin-bottom:4px}
+#ch3TaskTitle{margin:0;font-size:1.18rem;line-height:1.25}
+.ch3-task-count{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,currentColor 7%,transparent);font-size:.72rem;font-weight:750}
+#ch3Prompt{margin:14px 0 0;font-size:.98rem;line-height:1.6}
+.ch3-rule{display:inline-flex;align-self:flex-start;margin-top:10px;padding:5px 8px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:8px;font-size:.7rem;font-weight:750;opacity:.66}
+#ch3Choices{display:grid;gap:8px;margin-top:16px}
+.ch3-choice{width:100%;min-height:44px;padding:10px 12px;text-align:left;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:11px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.ch3-choice:hover:not(:disabled){background:color-mix(in srgb,currentColor 6%,transparent)}
+.ch3-choice:disabled{cursor:default;opacity:.72}
+#ch3Feedback{min-height:46px;margin-top:15px;padding:11px 12px;border-radius:11px;background:color-mix(in srgb,currentColor 6%,transparent);font-size:.85rem;line-height:1.48}
+#ch3Feedback.good{background:color-mix(in srgb,#2f8a50 13%,transparent)}
+#ch3Feedback.miss{background:color-mix(in srgb,#b2762a 13%,transparent)}
+.ch3-content-actions{display:flex;gap:8px;align-items:center;margin-top:auto;padding-top:16px;flex-wrap:wrap}
+#ch3Reveal[hidden]{display:none}
+#ch3NextTask{margin-left:auto}
+.ch3-lesson-copy{margin-top:9px;font-size:.78rem;line-height:1.45;opacity:.61}
+@media(max-width:680px){
+  #ch3CourseDialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:16px}
+  .ch3-shell{max-height:calc(100dvh - 12px)}
+  .ch3-head{padding:13px 14px 10px}
+  .ch3-lessons{padding:8px 10px}
+  .ch3-main{display:block;overflow:auto}
+  .ch3-board-pane{padding:11px 13px;border-right:0;border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent)}
+  .ch3-board-wrap{width:min(100%,350px)}
+  .ch3-content{padding:14px 14px 18px}
+  #ch3Prompt{margin-top:11px}
+  .ch3-card-top{gap:10px}
+  .ch3-card-stat{min-width:70px}
+  .ch3-choice,.ch3-btn{min-height:46px}
+}
+</style>
+
+
+<script id="course-ch3-v1-script">
+(()=>{
+'use strict';
+if(window.GomokuCourseChapter3)return;
+const COURSE={"lessons":[{"title":"Recognize threes","eyebrow":"Lesson 1","description":"Separate open, blocked, broken and edge-cramped shapes before calculating tactics."},{"title":"Open threes","eyebrow":"Lesson 2","description":"See the two growth points and convert clean threes into open fours."},{"title":"Broken threes","eyebrow":"Lesson 3","description":"Find internal gaps and jump patterns that hide four-making moves."},{"title":"Extend into fours","eyebrow":"Lesson 4","description":"Turn latent potential into forcing open or closed fours at the right moment."},{"title":"Defend early","eyebrow":"Lesson 5","description":"Intervene while a threat is still a three instead of waiting for an open four."},{"title":"Three–four ladders","eyebrow":"Lesson 6","description":"Keep the initiative by chaining only moves that create immediate obligations."},{"title":"Multiple threes & Renju","eyebrow":"Lesson 7","description":"Use multi-three geometry in Gomoku and judge genuine Black double-threes correctly in Renju."},{"title":"Chapter checkpoint","eyebrow":"Checkpoint","description":"Twelve mixed positions covering recognition, attack, defense, forcing priority and Renju legality."}],"tasks":[{"id":"r1","lesson":0,"title":"The basic open three","prompt":"Black has three connected stones with room on both sides. What is this structure?","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["Open three","Broken three","Closed four","Not a threat"],"correct":["Open three"],"candidates":[],"hint1":"Count the stones, then inspect both ends.","hint2":"Both E6 and I6 are free; either side can be used to grow the line.","explanation":"F6–H6 with both E6 and I6 free is the basic open-three shape. A move on either side can create an open four.","rule":"Pattern"},{"id":"r2","lesson":0,"title":"One side is sealed","prompt":"White occupies one end of Black’s three. How should you classify Black’s line?","kind":"choice","board":{"black":["F6","G6","H6"],"white":["E6"]},"choices":["Open three","Blocked three","Broken three","Open four"],"correct":["Blocked three"],"candidates":[],"hint1":"An open three needs useful growth space on both sides.","hint2":"E6 is already occupied by White, so Black has only one clean outside extension.","explanation":"The stones are still a three, but it is not open: White has sealed E6. Black can grow on I6, yet the two-sided open-four conversion is gone.","rule":"Pattern"},{"id":"r3","lesson":0,"title":"The internal gap","prompt":"Black has three stones with a one-point hole inside the line. What family does this belong to?","kind":"choice","board":{"black":["F6","G6","I6"],"white":[]},"choices":["Open three","Broken three","Closed four","Dead shape"],"correct":["Broken three"],"candidates":[],"hint1":"Do not only count consecutive stones.","hint2":"H6 is the internal gap that can connect the stones into a four.","explanation":"F6, G6 and I6 form a broken (jump) three. The internal point H6 is tactically important because filling it creates four connected stones.","rule":"Pattern"},{"id":"r4","lesson":0,"title":"The edge changes the shape","prompt":"Black has A6–C6 on the board edge. Is this an open three?","kind":"choice","board":{"black":["A6","B6","C6"],"white":[]},"choices":["Yes — open three","No — edge-cramped three","Yes — broken three","It is already a four"],"correct":["No — edge-cramped three"],"candidates":[],"hint1":"Imagine the two outside growth points an open three would need.","hint2":"There is no square to the left of A6.","explanation":"The edge removes one side entirely. A6–C6 can still grow at D6, but it does not have the two-sided geometry of an open three.","rule":"Pattern"},{"id":"o1","lesson":1,"title":"Convert the open three","prompt":"Black to move. Choose a move that turns the open three into an open four.","kind":"move","board":{"black":["F6","G6","H6"],"white":[]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","C3"],"hint1":"Stay on the same horizontal line.","hint2":"Use either free endpoint next to F6–H6.","explanation":"E6 or I6 creates four connected Black stones with an empty winning point at each end. That is an open four and therefore a forcing threat.","rule":"Tactic"},{"id":"o2","lesson":1,"title":"Diagonal growth","prompt":"The same idea works diagonally. Which move creates the open four?","kind":"move","board":{"black":["F5","G6","H7"],"white":[]},"choices":[],"correct":["E4","I8"],"candidates":["E4","I8","H5"],"hint1":"Trace the F5–G6–H7 diagonal.","hint2":"Its two natural extension points are E4 and I8.","explanation":"Playing E4 or I8 extends the diagonal three to four while preserving an empty point at the opposite outer end and another beyond the played stone.","rule":"Tactic"},{"id":"o3","lesson":1,"title":"Why open threes matter","prompt":"What makes a clean open three strategically dangerous?","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["It wins immediately","It can become an open four","It cannot be blocked","It counts as five"],"correct":["It can become an open four"],"candidates":[],"hint1":"A three is potential, not yet an immediate win.","hint2":"Ask what the next attacking move can create.","explanation":"The value of an open three is that one move can convert it into an open four. The open four then creates two winning endpoints and forces the defender into a losing geometry unless the attack was prevented earlier.","rule":"Concept"},{"id":"o4","lesson":1,"title":"Blocked conversion","prompt":"White already occupies E6. If Black plays I6, what does Black create?","kind":"choice","board":{"black":["F6","G6","H6"],"white":["E6"]},"choices":["Open four","Closed four","Broken three","Double four"],"correct":["Closed four"],"candidates":[],"hint1":"After I6, inspect both ends of the four.","hint2":"E6 is White, while J6 remains empty.","explanation":"I6 gives Black F6–I6, but E6 is blocked. Only J6 remains as the direct winning endpoint, so the result is a closed four rather than an open four.","rule":"Tactic"},{"id":"o5","lesson":1,"title":"Keep the initiative","prompt":"Black can either extend the open three or play a quiet move elsewhere. Which move preserves the forcing path?","kind":"move","board":{"black":["F6","G6","H6","C3"],"white":["D4"]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","C4"],"hint1":"A forcing move changes what the opponent must answer.","hint2":"Turn the existing three into a four instead of starting a second slow idea.","explanation":"E6 or I6 immediately upgrades the three into an open four. C4 may improve another area, but it gives the opponent freedom because it does not create the same immediate threat.","rule":"Tactic"},{"id":"b1","lesson":2,"title":"Fill the middle gap","prompt":"Black has F6, G6 and I6. Which move connects the broken three into four?","kind":"move","board":{"black":["F6","G6","I6"],"white":[]},"choices":[],"correct":["H6"],"candidates":["H6","E6","J6"],"hint1":"Look inside the pattern before looking outside it.","hint2":"H6 is the only missing point between G6 and I6.","explanation":"H6 fills the internal gap and produces F6–I6, a four. Broken threes are easy to underestimate because their key growth point is inside the visible stones.","rule":"Tactic"},{"id":"b2","lesson":2,"title":"Gap on the other side","prompt":"Which point completes Black’s X.XX shape into four connected stones?","kind":"move","board":{"black":["F6","H6","I6"],"white":[]},"choices":[],"correct":["G6"],"candidates":["G6","E6","J6"],"hint1":"The missing point lies between F6 and H6.","hint2":"Play G6.","explanation":"G6 connects F6 with H6–I6. The location of the gap changes, but the scan rule is the same: inspect internal empties that join separated stones.","rule":"Tactic"},{"id":"b3","lesson":2,"title":"Diagonal broken three","prompt":"Black’s diagonal has a gap. Which move turns it into four?","kind":"move","board":{"black":["F5","G6","I8"],"white":[]},"choices":[],"correct":["H7"],"candidates":["H7","E4","J9"],"hint1":"Follow the same diagonal through the missing coordinate.","hint2":"F5, G6, H7, I8 are consecutive diagonal points.","explanation":"H7 is the connecting move. Broken threes can appear horizontally, vertically or diagonally; the geometry, not the visual orientation, is what matters.","rule":"Tactic"},{"id":"b4","lesson":2,"title":"Real potential or decoration?","prompt":"Black has F6, G6 and I6, but White occupies H6. Is Black’s apparent broken three still connectable through the gap?","kind":"choice","board":{"black":["F6","G6","I6"],"white":["H6"]},"choices":["Yes — H6 is available","No — the key gap is occupied","Yes — it is an open three","It is already a four"],"correct":["No — the key gap is occupied"],"candidates":[],"hint1":"Check whether the critical internal point is actually empty.","hint2":"White owns H6.","explanation":"The geometry resembles a broken three, but its connecting point is unavailable. Threat recognition must include occupancy, not just a visual pattern.","rule":"Pattern"},{"id":"b5","lesson":2,"title":"Choose the useful fill","prompt":"Black has E6, G6 and H6. Which candidate creates a clean four immediately?","kind":"move","board":{"black":["E6","G6","H6"],"white":[]},"choices":[],"correct":["F6"],"candidates":["F6","I6"],"hint1":"One move fills the internal hole; the other extends the outside.","hint2":"F6 connects E6 to G6–H6.","explanation":"F6 creates E6–H6, four connected stones. I6 leaves the F6 hole untouched, so the line remains disconnected.","rule":"Tactic"},{"id":"e1","lesson":3,"title":"Three to open four","prompt":"Black to move. Which endpoints turn F6–H6 into an open four?","kind":"move","board":{"black":["F6","G6","H6"],"white":[]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","F5"],"hint1":"The conversion happens on the line of the three.","hint2":"Both adjacent endpoints work.","explanation":"E6 and I6 are equivalent forcing conversions. This is the core three-to-four transition: the three is valuable because it can create a threat the opponent cannot answer with a single block.","rule":"Tactic"},{"id":"e2","lesson":3,"title":"Three to closed four","prompt":"White has sealed E6. Which move gives Black a direct one-end winning threat?","kind":"move","board":{"black":["F6","G6","H6"],"white":["E6"]},"choices":[],"correct":["I6"],"candidates":["I6","F5","G5"],"hint1":"Only one horizontal outside point remains.","hint2":"Extend at I6.","explanation":"I6 creates the closed four F6–I6 with J6 as the single winning endpoint. Closed fours are still forcing, but unlike open fours they can be met by one precise block.","rule":"Tactic"},{"id":"e3","lesson":3,"title":"Broken three to four","prompt":"Which move converts Black’s broken three into a direct four threat?","kind":"move","board":{"black":["F6","G6","I6"],"white":["E6"]},"choices":[],"correct":["H6"],"candidates":["H6","J6","F5"],"hint1":"Connect the existing stones before extending farther.","hint2":"The internal gap is H6.","explanation":"H6 creates four connected stones. With E6 blocked by White, J6 becomes the direct winning endpoint, so the new four is forcing.","rule":"Tactic"},{"id":"e4","lesson":3,"title":"Do not start over","prompt":"Black already has an open three. Which move should be preferred over starting a new three elsewhere?","kind":"move","board":{"black":["F6","G6","H6","C3","D3"],"white":["C4"]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","E3"],"hint1":"Compare an immediate four with another non-forcing three.","hint2":"Finish the stronger threat first.","explanation":"E6 or I6 creates an open four now. E3 may build another three, but a forcing four has higher tactical priority because it constrains the opponent immediately.","rule":"Priority"},{"id":"e5","lesson":3,"title":"The forcing transition","prompt":"After Black converts an open three into an open four, what is the defender’s fundamental problem?","kind":"choice","board":{"black":["E6","F6","G6","H6"],"white":[]},"choices":["There are two winning endpoints","The four disappears","Only one endpoint exists","Black must pass"],"correct":["There are two winning endpoints"],"candidates":[],"hint1":"Inspect D6 and I6.","hint2":"Both endpoints complete five.","explanation":"An open four has two winning endpoints. Blocking one leaves the other, which is why prevention usually has to happen while the structure is still a three.","rule":"Concept"},{"id":"d1","lesson":4,"title":"Defend before the four","prompt":"White has an open three at F6–H6. Which points can Black occupy now to reduce the two-sided threat?","kind":"move","board":{"black":["C3"],"white":["F6","G6","H6"]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","C4"],"hint1":"Do not wait for White to create the open four.","hint2":"Take one of White’s two growth endpoints.","explanation":"E6 or I6 removes one side of White’s open-three conversion. White can still create a closed four on the other side, but Black can then answer its single winning endpoint. Timing matters.","rule":"Defense"},{"id":"d2","lesson":4,"title":"Too late","prompt":"White already has an open four E6–H6 with both ends empty. Can one ordinary block save Black?","kind":"choice","board":{"black":["C3"],"white":["E6","F6","G6","H6"]},"choices":["Yes — one block solves it","No — two winning endpoints remain","Yes — pass instead","Only in freestyle"],"correct":["No — two winning endpoints remain"],"candidates":[],"hint1":"Count White’s winning moves.","hint2":"D6 and I6 both complete five.","explanation":"Once the open four exists, one block cannot cover both winning endpoints. This is exactly why strong defense recognizes and disrupts the preceding open three.","rule":"Defense"},{"id":"d3","lesson":4,"title":"Your win comes first","prompt":"White has an open three, but Black can complete five immediately. What has priority?","kind":"move","board":{"black":["B3","C3","D3","E3"],"white":["F6","G6","H6"]},"choices":[],"correct":["F3"],"candidates":["F3","E6","I6"],"hint1":"Check immediate wins before defensive threats.","hint2":"F3 gives Black five now.","explanation":"An immediate legal win outranks preventive defense. Threat scanning should always begin with: can I win now?","rule":"Priority"},{"id":"d4","lesson":4,"title":"Stop the broken conversion","prompt":"White’s F6, G6, I6 can become a forcing four by filling the gap. Which defensive move attacks that conversion directly?","kind":"move","board":{"black":["C3"],"white":["F6","G6","I6"]},"choices":[],"correct":["H6"],"candidates":["H6","E6","J6"],"hint1":"Find White’s critical connecting point.","hint2":"It is inside the pattern, not at an outer end.","explanation":"H6 is White’s key conversion square. Occupying it prevents the immediate connection into four and is more precise than blocking a less urgent outer point.","rule":"Defense"},{"id":"d5","lesson":4,"title":"Choose the real danger","prompt":"White has an edge-cramped three at A4–C4 and a clean open three at F7–H7. Which threat deserves the urgent block?","kind":"move","board":{"black":["C9"],"white":["A4","B4","C4","F7","G7","H7"]},"choices":[],"correct":["E7","I7"],"candidates":["D4","E7","I7"],"hint1":"Compare how many useful growth directions each three has.","hint2":"F7–H7 can become an open four from either side.","explanation":"The central open three is more dangerous because it has two clean forcing conversions. The edge three has only one outside direction and is easier to contain.","rule":"Defense"},{"id":"l1","lesson":5,"title":"Four before another three","prompt":"Black can make a forcing four or create a second quiet three. Which is the tactical continuation?","kind":"move","board":{"black":["F6","G6","H6","C3","D3"],"white":["C4"]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","E3"],"hint1":"Forcing moves reduce the opponent’s choices.","hint2":"Turn the existing three into four.","explanation":"A four demands an immediate answer. A second three may be useful later, but it gives the defender time. Good forcing sequences repeatedly choose moves the opponent cannot ignore.","rule":"Forcing"},{"id":"l2","lesson":5,"title":"After the forced block","prompt":"Imagine Black’s previous four forced White to block on E6. Which move now creates the next forcing four on the diagonal?","kind":"move","board":{"black":["F5","G6","H7","G5"],"white":["E6","J8"]},"choices":[],"correct":["I8"],"candidates":["I8","F6","H5"],"hint1":"Scan for a three that can become four immediately.","hint2":"Follow F5–G6–H7 to I8.","explanation":"I8 extends the diagonal three into a four. A three–four ladder works when each attacking move hands the defender another immediate obligation.","rule":"Forcing"},{"id":"l3","lesson":5,"title":"Order of a forcing attack","prompt":"Which sequence best describes the basic attacking ladder taught in this chapter?","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["Three → forcing four → five","Three → pass → four","Four → three → two","Three → random move → five"],"correct":["Three → forcing four → five"],"candidates":[],"hint1":"Each step should increase urgency.","hint2":"A three supplies the potential; a four supplies the immediate threat.","explanation":"The basic ladder is three → forcing four → five. Strong attacks often chain several fours before the final five, but every link must remain forcing.","rule":"Concept"},{"id":"l4","lesson":5,"title":"When the ladder breaks","prompt":"If your next move creates only another non-forcing three and the opponent has an immediate four threat, whose threat has priority?","kind":"choice","board":{"black":["F6","G6","H6"],"white":["C3","D3","E3","F3"]},"choices":["Continue the quiet three","Answer the opponent’s four","Ignore both","Pass"],"correct":["Answer the opponent’s four"],"candidates":[],"hint1":"Compare immediacy, not just shape size.","hint2":"A four threatens a win on the next move; a three does not.","explanation":"The forcing ladder is only real while each step keeps initiative. If your move ceases to force and the opponent has a direct four threat, you must answer the more immediate danger.","rule":"Priority"},{"id":"l5","lesson":5,"title":"Create the next obligation","prompt":"Black has a broken three F6, G6, I6. Which move creates a direct four and therefore another obligation for White?","kind":"move","board":{"black":["F6","G6","I6","C4"],"white":["E6"]},"choices":[],"correct":["H6"],"candidates":["H6","J6","C5"],"hint1":"The next forcing move is hidden in the internal gap.","hint2":"H6 connects four stones.","explanation":"H6 converts the broken three into a closed four. White must address the resulting winning endpoint, allowing Black to keep the initiative if another forcing continuation exists.","rule":"Forcing"},{"id":"m1","lesson":6,"title":"Two threes in ordinary Gomoku","prompt":"In ordinary Gomoku, Black can play F6 to create horizontal and vertical open-three shapes at once. How should that move be viewed?","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":[]},"choices":["Legal and potentially powerful","Always forbidden","An automatic loss","It counts as an overline"],"correct":["Legal and potentially powerful"],"candidates":[],"hint1":"Do not import Renju’s Black-only forbidden-move rules into ordinary Gomoku.","hint2":"Double-three restrictions are a Renju rule, not a general Gomoku rule.","explanation":"In ordinary Gomoku, simultaneously creating multiple three threats is legal and can be very strong because the defender may not be able to prevent every conversion.","rule":"Gomoku"},{"id":"m2","lesson":6,"title":"Renju Black double-three","prompt":"Under Renju, Black plays F6 in this cross and creates two genuine open-three threats. Is the move legal?","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":[]},"choices":["Yes — both threes are allowed","No — genuine double-three is forbidden","Yes — only fours are forbidden","No — White may not play it either"],"correct":["No — genuine double-three is forbidden"],"candidates":[],"hint1":"Renju restricts Black’s creation of multiple genuine threes.","hint2":"This move creates one horizontal and one vertical open-three threat.","explanation":"For Black in Renju, a move that creates two genuine open-three threats is a forbidden double-three. The app’s Renju rules treat this separately from ordinary Gomoku.","rule":"Renju · Black"},{"id":"m3","lesson":6,"title":"The same geometry for White","prompt":"Under Renju, White creates the same two-three cross. Does the Black double-three prohibition apply to White?","kind":"choice","board":{"black":[],"white":["F5","F7","E6","G6"]},"choices":["Yes — forbidden for both colors","No — the restriction is Black-only","Only if on F6","Only on diagonals"],"correct":["No — the restriction is Black-only"],"candidates":[],"hint1":"Recall which color carries Renju’s forbidden-move restrictions.","hint2":"White is not restricted by Black’s double-three rule.","explanation":"Renju’s double-three, double-four and overline prohibitions apply to Black. White may create the same geometric multi-three structure.","rule":"Renju · White"},{"id":"m4","lesson":6,"title":"A false double-three","prompt":"Black’s F6 move would appear to make two threes, but White already blocks H6 on the horizontal line. Is this automatically a forbidden Renju double-three?","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":["H6"]},"choices":["Yes — any two three-looking lines are forbidden","No — both threats must be genuine","Yes — any cross is forbidden","No — double-three never exists"],"correct":["No — both threats must be genuine"],"candidates":[],"hint1":"Renju does not judge the move by visual symmetry alone.","hint2":"A blocked or unusable branch may fail to qualify as a genuine open-three threat.","explanation":"Not every pair of three-looking shapes is a Renju double-three. The created threes must be genuine under Renju’s legality conditions; blocked or otherwise non-qualifying branches do not automatically make the move forbidden.","rule":"Renju · Black"},{"id":"m5","lesson":6,"title":"The legality scan","prompt":"Before calling a Black Renju move a double-three, what must you verify?","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":[]},"choices":["That two genuine open-three threats are created","Only that five stones are nearby","That the board is symmetric","That White agrees"],"correct":["That two genuine open-three threats are created"],"candidates":[],"hint1":"Count tactical threats, not decorative alignments.","hint2":"Each branch has to qualify as a genuine three under Renju.","explanation":"The correct scan is functional: does the Black move create at least two genuine open-three threats that can legally develop as required? Mere visual resemblance is not enough.","rule":"Renju · Black"},{"id":"c1","lesson":7,"title":"Checkpoint · identify","prompt":"Classify Black’s F6–H6 with both ends free.","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["Open three","Broken three","Closed four","Dead shape"],"correct":["Open three"],"candidates":[],"hint1":"Check E6 and I6.","hint2":"Both ends are free.","explanation":"This is the basic open three.","rule":"Checkpoint"},{"id":"c2","lesson":7,"title":"Checkpoint · broken","prompt":"Which point connects Black’s F6, G6, I6 into a four?","kind":"move","board":{"black":["F6","G6","I6"],"white":[]},"choices":[],"correct":["H6"],"candidates":["H6","E6","J6"],"hint1":"Look inside.","hint2":"H6 is the gap.","explanation":"H6 fills the internal gap and creates four.","rule":"Checkpoint"},{"id":"c3","lesson":7,"title":"Checkpoint · open-four conversion","prompt":"Choose an endpoint that turns Black’s open three into an open four.","kind":"move","board":{"black":["F6","G6","H6"],"white":[]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","F5"],"hint1":"Stay horizontal.","hint2":"Either outside endpoint works.","explanation":"E6 or I6 creates the forcing open four.","rule":"Checkpoint"},{"id":"c4","lesson":7,"title":"Checkpoint · defend early","prompt":"White has F6–H6 open. Which defensive points reduce the threat before it becomes an open four?","kind":"move","board":{"black":["C3"],"white":["F6","G6","H6"]},"choices":[],"correct":["E6","I6"],"candidates":["E6","I6","C4"],"hint1":"Block a growth endpoint.","hint2":"E6 or I6.","explanation":"Preventing one side while the shape is still a three keeps the position defensible.","rule":"Checkpoint"},{"id":"c5","lesson":7,"title":"Checkpoint · too late","prompt":"White has an open four. Can Black stop both winning ends with one ordinary move?","kind":"choice","board":{"black":[],"white":["E6","F6","G6","H6"]},"choices":["Yes","No","Only by passing","Only in Renju"],"correct":["No"],"candidates":[],"hint1":"Count endpoints.","hint2":"D6 and I6 both win.","explanation":"One move cannot cover both endpoints of an open four.","rule":"Checkpoint"},{"id":"c6","lesson":7,"title":"Checkpoint · immediate priority","prompt":"Black can win now at F3 while White has an open three. Choose the move.","kind":"move","board":{"black":["B3","C3","D3","E3"],"white":["F6","G6","H6"]},"choices":[],"correct":["F3"],"candidates":["F3","E6","I6"],"hint1":"Wins before prevention.","hint2":"F3 completes five.","explanation":"Take the legal immediate win.","rule":"Checkpoint"},{"id":"c7","lesson":7,"title":"Checkpoint · diagonal","prompt":"Which move connects the diagonal broken three F5, G6, I8?","kind":"move","board":{"black":["F5","G6","I8"],"white":[]},"choices":[],"correct":["H7"],"candidates":["H7","E4","J9"],"hint1":"Trace the diagonal.","hint2":"H7 is missing.","explanation":"H7 creates four connected diagonal stones.","rule":"Checkpoint"},{"id":"c8","lesson":7,"title":"Checkpoint · forcing logic","prompt":"Why is a forcing four normally preferred over beginning another unrelated three?","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["It demands an immediate reply","It is worth more points","Threes are illegal","It removes stones"],"correct":["It demands an immediate reply"],"candidates":[],"hint1":"Think initiative.","hint2":"A four threatens a next-move win.","explanation":"Forcing moves constrain the defender and preserve the attacker's initiative.","rule":"Checkpoint"},{"id":"c9","lesson":7,"title":"Checkpoint · ordinary Gomoku","prompt":"In ordinary Gomoku, a move that creates two open-three threats is generally…","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":[]},"choices":["Legal","Always forbidden","An overline","A draw"],"correct":["Legal"],"candidates":[],"hint1":"Separate Gomoku from Renju.","hint2":"Double-three is a Renju Black restriction.","explanation":"Ordinary Gomoku permits the tactic.","rule":"Checkpoint · Gomoku"},{"id":"c10","lesson":7,"title":"Checkpoint · Renju Black","prompt":"In Renju, Black creates two genuine open threes with one move. The move is…","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":[]},"choices":["Legal","Forbidden","A forced pass","White’s move"],"correct":["Forbidden"],"candidates":[],"hint1":"Recall Black’s forbidden moves.","hint2":"Genuine double-three is prohibited.","explanation":"A genuine Black double-three is forbidden in Renju.","rule":"Checkpoint · Renju"},{"id":"c11","lesson":7,"title":"Checkpoint · false double-three","prompt":"Two lines look like threes, but one is blocked and does not qualify as a genuine threat. Is the position automatically a Renju double-three?","kind":"choice","board":{"black":["F5","F7","E6","G6"],"white":["H6"]},"choices":["Yes","No","Only for White","Only at the center"],"correct":["No"],"candidates":[],"hint1":"Visual count is insufficient.","hint2":"Both created threes must be genuine.","explanation":"Renju double-three evaluation is functional, not merely geometric.","rule":"Checkpoint · Renju"},{"id":"c12","lesson":7,"title":"Checkpoint · core principle","prompt":"What is the central tactical lesson of Chapter 3?","kind":"choice","board":{"black":["F6","G6","H6"],"white":[]},"choices":["See which threes can become forcing fours","Every three wins immediately","Ignore defense until four appears","All threes are equivalent"],"correct":["See which threes can become forcing fours"],"candidates":[],"hint1":"A three is potential.","hint2":"The key question is what it becomes next.","explanation":"Strong play distinguishes real three potential from decorative shapes and acts before that potential becomes an unavoidable four.","rule":"Checkpoint"}]};
+const KEY='gomoku.course.chapter3.v1';
+const VERSION=1;
+const COLS='ABCDEFGHIJK'.split('');
+const lessonTasks=COURSE.lessons.map((_,i)=>COURSE.tasks.filter(t=>t.lesson===i));
+let currentLesson=0,currentTask=0,attempts=0,answered=false,mountQueued=false;
+
+function fresh(){return{version:VERSION,tasks:{},lastLesson:0,lastTask:0}}
+function load(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(raw&&raw.version===VERSION&&raw.tasks)return raw;
+  }catch{}
+  return fresh();
+}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}}
+function resultFor(id){return load().tasks[id]||null}
+function taskRecord(id,patch){
+  const s=load(),prev=s.tasks[id]||{attempts:0,correct:false,assisted:false,firstTry:false};
+  s.tasks[id]={...prev,...patch,updatedAt:Date.now()};
+  s.lastLesson=currentLesson;s.lastTask=currentTask;save(s);return s.tasks[id];
+}
+function report(){
+  const s=load();
+  const per=COURSE.lessons.map((lesson,i)=>{
+    const list=lessonTasks[i],records=list.map(t=>s.tasks[t.id]).filter(Boolean);
+    const solved=list.filter(t=>s.tasks[t.id]?.correct).length;
+    const firstTry=list.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.firstTry).length;
+    const assisted=list.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.assisted).length;
+    return{title:lesson.title,total:list.length,solved,firstTry,assisted,complete:solved===list.length,rate:solved?firstTry/solved:0};
+  });
+  const solved=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct).length;
+  const firstTry=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.firstTry).length;
+  const assisted=COURSE.tasks.filter(t=>s.tasks[t.id]?.correct&&s.tasks[t.id]?.assisted).length;
+  return{totalTasks:COURSE.tasks.length,totalLessons:COURSE.lessons.length,solved,firstTry,assisted,complete:solved===COURSE.tasks.length,lessons:per};
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ensureDialog(){
+  let d=document.getElementById('ch3CourseDialog');
+  if(d)return d;
+  d=document.createElement('dialog');d.id='ch3CourseDialog';
+  d.innerHTML=`<div class="ch3-shell">
+    <header class="ch3-head">
+      <div class="ch3-head-copy"><b>Gomoku course · Chapter 3</b><h2>Threes</h2></div>
+      <button id="ch3Close" aria-label="Close Chapter 3">×</button>
+    </header>
+    <nav class="ch3-lessons" id="ch3LessonNav" aria-label="Chapter 3 lessons"></nav>
+    <div class="ch3-main">
+      <section class="ch3-board-pane">
+        <div class="ch3-board-wrap"><div id="ch3Board" role="grid" aria-label="Training board"></div></div>
+        <div class="ch3-board-note"><span>● Black</span><span>○ White</span><span id="ch3MoveHint">Study the position</span></div>
+      </section>
+      <section class="ch3-content">
+        <div class="ch3-task-top"><div><div class="ch3-kicker" id="ch3LessonLabel"></div><h3 id="ch3TaskTitle"></h3></div><span class="ch3-task-count"></span></div>
+        <p id="ch3Prompt"></p><span class="ch3-rule" id="ch3Rule"></span>
+        <div id="ch3Choices"></div>
+        <div id="ch3Feedback" aria-live="polite">Study every relevant line before answering.</div>
+        <div class="ch3-lesson-copy" id="ch3LessonCopy"></div>
+        <div class="ch3-content-actions">
+          <button class="ch3-btn" id="ch3PrevTask">Previous</button>
+          <button class="ch3-btn" id="ch3Reveal" hidden>Show answer</button>
+          <button class="ch3-btn" id="ch3NextTask">Next</button>
+        </div>
+      </section>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+  d.querySelector('#ch3Close').addEventListener('click',()=>d.close());
+  d.addEventListener('click',e=>{if(e.target===d)d.close()});
+  d.querySelector('#ch3PrevTask').addEventListener('click',prevTask);
+  d.querySelector('#ch3NextTask').addEventListener('click',nextTask);
+  d.querySelector('#ch3Reveal').addEventListener('click',reveal);
+  return d;
+}
+function stoneMap(task){
+  const map=new Map();
+  (task.board?.black||[]).forEach(c=>map.set(c,'black'));
+  (task.board?.white||[]).forEach(c=>map.set(c,'white'));
+  return map;
+}
+function renderBoard(task){
+  const board=document.getElementById('ch3Board');if(!board)return;
+  const stones=stoneMap(task),candidates=new Set(task.kind==='move'?task.candidates||[]:[]);
+  board.innerHTML='';
+  for(let row=1;row<=11;row++)for(let col=0;col<11;col++){
+    const coord=COLS[col]+row,cell=document.createElement('button');
+    cell.className='ch3-cell';cell.type='button';cell.dataset.coord=coord;
+    const color=stones.get(coord);
+    if(color){cell.disabled=true;cell.innerHTML=`<i class="ch3-stone ${color}" aria-hidden="true"></i>`;cell.setAttribute('aria-label',`${coord} ${color} stone`)}
+    else if(candidates.has(coord)){
+      cell.dataset.candidate='1';cell.innerHTML='<i class="ch3-candidate-dot" aria-hidden="true"></i>';
+      cell.setAttribute('aria-label',`Play ${coord}`);cell.addEventListener('click',()=>answer(coord));
+    } else {cell.disabled=true;cell.setAttribute('aria-label',`${coord} empty`)}
+    if((row===1&&col%2===0)||(col===0&&row%2===0)){const label=document.createElement('small');label.className='ch3-coord';label.textContent=coord;cell.appendChild(label)}
+    board.appendChild(cell);
+  }
+  document.getElementById('ch3MoveHint').textContent=task.kind==='move'?'Choose a marked point':'Read the pattern';
+}
+function renderLessons(){
+  const nav=document.getElementById('ch3LessonNav');if(!nav)return;
+  const rep=report();
+  nav.innerHTML=COURSE.lessons.map((l,i)=>`<button class="ch3-lesson-chip${i===currentLesson?' active':''}${rep.lessons[i].complete?' done':''}" data-l="${i}">${i===7?'Checkpoint':`L${i+1} · ${esc(l.title)}`}</button>`).join('');
+  nav.querySelectorAll('[data-l]').forEach(b=>b.addEventListener('click',()=>openSection(Number(b.dataset.l),0)));
+}
+function current(){return lessonTasks[currentLesson][currentTask]}
+function render(){
+  const d=ensureDialog(),task=current(),lesson=COURSE.lessons[currentLesson],old=resultFor(task.id);
+  attempts=old?.correct?Math.max(0,old.attempts||0):Math.max(0,old?.attempts||0);
+  answered=!!old?.correct;
+  renderLessons();renderBoard(task);
+  d.querySelector('#ch3LessonLabel').textContent=lesson.eyebrow;
+  d.querySelector('#ch3TaskTitle').textContent=task.title;
+  d.querySelector('.ch3-task-count').textContent=`${currentTask+1} / ${lessonTasks[currentLesson].length}`;
+  d.querySelector('#ch3Prompt').textContent=task.prompt;
+  d.querySelector('#ch3Rule').textContent=task.rule;
+  d.querySelector('#ch3LessonCopy').textContent=lesson.description;
+  const choices=d.querySelector('#ch3Choices');
+  choices.innerHTML='';
+  if(task.kind==='choice'){
+    task.choices.forEach(label=>{
+      const b=document.createElement('button');b.className='ch3-choice';b.type='button';b.textContent=label;b.disabled=answered;
+      b.addEventListener('click',()=>answer(label));choices.appendChild(b);
+    });
+  }
+  const feedback=d.querySelector('#ch3Feedback');feedback.className='';
+  if(answered){feedback.className='good';feedback.textContent=`Previously completed. ${task.explanation}`}
+  else {feedback.textContent='Study every relevant line before answering.'}
+  const reveal=d.querySelector('#ch3Reveal');reveal.hidden=answered||attempts<2;
+  d.querySelector('#ch3PrevTask').disabled=currentLesson===0&&currentTask===0;
+  const last=currentLesson===COURSE.lessons.length-1&&currentTask===lessonTasks[currentLesson].length-1;
+  d.querySelector('#ch3NextTask').disabled=last;
+  d.querySelector('#ch3NextTask').textContent=last?'Chapter end':(currentTask===lessonTasks[currentLesson].length-1?'Next lesson':'Next');
+  updateCard();
+}
+function answer(value){
+  if(answered)return;
+  const task=current(),isCorrect=task.correct.includes(value),nextAttempts=attempts+1;
+  attempts=nextAttempts;
+  if(isCorrect){
+    answered=true;
+    taskRecord(task.id,{correct:true,assisted:false,firstTry:nextAttempts===1,attempts:nextAttempts});
+    const f=document.getElementById('ch3Feedback');f.className='good';f.textContent=`Completed. ${task.explanation}`;
+    document.getElementById('ch3Reveal').hidden=true;
+    document.querySelectorAll('#ch3Choices button').forEach(b=>b.disabled=true);
+    document.querySelectorAll('#ch3Board .ch3-cell[data-candidate="1"]').forEach(b=>b.disabled=true);
+    renderLessons();updateCard();
+  }else{
+    taskRecord(task.id,{correct:false,assisted:false,firstTry:false,attempts:nextAttempts});
+    const f=document.getElementById('ch3Feedback');f.className='miss';
+    f.textContent=nextAttempts===1?`Not this. ${task.hint1}`:`Still not. ${task.hint2}`;
+    document.getElementById('ch3Reveal').hidden=nextAttempts<2;
+  }
+}
+function answerText(task){
+  if(task.kind==='move')return task.correct.join(' or ');
+  return task.correct[0];
+}
+function reveal(){
+  if(answered)return;
+  const task=current();answered=true;
+  taskRecord(task.id,{correct:true,assisted:true,firstTry:false,attempts:Math.max(2,attempts)});
+  const f=document.getElementById('ch3Feedback');f.className='good';f.textContent=`Answer shown: ${answerText(task)}. ${task.explanation}`;
+  document.getElementById('ch3Reveal').hidden=true;
+  document.querySelectorAll('#ch3Choices button').forEach(b=>b.disabled=true);
+  document.querySelectorAll('#ch3Board .ch3-cell[data-candidate="1"]').forEach(b=>b.disabled=true);
+  renderLessons();updateCard();
+}
+function nextTask(){
+  if(currentTask<lessonTasks[currentLesson].length-1)currentTask++;
+  else if(currentLesson<COURSE.lessons.length-1){currentLesson++;currentTask=0}
+  else return;
+  remember();render();
+}
+function prevTask(){
+  if(currentTask>0)currentTask--;
+  else if(currentLesson>0){currentLesson--;currentTask=lessonTasks[currentLesson].length-1}
+  else return;
+  remember();render();
+}
+function remember(){
+  const s=load();s.lastLesson=currentLesson;s.lastTask=currentTask;save(s);
+}
+function openSection(lesson=0,task=0){
+  currentLesson=Math.max(0,Math.min(COURSE.lessons.length-1,Number(lesson)||0));
+  currentTask=Math.max(0,Math.min(lessonTasks[currentLesson].length-1,Number(task)||0));
+  remember();const d=ensureDialog();render();
+  try{if(!d.open)d.showModal()}catch{d.setAttribute('open','')}
+}
+function openCourse(){
+  const s=load();openSection(Number(s.lastLesson)||0,Number(s.lastTask)||0);
+}
+function weakestIndex(){
+  const rep=report();
+  let best=0,bestScore=Infinity;
+  rep.lessons.slice(0,7).forEach((l,i)=>{
+    const completion=l.solved/l.total;
+    const score=completion*.72+l.rate*.28;
+    if(!l.complete&&score<bestScore){bestScore=score;best=i}
+  });
+  if(bestScore===Infinity){
+    rep.lessons.slice(0,7).forEach((l,i)=>{if(l.rate<bestScore){bestScore=l.rate;best=i}});
+  }
+  return best;
+}
+function updateCard(){
+  const card=document.getElementById('ch3CourseCard');if(!card)return;
+  const rep=report(),pct=Math.round(rep.solved/rep.totalTasks*100),weak=weakestIndex();
+  const fill=card.querySelector('.ch3-progress i');if(fill)fill.style.width=pct+'%';
+  const n=card.querySelector('[data-ch3-solved]');if(n)n.textContent=rep.solved;
+  const p=card.querySelector('[data-ch3-pct]');if(p)p.textContent=pct+'%';
+  const w=card.querySelector('[data-ch3-weak]');if(w)w.textContent=COURSE.lessons[weak].title;
+  const start=card.querySelector('#ch3Start');if(start)start.textContent=rep.solved?'Continue chapter':'Start chapter';
+}
+function makeCard(){
+  const card=document.createElement('section');card.id='ch3CourseCard';
+  card.innerHTML=`<div class="ch3-card-top"><div><div class="ch3-kicker">Chapter 3 · Tactical foundations</div><h3>Threes</h3><p>Learn which threes are real, how they grow into forcing fours, when to defend early, and why Renju treats genuine Black double-threes differently.</p></div><div class="ch3-card-stat"><strong><span data-ch3-solved>0</span>/46</strong><span>positions</span></div></div>
+  <div class="ch3-progress" aria-hidden="true"><i></i></div>
+  <div class="ch3-card-meta"><span><b data-ch3-pct>0%</b> complete</span><span>Review focus: <b data-ch3-weak>Recognize threes</b></span></div>
+  <div class="ch3-card-actions"><button class="ch3-btn primary" id="ch3Start"><span>Start chapter</span></button><button class="ch3-btn" id="ch3Review">Review weakest</button></div>`;
+  card.querySelector('#ch3Start').addEventListener('click',openCourse);
+  card.querySelector('#ch3Review').addEventListener('click',()=>openSection(weakestIndex(),0));
+  return card;
+}
+function mountCard(){
+  const existing=document.getElementById('ch3CourseCard');
+  const ch2=document.getElementById('ch2CourseCard');
+  if(existing){
+    if(ch2&&existing.previousElementSibling!==ch2)ch2.insertAdjacentElement('afterend',existing);
+    updateCard();return;
+  }
+  const anchor=ch2||document.getElementById('ch1CourseCard');
+  if(!anchor)return;
+  anchor.insertAdjacentElement('afterend',makeCard());updateCard();
+}
+function scheduleMount(){
+  if(mountQueued)return;mountQueued=true;
+  queueMicrotask(()=>{mountQueued=false;mountCard()});
+}
+const observer=new MutationObserver(scheduleMount);
+function boot(){
+  ensureDialog();mountCard();observer.observe(document.body,{childList:true,subtree:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.GomokuCourseChapter3={
+  open:openCourse,openSection,report,
+  reset(){localStorage.removeItem(KEY);currentLesson=0;currentTask=0;render();updateCard()},
+  version:VERSION
+};
+})();
+</script>
+
+
 </body></html>
