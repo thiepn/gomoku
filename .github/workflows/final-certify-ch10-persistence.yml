@@ -1,0 +1,144 @@
+name: Final certify Chapter 10 persistence
+
+on:
+  push:
+    paths: ['.github/workflows/final-certify-ch10-persistence.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  certify:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Wait for this commit's Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 100); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+
+      - name: Certify cross-page persistence
+        shell: bash
+        run: |
+          cat > .ch10-persist-final.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          await ctx.addInitScript(()=>{
+            const original=HTMLDialogElement.prototype.showModal;
+            HTMLDialogElement.prototype.showModal=function(){
+              if(this.id==='v112WelcomeDialog') return;
+              return original.call(this);
+            };
+          });
+
+          const prepare=async p=>{
+            p.setDefaultTimeout(15000);
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter10?.openSection==='function',null,{timeout:20000});
+            await p.evaluate(()=>{
+              document.querySelectorAll('dialog[open]:not(#ch10CourseDialog)').forEach(d=>d.close?.());
+              document.querySelector('[data-v92-route="improve"]')?.click();
+            });
+            await p.waitForFunction(()=>document.querySelector('#ch9CourseCard')?.nextElementSibling?.id==='ch10CourseCard',null,{timeout:10000});
+          };
+          const assertStack=async p=>{
+            const x=await p.evaluate(()=>{
+              const cards=[1,2,3,4,5,6,7,8,9,10].map(n=>document.querySelector(`#ch${n}CourseCard`));
+              const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));
+              return {
+                counts:cards.map((_,i)=>document.querySelectorAll(`#ch${i+1}CourseCard`).length),
+                order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1])),
+                parents:cards.map(c=>c?.parentElement?.id||null)
+              };
+            });
+            if(x.counts.some(n=>n!==1)||!x.order||x.parents.some(v=>v!=='v92ImproveHome')) throw new Error('Course stack '+JSON.stringify(x));
+          };
+
+          const p1=await ctx.newPage();
+          const errors1=[]; p1.on('pageerror',e=>errors1.push(e.message));
+          await p1.goto(root+'?ch10persist-final-a='+Date.now(),{waitUntil:'domcontentloaded',timeout:20000});
+          await prepare(p1);
+          await assertStack(p1);
+          await p1.evaluate(()=>localStorage.removeItem('gomoku.course.chapter10.v1'));
+
+          await p1.evaluate(()=>window.GomokuCourseChapter10.openSection(0,0));
+          await p1.waitForSelector('#ch10CourseDialog[open]');
+          await p1.getByRole('button',{name:'Immediate wins, losses, and forcing threats for both sides before judging long-term plans',exact:true}).click();
+          if(!/^Completed\./.test(await p1.locator('#ch10Feedback').innerText())) throw new Error('Choice completion failed');
+
+          await p1.evaluate(()=>window.GomokuCourseChapter10.openSection(1,0));
+          await p1.locator('#ch10Board [data-coord="E4"]').click();
+          if(!/^Completed\./.test(await p1.locator('#ch10Feedback').innerText())) throw new Error('Board completion failed');
+
+          const before=await p1.evaluate(()=>JSON.parse(localStorage.getItem('gomoku.course.chapter10.v1')));
+          for(const id of ['p1','p6']){
+            const r=before?.tasks?.[id];
+            if(!r?.correct||!r.firstTry||r.assisted) throw new Error('Pre-close state '+id+' '+JSON.stringify(r));
+          }
+          if(errors1.some(x=>/ch10|chapter 10/i.test(x))) throw new Error('First-page Chapter 10 errors '+JSON.stringify(errors1));
+          console.log('PASS first page writes Chapter 10 progress');
+          await p1.close();
+
+          const p2=await ctx.newPage();
+          const errors2=[]; p2.on('pageerror',e=>errors2.push(e.message));
+          await p2.goto(root+'?ch10persist-final-b='+Date.now(),{waitUntil:'domcontentloaded',timeout:20000});
+          await prepare(p2);
+          await assertStack(p2);
+          const after=await p2.evaluate(()=>({
+            state:JSON.parse(localStorage.getItem('gomoku.course.chapter10.v1')),
+            report:window.GomokuCourseChapter10.report(),
+            markerCount:document.querySelectorAll('#course-ch10-v1-script').length,
+            cardCount:document.querySelectorAll('#ch10CourseCard').length
+          }));
+          for(const id of ['p1','p6']){
+            const r=after.state?.tasks?.[id];
+            if(!r?.correct||!r.firstTry||r.assisted) throw new Error('Cross-page persisted state '+id+' '+JSON.stringify(r));
+          }
+          if(after.report.totalTasks!==48||after.report.totalLessons!==8||after.report.lessons[0].completed<1||after.report.lessons[1].completed<1) throw new Error('Persisted report '+JSON.stringify(after.report));
+          if(after.markerCount!==1||after.cardCount!==1) throw new Error('Chapter 10 duplication '+JSON.stringify(after));
+          if(errors2.some(x=>/ch10|chapter 10/i.test(x))) throw new Error('Second-page Chapter 10 errors '+JSON.stringify(errors2));
+          console.log('PASS brand-new page restores Chapter 10 localStorage progress');
+          console.log('PASS unique ordered Chapters 1-10 after fresh page load');
+          console.log('CHAPTER10_PERSISTENCE_CERTIFIED');
+          await p2.close();
+          await ctx.close();
+          await browser.close();
+          JS
+          node --check .ch10-persist-final.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 100s env CHROME="$CHROME" node .ch10-persist-final.mjs
+
+      - name: Remove final persistence certification
+        if: always()
+        shell: bash
+        run: |
+          rm -f .ch10-persist-final.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/final-certify-ch10-persistence.yml
+          git commit -m 'Remove Chapter 10 final persistence certification' || true
+          git pull --rebase || true
+          git push || true
