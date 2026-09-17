@@ -1,0 +1,378 @@
+/* TOURNAMENT TABLE — a single presentation system over the preserved game APIs. */
+html body.ui-studio {
+ --paper:#eef0eb;--card:#fafbf7;--card2:#fffefa;--ink:#202724;--ink2:#626b62;
+ --hair:#d8ded5;--hair2:#bcc6b9;--seal:#b43f2d;--soft:#b43f2d0d;--shadow:#20272414;
+ --ui-accent:#b43f2d;--ui-accent-bright:#e98764;--ui-chrome:#192420;--ui-chrome-text:#f3f3e9;
+ --ui-font:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ --bg:var(--paper);--panel:var(--card);--panel2:var(--card2);--text:var(--ink);--muted:var(--ink2);--line:var(--hair);
+ --border:var(--hair);--accent:var(--ui-accent);--surface:var(--card);--surface2:var(--card2);
+ background:var(--paper)!important;background-image:none!important;color:var(--ink);font:14px/1.55 var(--ui-font);color-scheme:light;
+}
+html body.ui-studio[data-theme="night"],html body.ui-studio[data-theme="dark"] {
+ --paper:#151e1b;--card:#202c27;--card2:#28362f;--ink:#eef2e8;--ink2:#a9b8ad;
+ --hair:#35463c;--hair2:#566d5d;--seal:#f09777;--soft:#f0977710;--shadow:#0004;
+ --ui-accent:#f09777;--ui-accent-bright:#f09777;--ui-chrome:#101713;--ui-chrome-text:#f3f3e9;color-scheme:dark;
+}
+html body.ui-studio[data-theme="slate"]{--paper:#e8eeec;--card:#f6faf8;--card2:#fff;--ink:#1c302b;--ink2:#526b62;--hair:#d0ded7;--hair2:#adc2b5;--seal:#226653;--ui-accent:#226653;--soft:#2266530c;}
+html body.ui-studio h1,html body.ui-studio h2,html body.ui-studio h3,html body.ui-studio h4{font-family:var(--ui-font)!important;letter-spacing:-.025em;font-weight:650;}
+html body.ui-studio button,html body.ui-studio input,html body.ui-studio select,html body.ui-studio textarea{font-family:var(--ui-font);}
+html body.ui-studio :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--ui-accent)!important;outline-offset:3px!important;}
+html body.ui-studio :is(button,input,select,textarea){-webkit-tap-highlight-color:transparent;}
+html body.ui-studio :is(button,summary){transition:background-color .15s,border-color .15s,box-shadow .15s;}
+html body.ui-studio button:disabled{opacity:.46;cursor:not-allowed;}
+html body.ui-studio .ui-icon{width:20px;height:20px;flex-shrink:0;display:block;pointer-events:none;}
+html body.ui-studio .ui-kicker,html body.ui-studio .eyebrow{font:700 10px/1.5 var(--ui-font);letter-spacing:.13em;color:var(--ink2);}
+html body.ui-studio .muted{font-size:13px;line-height:1.7;}html body.ui-studio .tiny,html body.ui-studio .engine-note{font-size:12px;line-height:1.65;}
+/* One navigation row; stable anchors, no parallel navigation hierarchy. */
+html body.ui-studio header.top{max-width:none;width:100%;margin:0;padding:0 max(24px,calc((100vw - 1260px)/2));height:82px;min-height:82px;display:flex;gap:38px;align-items:center;background:var(--ui-chrome);color:var(--ui-chrome-text);border:0;position:relative;z-index:10;box-shadow:0 1px 0 #ffffff10;}
+html body.ui-studio .brand{gap:12px;flex-shrink:0;}
+html body.ui-studio .logo-seal{background:transparent;box-shadow:none;transform:none;border:0;border-radius:0;width:39px;height:39px;color:var(--ui-accent-bright);padding:0;}
+html body.ui-studio .logo-seal svg{width:39px;height:39px;}
+html body.ui-studio .brand h1{font:800 21px/1 var(--ui-font)!important;letter-spacing:.03em;white-space:nowrap;}
+html body.ui-studio .brand h1 span{display:block;margin:5px 0 0;font:600 9px/1 var(--ui-font);letter-spacing:.30em;color:#a7b9ab;}
+html body.ui-studio .brand p,html body.ui-studio .version{display:none!important;}
+html body.ui-studio #v92Primary{padding:0;margin:0 0 0 24px;border:0;background:transparent;position:static;flex:1;width:auto;max-width:none;box-shadow:none;display:block!important;}
+html body.ui-studio .v92-nav-main{display:flex!important;width:auto;border:0;padding:0;background:none;gap:5px;border-radius:0;}
+html body.ui-studio .v92-nav-btn{min-width:88px;min-height:46px;padding:12px 18px;font-size:13px;letter-spacing:.015em;font-weight:650;border:1px solid transparent;border-radius:6px;background:transparent;color:#b9c6bb;position:relative;}
+html body.ui-studio .v92-nav-btn:hover{color:#fff;background:#ffffff09;}
+html body.ui-studio .v92-nav-btn[aria-current="page"]{color:#fff;background:#314039;border-color:#ffffff13;box-shadow:none;}
+html body.ui-studio .v92-nav-btn[aria-current="page"]:after{content:'';position:absolute;bottom:-18px;left:23px;right:23px;height:3px;background:var(--ui-accent-bright);border-radius:2px;}
+html body.ui-studio #v92More{display:none!important;}
+html body.ui-studio .header-tools{gap:7px;margin-left:auto;}
+html body.ui-studio .header-tools :is(.icon-btn,#v111MenuBtn){min-width:42px;min-height:42px;height:42px;padding:10px;color:#ced8ce;background:transparent;border:1px solid #52635766;border-radius:6px;box-shadow:none;}
+html body.ui-studio #focusBtn,html body.ui-studio #soundBtn{display:grid!important;}
+html body.ui-studio #v111MenuBtn{display:flex!important;align-items:center;gap:9px;font-size:12px;}
+html body.ui-studio .header-tools :is(.icon-btn,#v111MenuBtn):hover{background:#ffffff0d;color:white;}
+html body.ui-studio #settingsBtn,html body.ui-studio #v85GuideBtn{display:none!important;}
+/* The board is the largest object, framed by actual player state rather than widgets. */
+html body.ui-studio #mainContent{max-width:1224px;padding:28px 24px 36px;gap:48px;margin:auto;}
+html body.ui-studio[data-v92-route="play"] #mainContent{display:grid!important;grid-template-columns:minmax(0,1fr) 318px;align-items:start;}
+html body.ui-studio .board-side{position:static;top:auto;min-width:0;}
+html body.ui-studio .board-col{width:min(100%,660px);max-width:660px;}
+html body.ui-studio .board-top{min-height:43px;margin:0 0 16px;align-items:center;}
+html body.ui-studio .board-heading{margin-top:3px;gap:9px;}
+html body.ui-studio .board-heading h2{font-size:25px;line-height:1.2;font-weight:650;}
+html body.ui-studio #matchLabel{font-size:9px;letter-spacing:.12em;}
+html body.ui-studio .move-badge{font:500 24px/1 var(--ui-font);min-width:50px;border-left:1px solid var(--hair2);padding-left:16px;}
+html body.ui-studio .move-badge span{font-size:8px;margin-top:6px;}
+html body.ui-studio .turn-dot{width:9px;height:9px;}
+html body.ui-studio #uiPlayers{display:flex!important;gap:14px;align-items:center;margin:0 0 13px;padding:0;background:none;border:0;}
+html body.ui-studio #uiPlayers .player-card{background:var(--card);border:1px solid var(--hair);border-radius:7px;min-height:61px;padding:10px 14px;gap:12px;}
+html body.ui-studio #uiPlayers .player-card.ui-active-player{border-color:var(--ui-accent);box-shadow:inset 3px 0 var(--ui-accent);}
+html body.ui-studio #uiPlayers .player-card b{font:650 14px var(--ui-font);}
+html body.ui-studio #uiPlayers .player-card small{font:11px/1.4 var(--ui-font);margin-top:3px;}
+html body.ui-studio #uiPlayers .pstone{width:29px;height:29px;box-shadow:0 2px 3px #1113;}
+html body.ui-studio .pstone.black{background:radial-gradient(circle at 32% 24%,#606861,#222923 70%,#101610);}
+html body.ui-studio .pstone.white{background:radial-gradient(circle at 32% 24%,#fff,#eff1e9 66%,#bcc3b6);border-color:#a2aa9c;}
+html body.ui-studio .board-shell{border:1px solid #b8a284;border-radius:5px;background:#e4cfa9;box-shadow:0 2px 0 #9f8663,0 14px 32px -18px #24231c65;overflow:visible;}
+html body.ui-studio .board-shell::after{display:none;}
+html body.ui-studio #board,html body.ui-studio #v94Fx{border-radius:4px;}
+html body.ui-studio .caption{margin:11px 1px 0;font-size:11px;min-height:17px;}
+html body.ui-studio .ui-table-signature{margin-left:auto;letter-spacing:.16em;font-size:8px;font-weight:700;}
+html body.ui-studio #v92GameBar{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:8px;margin-top:13px;}
+html body.ui-studio .v92-game-btn{min-height:45px;padding:10px 12px;border:1px solid var(--hair2);border-radius:6px;background:var(--card);color:var(--ink);font-size:12px;font-weight:650;}
+html body.ui-studio .v92-game-btn.primary{background:var(--ui-accent);border-color:var(--ui-accent);color:#fffaf4;}
+html body.ui-studio[data-theme="night"] .v92-game-btn.primary{color:#231b15;}
+html body.ui-studio .v92-game-btn:not(:disabled):hover{border-color:var(--ui-accent);box-shadow:0 2px 8px var(--shadow);}
+html body.ui-studio #v85Next{background:var(--card);border:1px solid var(--hair);border-radius:5px;padding:10px 12px;margin-top:10px;}
+html body.ui-studio #v85Next .v85-next-copy b{font-size:12px;}html body.ui-studio #v85Next .v85-next-copy p{font-size:11px;}
+html body.ui-studio #v94ThinkPill{border:1px solid #455948;background:#23342b;color:#f1f2e7;box-shadow:0 3px 8px #0002;font-size:10px;top:10px;right:10px;}
+html body.ui-studio .placement{background:var(--card);border:1px solid var(--hair);border-radius:6px;padding:10px 12px;}
+html body.ui-studio .placement strong{font-size:13px;}html body.ui-studio .placement span{font-size:11px;}
+/* Match inspector: settings first, contextual record below; no unrelated course cards. */
+html body.ui-studio aside.panel{padding:0;border:0;min-width:0;background:none;}
+html body.ui-studio #panel-play{background:var(--card);border:1px solid var(--hair);border-radius:9px;overflow:hidden;}
+html body.ui-studio #panel-play>section{padding:20px 22px;border-bottom:1px solid var(--hair);}
+html body.ui-studio #v92PlayHeader .eyebrow{color:var(--ui-accent);font-size:10px;}
+html body.ui-studio #v92PlayHeader h2{font-size:24px;line-height:1.2;}
+html body.ui-studio #v92PlayHeader .v92-section-head{display:block;}
+html body.ui-studio .v92-mode-switch{display:flex;margin:17px 0 0;width:100%;border:1px solid var(--hair);padding:3px;border-radius:6px;background:var(--paper);}
+html body.ui-studio .v92-mode-switch button{flex:1;min-height:40px;border:0;border-radius:4px;color:var(--ink2);font-size:12px;}
+html body.ui-studio .v92-mode-switch button[aria-pressed="true"]{background:var(--card2);color:var(--ink);box-shadow:0 1px 3px var(--shadow);}
+html body.ui-studio #panel-play>.ui-player-origin{padding:0;border:0;}
+html body.ui-studio .ui-player-origin>.eyebrow{display:none;}
+html body.ui-studio .ui-player-origin:has(#localPanel91:not([hidden])){padding:14px 20px!important;}
+html body.ui-studio #levelSection{padding-top:18px;}
+html body.ui-studio #levelSection .section-heading{margin-bottom:8px;}
+html body.ui-studio #levelNumber{display:none;}
+html body.ui-studio #uiDifficultyMeter{display:flex;gap:4px;margin:12px 0 14px;}
+html body.ui-studio #uiDifficultyMeter i{height:4px;flex:1;border-radius:2px;background:var(--hair);}
+html body.ui-studio #uiDifficultyMeter i.is-filled{background:var(--ui-accent);}
+html body.ui-studio :is(input[type="text"],input[type="search"],input[type="number"],select,textarea){color:var(--ink);background:var(--card2);border:1px solid var(--hair2);border-radius:5px;min-height:44px;font-size:13px;padding:10px 12px;max-width:100%;}
+html body.ui-studio label:not(.toggle){font-size:12px;}
+html body.ui-studio .ui-engine-explanation{margin:0;border:0;}
+html body.ui-studio .ui-engine-explanation summary{font-size:12px;min-height:40px;display:flex;align-items:center;}
+html body.ui-studio #v92OpponentDetails{margin:3px 0 0;border:0;border-top:1px solid var(--hair);border-radius:0;background:none;}
+html body.ui-studio #v92OpponentDetails>summary{padding:12px 0;font-size:12px;}
+html body.ui-studio #uiMatchDesk{display:block!important;background:var(--ui-chrome);color:var(--ui-chrome-text);border:0!important;padding:24px!important;}
+html body.ui-studio .ui-desk-heading{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+html body.ui-studio #uiGameMode{color:#9cab9f;font-size:8px;}html body.ui-studio #uiMatchNumber{color:#adbdb0;font-size:10px;}
+html body.ui-studio #uiMatchDesk h3{font-size:24px;line-height:1.22;margin:26px 0 9px;max-width:210px;}
+html body.ui-studio #uiMatchDesk>p{color:#b5c4b7;font-size:12px;line-height:1.7;}
+html body.ui-studio .ui-mini-signature{display:flex;gap:10px;margin:23px 0 24px;align-items:center;}
+html body.ui-studio .ui-mini-signature i{width:24px;height:24px;border-radius:50%;background:#f3f2e5;box-shadow:inset -2px -3px 0 #d9dfd077;}
+html body.ui-studio .ui-mini-signature i:last-child{background:var(--ui-accent-bright);box-shadow:none;}
+html body.ui-studio .ui-recent-heading{border-top:1px solid #52635766;padding-top:19px;font-size:8px;letter-spacing:.13em;color:#a7b9ab;font-weight:700;}
+html body.ui-studio #uiRecentMoves{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 17px;min-height:40px;}
+html body.ui-studio #uiRecentMoves>p{grid-column:1/-1;font-size:12px;line-height:1.6;color:#b5c4b7;}
+html body.ui-studio #uiRecentMoves>span{display:flex;gap:6px;align-items:center;color:#eef2e7;font-variant-numeric:tabular-nums;font-size:12px;}
+html body.ui-studio #uiRecentMoves small{font-size:10px;color:#a7b9ab;min-width:12px;}
+html body.ui-studio .ui-stone{width:10px;height:10px;border-radius:50%;border:1px solid #819b88;flex:none;}.ui-stone.black{background:#101a14;}.ui-stone.white{background:#f6f8ef;}
+html body.ui-studio .ui-review-link{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;color:#edf1e7;border:1px solid #526357;background:#304338;min-height:45px;padding:10px 11px;border-radius:5px;font-size:12px;font-weight:600;}
+html body.ui-studio .ui-review-link:hover:not(:disabled){background:#405348;}
+html body.ui-studio #uiMatchDesk>.ui-review-caption{font-size:10px;margin-top:10px;color:#a7b9ab;}
+/* A coherent course catalog replaces fourteen unrelated card implementations. */
+html body.ui-studio #mainContent>.ui-source-course,html body.ui-studio .ui-source-course{display:none!important;}
+html body.ui-studio #v92ImproveHome.ui-catalog-ready>:not(#uiLearning){display:none!important;}
+html body.ui-studio[data-v92-route="improve"][data-v92-sub="home"] #mainContent{display:block!important;max-width:1240px;padding:36px 28px 52px;}
+html body.ui-studio[data-v92-route="improve"][data-v92-sub="home"] .panel{width:100%;max-width:none;margin:0;}
+html body.ui-studio #v92ImproveHome{max-width:none;width:100%;padding:0!important;}
+html body.ui-studio #uiLearning section{border:0;}
+html body.ui-studio .ui-learn-heading{display:flex;justify-content:space-between;align-items:center;gap:30px;padding:0 0 31px;}
+html body.ui-studio .ui-learn-heading .ui-kicker{color:var(--ui-accent);margin-bottom:13px;}
+html body.ui-studio .ui-learn-heading h2{font-size:clamp(30px,3.25vw,44px);line-height:1.12;letter-spacing:-.045em;font-weight:600;}
+html body.ui-studio .ui-learn-heading p:last-child{font-size:14px;line-height:1.65;color:var(--ink2);margin-top:13px;max-width:490px;}
+html body.ui-studio .ui-learn-mark{width:205px;height:160px;color:var(--ink);flex-shrink:0;padding:10px 14px;border-left:1px solid var(--hair2);}
+html body.ui-studio .ui-learn-mark>svg{display:block;width:160px;height:118px;margin:auto;}
+html body.ui-studio .ui-learn-mark>span{display:block;text-align:center;color:var(--ink2);font-size:8px;letter-spacing:.21em;margin-top:10px;}
+html body.ui-studio .ui-learning-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--ui-chrome);color:#edf2e7;border-radius:8px;overflow:hidden;margin-bottom:34px;}
+html body.ui-studio .ui-learning-actions>button{padding:21px 24px;min-height:92px;text-align:left;display:flex;align-items:center;gap:15px;border:0;border-right:1px solid #48594d;background:none;color:inherit;border-radius:0;}
+html body.ui-studio .ui-learning-actions>button:last-child{border:0;}
+html body.ui-studio .ui-learning-actions>button>.ui-icon:first-child{color:var(--ui-accent-bright);width:23px;height:23px;}
+html body.ui-studio .ui-learning-actions>button>.ui-icon:last-child{margin-left:auto;width:17px;color:#c0d0c2;}
+html body.ui-studio .ui-learning-actions b{font-size:15px;display:block;font-weight:600;}
+html body.ui-studio .ui-learning-actions small{font-size:11px;display:block;color:#b9c9bc;margin-top:4px;}
+html body.ui-studio .ui-learning-actions>button:hover{background:#ffffff09;}
+html body.ui-studio .ui-curriculum{padding:0!important;}
+html body.ui-studio .ui-curriculum-top{display:flex;align-items:center;justify-content:space-between;gap:25px;margin:0 0 18px;}
+html body.ui-studio .ui-curriculum-top h3{font-size:24px;line-height:1.25;margin:7px 0;}
+html body.ui-studio #uiCourseCount{font-size:12px;color:var(--ink2);}
+html body.ui-studio .ui-cta{display:flex;justify-content:center;align-items:center;gap:14px;min-height:48px;padding:12px 17px;background:var(--ui-accent);color:#fff;border:1px solid var(--ui-accent);border-radius:5px;font-size:12px;font-weight:650;}
+html body.ui-studio[data-theme="night"] .ui-cta{color:#231b15;}
+html body.ui-studio .ui-progress-strip{display:flex;gap:22px;align-items:center;padding:16px 0;border-top:1px solid var(--hair2);border-bottom:1px solid var(--hair2);}
+html body.ui-studio #uiCourseProgress{font-size:12px;font-variant-numeric:tabular-nums;}
+html body.ui-studio .ui-progress-strip progress{flex:1;max-width:280px;}
+html body.ui-studio progress{height:4px;border:0;border-radius:0;background:var(--hair);color:var(--ui-accent);accent-color:var(--ui-accent);overflow:hidden;}
+html body.ui-studio progress::-webkit-progress-bar{background:var(--hair);}html body.ui-studio progress::-webkit-progress-value{background:var(--ui-accent);}html body.ui-studio progress::-moz-progress-bar{background:var(--ui-accent);}
+html body.ui-studio #uiViewProgress{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px;color:var(--ink);border:0;background:transparent;min-height:36px;padding:6px 0;}
+html body.ui-studio #uiViewProgress .ui-icon{width:16px;}
+html body.ui-studio .ui-course-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0;}
+html body.ui-studio .ui-filters{display:flex;gap:4px;flex-wrap:wrap;}
+html body.ui-studio .ui-filters button{min-height:40px;padding:9px 13px;font-size:12px;font-weight:600;color:var(--ink2);background:transparent;border:1px solid transparent;border-radius:5px;}
+html body.ui-studio .ui-filters button[aria-pressed="true"]{color:var(--ink);background:var(--card);border-color:var(--hair2);}
+html body.ui-studio #uiCourseVisible{font-size:11px;color:var(--ink2);white-space:nowrap;}
+html body.ui-studio .ui-course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+html body.ui-studio .ui-course-tile{background:var(--card);border:1px solid var(--hair);border-radius:7px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s;}
+html body.ui-studio .ui-course-tile:focus-within,html body.ui-studio .ui-course-tile:hover{border-color:var(--hair2);box-shadow:0 6px 16px var(--shadow);}
+html body.ui-studio .ui-course-art{height:130px;background:color-mix(in srgb,var(--ink) 3%,var(--paper));color:var(--ink);border-bottom:1px solid var(--hair);position:relative;padding:7px 15px;}
+html body.ui-studio .ui-course-art>svg{height:116px;width:170px;margin-left:auto;display:block;}
+html body.ui-studio .ui-course-art>span{position:absolute;left:21px;bottom:14px;font:450 38px/1 var(--ui-font);letter-spacing:-.065em;opacity:.67;}
+html body.ui-studio .ui-course-copy{padding:20px;display:flex;flex-direction:column;flex:1;}
+html body.ui-studio .ui-course-copy .ui-kicker{font-size:8px;color:var(--ui-accent);}
+html body.ui-studio .ui-course-copy h3{font-size:19px;line-height:1.25;margin:8px 0;font-weight:650;}
+html body.ui-studio .ui-course-copy>p:not(.ui-kicker){font-size:12px;color:var(--ink2);line-height:1.6;min-height:39px;}
+html body.ui-studio .ui-course-progress{display:flex;align-items:center;gap:12px;margin-top:auto;padding:19px 0 13px;font-size:10px;color:var(--ink2);}
+html body.ui-studio .ui-course-progress progress{width:50%;flex:1;height:3px;}
+html body.ui-studio .ui-course-open{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:40px;border:0;border-top:1px solid var(--hair);padding:13px 0 0;margin:0;background:transparent;color:var(--ink);font-size:12px;font-weight:650;text-align:left;}
+html body.ui-studio .ui-course-open .ui-icon{width:18px;height:18px;color:var(--ui-accent);}
+html body.ui-studio .ui-course-note{font-size:12px;color:var(--ink2);margin-top:22px;}
+/* Shared dialogs and forms: deliberate surface contrast, legible type, visible focus. */
+html body.ui-studio dialog{background:var(--card)!important;color:var(--ink)!important;border:1px solid var(--hair2)!important;border-radius:10px;box-shadow:0 25px 100px #0005;font-family:var(--ui-font)!important;}
+html body.ui-studio dialog::backdrop{background:#0c1716a8;backdrop-filter:blur(4px);}
+html body.ui-studio dialog :is(h2,h3,h4){color:inherit;}
+html body.ui-studio dialog .dialog-header h2{font-size:27px;font-weight:650;}
+html body.ui-studio :is(.btn,.v92-primary,.v92-secondary){min-height:44px;border-radius:5px;font-size:12px;padding:10px 15px;}
+html body.ui-studio .btn{background:var(--ink);color:var(--card);border-color:var(--ink);}
+html body.ui-studio .btn.ghost,html body.ui-studio .v92-secondary{background:transparent;color:var(--ink);border:1px solid var(--hair2);}
+html body.ui-studio .btn.primary,html body.ui-studio .v92-primary{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);}
+html body.ui-studio[data-theme="night"] :is(.btn.primary,.v92-primary){color:#231b15;}
+html body.ui-studio .v92-mode-card{border-radius:6px;background:var(--paper);border-color:var(--hair2);min-height:78px;}
+html body.ui-studio .v92-mode-card[aria-pressed="true"]{background:var(--soft);border-color:var(--ui-accent);box-shadow:inset 3px 0 var(--ui-accent);}
+html body.ui-studio .v92-mode-card b{font:650 16px var(--ui-font);}
+html body.ui-studio .v92-mode-card span{font-size:12px;}
+html body.ui-studio .v92-disclosure,html body.ui-studio .v111-advanced{border-color:var(--hair);border-radius:6px;background:var(--paper);}
+html body.ui-studio .v111-menu-head{border-bottom:1px solid var(--hair);}
+html body.ui-studio #v111MenuTitle{font-size:31px;}
+html body.ui-studio .v111-menu-action,html body.ui-studio .v111-tool{background:var(--paper);border-color:var(--hair);border-radius:6px;}
+html body.ui-studio .v111-menu-action b{font-size:17px;}html body.ui-studio .v111-menu-action span,html body.ui-studio .v111-tool span{font-size:12px;}
+html body.ui-studio .v111-tool b{font-size:13px;}
+html body.ui-studio .v111-menu-head p{font-size:13px;line-height:1.6;}
+html body.ui-studio #settingsDialog{width:min(580px,calc(100vw - 28px));padding:25px;}
+html body.ui-studio #settingsDialog>.toggle{padding:13px 0;border-bottom:1px solid var(--hair);font-size:14px;gap:12px;}
+html body.ui-studio #settingsDialog input[type="checkbox"]{width:18px;height:18px;accent-color:var(--ui-accent);}
+html body.ui-studio #resultDialog{padding:0;overflow:hidden;width:min(500px,calc(100vw - 28px));}
+html body.ui-studio #resultDialog .result-card{padding:40px 30px;background:var(--card);}
+html body.ui-studio #resStamp{display:none;}
+html body.ui-studio .result-card:before{content:'MATCH COMPLETE';display:block;font-size:10px;letter-spacing:.18em;color:var(--ui-accent);font-weight:700;margin-bottom:20px;}
+html body.ui-studio #resTitle{font-size:40px;line-height:1.1;}
+html body.ui-studio #resSub{font-size:14px;line-height:1.6;margin-top:16px;color:var(--ink2);}
+html body.ui-studio #resultReviewBtn{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff;}
+html body.ui-studio[data-theme="night"] #resultReviewBtn{color:#231b15;}
+html body.ui-studio #v112WelcomeDialog{border-radius:12px;background:var(--card)!important;}
+html body.ui-studio .v112-welcome-title{font-size:32px;font-weight:650;}
+html body.ui-studio #v112WelcomeDialog :is(button,[class*="choice"]){border-radius:6px;}
+/* Guided Review retains its independently tested navigation and evaluation behavior. */
+html body.ui-studio #grDialog{--gr-bg:var(--paper);--gr-surface:var(--card);--gr-ink:var(--ink);--gr-muted:var(--ink2);--gr-line:var(--hair);--gr-accent:var(--ui-accent);border-radius:10px;}
+html body.ui-studio #grDialog .gr-header{background:var(--ui-chrome);color:var(--ui-chrome-text);border-color:#48594d;}
+html body.ui-studio #grDialog #grTitle{font:650 29px/1.2 var(--ui-font)!important;letter-spacing:-.035em;}
+html body.ui-studio #grDialog .gr-header :is(.gr-kicker,#grGameMeta){color:#aebfb0;}
+html body.ui-studio #grDialog .gr-header .gr-btn{background:transparent;color:#f2f5eb;border-color:#607366;}
+html body.ui-studio #grDialog .gr-btn{min-height:44px;border-radius:5px;font-size:12px;}
+html body.ui-studio #grDialog .gr-primary,html body.ui-studio #grDialog .gr-primary:hover{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff;}
+html body.ui-studio[data-theme="night"] #grDialog .gr-primary,html body.ui-studio[data-theme="dark"] #grDialog .gr-primary{color:#231b15;}
+html body.ui-studio #grDialog .gr-verdict{font:650 30px/1.2 var(--ui-font)!important;}
+html body.ui-studio #grDialog .gr-board-wrap{background:#e4cfa9;border-color:#b8a284;border-radius:5px;box-shadow:0 2px 0 #ad9370,0 8px 17px -12px #221b15aa;}
+html body.ui-studio #grDialog .gr-cell:after{background:#e4cfa9;}
+html body.ui-studio #grDialog .gr-view-switch{border-radius:5px;padding:3px;}
+html body.ui-studio #grDialog .gr-view-switch button{min-height:40px;border-radius:3px;}
+html body.ui-studio #grDialog .gr-view-switch button[aria-pressed="true"]{background:var(--ink);color:var(--card);}
+html body.ui-studio #grDialog .gr-candidate-coord{border-radius:4px;font-weight:700;}
+html body.ui-studio #grDialog .gr-board-heading h3{font-family:var(--ui-font);font-size:16px;}
+html body.ui-studio #grDialog .gr-basis,html body.ui-studio #grDialog .gr-candidate small{font-size:11px;}
+/* All fourteen chapter interiors share theme tokens. Answer and board semantics are preserved. */
+html body.ui-studio dialog.ui-course-dialog{border-radius:10px!important;background:var(--card)!important;color:var(--ink)!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-head"],[class$="-header"],[class$="-bottom"],[class$="-footer"]){background:var(--card)!important;border-color:var(--hair)!important;color:var(--ink)!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-body"],[class$="-main"],[class$="-stage"],[class$="-shell"],[class$="-work"]){background:var(--card)!important;color:var(--ink)!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-nav"],[class$="-side"],[class$="-sidebar"]){background:var(--paper)!important;border-color:var(--hair)!important;color:var(--ink)!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-title"],[class$="-prompt"],h2,h3,h4){font-family:var(--ui-font)!important;color:var(--ink)!important;letter-spacing:-.02em;}
+html body.ui-studio .ui-course-dialog :is([class$="-title"],h2){font-size:23px!important;font-weight:650!important;line-height:1.25!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-prompt"],[class$="-task-copy"] h3){font-size:18px!important;line-height:1.45!important;font-weight:650!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-lead"],[class$="-lesson-intro"],[class$="-intro"],[class$="-rule"],[class$="-task-card"]){background:var(--paper)!important;color:var(--ink)!important;border-color:var(--hair)!important;border-radius:6px!important;font-size:14px!important;line-height:1.65!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-kicker"],[class$="-eyebrow"]){color:var(--ui-accent)!important;opacity:1!important;font-size:10px!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-meta"],[class$="-score"],[class$="-task-count"],[class$="-legend"]){color:var(--ink2)!important;opacity:1!important;font-size:12px!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-btn"],[class$="-close"]){min-height:44px!important;border-radius:5px!important;background:var(--card2)!important;color:var(--ink)!important;border:1px solid var(--hair2)!important;font-size:12px!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-primary"],.btn.primary){background:var(--ui-accent)!important;border-color:var(--ui-accent)!important;color:#fff!important;}
+html body.ui-studio[data-theme="night"] .ui-course-dialog :is([class$="-primary"],.btn.primary){color:#231b15!important;}
+html body.ui-studio .ui-course-dialog :is([class$="-choice"],[class$="-option"]){min-height:48px!important;font-size:14px!important;line-height:1.5!important;border-radius:6px!important;background:var(--card2);color:var(--ink);border-color:var(--hair2);}
+html body.ui-studio .ui-course-dialog :is([class$="-feedback"],[class$="-hint"]){font-size:14px!important;line-height:1.65!important;border-radius:6px!important;color:var(--ink)!important;}
+html body.ui-studio .ui-course-dialog [class$="-board"]{border-radius:4px!important;}
+/* Library and specialist views keep their information without mismatched typography. */
+html body.ui-studio[data-v92-route="library"] #mainContent{display:block!important;max-width:990px;}
+html body.ui-studio[data-v92-route="library"] aside.panel{max-width:none;}
+html body.ui-studio #v92LibraryIntro h2{font-size:38px;font-weight:650;}
+html body.ui-studio #v92LibraryIntro p{font-size:14px;color:var(--ink2);}
+html body.ui-studio #panel-library>section{padding:22px 0;}
+html body.ui-studio #panel-library input{margin-top:8px;}
+html body.ui-studio #libraryList>div{background:var(--card);border:1px solid var(--hair);border-radius:6px;padding:18px;}
+html body.ui-studio .v92-recommend,html body.ui-studio .v92-choice{background:var(--card);border-color:var(--hair);border-radius:6px;}
+html body.ui-studio #v92StudyHeader h2,html body.ui-studio .v92-subhead h2{font-size:27px;}
+html body.ui-studio .toast{border:1px solid var(--hair2);border-radius:7px;background:var(--ink);color:var(--card);font-size:12px;box-shadow:0 8px 24px #0003;}
+html body.ui-studio footer{font-size:11px;}
+@media(min-width:1060px) and (min-height:720px){html body.ui-studio[data-v92-route="play"] .board-col{max-width:min(660px,calc(100dvh - 335px));}}
+@media(max-width:1050px){html body.ui-studio header.top{gap:20px;padding:0 24px;}html body.ui-studio #v92Primary{margin-left:0;}html body.ui-studio #mainContent{gap:24px;}html body.ui-studio[data-v92-route="play"] #mainContent{grid-template-columns:minmax(0,1fr) 280px;}html body.ui-studio #panel-play>section{padding:17px;}html body.ui-studio #uiMatchDesk{padding:20px!important;}html body.ui-studio .ui-course-grid{grid-template-columns:repeat(2,minmax(0,1fr));}html body.ui-studio .ui-learning-actions>button{padding:18px 16px;gap:10px;}}
+@media(max-width:760px){
+ html body.ui-studio{padding-bottom:78px;}
+ html body.ui-studio header.top{height:64px;min-height:64px;padding:0 17px;gap:12px;position:relative;}
+ html body.ui-studio .brand h1{font-size:18px!important;}.ui-studio .brand h1 span{font-size:8px!important;}
+ html body.ui-studio .logo-seal,html body.ui-studio .logo-seal svg{width:32px;height:32px;}
+ html body.ui-studio .brand{gap:9px;}
+ html body.ui-studio #v92Primary{position:fixed;inset:auto 0 0;height:calc(64px + env(safe-area-inset-bottom));padding:6px 12px calc(6px + env(safe-area-inset-bottom));margin:0!important;width:100%;z-index:30;background:var(--ui-chrome);border-top:1px solid #53685a;box-shadow:0 -3px 14px #13251b0d;}
+ html body.ui-studio .v92-nav-main{width:100%;gap:5px;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));}
+ html body.ui-studio .v92-nav-btn{min-height:48px;min-width:0;padding:10px 12px;font-size:13px;}
+ html body.ui-studio .v92-nav-btn[aria-current="page"]:after{bottom:2px;left:40%;right:40%;height:2px;}
+ html body.ui-studio .header-tools{gap:5px;}
+ html body.ui-studio .header-tools :is(.icon-btn,#v111MenuBtn){min-height:40px;min-width:40px;height:40px;padding:9px;}
+ html body.ui-studio #focusBtn,html body.ui-studio #soundBtn{display:none!important;}
+ html body.ui-studio #v111MenuBtn .v111-menu-label{display:none;}
+ html body.ui-studio #mainContent,html body.ui-studio[data-v92-route="play"] #mainContent{display:block!important;padding:18px 16px 24px;max-width:640px;}
+ html body.ui-studio[data-v92-route="play"] aside.panel{display:none!important;}
+ html body.ui-studio .board-col{max-width:600px;width:100%;}
+ html body.ui-studio .board-top{min-height:41px;margin-bottom:12px;}
+ html body.ui-studio .board-heading h2{font-size:21px;}
+ html body.ui-studio .move-badge{font-size:22px;}
+ html body.ui-studio #uiPlayers{gap:9px;margin-bottom:12px;}
+ html body.ui-studio #uiPlayers .player-card{min-height:52px;padding:8px 10px;gap:9px;}
+ html body.ui-studio #uiPlayers .player-card b{font-size:12px;}
+ html body.ui-studio #uiPlayers .player-card small{font-size:10px;margin-top:2px;}
+ html body.ui-studio #uiPlayers .pstone{width:23px;height:23px;}
+ html body.ui-studio .caption{font-size:10px;margin-top:9px;}
+ html body.ui-studio #v92GameBar{gap:6px;margin-top:9px;}
+ html body.ui-studio .v92-game-btn{font-size:11px;min-height:45px;padding:9px 5px;}
+ html body.ui-studio #v93MobileMatchStrip{display:flex!important;min-height:42px;padding:9px 10px;margin:8px 0 0;background:var(--card);border:1px solid var(--hair);border-radius:5px;color:var(--ink);font-size:11px;}
+ html body.ui-studio #v93MobileMatchStrip .v93-match-change{color:var(--ui-accent);}
+ html body.ui-studio .ui-table-signature{font-size:7px;}
+ html body.ui-studio #v85Next .v85-next-copy p{display:none;}
+ html body.ui-studio #v85Next{padding:8px 10px;}
+ html body.ui-studio .toast{bottom:calc(80px + env(safe-area-inset-bottom));max-width:calc(100% - 30px);}
+ html body.ui-studio[data-v92-route="improve"][data-v92-sub="home"] #mainContent{padding:26px 18px 30px;}
+ html body.ui-studio .ui-learn-heading{padding-bottom:22px;gap:12px;}
+ html body.ui-studio .ui-learn-heading h2{font-size:31px;}
+ html body.ui-studio .ui-learn-heading p:last-child{font-size:13px;max-width:330px;}
+ html body.ui-studio .ui-learn-mark{display:none;}
+ html body.ui-studio .ui-learning-actions{display:flex;flex-direction:column;margin-bottom:27px;}
+ html body.ui-studio .ui-learning-actions>button{min-height:70px;border-right:0;border-bottom:1px solid #48594d;padding:14px 18px;gap:15px;}
+ html body.ui-studio .ui-learning-actions b{font-size:14px;}
+ html body.ui-studio .ui-curriculum-top{display:block;margin-bottom:18px;}
+ html body.ui-studio .ui-curriculum-top h3{font-size:23px;}
+ html body.ui-studio #uiContinueCourse{margin-top:17px;width:100%;}
+ html body.ui-studio .ui-progress-strip{gap:12px;flex-wrap:wrap;padding:12px 0;}
+ html body.ui-studio #uiCourseProgress{font-size:11px;}
+ html body.ui-studio #uiViewProgress{margin-left:0;font-size:11px;min-height:34px;}
+ html body.ui-studio .ui-progress-strip progress{max-width:none;min-width:50px;}
+ html body.ui-studio .ui-course-tools{margin:16px 0;}
+ html body.ui-studio #uiCourseVisible{display:none;}
+ html body.ui-studio .ui-filters{gap:3px;}
+ html body.ui-studio .ui-filters button{padding:8px 9px;font-size:11px;min-height:42px;}
+ html body.ui-studio .ui-course-grid{gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));}
+ html body.ui-studio .ui-course-copy{padding:14px;}
+ html body.ui-studio .ui-course-copy h3{font-size:17px;}
+ html body.ui-studio .ui-course-copy>p:not(.ui-kicker){font-size:12px;min-height:60px;}
+ html body.ui-studio .ui-course-art{height:105px;padding:0 8px;}
+ html body.ui-studio .ui-course-art>svg{height:101px;width:120px;}
+ html body.ui-studio .ui-course-art>span{font-size:27px;left:12px;bottom:10px;opacity:.5;}
+ html body.ui-studio .ui-course-progress{flex-wrap:wrap;gap:6px;padding:15px 0 10px;}
+ html body.ui-studio .ui-course-progress progress{width:100%;flex:auto;}
+ html body.ui-studio .ui-course-open{font-size:11px;min-height:43px;}
+ html body.ui-studio .ui-course-open .ui-icon{width:15px;}
+ html body.ui-studio #settingsDialog{padding:20px;}
+ html body.ui-studio dialog.ui-course-dialog{width:100vw!important;height:100dvh!important;max-height:100dvh!important;max-width:100vw!important;margin:0!important;border-radius:0!important;border:0!important;}
+ html body.ui-studio .ui-course-dialog :is([class$="-title"],h2){font-size:20px!important;}
+ html body.ui-studio .ui-course-dialog :is([class$="-prompt"],[class$="-task-copy"] h3){font-size:16px!important;}
+ html body.ui-studio .ui-course-dialog :is([class$="-bottom"],[class$="-footer"]){padding-bottom:max(12px,env(safe-area-inset-bottom))!important;}
+ html body.ui-studio #grDialog{width:100vw!important;height:100dvh!important;border:0!important;border-radius:0;}
+ html body.ui-studio #grDialog #grTitle{font-size:25px!important;}
+ html body.ui-studio #grDialog .gr-header{gap:10px;}
+ html body.ui-studio[data-v92-route="library"] #mainContent{padding:25px 18px;}
+}
+@media(max-width:380px){html body.ui-studio .ui-course-grid{grid-template-columns:1fr;}html body.ui-studio .ui-course-tile{display:grid;grid-template-columns:100px minmax(0,1fr);}html body.ui-studio .ui-course-art{height:100%;padding:15px 0;border-right:1px solid var(--hair);border-bottom:0;}html body.ui-studio .ui-course-art>svg{width:96px;margin:0;height:100px;}html body.ui-studio .ui-course-copy>p:not(.ui-kicker){min-height:0;}html body.ui-studio .ui-course-art>span{bottom:20px;left:18px;font-size:36px;}html body.ui-studio .v92-game-btn{font-size:10px;}}
+@media(prefers-reduced-motion:reduce){html body.ui-studio *,html body.ui-studio *:before,html body.ui-studio *:after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}}
+@media(forced-colors:active){html body.ui-studio button{border:1px solid ButtonText!important;}html body.ui-studio .ui-icon{forced-color-adjust:auto;}html body.ui-studio .ui-course-progress progress{border:1px solid CanvasText;}html body.ui-studio .v92-nav-btn[aria-current="page"]{outline:2px solid Highlight;}}
+
+/* Integration fixes: retain the authored header geometry and keyboard-only skip links. */
+html body.ui-studio #panel-play>#v92PlayHeader{padding:20px 22px!important;}
+html body.ui-studio #v92PlayHeader .v92-section-head{display:block!important;}
+html body.ui-studio .skip:not(:focus-visible){top:-110px!important;}
+html body.ui-studio .skip:focus-visible{top:8px!important;}
+html body.ui-studio .v112-choice b{font-family:var(--ui-font)!important;font-size:17px!important;}
+html body.ui-studio .ui-course-dialog [class$="-board"]{background:linear-gradient(135deg,#eddbbc,#dfc79e)!important;border-color:#a88b60!important;box-shadow:0 3px 8px #33281918!important;}
+html body.ui-studio[data-theme="slate"] .ui-course-dialog [class$="-board"]{background:linear-gradient(135deg,#e2e6df,#cbd3ca)!important;}
+html body.ui-studio .ui-course-dialog [class$="-stone"].black{background:radial-gradient(circle at 32% 25%,#565c58,#242a27 65%,#111613)!important;}
+html body.ui-studio .ui-course-dialog [class$="-stone"].white{background:radial-gradient(circle at 32% 25%,#fff,#f3f4ee 62%,#cbd0c4)!important;border-color:#9ca695!important;}
+html body.ui-studio .ui-course-dialog [class$="-nav"] button{font-size:12px;}
+html body.ui-studio .ui-course-dialog [class$="-step-copy"] b{font-size:12px;line-height:1.4;}
+html body.ui-studio .ui-course-dialog [class$="-step-copy"] span{font-size:10px;}
+html body.ui-studio .ui-course-dialog [class$="-head"] p{font-size:12px;line-height:1.5;color:var(--ink2);}
+html body.ui-studio .ui-course-dialog [class$="-nav-summary"] b{font:650 16px var(--ui-font);}
+html body.ui-studio .ui-course-dialog [class$="-nav-summary"] span{font-size:11px;line-height:1.55;}
+@media(min-width:1060px) and (min-height:720px){html body.ui-studio[data-v92-route="play"] .board-col{max-width:min(660px,max(380px,calc(100dvh - 415px)));}}
+html body.ui-studio.focus-mode[data-v92-route="play"] #mainContent{grid-template-columns:minmax(0,1fr)!important;max-width:960px;}
+html body.ui-studio.focus-mode aside.panel{display:none!important;}
+html body.ui-studio.high-contrast{--paper:#fff;--card:#fff;--card2:#fff;--ink:#000;--ink2:#252a26;--hair:#454e47;--hair2:#333e35;--seal:#9d301d;--ui-accent:#9d301d;}
+html body.ui-studio.large-text{font-size:18px;}
+html body.ui-studio.large-text :is(.muted,.tiny,.engine-note,.ui-course-copy>p,.ui-course-open,.ui-learning-actions small,.ui-course-note){font-size:15px;}
+html body.ui-studio.large-text .ui-course-copy h3{font-size:23px;}
+html body.ui-studio.large-text :is(.ui-filters button,#uiCourseProgress,#uiViewProgress,.v92-mode-switch button,select){font-size:14px;}
+@media(max-width:760px){html body.ui-studio[data-v92-route="play"] #mainContent{padding:16px 12px 28px!important;}html body.ui-studio.large-text .ui-course-grid{grid-template-columns:1fr;}}
+/* Disabled board intersections must never fade the stones or grid. */
+html body.ui-studio .ui-course-dialog [class$="-cell"]:disabled{opacity:1!important;}
+html body.ui-studio .ui-course-dialog [class$="-coord"]{color:#635139!important;font-size:8px!important;opacity:.85!important;}
+html body.ui-studio .ui-course-dialog [class$="-choice"].correct:disabled{opacity:1!important;border-color:#648468!important;box-shadow:inset 3px 0 #648468;}
+@media(min-width:940px){
+ html body.ui-studio .ui-linear-course:has([class$="-board-wrap"][style*="grid"]){width:min(1080px,calc(100vw - 48px))!important;}
+ html body.ui-studio .ui-linear-course [class$="-body"]:has(>[class$="-board-wrap"][style*="grid"]){display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 28px;align-content:start;align-items:start;padding:26px!important;}
+ html body.ui-studio .ui-linear-course [class$="-body"]:has(>[class$="-board-wrap"][style*="grid"])>*{grid-column:1;margin:0;}
+ html body.ui-studio .ui-linear-course [class$="-body"]:has(>[class$="-board-wrap"][style*="grid"])>[class$="-board-wrap"]{grid-column:2;grid-row:1/span 5;}
+}
+/* Touch confirmation is in the board flow, never an overlay over New/Undo/Hint. */
+@media(max-width:760px){html body.ui-studio .placement{position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;margin:10px 0!important;box-shadow:none!important;z-index:auto!important;}}
+html body.ui-studio dialog b{font-family:var(--ui-font)!important;}

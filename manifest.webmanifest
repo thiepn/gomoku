@@ -1,14 +1,14 @@
 {
-  "name": "Gomoku",
+  "name": "Gomoku Studio",
   "short_name": "Gomoku",
-  "description": "A clean Gomoku (five-in-a-row) game.",
+  "description": "Play, study, and review five-in-a-row. Your own Gomoku table.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1f1714",
-  "theme_color": "#1f1714",
+  "background_color": "#192420",
+  "theme_color": "#192420",
   "lang": "en",
   "categories": [
     "games",
