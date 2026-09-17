@@ -1,0 +1,307 @@
+/* Review workspace 2.1. Board-first and progressively disclosed.
+   No game, course, engine, or storage styles are changed. */
+html body #grDialog.gr-workspace{
+ --gr-accent:var(--ui-accent,#b43f2d);--rw-soft:color-mix(in srgb,var(--gr-ink) 4%,var(--gr-surface));
+ width:min(1320px,calc(100vw - 32px));height:min(1020px,calc(100dvh - 32px));
+ border-radius:12px;font:14px/1.5 var(--ui-font,system-ui);overflow:hidden;
+}
+html body #grDialog.gr-workspace .gr-header{padding:16px 22px;gap:18px;min-height:78px}
+html body #grDialog.gr-workspace .rw-brand{display:flex;gap:15px;align-items:center;min-width:0}
+html body #grDialog.gr-workspace .rw-mark{width:36px;height:36px;display:flex;align-items:center;gap:2px;font-size:12px;letter-spacing:-2px;transform:rotate(-35deg);flex-shrink:0}
+html body #grDialog.gr-workspace .rw-mark i{color:#e98a71;font-style:normal;transform:translateY(-8px)}
+html body #grDialog.gr-workspace #grTitle{font:700 23px/1.2 var(--ui-font,system-ui)!important;letter-spacing:-.025em;display:flex;gap:12px;align-items:center;margin:0 0 5px}
+html body #grDialog.gr-workspace #grTitle span{font-size:10px;font-weight:600;letter-spacing:.1em;color:#becac2}
+html body #grDialog.gr-workspace #grGameMeta{font-size:12px;max-width:65ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #grDialog.gr-workspace .rw-header-actions{display:flex;gap:8px;flex-shrink:0}
+html body #grDialog.gr-workspace .gr-btn{min-height:44px;padding:9px 14px;font-size:13px;border-radius:7px;line-height:1.35}
+html body #grDialog.gr-workspace .gr-link{font-size:12px;min-height:36px;padding:5px 6px}
+html body #grDialog.gr-workspace .gr-close{align-self:auto}
+html body #grDialog.gr-workspace .rw-tabs{display:flex;align-items:stretch;gap:22px;padding:0 24px;min-height:48px;border-bottom:1px solid var(--gr-line);background:var(--gr-surface);flex-shrink:0}
+html body #grDialog.gr-workspace .rw-tabs button{border:0;border-bottom:3px solid transparent;background:transparent;padding:12px 2px 9px;font-size:14px;font-weight:650;color:var(--gr-muted);border-radius:0}
+html body #grDialog.gr-workspace .rw-tabs button[aria-selected=true]{border-bottom-color:var(--gr-accent);color:var(--gr-ink)}
+html body #grDialog.gr-workspace .rw-tab-context{margin-left:auto;align-self:center;color:var(--gr-muted);font-size:12px}
+html body #grDialog.gr-workspace .gr-progress-section{padding:0 24px;border:0;background:var(--gr-bg)}
+html body #grDialog.gr-workspace .gr-progress-copy{height:34px;font-size:11px;gap:8px}
+html body #grDialog.gr-workspace progress{height:2px;margin:0}
+html body #grDialog.gr-workspace #grPause{font-size:11px;min-height:32px}
+html body #grDialog.gr-workspace .gr-content{grid-template-columns:minmax(0,1.25fr) minmax(370px,1fr);overflow:hidden;gap:0}
+html body #grDialog.gr-workspace .gr-board-column{padding:14px 22px 8px;overflow-y:auto;min-width:0;scrollbar-width:thin}
+html body #grDialog.gr-workspace .gr-board-heading{min-height:42px;margin-bottom:10px;gap:8px}
+html body #grDialog.gr-workspace .gr-kicker{font-size:10px;letter-spacing:.11em}
+html body #grDialog.gr-workspace .gr-board-heading h3{font-size:16px;line-height:1.35;letter-spacing:-.01em;margin-top:3px}
+html body #grDialog.gr-workspace .gr-board-wrap{width:min(100%,max(260px,calc(100dvh - 360px)));padding:25px 12px 14px 28px;background:#e6d8b6;border-color:#b5a27c;border-radius:8px;margin:0 auto;box-shadow:0 2px 0 #ac9871,0 8px 24px -18px #19191470}
+html body #grDialog.gr-workspace .gr-cell:after{background:#e6d8b6}
+html body #grDialog.gr-workspace .gr-cell:before{background-image:linear-gradient(#928361,#928361),linear-gradient(#928361,#928361)}
+html body #grDialog.gr-workspace .gr-top-coords{left:28px;right:12px;top:4px;font-size:11px;color:#524b39}
+html body #grDialog.gr-workspace .gr-side-coords{top:25px;bottom:14px;left:3px;color:#524b39}
+html body #grDialog.gr-workspace .gr-stone{font-size:11px;font-weight:650}
+html body #grDialog.gr-workspace .gr-cell.gr-last .gr-stone{box-shadow:0 0 0 2px #fffbe9,0 0 0 4px #a3422e}
+html body #grDialog.gr-workspace #grBoard[data-editable=false] .gr-cell{cursor:default}
+html body #grDialog.gr-workspace .gr-cell.rw-preview{outline:3px solid var(--gr-accent);outline-offset:-3px!important;border-radius:50%;z-index:2}
+html body #grDialog.gr-workspace .gr-cell.rw-pending{border-radius:50%;outline:3px solid #9a422c;outline-offset:-3px!important;background:#ffffff75}
+html body #grDialog.gr-workspace .rw-candidate-point .gr-point-mark{display:grid!important;place-items:center;border-radius:50%;background:#255741;color:#fff;font-size:11px;line-height:1;min-width:18px;min-height:18px;box-shadow:0 0 0 1px #f3f6df}
+html body #grDialog.gr-workspace .rw-board-caption{display:flex;justify-content:space-between;gap:8px;margin:7px 0 0;min-height:20px}
+html body #grDialog.gr-workspace .gr-board-help{font-size:11px;line-height:1.45;min-height:0;color:var(--gr-muted);margin:0}
+html body #grDialog.gr-workspace .gr-quick-verdict{display:none}
+html body #grDialog.gr-workspace .gr-navigation{position:static;display:flex;align-items:center;gap:6px;padding:6px 0;background:transparent;margin:0;min-height:52px}
+html body #grDialog.gr-workspace #grCounter{flex:1;text-align:center;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .gr-navigation .rw-icon{min-width:38px;padding:8px;font-size:18px}
+html body #grDialog.gr-workspace .gr-balance{display:block;border-top:1px solid var(--gr-line);padding-top:8px;margin-top:1px}
+html body #grDialog.gr-workspace .gr-balance h4{font-size:11px}
+html body #grDialog.gr-workspace .gr-balance .gr-section-head span{font-size:10px}
+html body #grDialog.gr-workspace #grGraph svg{width:100%;height:45px;display:block;overflow:visible;pointer-events:none}
+html body #grDialog.gr-workspace #grGraph [data-review-ply]{pointer-events:auto;cursor:pointer}
+html body #grDialog.gr-workspace #rwScrubber{width:100%;height:18px;display:block;accent-color:var(--gr-accent);padding:0;margin:-6px 0 0;cursor:pointer}
+html body #grDialog.gr-workspace .gr-balance p{font-size:10px;margin:1px 0 0;color:var(--gr-muted)}
+html body #grDialog.gr-workspace .gr-inspector{padding:24px;overflow-y:auto;border-left:1px solid var(--gr-line);background:var(--gr-surface);scrollbar-width:thin;scroll-padding:20px}
+html body #grDialog.gr-workspace .rw-result-line{display:flex;align-items:center;gap:7px;color:var(--gr-muted);font-size:12px;margin-bottom:18px}
+html body #grDialog.gr-workspace .rw-status-dot{width:7px;height:7px;border-radius:50%;background:var(--gr-accent)}
+html body #grDialog.gr-workspace #rwOverviewTitle{font-size:29px;line-height:1.15;letter-spacing:-.04em;font-weight:700;max-width:360px}
+html body #grDialog.gr-workspace .rw-subtitle{font-size:13px;line-height:1.6;color:var(--gr-muted);margin-top:10px}
+html body #grDialog.gr-workspace .gr-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:24px 0 20px;padding:17px 0;border-top:1px solid var(--gr-line);border-bottom:1px solid var(--gr-line);font-size:12px}
+html body #grDialog.gr-workspace .gr-summary span{display:block!important;margin:0!important;max-width:none;text-align:center;border-right:1px solid var(--gr-line);line-height:1.4}
+html body #grDialog.gr-workspace .gr-summary span:last-child{border-right:0}
+html body #grDialog.gr-workspace .gr-summary b{display:block;padding:0;font-size:30px;line-height:1.3;font-weight:700}
+html body #grDialog.gr-workspace .rw-start{width:100%;font-size:14px;min-height:48px}
+html body #grDialog.gr-workspace .rw-section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 8px}
+html body #grDialog.gr-workspace .rw-section-title h4{font-size:13px}
+html body #grDialog.gr-workspace .rw-section-title span{font-size:11px;color:var(--gr-muted)}
+html body #grDialog.gr-workspace .rw-key-row{display:flex;align-items:center;gap:12px;min-height:67px;padding:12px 0;border:0;border-bottom:1px solid var(--gr-line);border-radius:0;text-align:left;background:transparent;width:100%}
+html body #grDialog.gr-workspace .rw-key-row:hover{background:var(--rw-soft)}
+html body #grDialog.gr-workspace .rw-key-number{font-size:12px;color:var(--gr-muted);width:20px;flex-shrink:0}
+html body #grDialog.gr-workspace .rw-key-row>span:nth-child(2){flex:1;min-width:0}
+html body #grDialog.gr-workspace .rw-key-row b{font-size:14px}
+html body #grDialog.gr-workspace .rw-key-row small{display:block;font-size:11px;line-height:1.5;color:var(--gr-muted);margin-top:4px}
+html body #grDialog.gr-workspace .rw-key-row strong{font-size:11px;max-width:84px}
+html body #grDialog.gr-workspace .rw-practice{padding:18px 0;margin-top:20px;border-top:1px solid var(--gr-line);display:flex;align-items:center;gap:16px}
+html body #grDialog.gr-workspace .rw-practice h4{font-size:14px}
+html body #grDialog.gr-workspace .rw-practice p{font-size:12px;color:var(--gr-muted);margin-top:4px}
+html body #grDialog.gr-workspace .rw-practice .gr-btn{margin-left:auto;max-width:160px;flex-shrink:0}
+html body #grDialog.gr-workspace .rw-decision-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
+html body #grDialog.gr-workspace #grDecisionTitle{font-size:14px;font-weight:650}
+html body #grDialog.gr-workspace #rwDecisionContext{font-size:9px;letter-spacing:.08em;color:var(--gr-muted);text-align:right;max-width:125px}
+html body #grDialog.gr-workspace .rw-verdict-row{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+html body #grDialog.gr-workspace .rw-grade-icon{display:grid;place-items:center;min-width:43px;height:43px;border-radius:50%;font-size:19px;font-weight:750;background:var(--rw-soft);border:1px solid var(--gr-line)}
+html body #grDialog.gr-workspace .gr-verdict{font:700 28px/1.15 var(--ui-font,system-ui)!important;letter-spacing:-.03em;margin:0}
+html body #grDialog.gr-workspace .gr-basis{font-size:11px;margin-top:5px;line-height:1.5}
+html body #grDialog.gr-workspace .rw-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+html body #grDialog.gr-workspace .rw-compare-move{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;background:transparent;border:1px solid var(--gr-line);border-radius:8px;text-align:left;padding:12px 14px;min-height:78px}
+html body #grDialog.gr-workspace .rw-compare-move:hover{border-color:var(--gr-accent);background:var(--rw-soft)}
+html body #grDialog.gr-workspace .rw-compare-move[aria-pressed=true]{border-color:var(--gr-accent);box-shadow:inset 0 -2px var(--gr-accent)}
+html body #grDialog.gr-workspace .rw-compare-move span{font-size:12px;color:var(--gr-muted)}
+html body #grDialog.gr-workspace .rw-compare-move b{grid-row:1/3;grid-column:2;font-size:23px;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .rw-compare-move small{font-size:11px;font-weight:600}
+html body #grDialog.gr-workspace .rw-main-actions{margin-bottom:22px;gap:8px;display:grid;grid-template-columns:1fr 1fr}
+html body #grDialog.gr-workspace .rw-main-actions .gr-btn{font-size:12px;white-space:normal;min-height:44px}
+html body #grDialog.gr-workspace #grExplore{grid-column:1/-1;border:0;min-height:30px;padding:0;color:var(--gr-accent);background:transparent}
+html body #grDialog.gr-workspace .gr-coach{padding-top:0}
+html body #grDialog.gr-workspace .gr-coach h4{font-size:12px;margin-bottom:8px}
+html body #grDialog.gr-workspace #rwShortWhy{font-size:15px;line-height:1.65}
+html body #grDialog.gr-workspace #grWhy{font-size:13px;line-height:1.65;max-width:65ch}
+html body #grDialog.gr-workspace .gr-details{margin-top:12px;font-size:12px;line-height:1.6}
+html body #grDialog.gr-workspace .gr-details summary{min-height:36px;font-size:12px;padding:7px 0;cursor:pointer}
+html body #grDialog.gr-workspace .gr-lesson{margin:14px 0 18px;padding:12px 14px;background:var(--rw-soft);border-left:2px solid var(--gr-accent)}
+html body #grDialog.gr-workspace .gr-lesson p{font-size:13px;line-height:1.6}
+html body #grDialog.gr-workspace .gr-lesson span{font-size:9px;letter-spacing:.12em}
+html body #grDialog.gr-workspace .rw-threat-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+html body #grDialog.gr-workspace .rw-threat-actions .gr-btn{width:100%;font-size:12px;color:var(--gr-accent)}
+html body #grDialog.gr-workspace .gr-feedback{font-size:13px;line-height:1.6;padding:12px;margin:12px 0}
+html body #grDialog.gr-workspace .rw-global-notice{padding:10px 24px;font-size:13px;background:var(--gr-surface);border-left:3px solid var(--gr-accent);flex-shrink:0}
+html body #grDialog.gr-workspace .gr-record{margin-top:22px;padding-top:18px}
+html body #grDialog.gr-workspace .gr-record h4{font-size:13px}
+html body #grDialog.gr-workspace select{min-height:38px;padding:7px 10px;font-size:12px}
+html body #grDialog.gr-workspace .gr-move-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;max-height:230px;scrollbar-width:thin;margin-top:12px}
+html body #grDialog.gr-workspace .gr-record-move{min-height:42px;padding:8px 7px;gap:6px;font-size:12px}
+html body #grDialog.gr-workspace .gr-record-label{font-size:10px;line-height:1.2}
+html body #grDialog.gr-workspace .gr-move-number{width:17px}
+html body #grDialog.gr-workspace .gr-alternatives{margin-top:18px;padding-top:14px}
+html body #grDialog.gr-workspace .gr-alternatives h4{font-size:13px}
+html body #grDialog.gr-workspace #grAltHint{font-size:10px;color:var(--gr-muted)}
+html body #grDialog.gr-workspace .gr-candidate{display:flex;gap:9px;padding:13px 3px;min-height:74px;border-radius:0}
+html body #grDialog.gr-workspace .rw-candidate-rank{color:var(--gr-muted);font-size:11px;width:13px;flex-shrink:0}
+html body #grDialog.gr-workspace .gr-candidate-coord{width:40px;height:40px;font-size:17px}
+html body #grDialog.gr-workspace .rw-candidate-copy{flex:1;min-width:0}
+html body #grDialog.gr-workspace .gr-candidate b{font-size:13px}
+html body #grDialog.gr-workspace .gr-candidate small{font-size:11px;line-height:1.45;margin-top:2px}
+html body #grDialog.gr-workspace .rw-candidate-go{font-size:12px!important;color:var(--gr-accent)!important;white-space:nowrap;margin:0!important;padding:0!important}
+html body #grDialog.gr-workspace .rw-pv{font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .gr-branch-tools{padding:14px;margin-top:16px}
+html body #grDialog.gr-workspace .gr-branch-tools .rw-section-title{margin:0 0 8px}
+html body #grDialog.gr-workspace .gr-branch-tools .gr-action-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+html body #grDialog.gr-workspace .gr-branch-tools .gr-btn{font-size:12px;white-space:normal}
+html body #grDialog.gr-workspace .gr-saved-label{font-size:12px;margin-top:12px}
+html body #grDialog.gr-workspace .rw-analysis-tools{display:flex;align-items:center;gap:12px;border-top:1px solid var(--gr-line);padding-top:16px;margin-top:18px}
+html body #grDialog.gr-workspace #rwStrengthLabel{font-size:11px;color:var(--gr-muted)}
+html body #grDialog.gr-workspace .a2-evidence{margin-top:8px;padding-top:0;border:0}
+html body #grDialog.gr-workspace .a2-evidence .a2-tags{margin-top:12px}
+html body #grDialog.gr-workspace .gr-footer{padding:8px 20px;min-height:63px;background:var(--gr-surface);gap:16px}
+html body #grDialog.gr-workspace .rw-footer-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1;flex-wrap:wrap}
+html body #grDialog.gr-workspace #grFooterNote{font-size:10px;max-width:300px;margin-left:auto}
+html body #grDialog.gr-workspace #grKey{display:inline-flex;min-width:190px;flex-shrink:0}
+html body #grDialog.gr-workspace .rw-settings{position:absolute;right:20px;top:74px;z-index:20;width:min(400px,calc(100% - 24px));max-height:calc(100% - 160px);overflow:auto;box-shadow:0 20px 80px #0005;border:1px solid var(--gr-line);border-radius:10px;background:var(--gr-surface);padding:18px}
+html body #grDialog.gr-workspace .rw-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:12px}
+html body #grDialog.gr-workspace .rw-settings-heading h3{font-size:17px}
+html body #grDialog.gr-workspace .rw-settings p{font-size:12px;color:var(--gr-muted);line-height:1.65;margin-top:12px}
+html body #grDialog.gr-workspace .a2-toolbar{display:grid;gap:12px;font-size:13px;padding:0}
+html body #grDialog.gr-workspace .a2-toolbar label{display:flex;justify-content:space-between;gap:8px}
+html body #grDialog.gr-workspace .rw-setting-checks{display:grid;gap:7px;margin-top:14px;font-size:13px}
+html body #grDialog.gr-workspace .rw-setting-checks label{display:flex;gap:10px;align-items:center;min-height:36px}
+html body #grDialog.gr-workspace input[type=checkbox]{appearance:auto;width:16px;height:16px;accent-color:var(--gr-accent)}
+html body #grDialog.gr-workspace .rw-placement{display:flex;align-items:center;gap:7px;background:var(--gr-surface);padding:7px;border-radius:6px;margin-top:5px;font-size:12px}
+html body #grDialog.gr-workspace .rw-placement span{margin-right:auto}
+/* The proof is still part of Review, not a fourth navigation destination. */
+html body #grDialog.gr-workspace[data-review-mode=proof] .gr-inspector>#rwDecision{display:block!important}
+html body #grDialog.gr-workspace[data-review-mode=proof] #rwDecision>*:not(.rw-decision-head):not(.a2-proof-tools){display:none!important}
+html body #grDialog.gr-workspace[data-review-mode=proof] #grKey{display:inline-flex!important}
+html body #grDialog.gr-workspace[data-review-mode=proof] .gr-board-wrap{width:min(100%,max(280px,calc(100dvh - 300px)))}
+html body #grDialog.gr-workspace[data-review-mode=proof] .a2-proof-tools{margin:12px 0 0;padding:18px;box-shadow:none}
+html body #grDialog.gr-workspace[data-review-mode=proof] .a2-proof-tools p{font-size:15px;line-height:1.65}
+html body #grDialog.gr-workspace[data-review-mode=retry] .gr-record,html body #grDialog.gr-workspace[data-review-mode=retry] .gr-balance{display:none!important}
+html body #grDialog.gr-workspace[data-review-mode=retry] .gr-board-wrap{width:min(100%,max(280px,calc(100dvh - 320px)))}
+html body #grDialog.gr-workspace :is(button,summary,input,select):focus-visible{outline:3px solid var(--gr-accent);outline-offset:3px}
+html body #grDialog.gr-workspace button:not(:disabled){transition:background-color .12s,border-color .12s}
+html body.large-text #grDialog.gr-workspace #rwShortWhy{font-size:18px}
+html body.large-text #grDialog.gr-workspace :is(#grWhy,.gr-lesson p,.rw-subtitle){font-size:16px}
+html body.high-contrast #grDialog.gr-workspace{--gr-line:var(--gr-ink);--gr-muted:var(--gr-ink)}
+@media(max-width:1050px) and (min-width:721px){
+ html body #grDialog.gr-workspace .gr-content{grid-template-columns:minmax(0,1fr) minmax(335px,.9fr)}
+ html body #grDialog.gr-workspace .gr-inspector{padding:18px}
+ html body #grDialog.gr-workspace .gr-board-column{padding:14px 14px 8px}
+ html body #grDialog.gr-workspace .rw-tab-context{display:none}
+ html body #grDialog.gr-workspace #grFooterNote{display:none}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace{width:100vw!important;height:100dvh!important;border-radius:0;border:0}
+ html body #grDialog.gr-workspace .gr-header{padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));min-height:64px;gap:8px}
+ html body #grDialog.gr-workspace .rw-brand{gap:8px;flex:1}
+ html body #grDialog.gr-workspace .rw-mark{display:none}
+ html body #grDialog.gr-workspace #grTitle{font-size:19px!important;display:block;margin-bottom:3px}
+ html body #grDialog.gr-workspace #grTitle span{display:none}
+ html body #grDialog.gr-workspace #grGameMeta{max-width:46vw;font-size:10px}
+ html body #grDialog.gr-workspace .rw-header-actions{gap:5px}
+ html body #grDialog.gr-workspace .rw-header-actions .gr-btn{font-size:11px;min-height:40px;padding:7px 10px}
+ html body #grDialog.gr-workspace .gr-close span{margin-left:2px;font-size:16px}
+ html body #grDialog.gr-workspace .rw-tabs{gap:0;padding:0 12px;min-height:44px;justify-content:space-between}
+ html body #grDialog.gr-workspace .rw-tabs button{font-size:13px;flex:1;padding:10px 2px 8px}
+ html body #grDialog.gr-workspace .rw-tab-context{display:none}
+ html body #grDialog.gr-workspace .gr-progress-section{padding:0 12px}
+ html body #grDialog.gr-workspace .gr-progress-copy{font-size:10px;height:31px}
+ html body #grDialog.gr-workspace #grPause{font-size:10px;min-height:30px}
+ html body #grDialog.gr-workspace .gr-content{display:block;overflow-y:auto;overscroll-behavior:contain}
+ html body #grDialog.gr-workspace .gr-board-column{padding:12px 14px 6px;overflow:visible;background:var(--gr-bg)}
+ html body #grDialog.gr-workspace .gr-board-heading{min-height:35px;margin-bottom:8px}
+ html body #grDialog.gr-workspace .gr-board-heading h3{font-size:13px}
+ html body #grDialog.gr-workspace .gr-kicker{font-size:9px}
+ html body #grDialog.gr-workspace .gr-return{font-size:11px;min-height:40px;padding:7px 9px}
+ html body #grDialog.gr-workspace .gr-board-wrap{width:min(100%,max(240px,calc(100dvh - 485px)));padding:21px 10px 12px 24px;border-radius:7px}
+ html body #grDialog.gr-workspace .gr-top-coords{left:24px;right:10px;top:2px;font-size:9px}
+ html body #grDialog.gr-workspace .gr-side-coords{top:21px;bottom:12px;left:2px;width:18px;font-size:9px}
+ html body #grDialog.gr-workspace .gr-stone{font-size:9px}
+ html body #grDialog.gr-workspace .gr-board-help{font-size:10px}
+ html body #grDialog.gr-workspace .gr-navigation{min-height:46px;padding:4px 0;gap:4px}
+ html body #grDialog.gr-workspace .gr-navigation .gr-btn{min-height:40px;font-size:11px;padding:8px 11px}
+ html body #grDialog.gr-workspace .gr-navigation .rw-icon{min-width:31px;font-size:15px;padding:7px}
+ html body #grDialog.gr-workspace #grCounter{font-size:11px}
+ html body #grDialog.gr-workspace .gr-balance{padding-top:5px}
+ html body #grDialog.gr-workspace #grGraph svg{height:30px}
+ html body #grDialog.gr-workspace #rwScrubber{height:20px;margin:-5px 0 0}
+ html body #grDialog.gr-workspace .gr-balance p{display:none}
+ html body #grDialog.gr-workspace .gr-inspector{border-left:0;padding:18px 16px 28px;overflow:visible}
+ html body #grDialog.gr-workspace #rwOverviewTitle{font-size:26px;max-width:none}
+ html body #grDialog.gr-workspace .gr-summary{margin:18px 0;padding:12px 0}
+ html body #grDialog.gr-workspace .gr-summary b{font-size:25px}
+ html body #grDialog.gr-workspace .rw-result-line{margin-bottom:12px}
+ html body #grDialog.gr-workspace .rw-verdict-row{margin:0 0 15px;gap:12px}
+ html body #grDialog.gr-workspace .gr-verdict{font-size:25px!important}
+ html body #grDialog.gr-workspace .rw-compare-move{min-height:67px;padding:10px 12px}
+ html body #grDialog.gr-workspace .rw-main-actions{margin-bottom:18px}
+ html body #grDialog.gr-workspace .gr-lesson p{font-size:13px}
+ html body #grDialog.gr-workspace .gr-footer{padding:7px 12px;padding-bottom:max(7px,env(safe-area-inset-bottom));min-height:58px;gap:10px;flex-wrap:nowrap}
+ html body #grDialog.gr-workspace .rw-footer-left{gap:0;flex-direction:column;align-items:flex-start}
+ html body #grDialog.gr-workspace .rw-footer-left .gr-link{font-size:10px;min-height:21px;padding:2px 0}
+ html body #grDialog.gr-workspace #grFooterNote{display:none}
+ html body #grDialog.gr-workspace #grKey{min-width:165px;font-size:12px;padding:10px}
+ html body #grDialog.gr-workspace .rw-settings{top:60px;right:12px;padding:16px;max-height:calc(100% - 145px)}
+ html body #grDialog.gr-workspace .rw-global-notice{font-size:12px;padding:8px 12px}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .gr-board-wrap{width:min(100%,max(230px,calc(100dvh - 480px)))}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .gr-inspector{padding:0 14px 20px;border:0}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .rw-decision-head{display:none}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .a2-proof-tools{margin:0;padding:12px}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .a2-proof-tools p{font-size:13px;line-height:1.6;margin:10px 0}
+ html body #grDialog.gr-workspace[data-review-mode=retry] .gr-board-wrap{width:min(100%,max(230px,calc(100dvh - 485px)))}
+}
+@media(prefers-reduced-motion:reduce){html body #grDialog.gr-workspace *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* Keep the entire board, timeline, and action footer visible at normal desktop heights. */
+html body #grDialog.gr-workspace .gr-header{padding-block:12px;min-height:70px}
+html body #grDialog.gr-workspace .gr-footer{display:flex!important;margin:0;max-width:none;letter-spacing:normal}
+html body #grDialog.gr-workspace .gr-footer span{letter-spacing:normal;white-space:normal}
+@media(min-width:721px){html body #grDialog.gr-workspace .gr-board-wrap{width:min(100%,max(260px,calc(100dvh - 470px)))}}
+/* On phones, only the explanation pane scrolls; the active board stays in sight.
+   Short landscape windows fall back to one continuous scroll region. */
+@media(max-width:720px) and (min-height:741px){
+ html body #grDialog.gr-workspace:not([data-panel=overview]) .gr-content{display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+ html body #grDialog.gr-workspace:not([data-panel=overview]) .gr-inspector{overflow-y:auto;padding:14px 16px 24px;overscroll-behavior:contain;border-top:1px solid var(--gr-line)}
+ html body #grDialog.gr-workspace .gr-board-wrap{width:min(100%,max(230px,calc(100dvh - 530px)))}
+ html body #grDialog.gr-workspace .gr-board-heading{min-height:28px}
+ html body #grDialog.gr-workspace[data-review-mode=game] .gr-balance{display:none!important}
+ html body #grDialog.gr-workspace[data-review-mode=explore] .gr-balance{display:none!important}
+ html body #grDialog.gr-workspace:not([data-panel=overview]) .gr-board-column{padding:8px 14px 4px}
+ html body #grDialog.gr-workspace[data-review-mode=retry] .gr-board-wrap{width:min(100%,max(230px,calc(100dvh - 530px)))}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .gr-board-wrap{width:min(100%,max(230px,calc(100dvh - 480px)))}
+ html body #grDialog.gr-workspace[data-review-mode=proof] .gr-inspector{padding:4px 14px 18px}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace[data-panel=overview] .gr-board-column{display:none}
+ html body #grDialog.gr-workspace[data-panel=overview] .gr-inspector{border-top:0}
+ html body #grDialog.gr-workspace #grExplore{display:none}
+ html body #grDialog.gr-workspace .rw-verdict-row{margin-bottom:12px}
+ html body #grDialog.gr-workspace .rw-decision-head{margin-bottom:10px}
+}
+html body #grDialog.gr-workspace #rwShortWhy{margin:0 0 16px}
+/* One header on desktop, not a stack of toolbars. */
+html body #grDialog.gr-workspace .gr-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:'brand tabs actions';gap:26px}
+html body #grDialog.gr-workspace .rw-brand{grid-area:brand}
+html body #grDialog.gr-workspace .rw-header-actions{grid-area:actions}
+html body #grDialog.gr-workspace .rw-tabs{grid-area:tabs;background:transparent;border:0;padding:0;gap:20px;min-height:44px}
+html body #grDialog.gr-workspace .rw-tabs button{color:#c0ccc4}
+html body #grDialog.gr-workspace .rw-tabs button[aria-selected=true]{color:#fff;border-bottom-color:#e7977f}
+html body #grDialog.gr-workspace .rw-tab-context{display:none}
+@media(max-width:1050px) and (min-width:721px){html body #grDialog.gr-workspace .gr-header{gap:16px}html body #grDialog.gr-workspace .rw-tabs{gap:12px}html body #grDialog.gr-workspace .rw-tabs button{font-size:12px}html body #grDialog.gr-workspace #grTitle span{display:none}}
+@media(max-width:720px){html body #grDialog.gr-workspace .gr-header{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'brand actions' 'tabs tabs';gap:6px;padding-bottom:0}html body #grDialog.gr-workspace .rw-tabs{gap:0}}
+/* Keep the move record at hand while longer explanations scroll independently. */
+@media(min-width:721px){
+ html body #grDialog.gr-workspace .gr-inspector{display:flex;flex-direction:column;overflow:hidden}
+ html body #grDialog.gr-workspace #rwOverview,html body #grDialog.gr-workspace #rwDecision{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;padding-right:6px}
+ html body #grDialog.gr-workspace .gr-record{flex:0 0 auto;margin-top:15px;padding-top:12px}
+ html body #grDialog.gr-workspace .gr-move-list{max-height:145px;margin-top:8px}
+ html body #grDialog.gr-workspace[data-panel=overview] .gr-record{display:none}
+ html body #grDialog.gr-workspace[data-review-mode=proof] #rwDecision{overflow:visible}
+}
+html body #grDialog.gr-workspace #grExplore{display:none}
+html body #grDialog.gr-workspace #grWhyTitle{display:none}
+html body #grDialog.gr-workspace .gr-record .gr-section-head h4{white-space:nowrap}
+html body #grDialog.gr-workspace #grFilter{width:auto;min-width:132px}
+
+html body #grDialog.gr-workspace[data-panel=overview] .gr-navigation{display:none}
+html body #grDialog.gr-workspace #rwCandidateEvidence table{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px;text-align:left}
+html body #grDialog.gr-workspace #rwCandidateEvidence :is(th,td){padding:6px 3px;border-bottom:1px solid var(--gr-line);font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace #rwCandidateEvidence caption{text-align:left;font-weight:600;padding:6px 0}
+
+/* Free analysis prioritizes playable alternatives, not a second copy of coaching. */
+html body #grDialog.gr-workspace[data-panel=analysis][data-review-mode=game] :is(.rw-verdict-row,#rwShortWhy,.gr-coach,.rw-threat-actions,.rw-main-actions){display:none}
+html body #grDialog.gr-workspace .rw-mobile-action{display:none}
+html body #grDialog.gr-workspace .rw-settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace .rw-footer-left{display:none}
+ html body #grDialog.gr-workspace .rw-mobile-action{display:inline-flex;flex:1;min-width:0;font-size:12px;min-height:44px}
+ html body #grDialog.gr-workspace #grKey{flex:1;min-width:0}
+ html body #grDialog.gr-workspace[data-panel=overview] #grKey{flex:0 1 auto;margin-left:auto;min-width:210px}
+ html body #grDialog.gr-workspace .gr-footer{min-height:60px}
+}
+
+html body #grDialog.gr-workspace .rw-candidate-rank{flex:0 0 14px!important}
+html body #grDialog.gr-workspace .gr-candidate-coord{flex:0 0 40px!important}
+html body #grDialog.gr-workspace .rw-candidate-go{flex:0 0 auto!important}
+html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=bad] .gr-point-mark{background:var(--gr-bad);color:#fff}
+html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=warn] .gr-point-mark{background:var(--gr-warn);color:#fff}
+html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral] .gr-point-mark{background:var(--gr-muted);color:var(--gr-surface)}
