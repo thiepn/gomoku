@@ -60,6 +60,6 @@ with sync_playwright() as p:
  check('pause cancels in-flight analysis',not state(page)['scanning'] and not state(page)['interacting'])
  page.locator('#grPause').click();page.wait_for_function('GomokuReview.state().results.every(Boolean)&&!GomokuReview.state().scanning',timeout=30000);check('resume completes remaining decisions')
  check('no uncaught browser errors',not errors)
- (OUT/'browser-report.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'pageErrors':errors,'scope':'Full inline application, synthetic fixture, Chromium set_content. No live-site navigation or real-device claim.'},indent=2))
+ (OUT/'browser-report.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'pageErrors':errors,'origin':os.environ.get('REVIEW_URL','set_content'),'scope':'Full inline application, synthetic fixture, Chromium. Navigation uses REVIEW_URL when provided; otherwise set_content. Not physical-device or all-browser certification.'},indent=2))
  b.close()
 print(f'{len(checks)} browser checks passed',flush=True)
