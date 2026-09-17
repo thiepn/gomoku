@@ -31,5 +31,5 @@ for n in [6,7]:
 # then deleted the inserted course card, causing an endless remove/remount loop.
 s=s.replace("document.querySelector('[data-v92-route=\"improve\"]')", "document.querySelector('#v92ImproveHome')")
 path.write_text(s)
-sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-review-1.0.0-table-1.0.1-renju';",t,count=1);sw.write_text(t)
-print('Embedded Guided Review 1.0.0; existing game, course and storage formats preserved.')
+sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-table-1.0.1-renju';",t,count=1);sw.write_text(t)
+print('Embedded Guided Review 2.0.0; existing game, course and storage formats preserved.')

@@ -17,7 +17,9 @@ with sync_playwright() as p:
  check('reopening restores full analysis and selected decision',pg.evaluate('GomokuReview.state().results.filter(Boolean).length===10&&GomokuReview.state().index===6'))
  check('export control and safety footer are visible',pg.locator('#grExport').is_visible())
  pg.evaluate('GomokuReview.close();localStorage.setItem("gomoku.guided-review.v1","{invalid");GomokuReview.open();document.getElementById("grPause").click()');check('malformed cache does not prevent opening',pg.locator('#grDialog').is_visible())
- pg.evaluate('GomokuReview.close();localStorage.removeItem("gomoku.guided-review.v1");window.__oldWorker=Worker;window.Worker=function(){throw Error("Worker blocked for test")};GomokuReview.open()');pg.wait_for_timeout(200)
+ # A fresh document isolates worker startup from Analysis 2.0's warm result cache.
+ pg.close();pg=load(b)
+ pg.evaluate('localStorage.removeItem("gomoku.guided-review.v1");window.__oldWorker=Worker;window.Worker=function(){throw Error("Worker blocked for test")};GomokuReview.open()');pg.wait_for_timeout(200)
  check('blocked worker produces explicit recoverable error','stopped' in pg.locator('#grFeedback').inner_text() and not pg.evaluate('GomokuReview.state().scanning'))
  pg.evaluate('window.Worker=window.__oldWorker;document.getElementById("grPause").click()');pg.wait_for_function('GomokuReview.state().results.every(Boolean)&&!GomokuReview.state().scanning',timeout=30000)
  check('analysis recovers after worker is available again')

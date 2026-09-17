@@ -1,0 +1,68 @@
+/* Analysis 2.0 uses the existing Tournament Table visual language. */
+#grDialog .a2-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:8px;font-size:11px}
+#grDialog .a2-toolbar label{display:flex;align-items:center;gap:8px;color:var(--gr-muted)}
+#grDialog .a2-toolbar select,#grDialog #a2Defense{background:var(--gr-surface);border:1px solid var(--gr-line);border-radius:6px;padding:7px;min-height:34px}
+#grDialog .a2-toolbar .gr-btn{min-height:34px;padding:7px 10px}
+#grDialog .a2-overlay-control{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11px;color:var(--gr-muted)}
+#grDialog .a2-overlay-control label{display:flex;align-items:center;gap:5px;white-space:nowrap}
+#grDialog .a2-overlay-control input{appearance:auto;accent-color:var(--gr-accent);width:15px;height:15px}
+#grDialog .a2-overlay-control span{font-size:10px;text-align:right}
+#grDialog .a2-evidence{margin-top:18px;padding-top:15px;border-top:1px solid var(--gr-line)}
+#grDialog .a2-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+#grDialog .a2-tags span{padding:4px 7px;border:1px solid var(--gr-line);border-radius:4px;font-size:10px;font-weight:650}
+#grDialog .a2-search-stats{color:var(--gr-muted);font-size:11px;line-height:1.7;margin-bottom:10px;font-variant-numeric:tabular-nums}
+#grDialog #a2ProofLimit{font-size:11px;margin-top:10px}
+#grDialog .a2-proof-tools{margin-top:12px;padding:14px;background:var(--gr-surface);border:1px solid var(--gr-line);border-left:3px solid var(--gr-accent);border-radius:7px}
+#grDialog .a2-proof-tools p{font-size:12px;margin-bottom:12px}
+#grDialog #a2DefenseLabel{display:block;font-size:11px;margin:8px 0 12px}
+#grDialog .a2-candidate-metrics{margin-left:auto;text-align:right;font-size:11px;flex:0 1 47%;min-width:0;font-variant-numeric:tabular-nums}
+#grDialog .a2-candidate-metrics small{display:block;overflow-wrap:anywhere;line-height:1.5;font-size:10px}
+#grDialog .gr-candidate>span:nth-child(2){min-width:0;flex:1}
+#grDialog #a2CoachSummary p{margin:8px 0;font-size:12px}
+#grDialog .gr-balance{display:block!important}
+#a2Trainer{--gr-accent:var(--ui-accent,#b43f2d);--gr-bg:var(--paper,#f6f3ea);--gr-surface:var(--card,#fffdf8);--gr-ink:var(--ink,#202721);--gr-muted:var(--ink2,#58655a);--gr-line:var(--hair2,#cbd2c8);border-radius:12px}
+#a2Trainer #a2TrainingTitle{font-size:27px;line-height:1.25;margin:5px 0}
+#a2Trainer #a2TrainingMeta{font-size:12px;color:var(--gr-muted)}
+#a2Trainer .gr-board-wrap{width:min(100%,max(300px,calc(100dvh - 360px)))}
+#a2Trainer .gr-inspector{overflow-y:auto}
+#a2Trainer #a2TrainingFeedback{min-height:60px}
+#a2Trainer #a2TrainingWhy{font-size:14px;line-height:1.7;margin-bottom:18px}
+#a2Trainer .a2-training-actions{margin:15px 0}
+#a2Trainer #a2TrainingSchedule{font-size:11px;line-height:1.7;margin-top:12px}
+#a2Trainer .a2-library-list{max-height:300px;overflow-y:auto}
+#a2Trainer .a2-library-card{display:flex;justify-content:space-between;gap:14px;width:100%;padding:12px 8px;text-align:left;border:0;border-bottom:1px solid var(--gr-line);border-radius:0;background:transparent;font-size:12px}
+#a2Trainer .a2-library-card[aria-current=true]{background:color-mix(in srgb,var(--gr-accent) 9%,var(--gr-surface));box-shadow:inset 3px 0 var(--gr-accent)}
+#a2Trainer .a2-library-card>span:last-child{text-align:right;white-space:nowrap;font-size:11px}
+#a2Trainer .a2-library-card small{display:block;color:var(--gr-muted);font-size:10px;line-height:1.7;overflow-wrap:anywhere}
+#a2Trainer .a2-library-actions{display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;align-items:center}
+#a2Trainer .a2-import{cursor:pointer;display:block}
+#a2Trainer .a2-import input{display:block;width:150px;font-size:10px}
+#a2Trainer #a2TrainingStorage{margin-top:10px;font-size:11px;line-height:1.6}
+html body.ui-studio #a2Trainer .gr-primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--card,#fff)}
+html body.ui-studio #a2Trainer .gr-board-wrap{background:#d9cda9;border-color:#aaa17c;box-shadow:inset 0 1px #fff9,0 5px 18px #16201a12}
+html body.ui-studio #a2Trainer .gr-cell:first-child:after,html body.ui-studio #a2Trainer .gr-cell:last-child:after{background:#d9cda9}
+@media(max-width:720px){#grDialog .a2-toolbar{gap:8px;font-size:10px}#grDialog .a2-toolbar label{width:100%;justify-content:space-between}#grDialog .a2-toolbar .gr-link{font-size:10px}#grDialog .a2-overlay-control span{display:none}#grDialog .a2-candidate-metrics{flex-basis:43%}#a2Trainer .gr-board-wrap{width:100%}#a2Trainer .gr-inspector{padding-bottom:35px}#a2Trainer #a2TrainingTitle{font-size:23px}#a2Trainer .gr-content{overflow-y:auto}#grDialog .a2-toolbar select{max-width:55%}}
+@media(min-width:721px){#grDialog .gr-board-wrap{width:min(100%,max(280px,calc(100dvh - 550px)))}#a2Trainer .gr-board-column{overflow-y:auto}}
+body.large-text :is(#grDialog,#a2Trainer){font-size:16px}
+body.high-contrast :is(#grDialog,#a2Trainer){--gr-line:currentColor}
+body.reduce-motion :is(#grDialog,#a2Trainer) *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+
+#grDialog .a2-toolbar label{white-space:nowrap;width:auto;flex:0 0 auto}
+#grDialog .a2-toolbar select{width:155px;max-width:100%}
+@media(max-width:720px){#grDialog .a2-toolbar label{width:100%;white-space:normal}}
+
+/* A proof is a focused board + explanation view, not controls below a scrolled board. */
+#grDialog[data-review-mode="proof"] .gr-progress-section,
+#grDialog[data-review-mode="proof"] .gr-view-switch,
+#grDialog[data-review-mode="proof"] .gr-balance,
+#grDialog[data-review-mode="proof"] .a2-overlay-control,
+#grDialog[data-review-mode="proof"] .gr-board-help,
+#grDialog[data-review-mode="proof"] .gr-board-feedback,
+#grDialog[data-review-mode="proof"] .gr-navigation,
+#grDialog[data-review-mode="proof"] .gr-quick-verdict{display:none!important}
+#grDialog[data-review-mode="proof"] .gr-inspector>*:not(.gr-section-head):not(.a2-proof-tools){display:none!important}
+#grDialog[data-review-mode="proof"] #grKey{display:none}
+#grDialog[data-review-mode="proof"] .a2-proof-tools{margin-top:18px}
+#grDialog[data-review-mode="proof"] .a2-proof-tools p{font-size:15px;line-height:1.7;margin:20px 0}
+@media(min-width:721px){#grDialog[data-review-mode="proof"] .gr-board-wrap{width:min(100%,calc(100dvh - 350px))}}
+@media(max-width:720px){#grDialog[data-review-mode="proof"] .gr-inspector{border-top:0;padding-top:0}#grDialog[data-review-mode="proof"] .gr-inspector>.gr-section-head{display:none}#grDialog[data-review-mode="proof"] .a2-proof-tools{margin:0;padding:12px}#grDialog[data-review-mode="proof"] .a2-proof-tools p{font-size:12px;margin:10px 0}}

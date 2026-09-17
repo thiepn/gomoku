@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-v12.1.0-review-1.0.0-table-1.0.1-renju';
+const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-table-1.0.1-renju';
 const APP_SHELL = [
   './',
   './index.html',
