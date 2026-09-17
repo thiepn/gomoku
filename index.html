@@ -1,4 +1,5 @@
-<!doctype html><html lang="en"><head>\n<script id="v117-early-resilience">
+<!doctype html><html lang="en"><head>
+<script id="v117-early-resilience">
 /* V11.7 · early resilience guard. Intentionally dependency-free so it can report startup failures. */
 (()=>{'use strict';
  const VERSION='12.1.0',KEY='gomoku.runtime.incidents.v117',started=performance.now();
@@ -14,7 +15,8 @@
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});else watch();
  window.__GomokuEarly117=Object.freeze({version:VERSION,startedAt:started,incidents:()=>incidents.slice(),record,downloadEmergency,storageSnapshot:appStorage,showGuard});
 })();
-</script>\n<meta charset="utf-8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="gomoku-build" content="12.1.0"><meta name="application-name" content="Gomoku Studio"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#192420"><meta name="description" content="A local-first Gomoku and Renju app for intuitive play, guided learning, review, training and competitive matches."><title>Gomoku Studio</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23a63b2a'/%3E%3Cpath d='M16 20h32M16 32h32M16 44h32M20 16v32M32 16v32M44 16v32' stroke='%23f2ecdd' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23221d14'/%3E%3C/svg%3E"><style>:root{--paper:#f2ecdd;--card:#f8f3e8;--card2:#fcf8ef;--ink:#28231b;--ink2:#716553;--hair:#d9cdae;--hair2:#c8b995;--seal:#a43a2b;--soft:rgba(164,58,43,.08);--shadow:rgba(67,43,14,.13);color-scheme:light}
+</script>
+<meta charset="utf-8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="gomoku-build" content="12.1.0"><meta name="application-name" content="Gomoku Studio"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#192420"><meta name="description" content="A local-first Gomoku and Renju app for intuitive play, guided learning, review, training and competitive matches."><title>Gomoku Studio</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23a63b2a'/%3E%3Cpath d='M16 20h32M16 32h32M16 44h32M20 16v32M32 16v32M44 16v32' stroke='%23f2ecdd' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23221d14'/%3E%3C/svg%3E"><style>:root{--paper:#f2ecdd;--card:#f8f3e8;--card2:#fcf8ef;--ink:#28231b;--ink2:#716553;--hair:#d9cdae;--hair2:#c8b995;--seal:#a43a2b;--soft:rgba(164,58,43,.08);--shadow:rgba(67,43,14,.13);color-scheme:light}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.032' filter='url(%23n)'/%3E%3C/svg%3E")}[hidden]{display:none!important}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}button,a,input,select,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--seal);outline-offset:3px}a{color:var(--seal)}h1,h2,h3,p{margin:0}h2,h3{font-family:Georgia,'Yu Mincho',serif;font-weight:500}h3{font-size:25px;line-height:1.3;margin:12px 0}small{font-size:11px}b,strong{font-weight:600}.skip{position:fixed;top:-80px;left:16px;padding:14px;background:var(--card2);z-index:60}.skip:focus{top:8px}.top{max-width:1280px;margin:auto;padding:24px 32px 22px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between;align-items:center;gap:20px}.brand{display:flex;align-items:center;gap:15px}.logo-seal{background:var(--seal);color:#fff2dc;width:47px;height:47px;display:grid;place-items:center;transform:rotate(-5deg);border-radius:8px;font:700 29px Georgia;box-shadow:inset 0 0 0 3px #ffffff20,0 5px 10px var(--shadow)}h1{font:700 25px Georgia;letter-spacing:.16em}h1 span{font:500 10px system-ui;letter-spacing:.24em;display:inline-block;margin-left:7px;vertical-align:middle;color:var(--ink2)}.brand p{font-size:11px;margin-top:7px;letter-spacing:.05em;color:var(--ink2)}.header-tools{display:flex;align-items:center;gap:8px}.version{font-size:9px;letter-spacing:.16em;margin-right:12px;color:var(--ink2)}.icon-btn{border:1px solid var(--hair);background:transparent;border-radius:6px;display:grid;place-items:center;min-width:44px;width:44px;min-height:44px;color:var(--ink);font-size:21px;line-height:1}.icon-btn:hover{background:var(--card2);border-color:var(--hair2)}.icon-btn[aria-pressed=true]{border-color:var(--seal);color:var(--seal)}
 main{max-width:1280px;margin:0 auto;padding:28px 32px 44px;display:grid;grid-template-columns:minmax(0,1fr) 355px;gap:45px;align-items:start}.board-side{min-width:0;position:sticky;top:20px}.board-col{max-width:680px;margin:auto}.board-top{display:flex;justify-content:space-between;align-items:center;margin:0 2px 19px;min-height:53px}.eyebrow{font:600 9px system-ui;letter-spacing:.19em;line-height:1.5;color:var(--ink2)}.board-heading{display:flex;gap:9px;align-items:center;margin-top:8px}.board-heading h2{font-size:22px;line-height:1.3}.turn-dot{background:#202020;border:1px solid #0002;border-radius:50%;width:11px;height:11px;flex:none}.move-badge{text-align:center;font:500 26px Georgia;line-height:1;color:var(--ink)}.move-badge span{display:block;font:600 8px system-ui;letter-spacing:.15em;color:var(--ink2);margin-top:6px}.board-shell{isolation:isolate;position:relative;width:100%;aspect-ratio:1;border-radius:7px;box-shadow:0 18px 30px -10px rgba(76,52,16,.35),0 4px 8px #46321825}.board-shell::after{content:'';position:absolute;left:3px;right:3px;bottom:-8px;height:8px;background:linear-gradient(#936029,#63400f);border-radius:0 0 6px 6px;z-index:-1}#board{display:block;width:100%;height:100%;border-radius:7px;pointer-events:none}.board-grid{position:absolute;inset:3.125%;display:grid;grid-template-rows:repeat(15,minmax(0,1fr));z-index:2;touch-action:manipulation}.board-row{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));min-width:0;min-height:0}.board-point{display:block;min-width:0;min-height:0;width:100%;height:100%;border:0;padding:0;border-radius:50%;background:transparent;color:transparent;touch-action:manipulation}.board-point:focus-visible{outline:2px solid var(--seal);outline-offset:-1px;background:#fff2}.board-point[aria-disabled=true]{cursor:default}.caption{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:20px 2px 0;color:var(--ink2);font-size:10px;line-height:1.5}.caption #capR{font-weight:500}.placement{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:12px 0;margin-top:13px;min-height:67px}.placement>div{min-width:0}.placement strong,.placement span{display:block}.placement strong{font-size:12px}.placement span{color:var(--ink2);font-size:10px;line-height:1.5;margin-top:4px}.btn{min-height:44px;display:inline-flex;justify-content:center;align-items:center;gap:6px;padding:10px 15px;border:1px solid var(--ink);border-radius:5px;background:var(--ink);color:var(--paper);font-size:11px;font-weight:550;line-height:1.4;transition:background .13s,border-color .13s;white-space:normal}.btn:hover:not(:disabled){filter:brightness(1.12)}.btn.ghost{background:transparent;color:var(--ink);border-color:var(--hair2)}.btn.ghost:hover:not(:disabled){background:var(--card2);border-color:var(--ink2)}.btn.primary{background:var(--seal);border-color:var(--seal);color:#fff6e9}.wide{width:100%;margin-top:10px}#placeBtn{min-width:107px;flex:none}.game-actions{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:7px;margin-top:13px}.game-actions .btn{padding-inline:6px}.board-help{margin-top:13px;color:var(--ink2);font-size:10px;line-height:1.7}.panel{border-left:1px solid var(--hair);padding-left:28px;min-width:0}.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px;background:var(--card);border:1px solid var(--hair);border-radius:7px;margin-bottom:5px}.tabs button{border:0;background:transparent;color:var(--ink2);padding:10px 4px;min-height:44px;border-radius:4px;font-size:11px;font-weight:600}.tabs button[aria-selected=true]{background:var(--ink);color:var(--paper)}.panel section{padding:20px 0;border-bottom:1px solid var(--hair)}.panel section:last-child{border:0}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.small-seal{border:1px solid var(--hair2);padding:4px 7px;border-radius:3px;color:var(--ink2);font-size:9px;letter-spacing:.06em;white-space:nowrap}.players{display:flex;align-items:center;gap:10px;margin-top:13px}.player-card{display:flex;gap:8px;align-items:center;flex:1;min-width:0}.player-card b{font:600 14px Georgia;display:block;overflow-wrap:anywhere}.player-card small{display:block;margin-top:4px;color:var(--ink2);font-size:9px;line-height:1.5}.versus{font:500 8px system-ui;color:var(--ink2);letter-spacing:.14em}.pstone{width:23px;height:23px;border-radius:50%;flex:none;box-shadow:0 2px 3px #23170e55}.pstone.black{background:radial-gradient(circle at 32% 28%,#777,#161616 64%,#000)}.pstone.white{background:radial-gradient(circle at 32% 28%,#fffef5,#ede6d6 55%,#b5a98d);border:1px solid #94836855}.levels{display:grid;grid-template-columns:1fr 1fr;gap:7px}.level{display:flex;align-items:center;gap:9px;min-height:52px;border:1px solid var(--hair);padding:9px;background:transparent;border-radius:5px;text-align:left;color:var(--ink)}.level-num{font:600 14px Georgia;color:var(--ink2);border-right:1px solid var(--hair);padding-right:8px}.level b{font:600 12px Georgia;display:block}.level small{display:block;margin-top:3px;font-size:9px;color:var(--ink2)}.level[aria-pressed=true]{border-color:var(--seal);background:var(--soft)}.level[aria-pressed=true] .level-num{color:var(--seal)}.muted{font-size:11px;color:var(--ink2);line-height:1.8;margin-top:10px}.tiny,.engine-note{font-size:10px;line-height:1.75;color:var(--ink2);margin-top:8px}.metrics{font-size:11px;line-height:1.7;margin-top:10px}.comment{border-left:2px solid var(--seal);padding-left:13px;margin-top:16px}.comment b{font-size:8px;letter-spacing:.15em;color:var(--seal)}.comment p{font:15px/1.7 Georgia;margin-top:6px}.comment span{display:block;font-size:10px;color:var(--ink2);margin-top:6px}.field-row{display:flex;gap:10px;margin-top:12px}.field-row>label{flex:1;min-width:0}label:not(.toggle){display:block;font-size:10px;color:var(--ink2);line-height:1.5;font-weight:550}input[type=text],select,textarea{width:100%;min-width:0;min-height:44px;padding:10px;border:1px solid var(--hair2);border-radius:5px;color:var(--ink);background:var(--card2);font-size:12px;margin-top:6px}textarea{resize:vertical;line-height:1.6}select{cursor:pointer}input[type=range]{accent-color:var(--seal);min-width:30px;width:100%;height:44px;cursor:pointer}.toggle{display:flex;align-items:center;min-height:44px;gap:10px;line-height:1.5;font-size:11px;color:var(--ink);cursor:pointer;margin-top:6px}.toggle input{width:18px;height:18px;accent-color:var(--seal);flex:none}.button-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.button-row>.btn{flex:1}.text-btn{border:0;background:none;min-height:44px;color:var(--ink2);text-decoration:underline;cursor:pointer;font-size:12px;margin-top:12px}.card{padding:16px;background:var(--card);border:1px solid var(--hair);border-radius:6px;margin-top:15px}.card b{font:600 16px Georgia}.editor-panel .brushes{display:flex;gap:8px;margin-top:12px}.brushes .btn{flex:1}.arena-controls{display:flex;align-items:end;gap:8px;margin-top:12px}.arena-controls>button{flex:1}.arena-controls>label{width:94px}.review-bar{border:1px solid var(--hair2);border-radius:6px;background:var(--card);padding:12px;margin-top:14px}.review-top{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;color:var(--ink2);align-items:center;margin-bottom:8px}.review-controls{display:flex;gap:5px;align-items:center}.review-options{display:flex;gap:8px;margin-top:9px}.review-options button{flex:1}.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.chip{border:1px solid var(--hair2);border-radius:4px;background:var(--card2);min-height:38px;color:var(--ink);font-size:10px;padding:8px 11px}.chip[aria-pressed=true]{border-color:var(--seal);color:var(--seal)}.analysis-box{padding:12px;border:1px solid var(--hair);border-radius:5px;background:var(--card);margin-top:12px;line-height:1.7;font-size:11px}.kifu{list-style:none;padding:0;margin:12px 0 0;max-height:255px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}.mv{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;border:0;border-radius:4px;background:transparent;color:var(--ink);text-align:left;padding:8px 10px;font-size:11px}.mv:hover{background:var(--card)}.mv[aria-current=step]{background:var(--soft);color:var(--seal)}.mv .no{color:var(--ink2);font-size:10px;min-width:22px}.mv .stone{width:10px;height:10px;border:1px solid #897759;border-radius:50%}.mv .tag{margin-left:auto;font-size:9px;color:var(--ink2)}.annotation-label{margin-top:14px}.training-progress{height:5px;background:var(--hair);border-radius:4px;margin-top:15px;overflow:hidden}.training-progress>div{height:100%;background:var(--seal);width:0;transition:width .2s}.puzzle-list details{border-bottom:1px solid var(--hair)}summary{min-height:44px;display:list-item;align-content:center;font-size:11px;color:var(--ink);cursor:pointer;padding:8px 0;margin-top:8px}.puzzle-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--hair);background:transparent;color:var(--ink);border-radius:4px;padding:10px;min-height:44px;width:100%;margin:5px 0;text-align:left;font-size:11px}.puzzle-item[aria-current=true]{border-color:var(--seal)}.puzzle-item span{font-size:9px;color:var(--seal)}.puzzle-feedback p{font-size:12px;line-height:1.8;margin-top:8px;color:var(--ink2)}.stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:15px 0}.stat-grid>div{padding:10px 7px;background:var(--card);border:1px solid var(--hair);border-radius:4px}.stat-grid strong{font:500 25px Georgia;display:block}.stat-grid span{font-size:9px;line-height:1.5;display:block;color:var(--ink2);margin-top:4px}.library-item{padding:14px 0;border-bottom:1px solid var(--hair)}.library-item h3{font-size:16px;margin:0;overflow-wrap:anywhere}.library-item .meta{font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px}.library-item .button-row{margin-top:8px}.library-empty{padding:18px 0;color:var(--ink2);font-size:12px;line-height:1.8}.spinner{width:13px;height:13px;border:2px solid var(--hair);border-top-color:var(--seal);border-radius:50%;animation:spin 1s linear infinite;flex:none}@keyframes spin{to{transform:rotate(360deg)}}footer{display:flex;gap:30px;max-width:1280px;margin:0 auto;padding:0 32px 30px;color:var(--ink2);font-size:9px;line-height:1.8}footer span{letter-spacing:.14em;white-space:nowrap}footer p{max-width:760px}.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);max-width:min(520px,calc(100% - 28px));width:max-content;padding:13px 18px;border:1px solid var(--hair2);border-radius:6px;background:var(--card2);color:var(--ink);font-size:12px;line-height:1.6;box-shadow:0 8px 25px var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:55}.toast.show{opacity:1;transform:translate(-50%,0)}dialog{margin:auto;width:min(510px,calc(100% - 28px));max-height:calc(100dvh - 36px);overflow:auto;padding:27px;border:1px solid var(--hair2);border-radius:10px;background:var(--card2);color:var(--ink);box-shadow:0 25px 80px #0004}dialog::backdrop{background:#19171088;backdrop-filter:blur(4px)}.dialog-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}dialog h2{font-size:26px;line-height:1.35}.dialog-header .eyebrow{margin-bottom:8px}dialog form>label{margin-top:13px}.dialog-actions{display:flex;gap:9px;margin-top:22px}.dialog-actions .btn{flex:1}dialog>p,.result-card>p{font-size:12px;line-height:1.8;color:var(--ink2);margin-top:15px}.result-card{text-align:center}.stamp{width:60px;height:60px;display:grid;place-items:center;margin:0 auto 18px;border:2px solid var(--seal);border-radius:7px;color:var(--seal);font:600 33px Georgia;transform:rotate(-5deg)}.notice{display:flex;gap:10px;align-items:center;max-width:1216px;margin:15px auto 0;padding:12px;border:1px solid var(--seal);background:var(--card2);border-radius:6px}.notice p{flex:1;font-size:12px;line-height:1.6}.warning{color:var(--seal)!important}body.focus-mode .panel,body.focus-mode footer{display:none}body.focus-mode main{grid-template-columns:minmax(0,1fr);max-width:870px}body.focus-mode .board-col{max-width:720px}body[data-theme=night]{--paper:#1e2024;--card:#27292f;--card2:#2e3037;--ink:#ebe5d9;--ink2:#b4aea5;--hair:#45454a;--hair2:#626064;--seal:#e5967d;--soft:#e5967d15;--shadow:#0004;color-scheme:dark}body[data-theme=slate]{--paper:#e8ecee;--card:#f0f3f4;--card2:#f7f9fa;--ink:#253340;--ink2:#5c6c7b;--hair:#c7d0d6;--hair2:#a6b3bd;--seal:#385e85;--soft:#385e8510}body[data-theme=slate] .board-shell::after{background:linear-gradient(#737f84,#445058)}
 @media(min-width:1100px) and (max-height:920px){.board-col{max-width:min(100%,max(400px,calc(100dvh - 290px)))}}@media(max-width:1050px){main{grid-template-columns:minmax(0,1fr) 315px;gap:25px;padding-inline:24px}.panel{padding-left:22px}.top{padding-inline:24px}.board-side{position:static}.board-heading h2{font-size:19px}.game-actions .btn{font-size:10px}.level{padding:8px}.level b{font-size:11px}}@media(max-width:800px){.top{max-width:700px;padding:18px 20px}.version{display:none}main{max-width:700px;padding:22px 20px 32px;grid-template-columns:minmax(0,1fr);gap:28px}.board-col{width:100%;max-width:620px}.panel{border-left:0;border-top:1px solid var(--hair);padding:20px 0 0}.panel section{padding-block:18px}.levels{grid-template-columns:repeat(4,minmax(0,1fr))}.level{display:block;text-align:left;padding:10px}.level-num{border-right:0;display:block;padding:0;margin-bottom:6px}.board-heading h2{font-size:21px}footer{max-width:700px;padding-inline:20px;display:block}footer p{margin-top:7px}.notice{margin:12px 20px 0;flex-wrap:wrap}.notice p{flex-basis:100%}.top .icon-btn{font-size:20px}.header-tools{gap:5px}h1{font-size:22px}h1 span{display:none}.board-top{margin-bottom:16px}.game-actions .btn{font-size:11px}.players{justify-content:space-between}.player-card b{font-size:17px}.player-card small{font-size:11px}}
@@ -430,6 +432,7 @@ function createEngine(variant='renju-practice') {
     finally { board[i]=0; }
   }
   function legalMove(board,i,color,moveCount,options={}) {
+    if(!board||board.length!==CELLS||![BLACK,WHITE].includes(color)||!Number.isInteger(moveCount)||moveCount<0)return invalid("invalid");
     if(i===-1) return moveCount>=3 ? {legal:true,win:false,foul:false,reason:'pass',fours:[],threes:[],winLines:[]} : invalid('opening-pass');
     // International Renju rule 4.2: Black's first stone belongs on the center intersection.
     // Legacy imported/autosaved games created before this enforcement can opt out only while replaying history.
@@ -1058,23 +1061,24 @@ function createStudioCore(engineFactory) {
     return {label:loss<1?'Best found':loss<200?'Good':loss<1800?'Inaccuracy':loss<14000?'Mistake':'Blunder',loss};
   }
   // A real branching game tree. IDs survive save, reload, SGF and navigation.
-  function newTree(game={}){const root={id:'0',parent:null,children:[],move:null,comment:game.annotations?.[0]||'',marks:[]};return {version:1,rule:game.variant||'renju-practice',initial:copy(game.initial||[]),startColor:game.startColor||1,title:String(game.title||'').slice(0,80),nodes:[root],active:'0',serial:1};}
+  function newTree(game={}){const root={id:'0',parent:null,children:[],move:null,comment:game.annotations?.[0]||'',marks:[]};return {version:1,rule:game.variant||'renju-practice',renjuCenterRule:game.renjuCenterRule!==false,initial:copy(game.initial||[]),startColor:game.startColor||1,title:String(game.title||'').slice(0,80),nodes:[root],active:'0',serial:1};}
   const node=(t,id)=>t.nodes.find(n=>n.id===id);
   function path(t,id=t.active){const out=[];let n=node(t,id),guard=0;while(n&&n.parent!==null){if(++guard>500)throw Error('Invalid variation path.');out.unshift(n);n=node(t,n.parent);}if(!n)throw Error('Missing variation root.');return out;}
-  function position(t,id=t.active){return engineFactory(t.rule).replay(path(t,id).map(n=>n.move),{initial:t.initial,startColor:t.startColor});}
+  function position(t,id=t.active){return engineFactory(t.rule).replay(path(t,id).map(n=>n.move),{initial:t.initial,startColor:t.startColor,allowLegacyOffCenterOpening:t.renjuCenterRule===false});}
   function add(t,parent,move,comment=''){
     const n=node(t,parent);if(!n)throw Error('Unknown variation parent.');
-    const p=path(t,parent);engineFactory(t.rule).replay([...p.map(n=>n.move),move],{initial:t.initial,startColor:t.startColor});
+    const p=path(t,parent);engineFactory(t.rule).replay([...p.map(n=>n.move),move],{initial:t.initial,startColor:t.startColor,allowLegacyOffCenterOpening:t.renjuCenterRule===false});
     let child=n.children.map(id=>node(t,id)).find(x=>x.move.i===move.i&&x.move.color===move.color);
     if(!child){if(t.nodes.length>=2500)throw Error('Study limit: 2,500 nodes. Export and start a new study.');const id=String(t.serial++);child={id,parent,children:[],move:{i:move.i,color:move.color},comment:String(comment).slice(0,1200),marks:[]};t.nodes.push(child);n.children.push(id);}
     else if(comment)child.comment=String(comment).slice(0,1200);
     t.active=child.id;return child.id;
   }
-  function treeFromGame(g){const t=newTree(g);let parent='0';for(let k=0;k<g.moves.length;k++)parent=add(t,parent,g.moves[k],g.annotations?.[k+1]||'');return t;}
+  function treeFromGame(g){const legacy=g.variant==='renju-practice'&&g.renjuCenterRule!==true&&!g.initial?.length&&g.moves?.length&&g.moves[0].i!==112;const t=newTree({...g,renjuCenterRule:legacy?false:g.renjuCenterRule});let parent='0';for(let k=0;k<g.moves.length;k++)parent=add(t,parent,g.moves[k],g.annotations?.[k+1]||'');return t;}
   function validateTree(raw){
     if(!raw||raw.version!==1||!Array.isArray(raw.nodes)||!raw.nodes.length||raw.nodes.length>2500)throw Error('Invalid study tree.');
     const e=engineFactory(raw.rule),initial=copy(raw.initial||[]),turn=raw.startColor||1;e.validateSetup(initial,turn);
-    const clean={version:1,rule:raw.rule,initial,startColor:turn,title:String(raw.title||'').slice(0,80),nodes:[],active:String(raw.active),serial:1};const seen=new Set();
+    const legacy=raw.rule==='renju-practice'&&raw.renjuCenterRule!==true&&!initial.length&&raw.nodes.some(n=>n?.parent==='0'&&n.move?.i!==112);
+    const clean={version:1,rule:raw.rule,renjuCenterRule:legacy?false:raw.renjuCenterRule!==false,initial,startColor:turn,title:String(raw.title||'').slice(0,80),nodes:[],active:String(raw.active),serial:1};const seen=new Set();
     for(const n of raw.nodes){if(!n||typeof n.id!=='string'||!/^[0-9]{1,6}$/.test(n.id)||seen.has(n.id))throw Error('Invalid study node ID.');seen.add(n.id);
       if(!Array.isArray(n.children)||new Set(n.children).size!==n.children.length)throw Error('Invalid study children.');
       clean.nodes.push({id:n.id,parent:n.parent===null?null:String(n.parent),children:n.children.map(String),move:n.move?{i:n.move.i,color:n.move.color}:null,comment:String(n.comment||'').slice(0,1200),marks:cleanMarks(n.marks)});clean.serial=Math.max(clean.serial,Number(n.id)+1);}
@@ -1082,7 +1086,7 @@ function createStudioCore(engineFactory) {
     const visited=new Set();
     function check(id,depth=0){if(depth>450||visited.has(id))throw Error('Cyclic or overlong study.');visited.add(id);const n=node(clean,id);if(!n)throw Error('Missing study node.');
       for(const child of n.children){const c=node(clean,child);if(!c||c.parent!==id||!c.move)throw Error('Invalid study parent link.');check(child,depth+1);}
-      if(!n.children.length)e.replay(path(clean,id).map(n=>n.move),{initial,startColor:turn});}
+      if(!n.children.length)e.replay(path(clean,id).map(n=>n.move),{initial,startColor:turn,allowLegacyOffCenterOpening:clean.renjuCenterRule===false});}
     check('0');if(visited.size!==clean.nodes.length||!visited.has(clean.active))throw Error('Disconnected study.');return clean;
   }
   function cleanMarks(m){if(!Array.isArray(m))return [];return m.slice(0,100).filter(x=>x&&['circle','square','triangle','cross','label','arrow'].includes(x.type)&&point(x.i)&&(x.type!=='arrow'||point(x.to))).map(x=>({type:x.type,i:x.i,...(x.type==='arrow'?{to:x.to}:{}),...(x.type==='label'?{text:String(x.text||'A').slice(0,3)}:{})}));}
@@ -1090,7 +1094,7 @@ function createStudioCore(engineFactory) {
   function parsePoint(s){if(s==='')return -1;if(!/^[a-o]{2}$/.test(s))throw Error('Invalid 15×15 SGF coordinate: '+s);return (s.charCodeAt(1)-97)*15+s.charCodeAt(0)-97;}
   const sgEscape=s=>String(s).replace(/\\/g,'\\\\').replace(/\]/g,'\\]');
   function exportSGF(tree){const t=validateTree(tree),props=(k,a)=>a.length?k+a.map(v=>'['+sgEscape(v)+']').join(''):'';
-    function content(n){let s=';';if(n.id==='0')s+='FF[4]GM[4]CA[UTF-8]AP[GomokuStudio:4.0]SZ[15]RU['+t.rule+']PL['+(t.startColor===1?'B':'W')+']'+props('GN',t.title?[t.title]:[])+props('AB',t.initial.filter(m=>m.color===1).map(m=>sgPoint(m.i)))+props('AW',t.initial.filter(m=>m.color===2).map(m=>sgPoint(m.i)));
+    function content(n){let s=';';if(n.id==='0')s+='FF[4]GM[4]CA[UTF-8]AP[GomokuStudio:4.0]SZ[15]RU['+t.rule+']GCO['+(t.renjuCenterRule===false?'0':'1')+']PL['+(t.startColor===1?'B':'W')+']'+props('GN',t.title?[t.title]:[])+props('AB',t.initial.filter(m=>m.color===1).map(m=>sgPoint(m.i)))+props('AW',t.initial.filter(m=>m.color===2).map(m=>sgPoint(m.i)));
       else s+=(n.move.color===1?'B':'W')+'['+sgPoint(n.move.i)+']';s+=props('C',n.comment?[n.comment]:[]);
       for(const [type,key]of [['circle','CR'],['square','SQ'],['triangle','TR'],['cross','MA'],['label','LB'],['arrow','AR']])s+=props(key,n.marks.filter(m=>m.type===type).map(m=>sgPoint(m.i)+(type==='label'?':'+m.text:type==='arrow'?':'+sgPoint(m.to):'')));
       if(n.children.length===1)s+=content(node(t,n.children[0]));else for(const id of n.children)s+='('+content(node(t,id))+')';return s;}
@@ -1106,15 +1110,17 @@ function createStudioCore(engineFactory) {
     const parsed=parse();ws();if(p!==text.length)throw Error('Import one SGF game at a time.');const r=parsed.props;
     if(r.GM?.[0]!=='4'||r.SZ?.[0]!=='15')throw Error('This importer accepts GM[4], SZ[15] Gomoku/Renju only.');
     if(r.AE||r.PL&&(!['B','W'].includes(r.PL[0])||r.PL.length!==1))throw Error('Unsupported or invalid root setup.');const ru=r.RU?.[0]||'freestyle',rule=/renju/i.test(ru)?'renju-practice':/exact|standard/i.test(ru)?'exact-five':/^freestyle$/i.test(ru)?'freestyle':null;if(!rule)throw Error('Unrecognized SGF ruleset: '+ru);
-    const initial=[...(r.AB||[]).map(s=>({i:parsePoint(s),color:1})),...(r.AW||[]).map(s=>({i:parsePoint(s),color:2}))];const t=newTree({variant:rule,initial,startColor:r.PL?.[0]==='W'?2:1,title:r.GN?.[0]||'Imported SGF'}),warnings=new Set();
+    if(r.GCO&&(r.GCO.length!==1||!['0','1'].includes(r.GCO[0])))throw Error('Invalid Renju opening compatibility marker.');
+    const legacy=rule==='renju-practice'&&r.GCO?.[0]!=='1'&&(r.GCO?.[0]==='0'||/^GomokuStudio:/i.test(r.AP?.[0]||'')&&((r.B?.[0]&&r.B[0]!=='hh')||parsed.children.some(n=>n.props.B&&n.props.B[0]!=='hh')));
+    const initial=[...(r.AB||[]).map(s=>({i:parsePoint(s),color:1})),...(r.AW||[]).map(s=>({i:parsePoint(s),color:2}))];const t=newTree({variant:rule,renjuCenterRule:!legacy,initial,startColor:r.PL?.[0]==='W'?2:1,title:r.GN?.[0]||'Imported SGF'}),warnings=new Set();
     function marks(props){const m=[];for(const[type,key]of[['circle','CR'],['square','SQ'],['triangle','TR'],['cross','MA'],['label','LB'],['arrow','AR']])for(const s of props[key]||[]){const [pt,...rest]=s.split(':');m.push({type,i:parsePoint(pt),...(type==='label'?{text:rest.join(':')}:{}),...(type==='arrow'?{to:parsePoint(rest[0]||'')}: {})});}return cleanMarks(m);}
-    function visit(n,parent,isRoot=false){const q=n.props;for(const key of Object.keys(q))if(!['FF','GM','CA','AP','SZ','RU','PL','GN','AB','AW','C','B','W','CR','SQ','TR','MA','LB','AR'].includes(key))warnings.add(key);
+    function visit(n,parent,isRoot=false){const q=n.props;for(const key of Object.keys(q))if(!['FF','GM','CA','AP','SZ','RU','GCO','PL','GN','AB','AW','C','B','W','CR','SQ','TR','MA','LB','AR'].includes(key))warnings.add(key);
       if(!isRoot&&(q.AB||q.AW||q.AE||q.PL))throw Error('Mid-game setup edits are not supported. Import as a separate study.');
       if(q.B&&q.W)throw Error('SGF node cannot contain two moves.');let id=parent;
       if(q.B||q.W){const color=q.B?1:2,values=q.B||q.W;if(values.length!==1)throw Error('Invalid SGF move.');id=add(t,parent,{color,i:parsePoint(values[0])});}
       const dest=node(t,id);if(q.C)dest.comment=(dest.comment?dest.comment+'\n':'')+q.C.join('\n').slice(0,1200);dest.marks=marks(q);
       for(const child of n.children)visit(child,id);}
-    visit(parsed,'0',true);t.active='0';let n=node(t,'0');while(n.children.length){n=node(t,n.children[0]);t.active=n.id;}return {tree:validateTree(t),warnings:[...warnings].map(k=>'Unsupported property '+k+' was not imported.')};
+    visit(parsed,'0',true);t.active='0';let n=node(t,'0');while(n.children.length){n=node(t,n.children[0]);t.active=n.id;}return {tree:validateTree(t),warnings:[...(legacy?['Preserved a legacy off-center Renju opening; new games still require the center.']:[]),...[...warnings].map(k=>'Unsupported property '+k+' was not imported.')]};
   }
   function transform(i,n){let x=i%15,y=Math.floor(i/15);if(n>=4)x=14-x;for(let k=0;k<n%4;k++)[x,y]=[14-y,x];return y*15+x;}
   function stabilizers(moves){return Array.from({length:8},(_,n)=>n).filter(n=>moves.every(m=>moves.some(q=>q.color===m.color&&q.i===transform(m.i,n))));}
@@ -2739,7 +2745,7 @@ $('newForm').addEventListener('submit',async event=>{
     if(plus)data=plus.newGameOptions(data);
     const [minutes,increment]=time.split(',').map(Number);if(data.studio)data.studio.clock=createStudioCore(createEngine).createClock(minutes,increment);
     applyData(data);setTab('play');toast(S.mode==='arena'?'Arena ready. Start the engines when ready.':'New '+D.rules[S.variant].label+' game.');
-  }catch(error){toast('Could not start: '+error.message);}finally{startingNewGame=false;submit.disabled=false;}
+  }catch(error){toast('Could not start: '+error.message);}finally{startingNewGame=false;submit.disabled=false;queueEngine();}
 });
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',()=>$(b.dataset.close).close());
 $('settingsBtn').addEventListener('click',()=>$('settingsDialog').showModal());
@@ -2838,10 +2844,10 @@ window.addEventListener('storage',event=>{
 });
 $('loadLatestBtn').addEventListener('click',()=>{
   try{if(!conflictRaw)throw new Error('The other tab removed its autosave. Export this board or choose Keep this board.');
-    const data=JSON.parse(conflictRaw);E.validateSave(data);storageConflict=false;$('conflictNotice').hidden=true;applyData(data);toast('Latest autosave loaded.');
+    const data=JSON.parse(conflictRaw),checked=E.validateSave(data);if(plus)plus.prepare(data.studio,checked);storageConflict=false;$('conflictNotice').hidden=true;applyData(data);toast('Latest autosave loaded.');
   }catch(error){toast('Could not load: '+error.message);}
 });
-$('keepLocalBtn').addEventListener('click',()=>{storageConflict=false;$('conflictNotice').hidden=true;save();render();queueEngine();toast('This board is now the autosave.');});
+$('keepLocalBtn').addEventListener('click',()=>{lastSavedRaw=null;storageConflict=false;const kept=save();storageConflict=!kept;$('conflictNotice').hidden=kept;render();if(kept){queueEngine();toast('This board is now the autosave.');}else toast('Could not keep this board in storage. Export JSON before closing, or retry when storage is available.');});
 window.addEventListener('resize',resize);if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(shell);
 reduced.addEventListener('change',()=>{anims.clear();requestDraw();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopReplay();if(S.mode==='arena'){plus?.pauseClock();cancelSearch();S.paused=true;render();}if(raf)cancelAnimationFrame(raf);raf=0;}else{anims.clear();resize();requestDraw();}});
@@ -2867,7 +2873,7 @@ function initStudioPlus(){
   const text=(tag,value,cls='')=>{const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e;};
   const button=(label,fn,cls='btn ghost')=>{const b=text('button',label,cls);b.type='button';b.addEventListener('click',fn);return b;};
   const insert=(target,html,where='beforeend')=>$(target).insertAdjacentHTML(where,html);
-  const plain=()=>({variant:S.variant,initial:S.initial,startColor:S.startColor,title:S.title,moves:S.records.map(m=>({i:m.i,color:m.color})),annotations:S.annotations});
+  const plain=()=>({variant:S.variant,renjuCenterRule:S.renjuCenterRule!==false,initial:S.initial,startColor:S.startColor,title:S.title,moves:S.records.map(m=>({i:m.i,color:m.color})),annotations:S.annotations});
   function prefSave(){try{const raw=JSON.stringify(prefs);localStorage.setItem(EX_KEY,raw);stateVault.note(EX_KEY,raw).catch(()=>{});}catch{toast('Preferences could not be saved.');}document.body.classList.toggle('high-contrast',prefs.contrast===true);document.body.classList.toggle('large-text',prefs.largeText===true);}
   function academySave(){if(academyBlocked){toast('Previous training data is unreadable. It was retained. Open Training record to export it; new attempts remain in memory.');return false;}try{const raw=JSON.stringify(academy);localStorage.setItem(ACADEMY_KEY,raw);stateVault.note(ACADEMY_KEY,raw).catch(()=>{});return true;}catch{toast('Training progress could not be saved. Export a full backup.');return false;}}
   function ensureTree(){
@@ -2950,7 +2956,7 @@ function initStudioPlus(){
     reviewQueue={next:startAt,total:g.moves.length,status:'running',options:{timeMs:baseOptions.timeMs,depth:baseOptions.depth,multiPV:baseOptions.multiPV,width:baseOptions.width||16,backend:baseOptions.backend||'auto'}};
     busy=true;S.hintBusy=true;if(!S.result)S.assisted=true;save();render();const engine=createEngine(g.variant);let made=startAt;
     try{for(let k=startAt;k<g.moves.length;k++){
-      if(series!==activeJobSeries||gid!==S.gameId)break;const board=engine.replay(g.moves.slice(0,k),{initial:g.initial,startColor:g.startColor}).board,color=g.moves[k].color,played=g.moves[k].i;
+      if(series!==activeJobSeries||gid!==S.gameId)break;const board=engine.replay(g.moves.slice(0,k),{initial:g.initial,startColor:g.startColor,allowLegacyOffCenterOpening:g.renjuCenterRule!==true}).board,color=g.moves[k].color,played=g.moves[k].i;
       if(filterColor&&color!==filterColor){made=k+1;reviewQueue.next=made;continue;}
       $('reviewProgress').textContent='Analyzing decision '+(k+1)+' / '+g.moves.length+' · completed results and queue position are saved.';
       const options={...baseOptions,kind:'auto',includeMoves:played>=0?[played]:[]},analysisKey=JSON.stringify({schema:55,board:Array.from(board).join(''),color,rule:g.variant,options});
@@ -3166,7 +3172,7 @@ function initStudioPlus(){
     for(const [key,title]of [['first-win','First recorded win'],['first-drill','First academy drill'],['100-drills','100 practice positions'],['first-vcf','First forcing line']]){const el=text('span',title+(academy.achievements[key]?' · complete':' · not yet'),'chip');$('achievementList').append(el);}$('exportStats').onclick=()=>download(new Blob([JSON.stringify(academy,null,2)],{type:'application/json'}),'gomoku-progress.json');}
   $('openStatsBtn').onclick=openStatistics;
   // Portable studies and backups. All incoming content is validated before mutation.
-  function dataForTree(t){const checked=C.validateTree(t),route=C.path(checked),data=blankGame({variant:checked.rule,mode:'study'});data.initial=checked.initial;data.startColor=checked.startColor;data.moves=route.map(n=>n.move);data.title=checked.title;data.annotations={'0':C.node(checked,'0').comment};route.forEach((n,k)=>{if(n.comment)data.annotations[k+1]=n.comment;});data.assisted=true;data.imported=true;data.studio={...newExtra(),clock:C.createClock(0,0),tree:checked};return data;}
+  function dataForTree(t){const checked=C.validateTree(t),route=C.path(checked),data=blankGame({variant:checked.rule,mode:'study'});data.initial=checked.initial;data.startColor=checked.startColor;data.renjuCenterRule=checked.renjuCenterRule!==false;data.moves=route.map(n=>n.move);data.title=checked.title;data.annotations={'0':C.node(checked,'0').comment};route.forEach((n,k)=>{if(n.comment)data.annotations[k+1]=n.comment;});data.assisted=true;data.imported=true;data.studio={...newExtra(),clock:C.createClock(0,0),tree:checked};return data;}
   function validateFull(data){if(network)throw Error('Leave the room before importing a local study.');const clean=E.validateSave(data);prepare(data.studio,clean);return data;}
   $('sgfExportBtn').onclick=()=>{try{download(new Blob([C.exportSGF(ensureTree())],{type:'application/x-go-sgf'}),'gomoku-study.sgf');}catch(err){safeError(err);}};
   $('sgfImportBtn').onclick=()=>{$('sgfFile').value='';$('sgfFile').click();};
@@ -3181,17 +3187,20 @@ function initStudioPlus(){
   $('shareBtn').onclick=()=>{try{const code=makeCode(),hosted=['http:','https:'].includes(location.protocol)&&code.length<12000;$('shareCode').value=hosted?location.href.split('#')[0]+'#study='+code:code;$('shareStatus').textContent=hosted?'This URL contains the study in its fragment. No upload is performed.':'Portable study code. Paste into Share → Import code on another copy of this app.';$('shareDialog').showModal();}catch(err){safeError(err);}};
   $('copyShare').onclick=async()=>{try{await navigator.clipboard.writeText($('shareCode').value);$('shareStatus').textContent='Copied.';}catch{$('shareCode').select();$('shareStatus').textContent='Clipboard unavailable. Copy the selected text manually.';}};
   $('loadShare').onclick=()=>{try{const data=decodeCode($('shareCode').value);validateFull(data);confirmReplacement(()=>{applyData(data,{queue:false});setTab('study');toast('Shared study imported.');});}catch(err){safeError(err);}};
-  function fullBackup(){return {format:'GomokuStudioBackup',version:1,appVersion:'12.1.0',artifact:document.documentElement.dataset.package==='pwa'?'installable-pwa':'portable-single-html',created:new Date().toISOString(),active:snapshot(),library:library.map(g=>({...g})),academy,prefs,drills:C.copy(progress),coach:C.copy(coachPrefs70),journey:C.copy(journeyState),reviewBatch:C.copy(reviewBatchBackup80()),reviewIntelligence:C.copy(v81Prefs)};}
+  function fullBackup(){return {format:'GomokuStudioBackup',version:1,appVersion:'12.1.0',artifact:document.documentElement.dataset.package==='pwa'?'installable-pwa':'portable-single-html',created:new Date().toISOString(),courses:window.GomokuCourseStorage?.snapshot()||{},active:snapshot(),library:library.map(g=>({...g})),academy,prefs,drills:C.copy(progress),coach:C.copy(coachPrefs70),journey:C.copy(journeyState),reviewBatch:C.copy(reviewBatchBackup80()),reviewIntelligence:C.copy(v81Prefs)};}
   $('backupAllBtn').onclick=async()=>{try{await libraryStore.settled();if(academyBlocked)throw Error('Export unreadable training data from Training record before restoring a valid backup.');if(!await refreshLibrary())throw Error('Refresh the Library before creating a complete backup. Export this board separately if storage is unavailable.');download(new Blob([JSON.stringify(fullBackup())],{type:'application/json'}),'gomoku-full-backup-v12.1.0-'+new Date().toISOString().slice(0,10)+'.json');}catch(e){safeError(e);}};
   $('restoreAllBtn').onclick=()=>{$('backupFile').value='';$('backupFile').click();};
-  $('backupFile').onchange=async ev=>{const file=ev.target.files?.[0];if(!file)return;const token=generation;try{if(file.size>72000000)throw Error('Backup exceeds 72 MB.');const data=JSON.parse(await file.text());if(data.format!=='GomokuStudioBackup'||data.version!==1||!Array.isArray(data.library)||data.library.length>libraryStore.metadata().limit)throw Error('Unsupported backup.');validateFull(data.active);const next=data.library.map(g=>{if(!g||typeof g.id!=='string'||typeof g.title!=='string'||typeof g.date!=='string')throw Error('Invalid Library entry.');validateFull(g.data);return {id:g.id,title:g.title.slice(0,80),date:g.date,data:g.data};});if(new Set(next.map(g=>g.id)).size!==next.length)throw Error('Duplicate Library IDs.');const ac=data.academy;if(!ac||!Array.isArray(ac.custom)||ac.custom.length>CUSTOM_EXERCISE_LIMIT||!Array.isArray(ac.results)||ac.results.length>2000||!ac.reviews||typeof ac.reviews!=='object'||!ac.lessons||typeof ac.lessons!=='object'||!ac.achievements||typeof ac.achievements!=='object')throw Error('Invalid practice backup.');if(Object.values(ac.reviews).some(r=>!r||typeof r!=='object'||![r.due,r.interval,r.correct||0].every(Number.isFinite))||ac.results.some(r=>!r||typeof r.id!=='string'||![0,1,2].includes(r.winner)))throw Error('Invalid practice statistics.');for(const p of ac.custom){if(!p||!Array.isArray(p.initial)||!D.rules[p.rule]||![1,2].includes(p.color)||typeof p.title!=='string')throw Error('Invalid custom exercise.');const b=createEngine(p.rule).validateSetup(p.initial,p.color);if(!C.verifyProof(b,p.color,p.rule,p.proof))throw Error('Unverified custom exercise in backup.');}
+  $('backupFile').onchange=async ev=>{const file=ev.target.files?.[0];if(!file)return;const token=generation;try{if(file.size>72000000)throw Error('Backup exceeds 72 MB.');const data=JSON.parse(await file.text());if(data.format==='GomokuCourseProgress'&&data.version===1){const courses=window.GomokuCourseStorage.validate(data.courses);ask('Import course progress?', 'This updates only the chapters in the progress file. Games, other chapters and settings are unchanged.',()=>{try{window.GomokuCourseStorage.restore(courses);toast('Course progress imported.');}catch(err){safeError(err);}},'Import progress');return;}if(data.format!=='GomokuStudioBackup'||data.version!==1||!Array.isArray(data.library)||data.library.length>libraryStore.metadata().limit)throw Error('Unsupported backup.');validateFull(data.active);const next=data.library.map(g=>{if(!g||typeof g.id!=='string'||typeof g.title!=='string'||typeof g.date!=='string')throw Error('Invalid Library entry.');validateFull(g.data);return {id:g.id,title:g.title.slice(0,80),date:g.date,data:g.data};});if(new Set(next.map(g=>g.id)).size!==next.length)throw Error('Duplicate Library IDs.');const ac=data.academy;if(!ac||!Array.isArray(ac.custom)||ac.custom.length>CUSTOM_EXERCISE_LIMIT||!Array.isArray(ac.results)||ac.results.length>2000||!ac.reviews||typeof ac.reviews!=='object'||!ac.lessons||typeof ac.lessons!=='object'||!ac.achievements||typeof ac.achievements!=='object')throw Error('Invalid practice backup.');if(Object.values(ac.reviews).some(r=>!r||typeof r!=='object'||![r.due,r.interval,r.correct||0].every(Number.isFinite))||ac.results.some(r=>!r||typeof r.id!=='string'||![0,1,2].includes(r.winner)))throw Error('Invalid practice statistics.');for(const p of ac.custom){if(!p||!Array.isArray(p.initial)||!D.rules[p.rule]||![1,2].includes(p.color)||typeof p.title!=='string')throw Error('Invalid custom exercise.');const b=createEngine(p.rule).validateSetup(p.initial,p.color);if(!C.verifyProof(b,p.color,p.rule,p.proof))throw Error('Unverified custom exercise in backup.');}
+      const restoredCourses=data.courses===undefined?null:window.GomokuCourseStorage.validate(data.courses);
       const restoredCoach=data.coach===undefined?null:(data.coach&&typeof data.coach==='object'&&!Array.isArray(data.coach)?{targets:Coach70.normalizeTargets(data.coach.targets||{})}:null);if(data.coach!==undefined&&!restoredCoach)throw Error('Invalid coach backup.');const restoredJourney={planMinutes:[15,30,45,60].includes(Number(data.journey?.planMinutes))?Number(data.journey.planMinutes):30};const restoredReviewBatch=V80.normalizeQueue(data.reviewBatch||{},next.map(g=>g.id));const restoredV81=V81.normalizePrefs(data.reviewIntelligence||{});const restoredV82Queue=V82.normalizeQueue(data.analysisJobs||{},next.map(g=>g.id));const restoredV82Prefs=V82.deviceProfile(data.computePrefs||{},v82Env());const restoredV83=V83.normalizeState(data.analysisScheduler||{},restoredV82Queue.jobs.map(j=>j.entryId));const restoredDrills={};if(data.drills!==undefined){if(!data.drills||typeof data.drills!=='object'||Array.isArray(data.drills))throw Error('Invalid drill progress.');for(const p of D.puzzles.slice(0,24)){const v=data.drills[p.id];if(v?.solved===true)restoredDrills[p.id]={solved:true,assisted:v.assisted===true,attempts:Math.max(1,Math.min(10000,Number(v.attempts)||1))};}}if(token!==generation)throw Error('Game changed while loading. Try again.');ask('Restore the complete backup?',((data.appVersion?'Source '+data.appVersion+' · ':'Earlier build · ')+next.length+' saved game'+(next.length===1?'':'s')+' · '+((data.active?.records?.length??data.active?.moves?.length??0))+' active moves. This replaces the saved Library, current board, and training data. Export the current complete backup first. The Library replacement itself is transactional.'),async()=>{
-        const keys=[KEY,ACADEMY_KEY,EX_KEY,PROGRESS_KEY,COACH70_KEY,V60_STATE_KEY,REVIEW_BATCH80_KEY,V81_PREF_KEY,V82_QUEUE_KEY,V82_PREF_KEY,V83_STATE_KEY],old=keys.map(k=>localStorage.getItem(k));
+        const keys=[KEY,ACADEMY_KEY,EX_KEY,PROGRESS_KEY,COACH70_KEY,V60_STATE_KEY,REVIEW_BATCH80_KEY,V81_PREF_KEY,V82_QUEUE_KEY,V82_PREF_KEY,V83_STATE_KEY,...(restoredCourses?window.GomokuCourseStorage.keys:[])],old=keys.map(k=>localStorage.getItem(k));
         cancelSearch();cancelJobs();pauseClock();
         try{
+          if(restoredCourses)for(const key of window.GomokuCourseStorage.keys){if(key in restoredCourses)localStorage.setItem(key,restoredCourses[key]);else localStorage.removeItem(key);}
           if(data.drills!==undefined)localStorage.setItem(PROGRESS_KEY,JSON.stringify(restoredDrills));localStorage.setItem(ACADEMY_KEY,JSON.stringify(ac));localStorage.setItem(KEY,JSON.stringify(data.active));localStorage.setItem(EX_KEY,JSON.stringify({...defaults,...data.prefs}));if(restoredCoach)localStorage.setItem(COACH70_KEY,JSON.stringify(restoredCoach));localStorage.setItem(V60_STATE_KEY,JSON.stringify(restoredJourney));localStorage.setItem(REVIEW_BATCH80_KEY,JSON.stringify(restoredReviewBatch));localStorage.setItem(V81_PREF_KEY,JSON.stringify(restoredV81));localStorage.setItem(V82_QUEUE_KEY,JSON.stringify(restoredV82Queue));localStorage.setItem(V82_PREF_KEY,JSON.stringify(restoredV82Prefs));localStorage.setItem(V83_STATE_KEY,JSON.stringify(restoredV83));
           const result=await libraryStore.replace(next);library=result.items;
         }catch(err){for(let i=0;i<keys.length;i++)try{old[i]===null?localStorage.removeItem(keys[i]):localStorage.setItem(keys[i],old[i]);}catch{}toast('Restore failed: '+err.message+' The Library transaction was not applied.');return;}
+        if(restoredCourses)window.GomokuCourseStorage.reloaded(window.GomokuCourseStorage.keys);
         libraryBlocked=false;academyBlocked=false;academyRecovery=null;if(data.drills!==undefined)progress=restoredDrills;academy=ac;normalizeSessionRecords();prefs={...defaults,...data.prefs};if(restoredCoach)coachPrefs70=restoredCoach;journeyState=restoredJourney;saveJourney60();restoreBatch80(restoredReviewBatch);v81Prefs=restoredV81;saveV81Prefs();restoreV82Queue(restoredV82Queue);v82Prefs=restoredV82Prefs;saveV82Prefs();v83State=restoredV83;saveV83State();prefSave();if(restoredCoach)saveCoach70();applyData({...data.active,aiPaused:true},{queue:false});renderLibrary();toast('Backup restored. Clocks and opponent engines are paused.');
       },'Restore backup');
     }catch(err){safeError(err);}};
@@ -3941,7 +3950,7 @@ async function analyzeSavedEntry80(entry,options,token,onProgress){
   const analyses80=extra.analyses,reviews80=extra.reviews,total=clean.records.length;let changed=0;
   for(let k=0;k<total;k++){
     if(token!==batchToken80)throw Error('Canceled');
-    const board=engine.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor}).board,color=raw.moves[k].color,played=raw.moves[k].i;
+    const board=engine.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor,allowLegacyOffCenterOpening:clean.renjuCenterRule===false}).board,color=raw.moves[k].color,played=raw.moves[k].i;
     const opts={...options,kind:'auto',includeMoves:played>=0?[played]:[]},analysisKey=JSON.stringify({schema:55,board:Array.from(board).join(''),color,rule:raw.variant,options:opts});
     if(reviews80[ids[k]]?.analysisKey===analysisKey){onProgress?.(k+1,total,true);continue;}
     const cacheKey=analysisCache58.key(board,color,raw.variant,opts);let r=await analysisCache58.get(cacheKey);if(!r){r=await runJob('analyze',{board:Array.from(board),color,rule:raw.variant,options:opts});analysisCache58.put(cacheKey,r).catch(()=>{});}
@@ -4003,7 +4012,7 @@ analyzeSavedEntry80=async function(entry,options,token,onProgress){
   const runPass=async(board,color,played,cfg)=>{const opts={...cfg,kind:'auto',includeMoves:played>=0?[played]:[]},cacheKey=analysisCache58.key(board,color,raw.variant,opts);let r=await analysisCache58.get(cacheKey);if(!r)r=await analysisCache58.find(board,color,raw.variant,opts);if(!r)r=await analysisCache58.getOrCompute(cacheKey,()=>runJob('analyze',{board:Array.from(board),color,rule:raw.variant,options:opts}));return {r,opts};};
   for(let k=0;k<total;k++){
     if(token!==batchToken80)throw Error('Canceled');
-    const board=engine.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor}).board,color=raw.moves[k].color,played=raw.moves[k].i;
+    const board=engine.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor,allowLegacyOffCenterOpening:clean.renjuCenterRule===false}).board,color=raw.moves[k].color,played=raw.moves[k].i;
     const analysisKey=JSON.stringify({schema:81,board:Array.from(board).join(''),color,rule:raw.variant,profile:'smart',first:plan.first,deep:plan.deep,played});
     if(reviews81[ids[k]]?.analysisKey===analysisKey){onProgress?.(k+1,total,true);continue;}
     let {r}=await runPass(board,color,played,plan.first);if(token!==batchToken80)throw Error('Canceled');let judgment=C.assessDecision(r,board,color,played),pass='scan';
@@ -4079,7 +4088,7 @@ function ensurePool82(){if(!v82Pool)v82Pool=createWorkerPool82(v82Prefs.workers)
 async function cachedBackgroundAnalyze82(board,color,rule,options){const key=analysisCache58.key(board,color,rule,options);let r=await analysisCache58.get(key);if(r)return {result:r,cache:'exact'};r=await analysisCache58.find(board,color,rule,options);if(r)return {result:r,cache:'deeper'};r=await analysisCache58.getOrCompute(key,()=>ensurePool82().run('analyze',{board:Array.from(board),color,rule,options}));return {result:r,cache:'searched'};}
 function v82ProfileFor(job){const manual=batchAnalysisOptions80();return V81.profile(job.profile||v81Prefs.profile,manual);}
 async function analyzeJobGame82(job,epoch){const entry=library.find(x=>x.id===job.entryId);if(!entry)throw Error('Saved game no longer exists.');const raw=C.copy(entry.data);raw.gameId=entry.id;const engine82=createEngine(raw.variant),clean=engine82.validateSave(raw),extra=prepare(raw.studio,clean),ids=C.path(extra.tree).map(n=>n.id);if(ids.length!==clean.records.length)throw Error('Saved variation route does not match its move record.');const plan=v82ProfileFor(job),analyses82=extra.analyses,reviews82=extra.reviews,total=clean.records.length;job.total=total;let changed=0,deepened=0,cacheHits=0;
-  for(let k=Math.min(job.done,total);k<total;k++){if(epoch!==v82Epoch||!v82Running||document.hidden&&v82Prefs.pauseHidden)throw Error('Paused');const board=engine82.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor}).board,color=raw.moves[k].color,played=raw.moves[k].i,analysisKey=JSON.stringify({schema:86,engine:'6.0-hybrid',board:Array.from(board).join(''),color,rule:raw.variant,profile:plan.id,first:plan.first,deep:plan.deep,played});if(reviews82[ids[k]]?.analysisKey===analysisKey){job.done=k+1;job.updated=Date.now();saveV82Queue();renderV82Queue();continue;}
+  for(let k=Math.min(job.done,total);k<total;k++){if(epoch!==v82Epoch||!v82Running||document.hidden&&v82Prefs.pauseHidden)throw Error('Paused');const board=engine82.replay(raw.moves.slice(0,k),{initial:clean.initial,startColor:clean.startColor,allowLegacyOffCenterOpening:clean.renjuCenterRule===false}).board,color=raw.moves[k].color,played=raw.moves[k].i,analysisKey=JSON.stringify({schema:86,engine:'6.0-hybrid',board:Array.from(board).join(''),color,rule:raw.variant,profile:plan.id,first:plan.first,deep:plan.deep,played});if(reviews82[ids[k]]?.analysisKey===analysisKey){job.done=k+1;job.updated=Date.now();saveV82Queue();renderV82Queue();continue;}
     const runPass=async cfg=>{const opts={...cfg,kind:'auto',includeMoves:played>=0?[played]:[]},out=await cachedBackgroundAnalyze82(board,color,raw.variant,opts);if(out.cache!=='searched')cacheHits++;return out.result;};let r=await runPass(plan.first);if(epoch!==v82Epoch)throw Error('Paused');let judgment=C.assessDecision(r,board,color,played),pass='scan';if(plan.deep&&V81.shouldDeepen(judgment)){r=await runPass(plan.deep);judgment=C.assessDecision(r,board,color,played);deepened++;pass='deep';}
     const parent=k?ids[k-1]:'0',alternative=(r.candidates||[]).find(c=>c.i===played);analyses82[parent]=compactAnalysis(r);reviews82[ids[k]]={...judgment,analysisKey,played,best:r.move,depth:r.depth,score:alternative?.score??null,explanation:r.explanation,reviewPass:pass};job.done=k+1;job.updated=Date.now();changed++;saveV82Queue();renderV82Queue();}
   if(changed){const studio=raw.studio&&typeof raw.studio==='object'?C.copy(raw.studio):newExtra();studio.version=1;studio.tree=extra.tree;studio.analyses=analyses82;studio.reviews=reviews82;studio.reviewQueue=null;raw.studio=studio;const verified=createEngine(raw.variant).validateSave(raw);prepare(raw.studio,verified);const state=await libraryStore.put({...entry,data:raw});library=state.items.sort((a,b)=>b.date.localeCompare(a.date));renderLibrary();}
@@ -5181,49 +5190,56 @@ body[data-theme="night"] #grDialog,body[data-theme="dark"] #grDialog{--gr-good:#
 
 </style>
 <script id="guided-review-script">
-/* Guided Review 1.0. Position-local analysis; the recorded game is never edited. */
+/* Guided Review 1.0.1. Position-local analysis; the recorded game is never edited. */
 function createGuidedReviewCore(engineFactory, studioFactory) {
   'use strict';
   const C = studioFactory(engineFactory);
   const coord = C.coord;
   const point = i => Number.isInteger(i) && i >= 0 && i < 225;
   const severity = label => ({'Blunder':5,'Missed win':4,'Mistake':3,'Inaccuracy':2,'Win available':1}[label] || 0);
-  const key = (b,c,r) => `${r}:${c}:${Array.from(b).join('')}`;
+  const key = (b,c,r,context={}) => `${r}:${c}:${Array.from(b).join('')}:p${context.passes||0}`;
   function positions(game) {
-    const e = engineFactory(game.variant), moves = game.moves || [];
-    e.replay(moves, {initial:game.initial || [],startColor:game.startColor || 1});
-    return moves.map((m,k) => {
-      const p = e.replay(moves.slice(0,k), {initial:game.initial || [],startColor:game.startColor || 1});
-      return {ply:k+1,played:m.i,color:m.color,board:Array.from(p.board),key:key(p.board,m.color,game.variant)};
-    });
+    const e=engineFactory(game.variant),moves=game.moves||[],options={initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule!==true};
+    // Validate once. Construct prefixes incrementally, rather than replaying every prefix.
+    e.replay(moves,options);
+    const board=e.validateSetup(options.initial,options.startColor),out=[];let passes=0;
+    for(let k=0;k<moves.length;k++){
+      const m=moves[k],context={passes,moveCount:options.initial.length+k};
+      out.push({ply:k+1,played:m.i,color:m.color,board:Array.from(board),...context,legacyOpening:options.allowLegacyOffCenterOpening&&k===0&&!options.initial.length,key:key(board,m.color,game.variant,context)});
+      if(m.i>=0){board[m.i]=m.color;passes=0;}else passes++;
+    }
+    return out;
   }
-  function legal(board,color,rule,i) {
+  function legal(board,color,rule,i,context={}) {
     if (i !== -1 && !point(i)) return {legal:false,reason:'Choose an empty intersection.'};
-    return engineFactory(rule).legalMove(Int8Array.from(board),i,color,board.filter(Boolean).length);
+    return engineFactory(rule).legalMove(Int8Array.from(board),i,color,context.moveCount??board.filter(Boolean).length,{allowOffCenterOpening:context.legacyOpening===true});
   }
-  function apply(board,color,rule,i) {
-    const a = legal(board,color,rule,i);
+  function apply(board,color,rule,i,context={}) {
+    if(context.result)throw Error("This line has ended.");
+    const a = legal(board,color,rule,i,context);
     if (!a.legal) throw Error(a.reason || 'Illegal move');
     const next = Array.from(board);if(i>=0)next[i] = color;
-    return {board:next,color:3-color,result:a.win ? {winner:color} : next.every(Boolean) ? {winner:0} : null};
+    const passes=i===-1?(context.passes||0)+1:0;
+    return {board:next,color:3-color,passes,moveCount:(context.moveCount??board.filter(Boolean).length)+1,result:a.win?{winner:color,reason:'five'}:next.every(Boolean)?{winner:0,reason:'full'}:passes>=2?{winner:0,reason:'passes'}:null};
   }
-  function facts(board,color,rule,i) {
+  function facts(board,color,rule,i,context={}) {
     const e = engineFactory(rule), b = Int8Array.from(board);
-    const a = i === -1 ? {legal:true,win:false,fours:[],threes:[]} : legal(board,color,rule,i);
+    const a = legal(board,color,rule,i,context);
     if (!a.legal) return {legal:false,reason:a.reason};
     const ownWins = e.winningMoves(b,color), threats = e.winningMoves(b,3-color);
     if (i >= 0) b[i] = color;
     const replies = a.win ? [] : e.winningMoves(b,3-color);
     const finishes = a.win ? [] : e.winningMoves(b,color);
     // Two winning points cannot both be occupied by one defensive placement.
-    return {legal:true,win:!!a.win,ownWins,threats,replies,finishes,
+    return {legal:true,win:!!a.win,draw:i===-1&&context.passes===1,ownWins,threats,replies,finishes,
       fours:(a.fours || []).map(f=>({stones:f.stones || [],ends:f.ends || []})),
       threes:(a.threes || []).map(t=>({stones:t.stones || [],extensions:t.extensions || []})),
-      alreadyLost:!ownWins.length && threats.length >= 2};
+      alreadyLost:!context.passes && !ownWins.length && threats.length >= 2};
   }
-  function judge(r,board,color,played) {
-    const f = facts(board,color,r.rule,played);
+  function judge(r,board,color,played,context={}) {
+    const f = facts(board,color,r.rule,played,context);
     if (!f.legal) return {label:'Illegal',basis:'rules',loss:null,best:r.move,facts:f};
+    if (f.draw) return {label:'Draw by passes',basis:'rules',loss:0,best:played,facts:f};
     if (f.win) return {label:'Winning move',basis:'rules',loss:0,best:played,facts:f};
     if (f.alreadyLost) return {label:'Already lost',basis:'rules',loss:null,best:r.move,facts:f};
     if (!f.ownWins.length && !f.replies.length && f.finishes.length>=2) return {label:'Winning threat',basis:'rules',loss:0,best:played,facts:f};
@@ -5241,6 +5257,7 @@ function createGuidedReviewCore(engineFactory, studioFactory) {
   function explain(r,board,color,played,q) {
     const f=q.facts,us=color===1?'Black':'White',them=color===1?'White':'Black',at=coord(played),best=coord(q.best);
     if (!f.legal) return {why:`${at} is not legal: ${f.reason}.`,lesson:'Check the rules before evaluating a move.',highlights:[]};
+    if (f.draw) return {why:'Both players passed consecutively. The game ends in a draw; there is no next move.',lesson:'Two consecutive passes end the game.',highlights:[]};
     if (f.win) return {why:`${at} completes five in a row. The game ends immediately; the opponent gets no reply.`,lesson:'Finish a legal five before looking for a longer plan.',highlights:[played]};
     if (f.alreadyLost) return {why:`${them} already had two immediate winning points: ${f.threats.map(coord).join(' and ')}. ${us} has no immediate win, and one stone cannot block both. This is not a new mistake by ${at}.`,lesson:'Go to the previous key moment: stop the open four before it gets two winning ends.',highlights:f.threats};
     if (f.replies.length && q.basis==='rules' && q.label==='Blunder') return {why:`After ${at}, ${them} can complete five at ${f.replies.map(coord).join(' or ')}. ${best} ${f.ownWins.includes(q.best)?'wins immediately instead':'avoids that immediate loss'}.`,lesson:'Before attacking, check every point where your opponent can win on the next move.',highlights:f.replies};
@@ -5268,26 +5285,26 @@ function createGuidedReviewCore(engineFactory, studioFactory) {
     const lesson = f.replies.length ? 'Look one move ahead for the opponent’s finish.' : f.threats.length ? 'Deal with the immediate threat before improving your own shape.' : f.finishes.length ? 'A forcing four gains time because the opponent must respond.' : f.threes.length ? 'Compare the legal extensions and the opponent’s strongest defense.' : 'Compare connected shapes and future threats, not just the nearest empty point.';
     return {why,lesson,highlights:f.replies.length?f.replies:f.finishes};
   }
-  function pack(r,board,color,played) {
-    const q=judge(r,board,color,played);
+  function pack(r,board,color,played,context={}) {
+    const q=judge(r,board,color,played,context);
     const candidates=(r.candidates || []).filter(c=>point(c.i)).map(c=>{
-      const j=judge(r,board,color,c.i);
+      const j=judge(r,board,color,c.i,context);
       return {i:c.i,score:Number.isFinite(c.score)?c.score:null,bound:c.bound||'unknown',pv:Array.isArray(c.pv)?c.pv.slice(0,24):[],label:j.label,basis:j.basis,loss:j.loss??null,explanation:explain(r,board,color,c.i,j)};
     });
     const c=candidates.find(x=>x.i===played);
-    const best=point(q.best)?q.best:point(r.move)?r.move:null;
-    if (best!==null && !candidates.some(x=>x.i===best)) candidates.unshift({i:best,score:null,bound:'unknown',pv:r.tactical?.verified?r.tactical.pv.slice(0,24):[],label:r.tactical?.verified?'Winning plan':'Suggestion',basis:r.tactical?.verified?'verified-proof':'insufficient-search',explanation:{why:r.explanation || 'Search suggestion; not scored against this move.',lesson:'Compare the continuation.',highlights:[]}});
-    return {key:key(board,color,r.rule),played,color,rule:r.rule,label:q.label,basis:q.basis,loss:q.loss??null,best,
+    const best=point(q.best)||(q.best===-1&&legal(board,color,r.rule,-1,context).legal)?q.best:point(r.move)?r.move:null;
+    if (best!==null && !candidates.some(x=>x.i===best)) {const j=judge(r,board,color,best,context);candidates.unshift({i:best,score:null,bound:'unknown',pv:r.tactical?.verified?r.tactical.pv.slice(0,24):[best],label:j.basis==='rules'?j.label:r.tactical?.verified?'Winning plan':'Suggestion',basis:j.basis==='rules'?'rules':r.tactical?.verified?'verified-proof':'insufficient-search',explanation:j.basis==='rules'?explain(r,board,color,best,j):{why:r.explanation || 'Search suggestion; not scored against this move.',lesson:'Compare the continuation.',highlights:[]}});}
+    return {key:key(board,color,r.rule,context),played,color,rule:r.rule,label:q.label,basis:q.basis,loss:q.loss??null,best,
       depth:r.depth || 0,timeMs:r.elapsedMs || 0,budget:r.parameters?.budget || 0,engine:r.parameters?.engine || '6.0',
       quality:r.analysisQuality || 'selective',score:c?.bound==='exact'?c.score:null,
       explanation:explain(r,board,color,played,q),facts:q.facts,candidates,
       pv:(r.pv || []).slice(0,24),evaluatedAt:Date.now()};
   }
-  function line(board,color,rule,moves) {
-    const states=[{board:Array.from(board),color,result:null}],valid=[];
+  function line(board,color,rule,moves,context={}) {
+    const states=[{board:Array.from(board),color,result:null,...context}],valid=[];
     for(const i of moves || []) {
       if(states.at(-1).result) break;
-      try {const s=apply(states.at(-1).board,states.at(-1).color,rule,i);states.push(s);valid.push(i);}catch{break;}
+      try {const s=apply(states.at(-1).board,states.at(-1).color,rule,i,states.at(-1));states.push(s);valid.push(i);}catch{break;}
     }
     return {states,moves:valid};
   }
@@ -5297,7 +5314,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='1.0.0', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='1.0.1', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -5305,19 +5322,19 @@ if(typeof window !== 'undefined') (()=>{
   let core,dialog,session=null,worker=null,workerURL=null,rejectJob=null,watchdog=0,serial=0,opener=null;
   let storageNotice='';
   const abort=()=>{if(worker)worker.terminate();if(workerURL)URL.revokeObjectURL(workerURL);clearTimeout(watchdog);worker=null;workerURL=null;const reject=rejectJob;rejectJob=null;reject?.(new DOMException('Canceled','AbortError'));};
-  function evaluate(board,color,rule,played,budget=350) {
+  function evaluate(board,color,rule,played,budget=350,context={}) {
     abort();
     return new Promise((resolve,reject)=>{
       try {
         if(typeof Worker!=='function') throw Error('This browser does not support background analysis workers.');
         const id=++serial;
-        const source=v5WorkerPrelude()+`;const R=(${createGuidedReviewCore.toString()})(createEngine,createStudioCore);const C=createStudioCore(createEngine);onmessage=({data:d})=>{try{const r=C.analyze(d.board,d.color,d.rule,{timeMs:d.budget,depth:9,width:20,multiPV:5,includeMoves:d.played>=0?[d.played]:[],backend:'auto',seed:17});postMessage({id:d.id,result:R.pack(r,d.board,d.color,d.played)});}catch(e){postMessage({id:d.id,error:e.message});}};`;
+        const source=v5WorkerPrelude()+`;const R=(${createGuidedReviewCore.toString()})(createEngine,createStudioCore);const C=createStudioCore(createEngine);onmessage=({data:d})=>{try{const r=C.analyze(d.board,d.color,d.rule,{timeMs:d.budget,depth:9,width:20,multiPV:5,includeMoves:d.played>=0?[d.played]:[],backend:'auto',seed:17});postMessage({id:d.id,result:R.pack(r,d.board,d.color,d.played,d.context)});}catch(e){postMessage({id:d.id,error:e.message});}};`;
         workerURL=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));worker=new Worker(workerURL);rejectJob=reject;
         const finish=(error,result)=>{if(id!==serial||!worker)return;rejectJob=null;worker.terminate();worker=null;URL.revokeObjectURL(workerURL);workerURL=null;clearTimeout(watchdog);error?reject(error):resolve(result);};
         worker.onmessage=ev=>{if(ev.data.id===id)finish(ev.data.error?Error(ev.data.error):null,ev.data.result);};
         worker.onerror=ev=>{ev.preventDefault();finish(Error(ev.message||'Analysis worker failed.'));};
         watchdog=setTimeout(()=>finish(Error('Analysis timed out. Completed results are safe; retry this move.')),Math.max(8000,budget+5000));
-        worker.postMessage({id,board,color,rule,played,budget});
+        worker.postMessage({id,board,color,rule,played,budget,context});
       } catch(error) {abort();reject(error);}
     });
   }
@@ -5330,7 +5347,7 @@ if(typeof window !== 'undefined') (()=>{
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
-        if(r?.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=25&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
+        if(r?.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=25&&r.candidates.every(c=>c&&(core.point(c.i)||c.i===-1)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
       }
       s.index=Math.max(0,Math.min(s.positions.length-1,Number(saved.index)||0));
     }catch{storageNotice='Review stays in this tab. Browser storage is unavailable; use Export review before closing.';}
@@ -5398,10 +5415,10 @@ if(typeof window !== 'undefined') (()=>{
   function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
   function chosenState() {
     const s=session,p=entry();
-    if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves).states.at(-1);
-    if(s.mode==='retry')return s.attempt?core.line(p.board,p.color,s.game.variant,[s.attempt.i]).states.at(-1):{board:p.board,color:p.color,result:null};
-    if(s.view==='before'||p.played<0)return {board:p.board,color:p.color,result:null};
-    return core.line(p.board,p.color,s.game.variant,[p.played]).states.at(-1);
+    if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves,p).states.at(-1);
+    if(s.mode==='retry')return s.attempt?core.line(p.board,p.color,s.game.variant,[s.attempt.i],p).states.at(-1):{...p,result:null};
+    if(s.view==='before')return {...p,result:null};
+    return core.line(p.board,p.color,s.game.variant,[p.played],p).states.at(-1);
   }
   function tone(label){return ['Winning move','Winning threat','Winning plan','Best found'].includes(label)?'best':label==='Good'?'good':core.severity(label)>=3?'bad':core.severity(label)?'warn':'neutral';}
   function basisText(r){if(!r)return 'Analysis is queued. You can navigate and explore while it runs.';return r.basis==='rules'?'Rule-checked tactical fact':r.basis==='verified-proof'?'Verified forcing strategy':r.basis==='insufficient-search'?'Insufficient evidence · analyze deeper':`Provisional engine judgment · depth ${r.depth}`;}
@@ -5474,7 +5491,7 @@ if(typeof window !== 'undefined') (()=>{
   function renderBranch(){
     const s=session,b=s.branch,state=chosenState();
     $('grBranchMoves').textContent=b.moves.length?b.moves.map((i,k)=>`${k+1}. ${core.coord(i)}`).join('  ·  '):'Starting position — choose a move on the board.';
-    $('grUndo').disabled=!b.moves.length;$('grLineNext').disabled=!!state.result||!core.point(b.pv?.[b.moves.length]);
+    $('grUndo').disabled=!b.moves.length;$('grLineNext').disabled=!!state.result||!(core.point(b.pv?.[b.moves.length])||b.pv?.[b.moves.length]===-1);
     $('grReply').disabled=!!state.result||s.interacting;
     $('grVariations').innerHTML=(s.variations[s.index]||[]).map((v,k)=>`<option value="${v.id}"${v===b?' selected':''}>${k+1}. ${v.moves.length?core.coord(v.moves[0]):'Empty line'} · ${v.moves.length} test moves</option>`).join('');
   }
@@ -5487,7 +5504,7 @@ if(typeof window !== 'undefined') (()=>{
     const s=session,p=entry(),r=result();s.mode='explore';s.touched=true;s.attempt=null;
     const branches=s.variations[s.index]||(s.variations[s.index]=[]),candidate=r?.candidates.find(c=>c.i===i);
     let b=branches.find(x=>x.moves.length===1&&x.moves[0]===i);
-    if(!b){let pv=candidate?.pv?.slice()||[];if(i!==null&&pv[0]!==i)pv=[i,...pv];b={id:String(++s.branchSerial),moves:i===null?[]:[i],pv:core.line(p.board,p.color,s.game.variant,pv).moves};branches.push(b);if(branches.length>12)branches.shift();}
+    if(!b){let pv=candidate?.pv?.slice()||[];if(i!==null&&pv[0]!==i)pv=[i,...pv];b={id:String(++s.branchSerial),moves:i===null?[]:[i],pv:core.line(p.board,p.color,s.game.variant,pv,p).moves};branches.push(b);if(branches.length>12)branches.shift();}
     s.branch=b;feedback(i===null?'Choose a move to start a new variation.':`${core.coord(i)} · ${candidate?.label||'Suggestion'}. ${candidate?.explanation?.why||'Explore the opponent’s reply to compare this move.'}`);render();revealBoard();
   }
   async function interactive(task){
@@ -5496,28 +5513,28 @@ if(typeof window !== 'undefined') (()=>{
     finally{if(session===s&&s.epoch===epoch){s.interacting=false;render();if(keep&&s.wantsScan)scan();}}
   }
   async function boardAction(i){
-    const s=session;if(!s)return;const state=s.mode==='game'?{board:entry().board,color:entry().color,result:null}:chosenState();if(state.board[i]){feedback(`${core.coord(i)} is occupied. Choose an empty intersection.`);return;}if(state.result){feedback('This test line has ended. Undo a move or return to the game.');return;}
+    const s=session;if(!s)return;const state=s.mode==='game'?{...entry(),result:null}:chosenState();if(state.board[i]){feedback(`${core.coord(i)} is occupied. Choose an empty intersection.`);return;}if(state.result){feedback('This test line has ended. Undo a move or return to the game.');return;}
     if(s.mode==='game'){// A click always branches from BEFORE the selected recorded move.
-      const a=core.legal(entry().board,entry().color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}startBranch(i);await gradeBranchMove(entry().board,entry().color,i);return;
+      const a=core.legal(entry().board,entry().color,s.game.variant,i,entry());if(!a.legal){feedback('Illegal move: '+a.reason);return;}startBranch(i);await gradeBranchMove(entry().board,entry().color,i,entry());return;
     }
     if(s.mode==='retry'){
-      const p=entry(),a=core.legal(p.board,p.color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
+      const p=entry(),a=core.legal(p.board,p.color,s.game.variant,i,p);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
       s.attempt={i,result:null};feedback(`Checking ${core.coord(i)} against the strongest alternatives…`);render();
-      await interactive(async(ss,current)=>{const r=await evaluate(p.board,p.color,ss.game.variant,i,1000);if(!current()||ss.mode!=='retry'||ss.index!==p.ply-1||ss.attempt?.i!==i)return;ss.attempt.result=r;feedback(`${['Winning move','Winning threat','Winning plan','Best found','Good'].includes(r.label)?'Good solution. ':r.label==='Unscored'?'No verdict yet. ':''}${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});return;
+      await interactive(async(ss,current)=>{const r=await evaluate(p.board,p.color,ss.game.variant,i,1000,p);if(!current()||ss.mode!=='retry'||ss.index!==p.ply-1||ss.attempt?.i!==i)return;ss.attempt.result=r;feedback(`${['Winning move','Winning threat','Winning plan','Best found','Good'].includes(r.label)?'Good solution. ':r.label==='Unscored'?'No verdict yet. ':''}${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});return;
     }
-    const a=core.legal(state.board,state.color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
+    const a=core.legal(state.board,state.color,s.game.variant,i,state);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
     if(s.branch.moves.length>=60){feedback('Variation limit: 60 test moves. Return to the game or start another line.');return;}
-    s.branch.moves.push(i);if(s.branch.pv[s.branch.moves.length-1]!==i)s.branch.pv=[];render();await gradeBranchMove(state.board,state.color,i);
+    s.branch.moves.push(i);if(s.branch.pv[s.branch.moves.length-1]!==i)s.branch.pv=[];render();await gradeBranchMove(state.board,state.color,i,state);
   }
-  async function gradeBranchMove(board,color,i){const branch=session.branch,signature=JSON.stringify(branch.moves);await interactive(async(s,current)=>{const r=await evaluate(board,color,s.game.variant,i,700);if(!current()||s.branch!==branch||JSON.stringify(branch.moves)!==signature)return;branch.last=r;feedback(`${side(color)} ${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});}
+  async function gradeBranchMove(board,color,i,context={}){const branch=session.branch,signature=JSON.stringify(branch.moves);await interactive(async(s,current)=>{const r=await evaluate(board,color,s.game.variant,i,700,context);if(!current()||s.branch!==branch||JSON.stringify(branch.moves)!==signature)return;branch.last=r;feedback(`${side(color)} ${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});}
   function undoBranch(){const s=session;if(!s?.branch?.moves.length)return;s.branch.moves.pop();feedback('Test move undone. The recorded game is unchanged.');render();}
   function nextLine(){const s=session,b=s.branch,i=b?.pv[b.moves.length];if(core.point(i))boardAction(i);}
-  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!core.point(r.best)){feedback('No legal reply found.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best);b.moves.push(r.best);b.pv=[];const c=r.candidates.find(x=>x.i===r.best);feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
-  async function deeper(){const p=entry(),index=session.index;await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,2400);if(!current())return;s.results[index]=r;persist(s);feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
+  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100,state);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!(core.point(r.best)||r.best===-1)||!core.legal(state.board,state.color,s.game.variant,r.best,state).legal){feedback('No legal reply found.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best,state);b.moves.push(r.best);b.pv=[];const c=r.candidates.find(x=>x.i===r.best);feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
+  async function deeper(){const p=entry(),index=session.index;await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,2400,p);if(!current())return;s.results[index]=r;persist(s);feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
   async function scan(){
     const s=session;if(!s||s.scanning||s.interacting||!s.wantsScan)return;const epoch=++s.epoch;s.scanning=true;renderProgress();
     const order=[s.index,...s.positions.map((p,k)=>k).filter(k=>s.positions[k].color===s.game.humanColor),...s.positions.map((_,k)=>k)].filter((v,k,a)=>a.indexOf(v)===k);
-    try{for(const k of order){if(session!==s||s.epoch!==epoch||!s.wantsScan)break;if(s.results[k])continue;const p=s.positions[k];const r=await evaluate(p.board,p.color,s.game.variant,p.played,350);if(session!==s||s.epoch!==epoch)break;s.results[k]=r;persist(s);if(!s.touched&&core.severity(r.label)>=2&&(s.game.mode!=='ai'||p.color===s.game.humanColor)){s.index=k;s.touched=true;}render();}}
+    try{for(const k of order){if(session!==s||s.epoch!==epoch||!s.wantsScan)break;if(s.results[k])continue;const p=s.positions[k];const r=await evaluate(p.board,p.color,s.game.variant,p.played,350,p);if(session!==s||s.epoch!==epoch)break;s.results[k]=r;persist(s);if(!s.touched&&core.severity(r.label)>=2&&(s.game.mode!=='ai'||p.color===s.game.humanColor)){s.index=k;s.touched=true;}render();}}
     catch(e){if(e.name!=='AbortError'&&session===s&&s.epoch===epoch){s.wantsScan=false;feedback('The scan stopped: '+e.message+' Completed moves are kept. Use Resume scan to retry.');}}
     finally{if(session===s&&s.epoch===epoch){s.scanning=false;render();}}
   }
@@ -5525,15 +5542,16 @@ if(typeof window !== 'undefined') (()=>{
   function open(options={}){
     const api=window.GomokuStudio;if(!api)return false;
     if(dialog?.open){if(Number.isInteger(options.ply))select(options.ply-1);return true;}
+    let prepared;
     try{
-      const prepared=api.prepareGuidedReview?api.prepareGuidedReview():{game:api.exportGame(),wasReviewing:true};
+      prepared=api.prepareGuidedReview?api.prepareGuidedReview():{game:api.exportGame(),wasReviewing:true};
       const game=copy(prepared.game);core=core||createGuidedReviewCore(createEngine,createStudioCore);const ps=core.positions(game);
       if(!ps.length){api.finishGuidedReview?.(!prepared.wasReviewing);return false;}
       opener=document.activeElement;document.querySelectorAll('dialog[open]').forEach(d=>d.close());ensureUI();storageNotice='';
       session={game,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false};
       loadCache(session);if(Number.isInteger(options.ply)){session.index=Math.max(0,Math.min(ps.length-1,options.ply-1));session.touched=true;}
       $('grFilter').value='all';dialog.showModal();feedback('');render();$('grClose').focus();scan();return true;
-    }catch(e){console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
+    }catch(e){if(prepared)api.finishGuidedReview?.(!prepared.wasReviewing);session=null;abort();dialog?.close();console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
   }
   function exportReview(){const s=session;if(!s)return;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function boot(){
@@ -5541,7 +5559,7 @@ if(typeof window !== 'undefined') (()=>{
     core=createGuidedReviewCore(createEngine,createStudioCore);
     const ids=new Set(['resultReviewBtn','resultCoachBtn','resultAnalyzeBtn','reviewAllBtn','reviewCoachOpen','reviewGameFromTrain','reviewCoachBtn','v95Full']);
     // Capture before legacy handlers; a single entry point, not another review overlay.
-    document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+    document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor,allowLegacyOffCenterOpening:g.renjuCenterRule!==true}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
     const button=$('resultReviewBtn');if(button)button.textContent='Review game';
     window.GomokuReview=Object.freeze({version:VERSION,open,close,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,
       state:()=>session?copy({gameId:session.game.gameId,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions}):null,
@@ -6195,7 +6213,8 @@ function mount(){if(mounted)return;if(!api()||!$('boardGrid')||!$('v92Primary')|
 mount();})();
 </script>
 
-\n<!-- V11.7: production resilience + release diagnostics. -->
+
+<!-- V11.7: production resilience + release diagnostics. -->
 <style id="v117-resilience-style">
 #v117RecoveryDialog{width:min(760px,calc(100vw - 24px));max-height:min(90dvh,820px);padding:0}
 .v117-shell{padding:20px}.v117-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--hair)}
@@ -6230,7 +6249,8 @@ mount();})();
  function mount(){if(document.body?.dataset.ready==='error'){ensureUI();menuTool();return}if(document.body?.dataset.ready!=='true'||!window.GomokuStudio||!$('v111MenuDialog')){setTimeout(mount,60);return}if(document.body.classList.contains('v117-ready'))return;document.body.classList.add('v117-ready');afterReady()}
  mount();
 })();
-</script>\n
+</script>
+
 
 <!-- V11.8: release integrity, portability and backup preflight. -->
 <style id="v118-release-style">
@@ -6535,6 +6555,54 @@ body:not([data-v92-route="play"]) #roomMatchHud{display:none!important}
 @media(prefers-reduced-motion:reduce){.ch1-cell.wrong{animation:none!important}}
 </style>
 
+<script id="course-storage-script">
+/* Chapter progress adapter. Corrupt/full storage must not erase earlier work. */
+(() => {
+  'use strict';
+  const keys=Array.from({length:14},(_,i)=>`gomoku.course.chapter${i+1}.v1`);
+  const memory=new Map(),blocked=new Set(),unsaved=new Set();let notice;
+  function warn(){
+    if(!document.body)return;
+    if(!notice){notice=document.createElement('aside');notice.id='courseStorageNotice';notice.setAttribute('role','status');notice.style.cssText='position:fixed;bottom:calc(82px + env(safe-area-inset-bottom));left:12px;right:12px;margin:auto;max-width:540px;z-index:2147483645;padding:14px;background:#fff4df;color:#332710;border:2px solid #876415;border-radius:8px;font:14px/1.4 system-ui';document.body.append(notice);}
+    notice.replaceChildren(document.createTextNode('Course progress is only in this tab. Storage is full, unavailable, or damaged. Export progress before closing. '));
+    const b=document.createElement('button');b.type='button';b.textContent='Export progress';b.onclick=()=>{const blob=new Blob([JSON.stringify({format:'GomokuCourseProgress',version:1,courses:snapshot(),recovery:Object.fromEntries(keys.map(k=>{try{return[k,localStorage.getItem(k)]}catch{return[k,null]}}))},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gomoku-course-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};notice.append(b);
+  }
+  function valid(raw){
+    if(typeof raw!=='string'||raw.length>500000)throw Error('Invalid course record size.');
+    const value=JSON.parse(raw);
+    if(!value||typeof value!=='object'||Array.isArray(value)||!value.tasks||typeof value.tasks!=='object'||Array.isArray(value.tasks))throw Error('Invalid course progress.');
+    if(Object.keys(value.tasks).length>2000||Object.values(value.tasks).some(x=>!x||typeof x!=='object'||Array.isArray(x)))throw Error('Invalid task records.');
+    return raw;
+  }
+  function getItem(key){
+    if(!keys.includes(key))throw Error('Unknown course key.');
+    if(memory.has(key))return memory.get(key);
+    try {const raw=localStorage.getItem(key);if(raw!==null)valid(raw);return raw;}
+    catch {blocked.add(key);memory.set(key,null);warn();return null;}
+  }
+  function setItem(key,raw){
+    if(!keys.includes(key))throw Error('Unknown course key.');valid(raw);memory.set(key,raw);
+    if(blocked.has(key)){unsaved.add(key);warn();return;}
+    try {localStorage.setItem(key,raw);unsaved.delete(key);if(!unsaved.size&&!blocked.size){notice?.remove();notice=null;}}
+    catch {unsaved.add(key);warn();}
+  }
+  function snapshot(){const out={};for(const k of keys){const raw=getItem(k);if(raw!==null)out[k]=raw;}return out;}
+  function validate(data){
+    if(!data||typeof data!=='object'||Array.isArray(data)||JSON.stringify(data).length>5000000)throw Error('Invalid course backup.');
+    const clean={};for(const [key,raw] of Object.entries(data)){if(!keys.includes(key))throw Error('Unexpected key in course backup.');clean[key]=valid(raw);}return clean;
+  }
+  function restore(data){
+    const clean=validate(data),changed=Object.keys(clean),old=changed.map(k=>localStorage.getItem(k));
+    try{for(const key of changed)localStorage.setItem(key,clean[key]);}
+    catch(error){for(let i=0;i<changed.length;i++)try{old[i]===null?localStorage.removeItem(changed[i]):localStorage.setItem(changed[i],old[i]);}catch{}throw Error('Progress import failed; earlier records were retained. '+error.message);}
+    reloaded(changed);
+  }
+  function reloaded(changed){for(const key of changed){memory.delete(key);blocked.delete(key);unsaved.delete(key);}if(!unsaved.size&&!blocked.size){notice?.remove();notice=null;}window.dispatchEvent(new CustomEvent('gomoku:course-restored'));window.dispatchEvent(new CustomEvent('gomoku:course-progress'));}
+  addEventListener('storage',e=>{const changed=(e.key===null?keys:keys.filter(k=>k===e.key)).filter(k=>!unsaved.has(k));if(changed.length){for(const key of changed){memory.delete(key);blocked.delete(key);}window.dispatchEvent(new CustomEvent('gomoku:course-restored'));window.dispatchEvent(new CustomEvent('gomoku:course-progress'));if(!unsaved.size&&!blocked.size){notice?.remove();notice=null;}}});
+  window.GomokuCourseStorage=Object.freeze({getItem,setItem,snapshot,validate,restore,reloaded,keys:Object.freeze(keys),status:()=>({unsaved:[...unsaved],damaged:[...blocked]})});
+})();
+
+</script>
 <script id="course-ch1-v1-script">
 (()=>{'use strict';
 if(window.__GomokuCourseChapter1Booted)return;window.__GomokuCourseChapter1Booted=true;
@@ -6620,9 +6688,9 @@ const CHECKPOINT=[
 ];
 LESSON_TASKS.checkpoint=CHECKPOINT;
 
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'?x:{}}catch{return{}}}
+function load(){try{const x=JSON.parse(GomokuCourseStorage.getItem(KEY)||'{}');return x&&typeof x==='object'?x:{}}catch{return{}}}
 let S=load();S.tasks=S.tasks&&typeof S.tasks==='object'?S.tasks:{};S.lesson=Number.isInteger(S.lesson)?Math.max(0,Math.min(L.length-1,S.lesson)):0;S.cursor=S.cursor&&typeof S.cursor==='object'?S.cursor:{};S.attemptLog=Array.isArray(S.attemptLog)?S.attemptLog.slice(-500):[];
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch{};renderCard();try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:report()}))}catch{}}
+function save(){try{GomokuCourseStorage.setItem(KEY,JSON.stringify(S))}catch{};renderCard();try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:report()}))}catch{}}
 function tasksFor(li){return LESSON_TASKS[L[li].id]||[]}
 function rec(id){return S.tasks[id]||{attempts:0,correct:false,firstTry:null,assisted:false}}
 function lessonReport(li){
@@ -6714,6 +6782,7 @@ function renderSkills(skills){
 function redoLesson(li){const ts=tasksFor(li);for(const t of ts)delete S.tasks[t.id];S.cursor[L[li].id]=0;save();renderCourse();}
 window.GomokuCourseChapter1=Object.freeze({version:'1.0',open:()=>openCourse(nextLesson()),report});
 mount();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});[400,1200,2500].forEach(ms=>setTimeout(mount,ms));
+addEventListener('gomoku:course-restored',()=>{S=load();S.tasks=S.tasks&&typeof S.tasks==='object'?S.tasks:{};S.lesson=Number.isInteger(S.lesson)?Math.max(0,Math.min(L.length-1,S.lesson)):0;S.cursor=S.cursor&&typeof S.cursor==='object'?S.cursor:{};S.attemptLog=Array.isArray(S.attemptLog)?S.attemptLog.slice(-500):[];renderCard();});
 })();
 </script>
 
@@ -6987,12 +7056,12 @@ let observer=null,ensureQueued=false;
 function blank(){return{version:VERSION,tasks:{},lastSection:0,lastTask:0,updatedAt:null}}
 function load(){
  try{
-  const v=JSON.parse(localStorage.getItem(STORE)||'null');
+  const v=JSON.parse(GomokuCourseStorage.getItem(STORE)||'null');
   if(v&&v.version===VERSION&&v.tasks)return Object.assign(blank(),v);
  }catch{}
  return blank();
 }
-function save(s){s.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify(s));try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:{chapter:2,report:report()}}))}catch{}}
+function save(s){s.updatedAt=new Date().toISOString();GomokuCourseStorage.setItem(STORE,JSON.stringify(s));try{window.dispatchEvent(new CustomEvent('gomoku:course-progress',{detail:{chapter:2,report:report()}}))}catch{}}
 function result(id){return load().tasks[id]||null}
 function pct(n){return Number.isFinite(n)?Math.round(n*100)+'%':'—'}
 function sectionReport(si){
@@ -7282,6 +7351,7 @@ function mount(){
 }
 mount();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});
+addEventListener('gomoku:course-restored',()=>{renderCard();});
 })();
 </script>
 
@@ -7381,12 +7451,12 @@ let currentLesson=0,currentTask=0,attempts=0,answered=false,mountQueued=false;
 function fresh(){return{version:VERSION,tasks:{},lastLesson:0,lastTask:0}}
 function load(){
   try{
-    const raw=JSON.parse(localStorage.getItem(KEY)||'null');
+    const raw=JSON.parse(GomokuCourseStorage.getItem(KEY)||'null');
     if(raw&&raw.version===VERSION&&raw.tasks)return raw;
   }catch{}
   return fresh();
 }
-function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}}
+function save(s){try{GomokuCourseStorage.setItem(KEY,JSON.stringify(s))}catch{}}
 function resultFor(id){return load().tasks[id]||null}
 function taskRecord(id,patch){
   const s=load(),prev=s.tasks[id]||{attempts:0,correct:false,assisted:false,firstTry:false};
@@ -7619,6 +7689,7 @@ window.GomokuCourseChapter3={
   reset(){localStorage.removeItem(KEY);currentLesson=0;currentTask=0;render();updateCard()},
   version:VERSION
 };
+addEventListener('gomoku:course-restored',()=>{updateCard();});
 })();
 </script>
 
@@ -7720,12 +7791,12 @@ let currentLesson=0,currentTask=0,attempts=0,answered=false,mountQueued=false;
 function fresh(){return{version:VERSION,tasks:{},lastLesson:0,lastTask:0}}
 function load(){
   try{
-    const raw=JSON.parse(localStorage.getItem(KEY)||'null');
+    const raw=JSON.parse(GomokuCourseStorage.getItem(KEY)||'null');
     if(raw&&raw.version===VERSION&&raw.tasks)return raw;
   }catch{}
   return fresh();
 }
-function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}}
+function save(s){try{GomokuCourseStorage.setItem(KEY,JSON.stringify(s))}catch{}}
 function resultFor(id){return load().tasks[id]||null}
 function taskRecord(id,patch){
   const s=load(),prev=s.tasks[id]||{attempts:0,correct:false,assisted:false,firstTry:false};
@@ -7958,6 +8029,7 @@ window.GomokuCourseChapter4={
   reset(){localStorage.removeItem(KEY);currentLesson=0;currentTask=0;render();updateCard()},
   version:VERSION
 };
+addEventListener('gomoku:course-restored',()=>{updateCard();});
 })();
 </script>
 
@@ -8011,14 +8083,14 @@ let state=load(),section=0,taskIndex=0,dialog=null,wrong=0,revealed=false;
 
 function load(){
  try{
-   const raw=JSON.parse(localStorage.getItem(STORAGE)||"null");
+   const raw=JSON.parse(GomokuCourseStorage.getItem(STORAGE)||"null");
    if(raw&&raw.v===1&&raw.tasks&&typeof raw.tasks==="object")return raw;
  }catch{}
  return {v:1,tasks:{},last:{section:0,task:0},startedAt:Date.now()};
 }
 function save(){
  state.last={section,task:taskIndex};
- try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch{}
+ try{GomokuCourseStorage.setItem(STORAGE,JSON.stringify(state));}catch{}
  updateCard();
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -8263,6 +8335,7 @@ else{
   if(document.body?.dataset?.ready==="true"){readyObs.disconnect();setTimeout(mountChapter5,0);}
  },{once:true});
 }
+addEventListener('gomoku:course-restored',()=>{state=load();updateCard();});
 })();
 </script>
 
@@ -8287,7 +8360,7 @@ function freshState(){
 }
 function loadState(){
   try{
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const raw = JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY) || "null");
     if(!raw || raw.version !== 1 || typeof raw.tasks !== "object") return freshState();
     raw.last ||= {lesson:0,task:0};
     return raw;
@@ -8295,7 +8368,7 @@ function loadState(){
 }
 let state = loadState();
 function saveState(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
+  try{ GomokuCourseStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
   refreshCard();
 }
 function allTasks(){ return LESSONS.flatMap(x => x.tasks); }
@@ -8785,6 +8858,7 @@ const startObserver=()=>{
 };
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",startObserver,{once:true});
 else startObserver();
+addEventListener('gomoku:course-restored',()=>{state=loadState();refreshCard();});
 })();
 </script>
 
@@ -8808,7 +8882,7 @@ function freshState(){
 }
 function loadState(){
   try{
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const raw = JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY) || "null");
     if(!raw || raw.version !== 1 || typeof raw.tasks !== "object") return freshState();
     raw.last ||= {lesson:0,task:0};
     return raw;
@@ -8816,7 +8890,7 @@ function loadState(){
 }
 let state = loadState();
 function saveState(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
+  try{ GomokuCourseStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{}
   refreshCard();
 }
 function allTasks(){ return LESSONS.flatMap(x => x.tasks); }
@@ -9286,6 +9360,7 @@ const startObserver=()=>{
 };
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",startObserver,{once:true});
 else startObserver();
+addEventListener('gomoku:course-restored',()=>{state=loadState();refreshCard();});
 })();
 </script>
 
@@ -9546,13 +9621,13 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");
     if(x && x.version===VERSION && x.tasks) return x;
   }catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+function saveState(){ try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
 
 let currentLesson=0,currentTask=0,misses=0,selected=null;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -9846,6 +9921,7 @@ else start();
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter8();});
 if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 <script id="course-ch9-v1-script">
@@ -10102,13 +10178,13 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");
     if(x && x.version===VERSION && x.tasks) return x;
   }catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+function saveState(){ try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
 
 let currentLesson=0,currentTask=0,misses=0,selected=null;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -10402,6 +10478,7 @@ else start();
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter9();});
 if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 
@@ -10659,13 +10736,13 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");
     if(x && x.version===VERSION && x.tasks) return x;
   }catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+function saveState(){ try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
 
 let currentLesson=0,currentTask=0,misses=0,selected=null;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -10959,6 +11036,7 @@ else start();
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter10();});
 if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 
@@ -10978,13 +11056,13 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");
     if(x && x.version===VERSION && x.tasks) return x;
   }catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+function saveState(){ try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
 
 let currentLesson=0,currentTask=0,misses=0;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -11285,6 +11363,7 @@ else start();
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true") mountChapter11();});
 if(document.body) observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 
@@ -11304,13 +11383,13 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");
     if(x && x.version===VERSION && x.tasks) return x;
   }catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
+function saveState(){ try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} }
 
 let currentLesson=0,currentTask=0,misses=0;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -11507,6 +11586,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true")mountChapter12();});
 if(document.body)observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 
@@ -11525,11 +11605,11 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
-  try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(x&&x.version===VERSION&&x.tasks)return x;}catch{}
+  try{const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");if(x&&x.version===VERSION&&x.tasks)return x;}catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
+function saveState(){try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
 
 let currentLesson=0,currentTask=0,misses=0;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -11616,6 +11696,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true")mountChapter13();});
 if(document.body)observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 
@@ -11634,11 +11715,11 @@ const TOTAL_TASKS = LESSONS.reduce((n,l)=>n+l.tasks.length,0);
 
 function emptyState(){ return {version:VERSION,tasks:{},last:{lesson:0,task:0}}; }
 function loadState(){
-  try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(x&&x.version===VERSION&&x.tasks)return x;}catch{}
+  try{const x=JSON.parse(GomokuCourseStorage.getItem(STORAGE_KEY)||"null");if(x&&x.version===VERSION&&x.tasks)return x;}catch{}
   return emptyState();
 }
 let state=loadState();
-function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
+function saveState(){try{GomokuCourseStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
 
 let currentLesson=0,currentTask=0,misses=0;
 let card,dialog,bodyEl,titleEl,metaEl,countEl,feedbackEl,revealBtn,nextBtn,boardEl,choicesEl;
@@ -11725,6 +11806,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 const observer=new MutationObserver(()=>{if(document.body?.dataset?.ready==="true")mountChapter14();});
 if(document.body)observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]});
 else document.addEventListener("DOMContentLoaded",()=>observer.observe(document.body,{attributes:true,attributeFilter:["data-ready"]}),{once:true});
+addEventListener('gomoku:course-restored',()=>{state=loadState();updateCard();});
 })();
 </script>
 <style id="tournament-table-style">

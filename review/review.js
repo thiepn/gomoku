@@ -1,46 +1,53 @@
-/* Guided Review 1.0. Position-local analysis; the recorded game is never edited. */
+/* Guided Review 1.0.1. Position-local analysis; the recorded game is never edited. */
 function createGuidedReviewCore(engineFactory, studioFactory) {
   'use strict';
   const C = studioFactory(engineFactory);
   const coord = C.coord;
   const point = i => Number.isInteger(i) && i >= 0 && i < 225;
   const severity = label => ({'Blunder':5,'Missed win':4,'Mistake':3,'Inaccuracy':2,'Win available':1}[label] || 0);
-  const key = (b,c,r) => `${r}:${c}:${Array.from(b).join('')}`;
+  const key = (b,c,r,context={}) => `${r}:${c}:${Array.from(b).join('')}:p${context.passes||0}`;
   function positions(game) {
-    const e = engineFactory(game.variant), moves = game.moves || [];
-    e.replay(moves, {initial:game.initial || [],startColor:game.startColor || 1});
-    return moves.map((m,k) => {
-      const p = e.replay(moves.slice(0,k), {initial:game.initial || [],startColor:game.startColor || 1});
-      return {ply:k+1,played:m.i,color:m.color,board:Array.from(p.board),key:key(p.board,m.color,game.variant)};
-    });
+    const e=engineFactory(game.variant),moves=game.moves||[],options={initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule!==true};
+    // Validate once. Construct prefixes incrementally, rather than replaying every prefix.
+    e.replay(moves,options);
+    const board=e.validateSetup(options.initial,options.startColor),out=[];let passes=0;
+    for(let k=0;k<moves.length;k++){
+      const m=moves[k],context={passes,moveCount:options.initial.length+k};
+      out.push({ply:k+1,played:m.i,color:m.color,board:Array.from(board),...context,legacyOpening:options.allowLegacyOffCenterOpening&&k===0&&!options.initial.length,key:key(board,m.color,game.variant,context)});
+      if(m.i>=0){board[m.i]=m.color;passes=0;}else passes++;
+    }
+    return out;
   }
-  function legal(board,color,rule,i) {
+  function legal(board,color,rule,i,context={}) {
     if (i !== -1 && !point(i)) return {legal:false,reason:'Choose an empty intersection.'};
-    return engineFactory(rule).legalMove(Int8Array.from(board),i,color,board.filter(Boolean).length);
+    return engineFactory(rule).legalMove(Int8Array.from(board),i,color,context.moveCount??board.filter(Boolean).length,{allowOffCenterOpening:context.legacyOpening===true});
   }
-  function apply(board,color,rule,i) {
-    const a = legal(board,color,rule,i);
+  function apply(board,color,rule,i,context={}) {
+    if(context.result)throw Error("This line has ended.");
+    const a = legal(board,color,rule,i,context);
     if (!a.legal) throw Error(a.reason || 'Illegal move');
     const next = Array.from(board);if(i>=0)next[i] = color;
-    return {board:next,color:3-color,result:a.win ? {winner:color} : next.every(Boolean) ? {winner:0} : null};
+    const passes=i===-1?(context.passes||0)+1:0;
+    return {board:next,color:3-color,passes,moveCount:(context.moveCount??board.filter(Boolean).length)+1,result:a.win?{winner:color,reason:'five'}:next.every(Boolean)?{winner:0,reason:'full'}:passes>=2?{winner:0,reason:'passes'}:null};
   }
-  function facts(board,color,rule,i) {
+  function facts(board,color,rule,i,context={}) {
     const e = engineFactory(rule), b = Int8Array.from(board);
-    const a = i === -1 ? {legal:true,win:false,fours:[],threes:[]} : legal(board,color,rule,i);
+    const a = legal(board,color,rule,i,context);
     if (!a.legal) return {legal:false,reason:a.reason};
     const ownWins = e.winningMoves(b,color), threats = e.winningMoves(b,3-color);
     if (i >= 0) b[i] = color;
     const replies = a.win ? [] : e.winningMoves(b,3-color);
     const finishes = a.win ? [] : e.winningMoves(b,color);
     // Two winning points cannot both be occupied by one defensive placement.
-    return {legal:true,win:!!a.win,ownWins,threats,replies,finishes,
+    return {legal:true,win:!!a.win,draw:i===-1&&context.passes===1,ownWins,threats,replies,finishes,
       fours:(a.fours || []).map(f=>({stones:f.stones || [],ends:f.ends || []})),
       threes:(a.threes || []).map(t=>({stones:t.stones || [],extensions:t.extensions || []})),
-      alreadyLost:!ownWins.length && threats.length >= 2};
+      alreadyLost:!context.passes && !ownWins.length && threats.length >= 2};
   }
-  function judge(r,board,color,played) {
-    const f = facts(board,color,r.rule,played);
+  function judge(r,board,color,played,context={}) {
+    const f = facts(board,color,r.rule,played,context);
     if (!f.legal) return {label:'Illegal',basis:'rules',loss:null,best:r.move,facts:f};
+    if (f.draw) return {label:'Draw by passes',basis:'rules',loss:0,best:played,facts:f};
     if (f.win) return {label:'Winning move',basis:'rules',loss:0,best:played,facts:f};
     if (f.alreadyLost) return {label:'Already lost',basis:'rules',loss:null,best:r.move,facts:f};
     if (!f.ownWins.length && !f.replies.length && f.finishes.length>=2) return {label:'Winning threat',basis:'rules',loss:0,best:played,facts:f};
@@ -58,6 +65,7 @@ function createGuidedReviewCore(engineFactory, studioFactory) {
   function explain(r,board,color,played,q) {
     const f=q.facts,us=color===1?'Black':'White',them=color===1?'White':'Black',at=coord(played),best=coord(q.best);
     if (!f.legal) return {why:`${at} is not legal: ${f.reason}.`,lesson:'Check the rules before evaluating a move.',highlights:[]};
+    if (f.draw) return {why:'Both players passed consecutively. The game ends in a draw; there is no next move.',lesson:'Two consecutive passes end the game.',highlights:[]};
     if (f.win) return {why:`${at} completes five in a row. The game ends immediately; the opponent gets no reply.`,lesson:'Finish a legal five before looking for a longer plan.',highlights:[played]};
     if (f.alreadyLost) return {why:`${them} already had two immediate winning points: ${f.threats.map(coord).join(' and ')}. ${us} has no immediate win, and one stone cannot block both. This is not a new mistake by ${at}.`,lesson:'Go to the previous key moment: stop the open four before it gets two winning ends.',highlights:f.threats};
     if (f.replies.length && q.basis==='rules' && q.label==='Blunder') return {why:`After ${at}, ${them} can complete five at ${f.replies.map(coord).join(' or ')}. ${best} ${f.ownWins.includes(q.best)?'wins immediately instead':'avoids that immediate loss'}.`,lesson:'Before attacking, check every point where your opponent can win on the next move.',highlights:f.replies};
@@ -85,26 +93,26 @@ function createGuidedReviewCore(engineFactory, studioFactory) {
     const lesson = f.replies.length ? 'Look one move ahead for the opponent’s finish.' : f.threats.length ? 'Deal with the immediate threat before improving your own shape.' : f.finishes.length ? 'A forcing four gains time because the opponent must respond.' : f.threes.length ? 'Compare the legal extensions and the opponent’s strongest defense.' : 'Compare connected shapes and future threats, not just the nearest empty point.';
     return {why,lesson,highlights:f.replies.length?f.replies:f.finishes};
   }
-  function pack(r,board,color,played) {
-    const q=judge(r,board,color,played);
+  function pack(r,board,color,played,context={}) {
+    const q=judge(r,board,color,played,context);
     const candidates=(r.candidates || []).filter(c=>point(c.i)).map(c=>{
-      const j=judge(r,board,color,c.i);
+      const j=judge(r,board,color,c.i,context);
       return {i:c.i,score:Number.isFinite(c.score)?c.score:null,bound:c.bound||'unknown',pv:Array.isArray(c.pv)?c.pv.slice(0,24):[],label:j.label,basis:j.basis,loss:j.loss??null,explanation:explain(r,board,color,c.i,j)};
     });
     const c=candidates.find(x=>x.i===played);
-    const best=point(q.best)?q.best:point(r.move)?r.move:null;
-    if (best!==null && !candidates.some(x=>x.i===best)) candidates.unshift({i:best,score:null,bound:'unknown',pv:r.tactical?.verified?r.tactical.pv.slice(0,24):[],label:r.tactical?.verified?'Winning plan':'Suggestion',basis:r.tactical?.verified?'verified-proof':'insufficient-search',explanation:{why:r.explanation || 'Search suggestion; not scored against this move.',lesson:'Compare the continuation.',highlights:[]}});
-    return {key:key(board,color,r.rule),played,color,rule:r.rule,label:q.label,basis:q.basis,loss:q.loss??null,best,
+    const best=point(q.best)||(q.best===-1&&legal(board,color,r.rule,-1,context).legal)?q.best:point(r.move)?r.move:null;
+    if (best!==null && !candidates.some(x=>x.i===best)) {const j=judge(r,board,color,best,context);candidates.unshift({i:best,score:null,bound:'unknown',pv:r.tactical?.verified?r.tactical.pv.slice(0,24):[best],label:j.basis==='rules'?j.label:r.tactical?.verified?'Winning plan':'Suggestion',basis:j.basis==='rules'?'rules':r.tactical?.verified?'verified-proof':'insufficient-search',explanation:j.basis==='rules'?explain(r,board,color,best,j):{why:r.explanation || 'Search suggestion; not scored against this move.',lesson:'Compare the continuation.',highlights:[]}});}
+    return {key:key(board,color,r.rule,context),played,color,rule:r.rule,label:q.label,basis:q.basis,loss:q.loss??null,best,
       depth:r.depth || 0,timeMs:r.elapsedMs || 0,budget:r.parameters?.budget || 0,engine:r.parameters?.engine || '6.0',
       quality:r.analysisQuality || 'selective',score:c?.bound==='exact'?c.score:null,
       explanation:explain(r,board,color,played,q),facts:q.facts,candidates,
       pv:(r.pv || []).slice(0,24),evaluatedAt:Date.now()};
   }
-  function line(board,color,rule,moves) {
-    const states=[{board:Array.from(board),color,result:null}],valid=[];
+  function line(board,color,rule,moves,context={}) {
+    const states=[{board:Array.from(board),color,result:null,...context}],valid=[];
     for(const i of moves || []) {
       if(states.at(-1).result) break;
-      try {const s=apply(states.at(-1).board,states.at(-1).color,rule,i);states.push(s);valid.push(i);}catch{break;}
+      try {const s=apply(states.at(-1).board,states.at(-1).color,rule,i,states.at(-1));states.push(s);valid.push(i);}catch{break;}
     }
     return {states,moves:valid};
   }
@@ -114,7 +122,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='1.0.0', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='1.0.1', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -122,19 +130,19 @@ if(typeof window !== 'undefined') (()=>{
   let core,dialog,session=null,worker=null,workerURL=null,rejectJob=null,watchdog=0,serial=0,opener=null;
   let storageNotice='';
   const abort=()=>{if(worker)worker.terminate();if(workerURL)URL.revokeObjectURL(workerURL);clearTimeout(watchdog);worker=null;workerURL=null;const reject=rejectJob;rejectJob=null;reject?.(new DOMException('Canceled','AbortError'));};
-  function evaluate(board,color,rule,played,budget=350) {
+  function evaluate(board,color,rule,played,budget=350,context={}) {
     abort();
     return new Promise((resolve,reject)=>{
       try {
         if(typeof Worker!=='function') throw Error('This browser does not support background analysis workers.');
         const id=++serial;
-        const source=v5WorkerPrelude()+`;const R=(${createGuidedReviewCore.toString()})(createEngine,createStudioCore);const C=createStudioCore(createEngine);onmessage=({data:d})=>{try{const r=C.analyze(d.board,d.color,d.rule,{timeMs:d.budget,depth:9,width:20,multiPV:5,includeMoves:d.played>=0?[d.played]:[],backend:'auto',seed:17});postMessage({id:d.id,result:R.pack(r,d.board,d.color,d.played)});}catch(e){postMessage({id:d.id,error:e.message});}};`;
+        const source=v5WorkerPrelude()+`;const R=(${createGuidedReviewCore.toString()})(createEngine,createStudioCore);const C=createStudioCore(createEngine);onmessage=({data:d})=>{try{const r=C.analyze(d.board,d.color,d.rule,{timeMs:d.budget,depth:9,width:20,multiPV:5,includeMoves:d.played>=0?[d.played]:[],backend:'auto',seed:17});postMessage({id:d.id,result:R.pack(r,d.board,d.color,d.played,d.context)});}catch(e){postMessage({id:d.id,error:e.message});}};`;
         workerURL=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));worker=new Worker(workerURL);rejectJob=reject;
         const finish=(error,result)=>{if(id!==serial||!worker)return;rejectJob=null;worker.terminate();worker=null;URL.revokeObjectURL(workerURL);workerURL=null;clearTimeout(watchdog);error?reject(error):resolve(result);};
         worker.onmessage=ev=>{if(ev.data.id===id)finish(ev.data.error?Error(ev.data.error):null,ev.data.result);};
         worker.onerror=ev=>{ev.preventDefault();finish(Error(ev.message||'Analysis worker failed.'));};
         watchdog=setTimeout(()=>finish(Error('Analysis timed out. Completed results are safe; retry this move.')),Math.max(8000,budget+5000));
-        worker.postMessage({id,board,color,rule,played,budget});
+        worker.postMessage({id,board,color,rule,played,budget,context});
       } catch(error) {abort();reject(error);}
     });
   }
@@ -147,7 +155,7 @@ if(typeof window !== 'undefined') (()=>{
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
-        if(r?.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=25&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
+        if(r?.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=25&&r.candidates.every(c=>c&&(core.point(c.i)||c.i===-1)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
       }
       s.index=Math.max(0,Math.min(s.positions.length-1,Number(saved.index)||0));
     }catch{storageNotice='Review stays in this tab. Browser storage is unavailable; use Export review before closing.';}
@@ -215,10 +223,10 @@ if(typeof window !== 'undefined') (()=>{
   function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
   function chosenState() {
     const s=session,p=entry();
-    if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves).states.at(-1);
-    if(s.mode==='retry')return s.attempt?core.line(p.board,p.color,s.game.variant,[s.attempt.i]).states.at(-1):{board:p.board,color:p.color,result:null};
-    if(s.view==='before'||p.played<0)return {board:p.board,color:p.color,result:null};
-    return core.line(p.board,p.color,s.game.variant,[p.played]).states.at(-1);
+    if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves,p).states.at(-1);
+    if(s.mode==='retry')return s.attempt?core.line(p.board,p.color,s.game.variant,[s.attempt.i],p).states.at(-1):{...p,result:null};
+    if(s.view==='before')return {...p,result:null};
+    return core.line(p.board,p.color,s.game.variant,[p.played],p).states.at(-1);
   }
   function tone(label){return ['Winning move','Winning threat','Winning plan','Best found'].includes(label)?'best':label==='Good'?'good':core.severity(label)>=3?'bad':core.severity(label)?'warn':'neutral';}
   function basisText(r){if(!r)return 'Analysis is queued. You can navigate and explore while it runs.';return r.basis==='rules'?'Rule-checked tactical fact':r.basis==='verified-proof'?'Verified forcing strategy':r.basis==='insufficient-search'?'Insufficient evidence · analyze deeper':`Provisional engine judgment · depth ${r.depth}`;}
@@ -291,7 +299,7 @@ if(typeof window !== 'undefined') (()=>{
   function renderBranch(){
     const s=session,b=s.branch,state=chosenState();
     $('grBranchMoves').textContent=b.moves.length?b.moves.map((i,k)=>`${k+1}. ${core.coord(i)}`).join('  ·  '):'Starting position — choose a move on the board.';
-    $('grUndo').disabled=!b.moves.length;$('grLineNext').disabled=!!state.result||!core.point(b.pv?.[b.moves.length]);
+    $('grUndo').disabled=!b.moves.length;$('grLineNext').disabled=!!state.result||!(core.point(b.pv?.[b.moves.length])||b.pv?.[b.moves.length]===-1);
     $('grReply').disabled=!!state.result||s.interacting;
     $('grVariations').innerHTML=(s.variations[s.index]||[]).map((v,k)=>`<option value="${v.id}"${v===b?' selected':''}>${k+1}. ${v.moves.length?core.coord(v.moves[0]):'Empty line'} · ${v.moves.length} test moves</option>`).join('');
   }
@@ -304,7 +312,7 @@ if(typeof window !== 'undefined') (()=>{
     const s=session,p=entry(),r=result();s.mode='explore';s.touched=true;s.attempt=null;
     const branches=s.variations[s.index]||(s.variations[s.index]=[]),candidate=r?.candidates.find(c=>c.i===i);
     let b=branches.find(x=>x.moves.length===1&&x.moves[0]===i);
-    if(!b){let pv=candidate?.pv?.slice()||[];if(i!==null&&pv[0]!==i)pv=[i,...pv];b={id:String(++s.branchSerial),moves:i===null?[]:[i],pv:core.line(p.board,p.color,s.game.variant,pv).moves};branches.push(b);if(branches.length>12)branches.shift();}
+    if(!b){let pv=candidate?.pv?.slice()||[];if(i!==null&&pv[0]!==i)pv=[i,...pv];b={id:String(++s.branchSerial),moves:i===null?[]:[i],pv:core.line(p.board,p.color,s.game.variant,pv,p).moves};branches.push(b);if(branches.length>12)branches.shift();}
     s.branch=b;feedback(i===null?'Choose a move to start a new variation.':`${core.coord(i)} · ${candidate?.label||'Suggestion'}. ${candidate?.explanation?.why||'Explore the opponent’s reply to compare this move.'}`);render();revealBoard();
   }
   async function interactive(task){
@@ -313,28 +321,28 @@ if(typeof window !== 'undefined') (()=>{
     finally{if(session===s&&s.epoch===epoch){s.interacting=false;render();if(keep&&s.wantsScan)scan();}}
   }
   async function boardAction(i){
-    const s=session;if(!s)return;const state=s.mode==='game'?{board:entry().board,color:entry().color,result:null}:chosenState();if(state.board[i]){feedback(`${core.coord(i)} is occupied. Choose an empty intersection.`);return;}if(state.result){feedback('This test line has ended. Undo a move or return to the game.');return;}
+    const s=session;if(!s)return;const state=s.mode==='game'?{...entry(),result:null}:chosenState();if(state.board[i]){feedback(`${core.coord(i)} is occupied. Choose an empty intersection.`);return;}if(state.result){feedback('This test line has ended. Undo a move or return to the game.');return;}
     if(s.mode==='game'){// A click always branches from BEFORE the selected recorded move.
-      const a=core.legal(entry().board,entry().color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}startBranch(i);await gradeBranchMove(entry().board,entry().color,i);return;
+      const a=core.legal(entry().board,entry().color,s.game.variant,i,entry());if(!a.legal){feedback('Illegal move: '+a.reason);return;}startBranch(i);await gradeBranchMove(entry().board,entry().color,i,entry());return;
     }
     if(s.mode==='retry'){
-      const p=entry(),a=core.legal(p.board,p.color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
+      const p=entry(),a=core.legal(p.board,p.color,s.game.variant,i,p);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
       s.attempt={i,result:null};feedback(`Checking ${core.coord(i)} against the strongest alternatives…`);render();
-      await interactive(async(ss,current)=>{const r=await evaluate(p.board,p.color,ss.game.variant,i,1000);if(!current()||ss.mode!=='retry'||ss.index!==p.ply-1||ss.attempt?.i!==i)return;ss.attempt.result=r;feedback(`${['Winning move','Winning threat','Winning plan','Best found','Good'].includes(r.label)?'Good solution. ':r.label==='Unscored'?'No verdict yet. ':''}${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});return;
+      await interactive(async(ss,current)=>{const r=await evaluate(p.board,p.color,ss.game.variant,i,1000,p);if(!current()||ss.mode!=='retry'||ss.index!==p.ply-1||ss.attempt?.i!==i)return;ss.attempt.result=r;feedback(`${['Winning move','Winning threat','Winning plan','Best found','Good'].includes(r.label)?'Good solution. ':r.label==='Unscored'?'No verdict yet. ':''}${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});return;
     }
-    const a=core.legal(state.board,state.color,s.game.variant,i);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
+    const a=core.legal(state.board,state.color,s.game.variant,i,state);if(!a.legal){feedback('Illegal move: '+a.reason);return;}
     if(s.branch.moves.length>=60){feedback('Variation limit: 60 test moves. Return to the game or start another line.');return;}
-    s.branch.moves.push(i);if(s.branch.pv[s.branch.moves.length-1]!==i)s.branch.pv=[];render();await gradeBranchMove(state.board,state.color,i);
+    s.branch.moves.push(i);if(s.branch.pv[s.branch.moves.length-1]!==i)s.branch.pv=[];render();await gradeBranchMove(state.board,state.color,i,state);
   }
-  async function gradeBranchMove(board,color,i){const branch=session.branch,signature=JSON.stringify(branch.moves);await interactive(async(s,current)=>{const r=await evaluate(board,color,s.game.variant,i,700);if(!current()||s.branch!==branch||JSON.stringify(branch.moves)!==signature)return;branch.last=r;feedback(`${side(color)} ${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});}
+  async function gradeBranchMove(board,color,i,context={}){const branch=session.branch,signature=JSON.stringify(branch.moves);await interactive(async(s,current)=>{const r=await evaluate(board,color,s.game.variant,i,700,context);if(!current()||s.branch!==branch||JSON.stringify(branch.moves)!==signature)return;branch.last=r;feedback(`${side(color)} ${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});}
   function undoBranch(){const s=session;if(!s?.branch?.moves.length)return;s.branch.moves.pop();feedback('Test move undone. The recorded game is unchanged.');render();}
   function nextLine(){const s=session,b=s.branch,i=b?.pv[b.moves.length];if(core.point(i))boardAction(i);}
-  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!core.point(r.best)){feedback('No legal reply found.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best);b.moves.push(r.best);b.pv=[];const c=r.candidates.find(x=>x.i===r.best);feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
-  async function deeper(){const p=entry(),index=session.index;await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,2400);if(!current())return;s.results[index]=r;persist(s);feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
+  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100,state);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!(core.point(r.best)||r.best===-1)||!core.legal(state.board,state.color,s.game.variant,r.best,state).legal){feedback('No legal reply found.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best,state);b.moves.push(r.best);b.pv=[];const c=r.candidates.find(x=>x.i===r.best);feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
+  async function deeper(){const p=entry(),index=session.index;await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,2400,p);if(!current())return;s.results[index]=r;persist(s);feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
   async function scan(){
     const s=session;if(!s||s.scanning||s.interacting||!s.wantsScan)return;const epoch=++s.epoch;s.scanning=true;renderProgress();
     const order=[s.index,...s.positions.map((p,k)=>k).filter(k=>s.positions[k].color===s.game.humanColor),...s.positions.map((_,k)=>k)].filter((v,k,a)=>a.indexOf(v)===k);
-    try{for(const k of order){if(session!==s||s.epoch!==epoch||!s.wantsScan)break;if(s.results[k])continue;const p=s.positions[k];const r=await evaluate(p.board,p.color,s.game.variant,p.played,350);if(session!==s||s.epoch!==epoch)break;s.results[k]=r;persist(s);if(!s.touched&&core.severity(r.label)>=2&&(s.game.mode!=='ai'||p.color===s.game.humanColor)){s.index=k;s.touched=true;}render();}}
+    try{for(const k of order){if(session!==s||s.epoch!==epoch||!s.wantsScan)break;if(s.results[k])continue;const p=s.positions[k];const r=await evaluate(p.board,p.color,s.game.variant,p.played,350,p);if(session!==s||s.epoch!==epoch)break;s.results[k]=r;persist(s);if(!s.touched&&core.severity(r.label)>=2&&(s.game.mode!=='ai'||p.color===s.game.humanColor)){s.index=k;s.touched=true;}render();}}
     catch(e){if(e.name!=='AbortError'&&session===s&&s.epoch===epoch){s.wantsScan=false;feedback('The scan stopped: '+e.message+' Completed moves are kept. Use Resume scan to retry.');}}
     finally{if(session===s&&s.epoch===epoch){s.scanning=false;render();}}
   }
@@ -342,15 +350,16 @@ if(typeof window !== 'undefined') (()=>{
   function open(options={}){
     const api=window.GomokuStudio;if(!api)return false;
     if(dialog?.open){if(Number.isInteger(options.ply))select(options.ply-1);return true;}
+    let prepared;
     try{
-      const prepared=api.prepareGuidedReview?api.prepareGuidedReview():{game:api.exportGame(),wasReviewing:true};
+      prepared=api.prepareGuidedReview?api.prepareGuidedReview():{game:api.exportGame(),wasReviewing:true};
       const game=copy(prepared.game);core=core||createGuidedReviewCore(createEngine,createStudioCore);const ps=core.positions(game);
       if(!ps.length){api.finishGuidedReview?.(!prepared.wasReviewing);return false;}
       opener=document.activeElement;document.querySelectorAll('dialog[open]').forEach(d=>d.close());ensureUI();storageNotice='';
       session={game,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false};
       loadCache(session);if(Number.isInteger(options.ply)){session.index=Math.max(0,Math.min(ps.length-1,options.ply-1));session.touched=true;}
       $('grFilter').value='all';dialog.showModal();feedback('');render();$('grClose').focus();scan();return true;
-    }catch(e){console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
+    }catch(e){if(prepared)api.finishGuidedReview?.(!prepared.wasReviewing);session=null;abort();dialog?.close();console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
   }
   function exportReview(){const s=session;if(!s)return;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function boot(){
@@ -358,7 +367,7 @@ if(typeof window !== 'undefined') (()=>{
     core=createGuidedReviewCore(createEngine,createStudioCore);
     const ids=new Set(['resultReviewBtn','resultCoachBtn','resultAnalyzeBtn','reviewAllBtn','reviewCoachOpen','reviewGameFromTrain','reviewCoachBtn','v95Full']);
     // Capture before legacy handlers; a single entry point, not another review overlay.
-    document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+    document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor,allowLegacyOffCenterOpening:g.renjuCenterRule!==true}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
     const button=$('resultReviewBtn');if(button)button.textContent='Review game';
     window.GomokuReview=Object.freeze({version:VERSION,open,close,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,
       state:()=>session?copy({gameId:session.game.gameId,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions}):null,
