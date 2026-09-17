@@ -1,0 +1,98 @@
+name: Tournament Table verification
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', '.github/workflows/verify-tournament-table.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', '.github/workflows/verify-tournament-table.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Reproducible build and unchanged gameplay
+        run: |
+          python review/build.py
+          python ui/build.py
+          python ui/build-icons.py
+          git diff --exit-code -- index.html sw.js manifest.webmanifest icons review/build.py
+          python ui/test-integrity.py
+          node --check ui/studio.js
+          node --check ui/board-material.js
+          node review/test-core.cjs
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Full-app interface and review suites
+        env:
+          UI_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          CHROMIUM_PATH: playwright
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/table-http.log 2>&1 &
+          python ui/test-ui.py
+          python review/test-browser.py
+          python review/test-recovery.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tournament-table-verification
+          path: |
+            ui-test-output/
+            review-test-output/
+          retention-days: 14
+  deployed-table:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify exact deployed application and icons
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request=urllib.request.Request(root+name+'?table-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Deployed file did not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise the public deployment
+        env:
+          UI_URL: https://thiepn.dev/gomoku/?table-ci=${{ github.sha }}
+          REVIEW_URL: https://thiepn.dev/gomoku/?table-ci=${{ github.sha }}
+          CHROMIUM_PATH: playwright
+        run: |
+          python ui/test-ui.py
+          python review/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-tournament-table-verification
+          path: |
+            ui-test-output/
+            review-test-output/
+          retention-days: 14
