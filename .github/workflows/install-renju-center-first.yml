@@ -1,0 +1,66 @@
+name: Install Renju center-first repair
+on:
+  push:
+    branches: ['fix/renju-center-first']
+    paths: ['.github/workflows/install-renju-center-first.yml', '.renju-install/**']
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify baseline and apply exact reviewed patch
+        run: |
+          test "$GITHUB_REF_NAME" = 'fix/renju-center-first'
+          echo 'b86b14e0e64b5971c08ce5aae4846aeb0aa55f87ca9b7d8b3484e7893abf5d8b  .renju-install/fix.patch.xz' | sha256sum -c -
+          echo 'a29bf8dd89eea0c2640f97b5cf1af69f28bdb08c36cc5201dd17351e383819ad  index.html' | sha256sum -c -
+          xz -dc .renju-install/fix.patch.xz > /tmp/renju.patch
+          git apply --check /tmp/renju.patch
+          git apply /tmp/renju.patch
+      - name: Rebuild and run rule/integrity checks
+        run: |
+          python review/build.py
+          python ui/build.py
+          python ui/build-icons.py
+          node --check review/review.js
+          node --check ui/studio.js
+          node --check ui/board-material.js
+          node review/test-core.cjs
+          python ui/test-integrity.py
+          echo '4dee0885dab00731b444bf9a51cef84c7ee9df4a32b4834dd3ae3b53a4dec585  index.html' | sha256sum -c -
+          grep -q "table-1.0.1-renju" sw.js
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Run full HTTP-origin regressions
+        env:
+          UI_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          CHROMIUM_PATH: playwright
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/renju-http.log 2>&1 &
+          python ui/test-ui.py
+          python review/test-browser.py
+          python review/test-recovery.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renju-center-first-verification
+          path: |
+            ui-test-output/
+            review-test-output/
+          retention-days: 14
+      - name: Commit verified repair to isolated branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js review ui
+          git commit -m 'Repair Renju center-first rule and add foul regression coverage'
+          git push origin HEAD:fix/renju-center-first
