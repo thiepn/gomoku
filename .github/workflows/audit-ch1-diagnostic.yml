@@ -1,0 +1,65 @@
+name: Audit Chapter 1 diagnostic
+
+on:
+  push:
+    paths: ['.github/workflows/audit-ch1-diagnostic.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Wait for exact Pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 180); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"; if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi; sleep 2
+          done
+          test "$ok" = 1
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Diagnose hit target and certify all Chapter 1 tasks
+        shell: bash
+        run: |
+          cat > .audit-ch1-diag.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const chrome=process.env.CHROME,root='https://thiepn.dev/gomoku/';if(!chrome)throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const comp=r=>(r.lessons||[]).reduce((a,x)=>a+Number(x.done||0),0),tot=r=>(r.lessons||[]).reduce((a,x)=>a+Number(x.total||0),0);
+          async function make(tag){const ctx=await browser.newContext({viewport:{width:1100,height:850}});await ctx.addInitScript(()=>{localStorage.removeItem('gomoku.course.chapter1.v1');const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}});const p=await ctx.newPage();p.setDefaultTimeout(15000);await p.goto(root+'?ch1diag='+tag+'-'+Date.now(),{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&window.GomokuCourseChapter1?.open);await p.evaluate(()=>window.GomokuCourseChapter1.open());await p.waitForSelector('#ch1CourseDialog[open]');return{ctx,p}}
+          async function cs(p){return p.locator('#ch1Board button:not([disabled])').evaluateAll(bs=>bs.map(b=>b.dataset.i))}
+          async function nativeNext(p){await p.evaluate(()=>document.querySelector('#ch1NextTask')?.click())}
+          const A=await make('discover'),T=tot(await A.p.evaluate(()=>window.GomokuCourseChapter1.report()));if(T!==39)throw new Error('total '+T);const ans=[];let geometry=null;
+          for(let k=0;k<T;k++){const before=comp(await A.p.evaluate(()=>window.GomokuCourseChapter1.report())),cand=await cs(A.p);let hit=null;for(const i of cand){const el=A.p.locator(`#ch1Board [data-i="${i}"]`);if(await el.isDisabled())continue;await el.click();if(comp(await A.p.evaluate(()=>window.GomokuCourseChapter1.report()))===before+1){hit=i;break}}if(hit==null)throw new Error('unsolvable '+k);ans.push(hit);
+            if(k===0){geometry=await A.p.evaluate(()=>{const nb=document.querySelector('#ch1NextTask'),bd=document.querySelector('#ch1Board'),wr=document.querySelector('.ch1-work'),cp=document.querySelector('.ch1-task-copy');const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};const nr=rect(nb),br=rect(bd),wrR=rect(wr),cr=rect(cp),x=nr.left+nr.width/2,y=nr.top+nr.height/2,hit=document.elementFromPoint(x,y);return{next:nr,board:br,work:wrR,copy:cr,hit:{tag:hit?.tagName,id:hit?.id,cls:hit?.className,dataI:hit?.dataset?.i},overlap:!(hit===nb||nb.contains(hit))}});console.log('CH1_GEOMETRY '+JSON.stringify(geometry));}
+            await nativeNext(A.p);
+          }
+          if(comp(await A.p.evaluate(()=>window.GomokuCourseChapter1.report()))!==T)throw new Error('discovery incomplete');console.log('CH1_DISCOVERY_PROGRAMMATIC_NAV_PASS tasks='+T);await A.ctx.close();
+          const B=await make('replay');for(let k=0;k<T;k++){const before=comp(await B.p.evaluate(()=>window.GomokuCourseChapter1.report())),el=B.p.locator(`#ch1Board [data-i="${ans[k]}"]`);await el.click();if(comp(await B.p.evaluate(()=>window.GomokuCourseChapter1.report()))!==before+1)throw new Error('replay '+k);await nativeNext(B.p)}const fin=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());console.log('CH1_FINAL '+JSON.stringify(fin));if(comp(fin)!==T||fin.firstTryRate!==1||!fin.complete)throw new Error('bad final');console.log('CH1_ALL_39_TASKS_PERFECT_REPLAY_PASS');await B.ctx.close();await browser.close();
+          if(geometry?.overlap){console.log('CH1_NEXT_HIT_OVERLAP_CONFIRMED');process.exitCode=2}else console.log('CH1_NEXT_HIT_TARGET_OK');
+          JS
+          node --check .audit-ch1-diag.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          set +e
+          timeout 360s env CHROME="$CHROME" node .audit-ch1-diag.mjs
+          code=$?
+          set -e
+          if [ "$code" = 2 ]; then echo 'CH1_OVERLAP_DIAGNOSTIC=1' > /tmp/ch1diag; exit 2; fi
+          exit "$code"
+      - name: Remove diagnostic workflow
+        if: always()
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]';git config user.email '41898282+github-actions[bot]@users.noreply.github.com';git rm .github/workflows/audit-ch1-diagnostic.yml;git commit -m 'Remove Chapter 1 diagnostic workflow' || true;git pull --rebase || true;git push || true
