@@ -8,11 +8,11 @@ The research used primary product and accessibility documentation available in 2
 
 - Riot Games, **VALORANT Patch Notes 12.04**, March 3, 2026: a reorganized end-of-game experience with Summary, Timeline, and Progression. Borrowed the separation of match information from progression, not its graphical assets. https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-04/
 - Riot Games, **VALORANT Patch Notes 12.07**, April 14, 2026: clearer settings categories and parent/child relationships. Borrowed the hierarchy principle: match mode, opponent strength, then optional details. https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-07/
-- Chess.com, **How does Game Review work?**, updated August 7, 2026: distinct Review, Retry, Best, and contextual explanatory actions. Kept the existing Guided Review's action clarity and made its visual language match the main game. https://support.chess.com/en/articles/8584089-how-does-game-review-work
+- Chess.com, **How does Game Review work?**, accessed September 17, 2026: distinct Review, Retry, Best, and contextual explanatory actions. Kept the existing Guided Review's action clarity and made its visual language match the main game. https://support.chess.com/en/articles/8584089-how-does-game-review-work
 - Supercell, **March Update 2026**, February 23, 2026: more direct mode access and changes to visual consistency. Borrowed direct mode selection, not progression or monetization systems. https://supercell.com/en/games/clashroyale/blog/release-notes/march-update-2026/
 - Microsoft, **Xbox Accessibility Guideline 101: Text display**: readable, scalable text and controlled hierarchy. Used as a design/testing reference, not a claim of certified compliance. https://learn.microsoft.com/en-us/gaming/accessibility/xbox-accessibility-guidelines/101
 
-The selected identity is **Tournament Table**: charcoal navigation, a restrained vermilion accent, pale mineral surfaces, birch/ash board material, and graphite/porcelain stones. Custom vector chapter signatures use the actual visual language of intersections and lines. System typography avoids network font loading. No third-party game artwork, screenshots, or fonts are distributed.
+The selected identity is **Tournament Table**: charcoal navigation, a restrained vermilion accent, pale mineral surfaces, birch/ash board material, and graphite/porcelain stones. Custom vector chapter signatures use the actual visual language of intersections and lines. System typography avoids network font loading. The redesign adds no third-party game artwork or fonts.
 
 ## Audit findings and decisions
 
@@ -22,6 +22,7 @@ The selected identity is **Tournament Table**: charcoal navigation, a restrained
 4. **A cosmetic wrapper could silently break existing settings.** Explicitly retained focus mode, daylight/night/slate, large text, high contrast, and reduced motion; repaired specificity conflicts rather than hiding the settings.
 5. **Later lesson boards faded their disabled occupied intersections.** Stones and grid lines now remain opaque even where a cell cannot be clicked. Desktop board-based later lessons use side-by-side text and board; mobile retains scrollable content and reachable bottom actions.
 6. **Review and general dialogs looked disconnected.** Guided Review, new-game setup, menu, settings, and lesson dialogs use the same surfaces and typography. Review judgments, candidate search, retry logic, and game history are untouched.
+7. **Mobile confirmation covered neighboring controls.** The placement-confirmation bar now occupies space in the board layout rather than floating over other actions. The original select-then-confirm interaction is preserved.
 
 ## Implemented scope
 
