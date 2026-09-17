@@ -1,0 +1,123 @@
+name: Audit whole Gomoku course
+
+on:
+  push:
+    paths: ['.github/workflows/audit-whole-course.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  audit:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Static course integrity audit
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, json, sys
+          s=Path('index.html').read_text(encoding='utf-8')
+          hard=[]; warnings=[]; total_markers=0
+          for n in range(1,15):
+            marker=f'id="course-ch{n}-v1-script"'
+            count=s.count(marker); total_markers += count
+            if count!=1: hard.append(f'Chapter {n}: script marker count {count}')
+            for required in [f'ch{n}CourseCard',f'ch{n}CourseDialog',f'gomoku.course.chapter{n}.v1',f'GomokuCourseChapter{n}']:
+              if required not in s: hard.append(f'Chapter {n}: missing {required}')
+          if total_markers!=14: hard.append(f'Total course markers {total_markers}, expected 14')
+          ids=re.findall(r'id:["\']([^"\']+)["\']',s)
+          course_ids=[x for x in ids if re.fullmatch(r'(?:[a-z]+\d+|[a-z][a-z0-9_-]+)',x,re.I)]
+          # Exact duplicate prompt text is usually accidental; checkpoints may intentionally restate ideas.
+          prompts=re.findall(r'(?:prompt|title):["\']([^"\']{18,})["\']',s)
+          from collections import Counter
+          dups=[(p,c) for p,c in Counter(prompts).items() if c>2]
+          if dups: warnings.append('Repeated prompt/title strings (>2 occurrences): '+str(dups[:12]))
+          bad_words=[x for x in ['TODO','FIXME','PLACEHOLDER','lorem ipsum'] if x.lower() in s.lower()]
+          if bad_words: hard.append('Placeholder markers present: '+', '.join(bad_words))
+          print('STATIC_MARKERS',total_markers)
+          print('STATIC_WARNINGS',json.dumps(warnings,ensure_ascii=False))
+          print('STATIC_HARD_ERRORS',json.dumps(hard,ensure_ascii=False))
+          if hard: sys.exit(1)
+      - name: Wait for exact Pages deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 180); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - name: Cross-course live UI and API audit
+        shell: bash
+        run: |
+          cat > .course-audit.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/';
+          const chrome=process.env.CHROME;
+          if(!chrome) throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const auditViewport=async(viewport,label)=>{
+            const ctx=await browser.newContext({viewport,isMobile:viewport.width<600,hasTouch:viewport.width<600});
+            await ctx.addInitScript(()=>{const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}});
+            const p=await ctx.newPage(); p.setDefaultTimeout(16000); p.setDefaultNavigationTimeout(30000); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+            await p.goto(root+'?whole-course-audit='+label+'-'+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true',null,{timeout:25000});
+            await p.evaluate(()=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close?.());document.querySelector('[data-v92-route="improve"]')?.click()});
+            await p.waitForFunction(()=>document.querySelector('#ch14CourseCard')?.parentElement?.id==='v92ImproveHome',null,{timeout:12000});
+            const stack=await p.evaluate(()=>{const cards=Array.from({length:14},(_,i)=>document.querySelector(`#ch${i+1}CourseCard`));const follows=(a,b)=>!!(a&&b&&(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING));return{counts:cards.map((_,i)=>document.querySelectorAll(`#ch${i+1}CourseCard`).length),parents:cards.map(c=>c?.parentElement?.id||null),order:cards.every(Boolean)&&cards.slice(0,-1).every((c,i)=>follows(c,cards[i+1]))}});
+            if(stack.counts.some(x=>x!==1)||stack.parents.some(x=>x!=='v92ImproveHome')||!stack.order) throw new Error(label+' course stack '+JSON.stringify(stack));
+            let aggregate=0;
+            for(let n=1;n<=14;n++){
+              const info=await p.evaluate(n=>{const api=window[`GomokuCourseChapter${n}`],r=api?.report?.();return{api:!!api,keys:api?Object.keys(api):[],r}},n);
+              if(!info.api||!info.r) throw new Error(`Chapter ${n}: missing API/report`);
+              const lessons=info.r.lessons||info.r.sections||[];
+              const taskTotal=info.r.totalTasks ?? lessons.reduce((a,x)=>a+(x.total||0),0);
+              if(!(taskTotal>0)||!lessons.length) throw new Error(`Chapter ${n}: invalid report ${JSON.stringify(info.r)}`);
+              aggregate+=taskTotal;
+              console.log(`COURSE_CHAPTER ${n} title=${info.r.title||''} lessons=${lessons.length} tasks=${taskTotal} lessonTitles=${lessons.map(x=>x.title).join(' | ')}`);
+              await p.evaluate(n=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close?.());const api=window[`GomokuCourseChapter${n}`];if(typeof api.open==='function')api.open();else if(typeof api.openSection==='function')api.openSection(0,0);},n);
+              await p.waitForSelector(`#ch${n}CourseDialog[open]`,{timeout:12000});
+              const geo=await p.evaluate(n=>{const d=document.querySelector(`#ch${n}CourseDialog`),b=document.querySelector(`#ch${n}Board`),r=document.querySelector(`#ch${n}Reveal`);const dr=d?.getBoundingClientRect(),br=b?.getBoundingClientRect(),rr=r?.getBoundingClientRect();return{iw:innerWidth,ih:innerHeight,page:document.documentElement.scrollWidth,dialog:dr?[dr.left,dr.top,dr.right,dr.bottom,dr.width,dr.height]:null,board:br?[br.left,br.top,br.right,br.bottom,br.width,br.height]:null,reveal:rr?[rr.left,rr.top,rr.right,rr.bottom,rr.width,rr.height]:null}},n);
+              if(geo.page>geo.iw+3||!geo.dialog||geo.dialog[4]<=10||geo.dialog[5]<=10||geo.dialog[0]<-3||geo.dialog[2]>geo.iw+3) throw new Error(`Chapter ${n} ${label} dialog geometry ${JSON.stringify(geo)}`);
+              if(geo.board&&geo.board[4]>geo.iw+3) throw new Error(`Chapter ${n} ${label} board overflow ${JSON.stringify(geo)}`);
+              await p.evaluate(n=>document.querySelector(`#ch${n}CourseDialog`)?.close?.(),n);
+            }
+            if(aggregate<500) throw new Error('Unexpectedly low course task total '+aggregate);
+            const courseErrors=errors.filter(x=>/course|chapter|ch\d+/i.test(x));
+            if(courseErrors.length) throw new Error(label+' course page errors '+JSON.stringify(courseErrors));
+            console.log(`COURSE_${label.toUpperCase()}_PASS aggregateTasks=${aggregate}`);
+            await ctx.close();
+          };
+          await auditViewport({width:390,height:844},'mobile');
+          await auditViewport({width:1440,height:900},'desktop');
+          await browser.close();
+          console.log('WHOLE_COURSE_SHELL_CERTIFIED');
+          JS
+          node --check .course-audit.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 300s env CHROME="$CHROME" node .course-audit.mjs
+      - name: Remove audit workflow
+        if: always()
+        shell: bash
+        run: |
+          rm -f .course-audit.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/audit-whole-course.yml
+          git commit -m 'Remove whole-course audit workflow' || true
+          git pull --rebase || true
+          git push || true
