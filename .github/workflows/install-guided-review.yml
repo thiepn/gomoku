@@ -1,0 +1,70 @@
+name: Install tested Guided Review
+on:
+  push:
+    branches: ['review/guided-review-overhaul']
+    paths: ['.github/workflows/install-guided-review.yml', '.review-install/**']
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Unpack verified source and preserve original baseline
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json, lzma
+          parts = sorted(Path('.review-install').glob('*.part'))
+          assert len(parts) == 4
+          data = b''.join(p.read_bytes() for p in parts)
+          assert hashlib.sha256(data).hexdigest() == '1b41ee8bb2d68cf93e2f04a0a8159b066d5652f1ca6cbf78691798acb6959665', 'Transport integrity failure'
+          original = Path('index.html').read_bytes()
+          blob = hashlib.sha1(('blob '+str(len(original))+'\0').encode()+original).hexdigest()
+          assert blob == '98decdab77e24042f9ba1ee5b7b24e6428c6696d', 'Baseline changed: inspect before rebuilding'
+          files = json.loads(lzma.decompress(data))
+          allowed = {'review/test-recovery.py','review/fixture.json','review/review.css','review/review.js','review/test-browser.py','review/README.md','review/test-core.cjs','review/build.py','.github/workflows/verify-guided-review.yml'}
+          assert set(files) == allowed
+          for name, text in files.items():
+              path = Path(name)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(text, encoding='utf-8')
+          print('Verified and unpacked', len(files), 'source files')
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Build portable application and test tactical assessments
+        run: |
+          python review/build.py
+          node --check review/review.js
+          node review/test-core.cjs
+          sha256sum index.html sw.js
+      - name: Full-app browser and recovery tests
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/review-http.log 2>&1 &
+          REVIEW_URL=http://127.0.0.1:8765/ CHROMIUM_PATH=playwright python review/test-browser.py
+          CHROMIUM_PATH=playwright python review/test-recovery.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: guided-review-install-evidence
+          path: review-test-output/
+          retention-days: 14
+      - name: Commit verified source to the review branch only
+        run: |
+          test "$GITHUB_REF_NAME" = 'review/guided-review-overhaul'
+          rm -rf .review-install
+          rm .github/workflows/install-guided-review.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git add index.html sw.js review .github/workflows/verify-guided-review.yml
+          git commit -m 'Rebuild post-game Guided Review with explanations, graded alternatives and safe retries'
+          git push origin HEAD:review/guided-review-overhaul
