@@ -1,0 +1,56 @@
+name: Install full-app audit repairs
+on:
+  push:
+    branches: ['audit/full-app-regressions']
+    paths: ['.audit-install/**', '.github/workflows/install-full-app-audit.yml']
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Validate exact baseline and reviewed patch
+        run: |
+          test "$GITHUB_REF_NAME" = 'audit/full-app-regressions'
+          test "$(git rev-parse HEAD^)" = '3d2f6cc6ef93fabeca3592e30ab26b169391361b'
+          cat .audit-install/00.part .audit-install/01.part .audit-install/02.part > /tmp/full-app-audit.patch.xz
+          echo '8d07bbb34e127855c6efd18ae5c119930e0ac8cc6234f23af934998dbce0d09e  /tmp/full-app-audit.patch.xz' | sha256sum -c -
+          echo '4dee0885dab00731b444bf9a51cef84c7ee9df4a32b4834dd3ae3b53a4dec585  index.html' | sha256sum -c -
+          xz -dc /tmp/full-app-audit.patch.xz > /tmp/full-app-audit.patch
+          git apply --check --unidiff-zero /tmp/full-app-audit.patch
+          git apply --unidiff-zero /tmp/full-app-audit.patch
+      - name: Rebuild and verify rule, storage and offline regressions
+        run: |
+          python review/build.py
+          python ui/build.py
+          python audit/build.py
+          python ui/build-icons.py
+          python ui/test-integrity.py
+          node --check review/review.js
+          node --check audit/course-storage.js
+          node review/test-core.cjs
+          node audit/test-core.cjs
+          node audit/test-service-worker.cjs
+          echo '75cda7d18fff8132304fecb6b16f5f373f2afa8cc80e3e9cd252b574ccded725  index.html' | sha256sum -c -
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-app-audit-core-install
+          path: audit-test-output/
+          retention-days: 14
+      - name: Commit repairs to isolated branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js review ui audit .gitignore
+          git commit -m 'Fix cross-feature save, Renju, review, course recovery and offline regressions'
+          git push origin HEAD:audit/full-app-regressions

@@ -1,0 +1,111 @@
+name: Full app cross-browser regression audit
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', 'audit/**', '.github/workflows/verify-full-app-audit.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', 'audit/**', '.github/workflows/verify-full-app-audit.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Reproducible builds and explicit logic invariants
+        run: |
+          python review/build.py
+          python ui/build.py
+          python audit/build.py
+          python ui/build-icons.py
+          git diff --exit-code -- index.html sw.js manifest.webmanifest icons review/build.py
+          python ui/test-integrity.py
+          node --check audit/course-storage.js
+          node --check review/review.js
+          node review/test-core.cjs
+          node audit/test-core.cjs
+          node audit/test-service-worker.cjs
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Native-origin gameplay, storage, review and recovery
+        env:
+          UI_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          AUDIT_URL: http://127.0.0.1:8765/
+          CHROMIUM_PATH: playwright
+          BROWSER_ENGINE: ${{ matrix.browser }}
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/audit-http.log 2>&1 &
+          if [ "$BROWSER_ENGINE" = chromium ]; then
+            python ui/test-ui.py
+            python review/test-browser.py
+            python review/test-recovery.py
+          fi
+          python audit/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-app-audit-${{ matrix.browser }}
+          path: |
+            audit-test-output/
+            ui-test-output/
+            review-test-output/
+          retention-days: 14
+  deployed:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Wait for exact public application and service worker
+        run: |
+          python - <<'PY'
+          import hashlib, time, urllib.request
+          from pathlib import Path
+          root = 'https://thiepn.dev/gomoku/'
+          for name in ['index.html', 'sw.js']:
+              expected = hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request = urllib.request.Request(root+name+'?audit-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received = hashlib.sha256(response.read()).hexdigest()
+                      if received == expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Public file did not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Exercise public app in isolated browser profile
+        env:
+          AUDIT_URL: https://thiepn.dev/gomoku/?audit-ci=${{ github.sha }}
+          CHROMIUM_PATH: playwright
+          BROWSER_ENGINE: ${{ matrix.browser }}
+        run: python audit/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-full-app-audit-${{ matrix.browser }}
+          path: audit-test-output/
+          retention-days: 14
