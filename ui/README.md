@@ -60,11 +60,11 @@ python review/test-recovery.py
 python ui/test-ui.py
 ```
 
-Browser tests need Playwright and Chromium. Set `CHROMIUM_PATH=playwright` for Playwright-managed Chromium. Set `UI_URL` and `REVIEW_URL` for tests against a hosted HTTP origin. Local `set_content` runs explicitly emulate localStorage; they do not establish native storage or PWA behavior. Hosted CI uses a real localhost origin, and the deployed check uses the live origin in an isolated browser profile. The UI integrity manifest records the original 40 untouched inline modules plus game logic outside the material renderer. A later intentional engine/course change must update that release invariant explicitly.
+Browser tests need Playwright and Chromium. Set `CHROMIUM_PATH=playwright` for Playwright-managed Chromium. Set `UI_URL` and `REVIEW_URL` for tests against a hosted HTTP origin. Local `set_content` runs explicitly emulate localStorage; they do not establish native storage or PWA behavior. Hosted CI uses a real localhost origin, and the deployed check uses the live origin in an isolated browser profile. The UI integrity manifest records the approved release hashes for all inline modules plus game logic outside the material renderer. The Renju center-first repair intentionally updates the rules-engine and game-app hashes; unrelated modules remain unchanged. Any later intentional engine/course change must update that invariant explicitly.
 
 ## Verification scope
 
-The new UI suite exercises 78 assertions: all chapter entry/return flows; real answer/progress; later-course resume; route isolation; filters; focus mode; real theme settings; no move mutation; library; local setup; review entry; high contrast and large text; desktop and 390/360/768-pixel responsive layouts; bottom navigation; original touch selection/confirmation; console errors.
+The new UI suite exercises 80 assertions, including the Renju center-first interaction: all chapter entry/return flows; real answer/progress; later-course resume; route isolation; filters; focus mode; real theme settings; no move mutation; library; local setup; review entry; high contrast and large text; desktop and 390/360/768-pixel responsive layouts; bottom navigation; original touch selection/confirmation; console errors.
 
 The existing Guided Review suite has 18 deterministic tactical checks, 31 browser interaction checks, and 9 recovery checks. These are targeted regressions, not proof of perfect Gomoku play, exhaustive validation of 655 exercises, or full accessibility certification. Native screen readers, Safari/Firefox, installed Android/iOS behavior, and physical-device performance need separate checks.
 

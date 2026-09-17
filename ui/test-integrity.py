@@ -11,4 +11,4 @@ for name,digest in expected.items():
 for tag,id,name in [('style','tournament-table-style','studio.css'),('script','tournament-table-script','studio.js')]:
     results=re.findall(fr'<{tag} id="{id}">(.*?)</{tag}>',html,re.S)
     assert len(results)==1 and results[0].strip()==(ROOT/'ui'/name).read_text().strip(),'Embedding differs from source: '+name
-print('PASS 40 original modules and game logic outside the material renderer are byte-identical; both UI embeddings match their source.')
+print('PASS release module hashes match the approved integrity manifest; both UI embeddings match their source.')

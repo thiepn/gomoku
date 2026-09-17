@@ -288,7 +288,7 @@ body.v91-local-active #opponentPauseBtn{display:none!important}
 <footer><span>GOMOKU STUDIO / 12.1.0</span><p>Local-first play, guided practice and private studies. Private online rooms are invite-only. No account or public matchmaking is required.</p></footer>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span></div>
 <dialog id="newDialog" aria-labelledby="newTitle"><div class="dialog-header"><div><p class="eyebrow">A NEW BOARD</p><h2 id="newTitle">Choose your game.</h2></div><button class="icon-btn" data-close="newDialog" aria-label="Close new game dialog">×</button></div><form id="newForm"><label>Mode<select id="modeSelect"><option value="ai">You vs engine</option><option value="local">Two players · same device</option><option value="arena">Engine vs engine · spectator</option><option value="study">Study · control both colors</option></select></label><div class="field-row"><label>Rules<select id="ruleSelect"></select></label><label id="colorLabel">Your color<select id="colorSelect"><option value="1">Black · first</option><option value="2">White · second</option><option value="random">Random color</option></select></label></div><div class="field-row" id="newAIFields"><label id="newLevelLabel">Difficulty<select id="levelSelect"></select></label><label id="newWhiteLevelLabel" hidden>White engine<select id="newWhiteLevelSelect"></select></label></div><label>Starting position<select id="openingSelect"></select></label><p class="tiny">Three-stone starts are teaching setups, not a rated opening book. Starting a new game replaces the autosave; save or export the current game to keep it.</p><div class="dialog-actions"><button class="btn ghost" type="button" data-close="newDialog">Cancel</button><button class="btn" type="submit">Start game</button></div></form></dialog>
-<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-header"><h2 id="settingsTitle">Board preferences</h2><button class="icon-btn" data-close="settingsDialog" aria-label="Close settings">×</button></div><label>Appearance<select id="themeSelect"><option value="paper">Paper &amp; kaya</option><option value="night">Midnight &amp; kaya</option><option value="slate">Slate &amp; ash</option></select></label><label class="toggle"><input type="checkbox" id="numbersChk">Show move numbers</label><label class="toggle"><input type="checkbox" id="heatChk">Show stone influence</label><p class="tiny">Influence is proximity only, not territory, a score, or a win probability.</p><label class="toggle"><input type="checkbox" id="touchChk" checked>Confirm touch placement</label><label class="toggle"><input type="checkbox" id="soundChk">Stone sound</label><details><summary>Rules &amp; keyboard reference</summary><p class="muted">Use arrows to move around the board, Enter or Space to place. Home/End reaches the edge of a row. Ctrl+Home/End reaches a corner. Outside text fields: U undo, Y redo, H hint, R review, F focus. Escape cancels a search or exits focus mode.</p><p class="muted">All modes use a 15 × 15 board. Renju forbids Black overlines, double-fours and genuine double-threes; White is unrestricted by those fouls. Opening and swap procedures are separate tools and are not applied to the main-board Renju ruleset. Optional clocks restore paused.</p><p class="muted">Reduced-motion preferences are respected automatically. Small mobile intersections have a separate 44-pixel Place control for confirmation.</p><p class="muted"><a href="https://www.renju.net/rifrules/" target="_blank" rel="noopener noreferrer">International Renju rules</a></p></details></dialog>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-header"><h2 id="settingsTitle">Board preferences</h2><button class="icon-btn" data-close="settingsDialog" aria-label="Close settings">×</button></div><label>Appearance<select id="themeSelect"><option value="paper">Paper &amp; kaya</option><option value="night">Midnight &amp; kaya</option><option value="slate">Slate &amp; ash</option></select></label><label class="toggle"><input type="checkbox" id="numbersChk">Show move numbers</label><label class="toggle"><input type="checkbox" id="heatChk">Show stone influence</label><p class="tiny">Influence is proximity only, not territory, a score, or a win probability.</p><label class="toggle"><input type="checkbox" id="touchChk" checked>Confirm touch placement</label><label class="toggle"><input type="checkbox" id="soundChk">Stone sound</label><details><summary>Rules &amp; keyboard reference</summary><p class="muted">Use arrows to move around the board, Enter or Space to place. Home/End reaches the edge of a row. Ctrl+Home/End reaches a corner. Outside text fields: U undo, Y redo, H hint, R review, F focus. Escape cancels a search or exits focus mode.</p><p class="muted">All modes use a 15 × 15 board. In Renju, Black's first move is H8 (the center); Black overlines, double-fours and genuine double-threes are forbidden, while White is unrestricted by those fouls. Tournament swap/opening procedures are separate tools. Optional clocks restore paused.</p><p class="muted">Reduced-motion preferences are respected automatically. Small mobile intersections have a separate 44-pixel Place control for confirmation.</p><p class="muted"><a href="https://www.renju.net/rifrules/" target="_blank" rel="noopener noreferrer">International Renju rules</a></p></details></dialog>
 <dialog id="resultDialog" aria-labelledby="resTitle"><div class="result-card"><span class="stamp" id="resStamp" aria-hidden="true">勝</span><h2 id="resTitle">Game complete</h2><p id="resSub"></p><div class="dialog-actions"><button class="btn" id="rematchBtn">Rematch · swap colors</button><button class="btn ghost" id="resultReviewBtn">Review game</button></div><button class="text-btn" data-close="resultDialog">View final board</button></div></dialog>
 <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Replace this board?</h2><p id="confirmText">Save or export the current game first.</p><div class="dialog-actions"><button class="btn ghost" id="confirmCancel" autofocus>Cancel</button><button class="btn" id="confirmAccept">Continue</button></div></dialog>
 <noscript><p>This offline game requires JavaScript.</p></noscript>
@@ -429,8 +429,11 @@ function createEngine(variant='renju-practice') {
     try { return inspect(board,i,color,new Map(),check); }
     finally { board[i]=0; }
   }
-  function legalMove(board,i,color,moveCount) {
+  function legalMove(board,i,color,moveCount,options={}) {
     if(i===-1) return moveCount>=3 ? {legal:true,win:false,foul:false,reason:'pass',fours:[],threes:[],winLines:[]} : invalid('opening-pass');
+    // International Renju rule 4.2: Black's first stone belongs on the center intersection.
+    // Legacy imported/autosaved games created before this enforcement can opt out only while replaying history.
+    if(renju&&color===BLACK&&moveCount===0&&i!==112&&options.allowOffCenterOpening!==true) return invalid('opening-center');
     return classify(board,i,color);
   }
   function winningMoves(board,color,check) {
@@ -691,7 +694,7 @@ function createEngine(variant='renju-practice') {
       const move=moves[k],color=(startColor-1+k)%2+1;
       if(result)throw new Error('Move '+(k+1)+' occurs after the game ended.');
       if(!move||!Number.isInteger(move.i)||move.i< -1||move.i>=CELLS||move.color!==color)throw new Error('Invalid coordinate or turn at move '+(k+1)+'.');
-      const a=legalMove(board,move.i,color,k+initial.length);
+      const a=legalMove(board,move.i,color,k+initial.length,{allowOffCenterOpening:options.allowLegacyOffCenterOpening===true});
       if(!a.legal)throw new Error('Illegal move '+(k+1)+': '+a.reason+'.');
       const defense=move.i>=0?classify(board,move.i,3-color):null;
       records.push({i:move.i,color,analysis:a,defense});
@@ -716,7 +719,9 @@ function createEngine(variant='renju-practice') {
     const initial=old?[]:(data.initial||[]),startColor=old?1:(data.startColor??1);
     if(initial.length&&mode!=='study'&&mode!=='puzzle')throw new Error('Custom setups are study or puzzle positions, not matches.');
     if(!initial.length&&startColor!==1)throw new Error('An empty game must begin with Black.');
-    const state=replay(data.moves,{initial,startColor});
+    const legacyRenjuOpening=data.variant==='renju-practice'&&data.renjuCenterRule!==true;
+    const state=replay(data.moves,{initial,startColor,allowLegacyOffCenterOpening:legacyRenjuOpening});
+    const renjuCenterRule=data.variant!=='renju-practice'||data.renjuCenterRule===true||!data.moves.length||data.moves[0]?.i===112;
     if(!old&&data.terminal){
       const t=data.terminal,c=(startColor-1+state.records.length)%2+1;
       if(state.result||!['ai','local','arena'].includes(mode)||(t.reason==='resign'&&mode==='arena')||!['resign','timeout','agreement'].includes(t.reason)||(t.reason==='agreement'?t.winner!==0:t.winner!==3-c))throw new Error(t.reason==='resign'?'Invalid resignation result.':'Invalid terminal result.');
@@ -740,7 +745,7 @@ function createEngine(variant='renju-practice') {
       numbersOn:typeof data.numbersOn==='boolean'?data.numbersOn:false,
       touchConfirm:typeof data.touchConfirm==='boolean'?data.touchConfirm:true,
       threatsOn:data.threatsOn===true,flip:data.flip===true,
-      theme:['paper','night','slate'].includes(data.theme)?data.theme:'paper'};
+      theme:['paper','night','slate'].includes(data.theme)?data.theme:'paper',renjuCenterRule};
   }
   return {N,CELLS,BLACK,WHITE,DIRS,COLS,coord,classify,legalMove,winningMoves,
     chooseMove,replay,validateSave,validateSetup,candidates,shapeScore,positional,strategicCandidates,tacticalProfile,variant};
@@ -2036,9 +2041,10 @@ const effectiveCount=()=>S.initial.length+S.records.length;
 const terminalView=()=>!!S.result&&(!S.reviewing||S.reviewPos===S.records.length)&&S.result.reason!=='resign';
 const FOUL={overline:'That makes a forbidden Black overline.','double-four':'Black cannot create two distinct fours.',
   'double-three':'Black cannot create two genuine threes.',
+  'opening-center':'Renju begins at H8, the center intersection.',
   'opening-pass':'Place the first three stones before passing.',occupied:'That point already has a stone.',invalid:'Choose a board intersection.'};
 function toast(message){$('toastMsg').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5200);}
-function snapshot(){return {aiPaused:S.aiPaused,version:3,variant:S.variant,mode:S.mode,humanColor:S.humanColor,level:S.level,opponentLevel:S.opponentLevel,
+function snapshot(){return {aiPaused:S.aiPaused,version:3,variant:S.variant,renjuCenterRule:S.renjuCenterRule!==false,mode:S.mode,humanColor:S.humanColor,level:S.level,opponentLevel:S.opponentLevel,
   moves:S.records.map(m=>({i:m.i,color:m.color})),initial:S.initial.map(m=>({...m})),startColor:S.startColor,
   terminal:['resign','timeout','agreement'].includes(S.result?.reason)?{reason:S.result.reason,winner:S.result.winner}:null,
   gameId:S.gameId,title:S.title,annotations:{...S.annotations},seed:S.seed,style:S.style,assisted:S.assisted,
@@ -2092,7 +2098,7 @@ function applyData(raw,{persist=true,clearRedo=true,queue=true}={}){
   if(queue)queueEngine();
 }
 function blankGame(options={}){
-  const prefs=snapshot();return {...prefs,...options,aiPaused:false,version:3,gameId:uid(),title:'',moves:[],initial:[],startColor:1,
+  const prefs=snapshot();return {...prefs,...options,aiPaused:false,version:3,renjuCenterRule:true,gameId:uid(),title:'',moves:[],initial:[],startColor:1,
     annotations:{},terminal:null,assisted:false,imported:false,puzzleId:'',seed:Math.floor(Math.random()*0xffffffff),...(plus?{studio:plus.newExtra()}: {})};
 }
 /* V9.6 · Human AI & Difficulty Calibration.
