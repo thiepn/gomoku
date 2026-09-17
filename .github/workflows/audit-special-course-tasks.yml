@@ -1,0 +1,130 @@
+name: Audit specialized Gomoku course tasks
+
+on:
+  push:
+    paths: ['.github/workflows/audit-special-course-tasks.yml']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=0
+          for i in $(seq 1 180); do
+            data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20" || true)
+            state=$(printf '%s' "$data" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const r=j.workflow_runs?.find(x=>x.name==='pages build and deployment');process.stdout.write(r?.conclusion||r?.status||'missing')}catch{process.stdout.write('bad')}})")
+            echo "Pages: $state"
+            if [ "$state" = success ]; then ok=1; break; fi
+            if [ "$state" = failure ] || [ "$state" = cancelled ]; then exit 1; fi
+            sleep 2
+          done
+          test "$ok" = 1
+
+  chapter1:
+    needs: pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - shell: bash
+        run: |
+          cat > .audit-ch1-v2.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          const root='https://thiepn.dev/gomoku/',chrome=process.env.CHROME;if(!chrome)throw new Error('Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const completed=r=>(r.lessons||[]).reduce((a,x)=>a+Number(x.done||0),0);
+          const total=r=>(r.lessons||[]).reduce((a,x)=>a+Number(x.total||0),0);
+          async function make(tag){
+            const ctx=await browser.newContext({viewport:{width:1100,height:850}});
+            await ctx.addInitScript(()=>{localStorage.removeItem('gomoku.course.chapter1.v1');const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}});
+            const p=await ctx.newPage();p.setDefaultTimeout(15000);p.setDefaultNavigationTimeout(30000);
+            await p.goto(root+'?audit-ch1-v2='+tag+'-'+Date.now(),{waitUntil:'domcontentloaded'});
+            await p.waitForFunction(()=>document.body?.dataset?.ready==='true'&&typeof window.GomokuCourseChapter1?.open==='function',null,{timeout:25000});
+            await p.evaluate(()=>window.GomokuCourseChapter1.open());await p.waitForSelector('#ch1CourseDialog[open]');return{ctx,p};
+          }
+          async function cand(p){return p.locator('#ch1Board button:not([disabled])').evaluateAll(bs=>bs.map(b=>b.dataset.i));}
+          async function next(p){const b=p.locator('#ch1NextTask');if(await b.count()&&await b.isVisible())await b.click();}
+          const A=await make('discover'),r0=await A.p.evaluate(()=>window.GomokuCourseChapter1.report()),T=total(r0);if(T!==39)throw new Error('Ch1 total '+T);
+          const ans=[];
+          for(let k=0;k<T;k++){
+            const before=completed(await A.p.evaluate(()=>window.GomokuCourseChapter1.report())),cs=await cand(A.p);if(!cs.length)throw new Error('Ch1 no candidates '+k);
+            let hit=null;
+            for(const i of cs){const el=A.p.locator(`#ch1Board [data-i="${i}"]`);if(!await el.count()||await el.isDisabled())continue;await el.click();const after=completed(await A.p.evaluate(()=>window.GomokuCourseChapter1.report()));if(after===before+1){hit=i;break;}}
+            if(hit==null)throw new Error('Ch1 unsolvable '+k+' '+JSON.stringify(cs));ans.push(hit);await next(A.p);
+          }
+          if(completed(await A.p.evaluate(()=>window.GomokuCourseChapter1.report()))!==T)throw new Error('Ch1 discovery incomplete');console.log('CH1_DISCOVERY_PASS tasks='+T);await A.ctx.close();
+          const B=await make('replay');
+          for(let k=0;k<T;k++){const before=completed(await B.p.evaluate(()=>window.GomokuCourseChapter1.report()));const el=B.p.locator(`#ch1Board [data-i="${ans[k]}"]`);if(!await el.count()||await el.isDisabled())throw new Error('Ch1 replay missing '+k);await el.click();const after=completed(await B.p.evaluate(()=>window.GomokuCourseChapter1.report()));if(after!==before+1)throw new Error('Ch1 replay failed '+k);await next(B.p);}
+          const fin=await B.p.evaluate(()=>window.GomokuCourseChapter1.report());if(completed(fin)!==T||fin.firstTryRate!==1||!fin.complete)throw new Error('Ch1 final '+JSON.stringify(fin));
+          console.log('CH1_PERFECT_REPLAY_PASS tasks='+T);await B.ctx.close();await browser.close();
+          JS
+          node --check .audit-ch1-v2.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 360s env CHROME="$CHROME" node .audit-ch1-v2.mjs
+
+  chapter6_7:
+    needs: pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix: {chapter: [6,7]}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - run: npm install --no-save --no-package-lock playwright-core@1.55.0
+      - shell: bash
+        env:
+          CHAPTER: ${{ matrix.chapter }}
+        run: |
+          cat > .audit-special.mjs <<'JS'
+          import fs from 'node:fs';import { chromium } from 'playwright-core';
+          const n=Number(process.env.CHAPTER),html=fs.readFileSync('index.html','utf8'),root='https://thiepn.dev/gomoku/',chrome=process.env.CHROME;if(!chrome)throw new Error('Chrome missing');
+          const sm=html.match(new RegExp(`<script id="course-ch${n}-v1-script">([\\s\\S]*?)<\\/script>`));if(!sm)throw new Error('module missing');
+          const lm=sm[1].match(/const LESSONS = (\[[\s\S]*?\]);\n\nconst \$/);if(!lm)throw new Error('LESSONS parse missing Ch'+n);const lessons=JSON.parse(lm[1]);
+          const total=lessons.reduce((a,l)=>a+l.tasks.length,0),key=`gomoku.course.chapter${n}.v1`;if(total!==48)throw new Error(`Ch${n} total ${total}`);
+          const browser=await chromium.launch({headless:true,executablePath:chrome});const ctx=await browser.newContext({viewport:{width:1100,height:850}});
+          await ctx.addInitScript(key=>{localStorage.removeItem(key);const o=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.id==='v112WelcomeDialog')return;return o.call(this)}},key);
+          const p=await ctx.newPage();p.setDefaultTimeout(15000);p.setDefaultNavigationTimeout(30000);await p.goto(root+`?audit-special-ch${n}=`+Date.now(),{waitUntil:'domcontentloaded'});
+          await p.waitForFunction(n=>document.body?.dataset?.ready==='true'&&typeof window[`GomokuCourseChapter${n}`]?.openSection==='function',n,{timeout:25000});
+          const open=async(g,t)=>{await p.evaluate(n=>document.querySelectorAll(`dialog[open]:not(#ch${n}CourseDialog)`).forEach(d=>d.close?.()),n);await p.evaluate(([n,g,t])=>window[`GomokuCourseChapter${n}`].openSection(g,t),[n,g,t]);await p.waitForSelector(`#ch${n}CourseDialog[open]`);};
+          const count=async()=>p.evaluate(key=>Object.values(JSON.parse(localStorage.getItem(key)||'{}').tasks||{}).filter(x=>x.correct).length,key);
+          for(let g=0;g<lessons.length;g++)for(let t=0;t<lessons[g].tasks.length;t++){
+            const task=lessons[g].tasks[t],before=await count();await open(g,t);
+            if(task.type==='choice'){
+              const text=task.choices[task.answer];const loc=p.locator(`#ch${n}CourseDialog[open] button`).filter({hasText:text}).filter({visible:true}).first();
+              if(!await loc.count())throw new Error(`Ch${n} choice missing ${task.id} ${text}`);await loc.click();
+            }else if(task.type==='board'){
+              const loc=p.locator(`#ch${n}Board [data-coord="${task.answer}"]`);if(!await loc.count()||await loc.isDisabled())throw new Error(`Ch${n} board answer missing ${task.id} ${task.answer}`);await loc.click();
+            }else if(task.type==='seq'){
+              for(const st of task.steps){const loc=p.locator(`#ch${n}Board [data-coord="${st.a}"]`);if(!await loc.count()||await loc.isDisabled())throw new Error(`Ch${n} seq move unavailable ${task.id} ${st.a}`);await loc.click();}
+            }else throw new Error(`Ch${n} unknown type ${task.type}`);
+            const after=await count();if(after!==before+1)throw new Error(`Ch${n} task did not complete first try ${task.id} before=${before} after=${after}`);
+          }
+          const verdict=await p.evaluate(([n,key,total])=>{const s=JSON.parse(localStorage.getItem(key)||'{}'),rows=Object.values(s.tasks||{}),r=window[`GomokuCourseChapter${n}`].report();return{r,rows:rows.length,perfect:rows.length===total&&rows.every(x=>x.correct&&x.firstTry===true&&!x.assisted)}} ,[n,key,total]);
+          if(verdict.r.completed!==total||!verdict.perfect)throw new Error(`Ch${n} final ${JSON.stringify(verdict)}`);console.log(`CH${n}_PERFECT_REPLAY_PASS tasks=${total}`);await ctx.close();await browser.close();
+          JS
+          node --check .audit-special.mjs
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          timeout 420s env CHROME="$CHROME" node .audit-special.mjs
+
+  cleanup:
+    if: always()
+    needs: [pages, chapter1, chapter6_7]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          git config user.name 'github-actions[bot]';git config user.email '41898282+github-actions[bot]@users.noreply.github.com';git rm .github/workflows/audit-special-course-tasks.yml;git commit -m 'Remove specialized course audit workflow' || true;git pull --rebase || true;git push || true
