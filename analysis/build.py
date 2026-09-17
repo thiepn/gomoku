@@ -20,5 +20,5 @@ text=(ROOT/'analysis/analysis.css').read_text();block=f'<style id="analysis2-sty
 if '<style id="analysis2-style">' in s:s=re.sub(r'<style id="analysis2-style">.*?</style>',lambda _:block,s,count=1,flags=re.S)
 else:s=s.replace('</body>',block+'\n</body>')
 p.write_text(s)
-sw=ROOT/'sw.js';sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-table-1.0.1-renju';",sw.read_text(),count=1))
+sw=ROOT/'sw.js';sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-review-ux-2.1.0';",sw.read_text(),count=1))
 print('Embedded Analysis 2.0 worker, evidence viewer and private mistake training.')

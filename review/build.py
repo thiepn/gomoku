@@ -30,6 +30,13 @@ for n in [6,7]:
 # The fallback previously selected the Learn navigation button. Its label observer
 # then deleted the inserted course card, causing an endless remove/remount loop.
 s=s.replace("document.querySelector('[data-v92-route=\"improve\"]')", "document.querySelector('#v92ImproveHome')")
+# Last-loaded presentation stylesheet; source stays separate from scoring logic.
+ux=(root/'review/ux/workspace.css').read_text()
+block='<style id="review-workspace-style">\n'+ux+'\n</style>'
+if '<style id="review-workspace-style">' in s:
+    s=re.sub(r'<style id="review-workspace-style">.*?</style>',lambda _:block,s,count=1,flags=re.S)
+else:
+    s=s.replace('</body>',block+'\n</body>')
 path.write_text(s)
-sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-table-1.0.1-renju';",t,count=1);sw.write_text(t)
+sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.1.0-analysis-2.0.0-review-ux-2.1.0';",t,count=1);sw.write_text(t)
 print('Embedded Guided Review 2.0.0; existing game, course and storage formats preserved.')
