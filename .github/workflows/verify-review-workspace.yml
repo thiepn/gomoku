@@ -1,0 +1,113 @@
+name: Review Workspace verification
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'review/**', 'analysis/**', 'ui/**', '.github/workflows/verify-review-workspace.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'review/**', 'analysis/**', 'ui/**', '.github/workflows/verify-review-workspace.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify reproducibility and preserved analysis intelligence
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          git diff --exit-code -- index.html sw.js
+          python review/ux/test-integrity.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          node --check review/review.js
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Full review, analysis, training and workspace browser suites
+        env:
+          CHROMIUM_PATH: playwright
+          WORKSPACE_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          UI_URL: http://127.0.0.1:8765/
+          ANALYSIS_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/workspace-http.log 2>&1 &
+          python review/test-browser.py
+          python review/test-recovery.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-workspace-verification
+          path: |
+            workspace-test-output/
+            review-test-output/
+            ui-test-output/
+            analysis-test-output/
+          retention-days: 14
+  deployed-workspace:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify this exact public application and service worker
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request=urllib.request.Request(root+name+'?workspace-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Deployed file did not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise the public review, analysis, training and mobile workspace
+        env:
+          CHROMIUM_PATH: playwright
+          WORKSPACE_URL: https://thiepn.dev/gomoku/?workspace-ci=${{ github.sha }}
+          REVIEW_URL: https://thiepn.dev/gomoku/?workspace-ci=${{ github.sha }}
+          UI_URL: https://thiepn.dev/gomoku/?workspace-ci=${{ github.sha }}
+          ANALYSIS_URL: https://thiepn.dev/gomoku/?workspace-ci=${{ github.sha }}
+        run: |
+          python review/test-browser.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-review-workspace-verification
+          path: |
+            workspace-test-output/
+            review-test-output/
+            ui-test-output/
+            analysis-test-output/
+          retention-days: 14

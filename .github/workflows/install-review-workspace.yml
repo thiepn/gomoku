@@ -1,0 +1,106 @@
+name: Install Review Workspace
+on:
+  push:
+    branches: ['review/intuitive-workspace']
+    paths: ['.review-ux-install/**', '.github/workflows/install-review-workspace.yml']
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify transport and apply exact source delta
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,lzma
+          digest=lambda data:hashlib.sha256(data).hexdigest()
+          parts=sorted(Path('.review-ux-install').glob('*.part'))
+          assert len(parts)==5
+          payload=b''.join(p.read_bytes() for p in parts)
+          assert digest(payload)=='e82993f1224c8207e23d141be934655e1365cbef19605845ee7e5f46c2662e82', 'Transport integrity failure'
+          assert digest(Path('index.html').read_bytes())=='df2fcc1be9c36085e518d3998b63596eaebb4092c18ca3862fb9fb3c2ea070c6', 'Application baseline changed'
+          changes=json.loads(lzma.decompress(payload))
+          allowed={'review/review.js','review/build.py','ui/build.py','analysis/build.py','ui/preserved-scripts.json','review/test-browser.py','analysis/test-browser.py','review/ux/workspace.css','review/ux/test-workspace.py','review/ux/README.md','review/ux/test-integrity.py'}
+          assert set(changes)==allowed
+          prepared={}
+          for name,change in changes.items():
+              path=Path(name)
+              old=path.read_text(encoding='utf-8') if path.exists() else ''
+              assert digest(old.encode())==change['base'], 'Source baseline changed: '+name
+              lines=old.splitlines(keepends=True)
+              last=0
+              for start,end,text in change['edits']:
+                  assert last<=start<=end<=len(lines) and isinstance(text,str)
+                  last=end
+              for start,end,text in reversed(change['edits']):
+                  lines[start:end]=[text]
+              new=''.join(lines)
+              assert digest(new.encode())==change['result'], 'Result integrity failure: '+name
+              prepared[name]=new
+          for name,text in prepared.items():
+              path=Path(name);path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text,encoding='utf-8')
+          print('Verified and applied',len(prepared),'source changes')
+          PY
+      - name: Rebuild and verify unchanged analysis intelligence
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          python review/ux/test-integrity.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          node --check review/review.js
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
+          sha256sum index.html sw.js > /tmp/review-workspace-sha
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          sha256sum --check /tmp/review-workspace-sha
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Test the complete workspace and existing application on HTTP
+        env:
+          CHROMIUM_PATH: playwright
+          WORKSPACE_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          UI_URL: http://127.0.0.1:8765/
+          ANALYSIS_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/workspace-http.log 2>&1 &
+          python review/test-browser.py
+          python review/test-recovery.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-workspace-install-evidence
+          path: |
+            workspace-test-output/
+            review-test-output/
+            ui-test-output/
+            analysis-test-output/
+          retention-days: 14
+      - name: Commit tested presentation to the isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = 'review/intuitive-workspace'
+          rm -rf .review-ux-install
+          rm .github/workflows/install-review-workspace.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git add review/ux review/review.js review/build.py review/test-browser.py analysis/build.py analysis/test-browser.py ui/build.py ui/preserved-scripts.json index.html sw.js
+          git commit -m 'Rebuild review around Overview, Guided review and safe Free analysis'
+          git push origin HEAD:review/intuitive-workspace
