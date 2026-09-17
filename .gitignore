@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*-test-output/
+audit/probe-*
+audit/before-*.png

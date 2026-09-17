@@ -69,3 +69,7 @@ The new UI suite exercises 80 assertions, including the Renju center-first inter
 The existing Guided Review suite has 18 deterministic tactical checks, 31 browser interaction checks, and 9 recovery checks. These are targeted regressions, not proof of perfect Gomoku play, exhaustive validation of 655 exercises, or full accessibility certification. Native screen readers, Safari/Firefox, installed Android/iOS behavior, and physical-device performance need separate checks.
 
 Screenshots and JSON reports are CI artifacts, not production assets. Do not publish test fixtures as a user's actual game or progress.
+
+## Post-release regression audit
+
+The full-app audit after the center-opening hotfix intentionally changes rule-input validation, legacy-study handling, review pass context, game/training backup integration and chapter-storage recovery. The approved integrity manifest now covers that repaired implementation, not an assertion that every original module is still byte-identical. All original lesson content is checked separately. See `../audit/README.md` and `../audit/approved-module-changes.json` for reproductions, approved changes, tests and scope limits.

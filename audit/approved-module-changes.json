@@ -1,0 +1,95 @@
+{
+  "baselineCommit": "3d2f6cc6ef93fabeca3592e30ab26b169391361b",
+  "modules": {
+    "rules-engine": {
+      "before": "d75e555766fc9259b005e95c043a3e0a6ee0e007809946661f69dfb97be1a550",
+      "after": "5001b6e1c9a1414fc501ffa0e10d75e5b7effa0b18252ecd8658a83dc990b121",
+      "reason": "Reject malformed pass calls before rules evaluation."
+    },
+    "studio-core": {
+      "before": "973326d6de7bcac1ea03974edeea15d7c90c26f0d525b26ec642770042b0cfde",
+      "after": "5df55b9c4ee387fae4d7a6d423ed620b3cd1b8b70ce4f4b19d82dd882d0918f9",
+      "reason": "Carry legacy Renju opening compatibility through trees and SGF."
+    },
+    "guided-review-script": {
+      "before": "4a2e7a8639c26cddf5b2f4c3fe001026e851a822bbaeef4362c7248ea9872d20",
+      "after": "ee771be2ab0bebe80597dc5e5ce18973594c4c6d0d76e7f5ef413b082ef324d0",
+      "reason": "Preserve pass context and terminal draws; support legacy replay; recover failed review startup."
+    },
+    "course-ch1-v1-script": {
+      "before": "c0f078c0eea1727d7fc1c11eefda2610d8768a19a5c8da031a32a899ee39b2f1",
+      "after": "d458e2bccc20f457c702e260e30b63c0232c6672ed749bf3e739fc634df11d33",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch2-v1-script": {
+      "before": "98b9883ba6c60f04ecd0e025ab049b69bcddecec79e653afd52bcf0c30b9ab6b",
+      "after": "3684449bc3d13545dae89ae61f3e776b8d91d496db716126672d2ba6c6e32861",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch3-v1-script": {
+      "before": "1e330c10c4a9c87fa82ac68c1aeaa39058c0b0feb5967a6306e6046f9cef5d0b",
+      "after": "2fe80ad13448f456fb9ef2ade297e04ec185f29732693f1a07c5c095fe177358",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch4-v1-script": {
+      "before": "ecbeecf826cac3d66af44ca0be3cf1ad1abaca87b61fb1e6a8b850431de94901",
+      "after": "251c4298f84b8bfe41166593c4fd4584ef3a123f73e31ae5ad5297eff94946f3",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch5-v1-script": {
+      "before": "fb7b276378855eeb8bc342a5e22cce02a02b67b632c8e81026a24fa5c28b24e3",
+      "after": "b23d280256107ee321f27377aa9703060a97d8eb099681cc05e6c7958e592b3c",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch6-v1-script": {
+      "before": "2ea5631b647b63f7bc4b5b757347eda19ec84ad91a4f6cccfa57aba5864d691b",
+      "after": "6a389a0583c36e7e700fff18afca7675526f68ec9e0f39d86dca5217ad2050c7",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch7-v1-script": {
+      "before": "2779d5f4a6c90687b7883c20c219de36521e0c1a8737f50f0c88bec33a76c9c0",
+      "after": "e071addd893b0ac0d1b901a0e001c7a31c2cbe0fa6a866de6f7f04188b5b5495",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch8-v1-script": {
+      "before": "dd843f5a0b84fcc9776ce7fee8ad4f7c9eab2dd400ca8889c5215e8e6c913208",
+      "after": "c38a1feb6b5374ccf2f003587db161c9e9931e956113e7403b1c79b37af8e8f2",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch9-v1-script": {
+      "before": "eb9e881acf17745df7a7a96233000fb962f43c0d8d94095ee11aa87ee9176a7d",
+      "after": "d3077cf3162e21154f26189399c06c661211b0788e2a96185de78271d95e432e",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch10-v1-script": {
+      "before": "c83838414e0a18b1a0b4cfe26f0cb0486c59031a6edd1bd1b3ef5c6708530dec",
+      "after": "53c59d02122307ef2afb0c92adbedbc1b5edb1715b4fb07e8585be00e265a519",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch11-v1-script": {
+      "before": "85ba94c9e8a3e501843bf69584566829ddd770334efd093ae5d1e5e344e39323",
+      "after": "f7c6d2915cc01804f2d9fb3bb3220a19efe87a1ddf7f89a2b003747f0318abd2",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch12-v1-script": {
+      "before": "c6f455d6613e0b9c0c157e04d4f150389e6658074d273a448b21ead1d782bbb3",
+      "after": "205e1864c667f7f4d2d0dae8b2f32eb71a4fcee228d282bdd1445d87bbd42047",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch13-v1-script": {
+      "before": "19f16e53bf1f86dcf38d31bd8a96604aab1396e09a2553eb2a187d2b9a6942cf",
+      "after": "0eb986a663fe87c7e1373b0950a92fcc306d72281beeb284934a27e98b053aef",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "course-ch14-v1-script": {
+      "before": "fe18eedb9de0caf3362bf1933ffbf18163370fff68a6c427e758612037b5e1b0",
+      "after": "50c75772fbcb54518e201b9ac577f2a9222a555425bafc3a48f6876107d8d68a",
+      "reason": "Use recoverable course storage and refresh state after restore; exercise content unchanged."
+    },
+    "_game-app-excluding-material": {
+      "before": "27c34bb40d86b4faa16e6d452a1cb4980ae9db932168ba8850d181d2bdefb277",
+      "after": "b02713d15de11aa1524f940780754408b53eca3065a2c18f276571ccd3ca84be",
+      "reason": "Course backup/restore, cross-tab save resolution, interrupted AI turn recovery and legacy replay paths."
+    }
+  }
+}
