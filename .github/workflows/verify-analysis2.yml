@@ -1,0 +1,110 @@
+name: Analysis 2.0 verification
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-analysis2.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-analysis2.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Reproducibility, preserved game logic and verified proof coverage
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          git diff --exit-code -- index.html sw.js
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          node --check review/review.js
+          node --check analysis/core.js
+          node --check analysis/runtime.js
+          node --check analysis/training.js
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
+          node analysis/benchmark.cjs
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Full browser flows and native storage
+        env:
+          CHROMIUM_PATH: playwright
+          UI_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          ANALYSIS_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/analysis-http.log 2>&1 &
+          python review/test-browser.py
+          python review/test-recovery.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analysis2-verification
+          path: |
+            analysis-test-output/
+            review-test-output/
+            ui-test-output/
+          retention-days: 14
+  deployed-analysis:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Wait for the exact deployed HTML and service worker
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request=urllib.request.Request(root+name+'?analysis2-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Deployed file did not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise public review, proof, practice, storage and UI
+        env:
+          CHROMIUM_PATH: playwright
+          UI_URL: https://thiepn.dev/gomoku/?analysis2-ci=${{ github.sha }}
+          REVIEW_URL: https://thiepn.dev/gomoku/?analysis2-ci=${{ github.sha }}
+          ANALYSIS_URL: https://thiepn.dev/gomoku/?analysis2-ci=${{ github.sha }}
+        run: |
+          python review/test-browser.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-analysis2-verification
+          path: |
+            analysis-test-output/
+            review-test-output/
+            ui-test-output/
+          retention-days: 14

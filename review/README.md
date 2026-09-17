@@ -1,3 +1,5 @@
+> Current review: **Analysis 2.0**. See [`../analysis/README.md`](../analysis/README.md) for the new search, proof and practice systems. The original Guided Review audit below is retained as release history.
+
 # Guided Review 1.0.0
 
 A single learning workspace replaces the overlapping post-game summary, full-review and continuation dialogs. Finish a game, choose **Review game**, then navigate the key moments. **Before move**, **Played move** and **Show best found** compare the decision. Select an alternative to explore it, request a reply or enter your own line. **Return to game** never edits the recording. **Try again** hides the answer and evaluates the attempted move afresh; equally good alternatives are accepted.
