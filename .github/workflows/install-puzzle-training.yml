@@ -1,0 +1,100 @@
+name: Install Puzzle Training 2.0
+on:
+  push:
+    branches: ['training/puzzle-vcf-2']
+    paths: ['.puzzle-install/**', '.github/workflows/install-puzzle-training.yml']
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify source transport and original application
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,lzma
+          parts=sorted(Path('.puzzle-install').glob('*.part'))
+          assert len(parts)==6
+          data=b''.join(p.read_bytes() for p in parts)
+          assert hashlib.sha256(data).hexdigest()=='8c237ee282bdf31b9120e3b6b052205bc33152a90abd38554d17121923a18037', 'Transport integrity failure'
+          assert hashlib.sha256(Path('index.html').read_bytes()).hexdigest()=='5b8a46d9ded2ca6e8479ff5504e026b6e42da29805f9f092942bed86ab91875f', 'Baseline changed: inspect before building'
+          files=json.loads(lzma.decompress(data))
+          allowed={'puzzles/test-browser.py','puzzles/engine.cjs','puzzles/app.js','puzzles/test-integrity.py','puzzles/README.md','puzzles/test-core.cjs','puzzles/core.js','puzzles/generate.cjs','puzzles/store.js','puzzles/puzzles.css','puzzles/build.py','puzzles/pack.cjs','review/build.py','analysis/build.py','ui/build.py'}
+          assert set(files)==allowed
+          for name,text in files.items():
+              path=Path(name);path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text,encoding='utf-8')
+          print('Verified and unpacked',len(files),'source files')
+          PY
+      - name: Reproduce the complete 3000-position bank from legal training games
+        env:
+          PUZZLE_GAME_LIMIT: '20000'
+        run: |
+          node puzzles/generate.cjs
+          node puzzles/pack.cjs
+          echo 'cf719c2a94f0807f9be76af5aa927a563ed1764e59a46ba0f7a98b5228b310da  puzzles/bank.json' | sha256sum -c -
+      - name: Build and check every position, full solution and preserved module
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          python puzzles/build.py
+          python puzzles/test-integrity.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
+          node --check puzzles/core.js
+          node --check puzzles/app.js
+          node --check puzzles/store.js
+          node puzzles/test-core.cjs
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Full-app puzzle, review, training, mobile and native storage regressions
+        env:
+          CHROMIUM_PATH: playwright
+          PUZZLE_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          UI_URL: http://127.0.0.1:8765/
+          ANALYSIS_URL: http://127.0.0.1:8765/
+          WORKSPACE_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/puzzle-http.log 2>&1 &
+          python puzzles/test-browser.py
+          python review/test-browser.py
+          python review/test-recovery.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: puzzle-training-install-evidence
+          path: |
+            puzzle-test-output/
+            review-test-output/
+            analysis-test-output/
+            ui-test-output/
+            workspace-test-output/
+          retention-days: 14
+      - name: Commit verified implementation to the isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = 'training/puzzle-vcf-2'
+          rm -rf .puzzle-install
+          rm .github/workflows/install-puzzle-training.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git add puzzles index.html sw.js review/build.py analysis/build.py ui/build.py
+          git commit -m 'Add 3000 verified puzzles, full-line VCF/VCT training and local practice progress'
+          git push origin HEAD:training/puzzle-vcf-2
