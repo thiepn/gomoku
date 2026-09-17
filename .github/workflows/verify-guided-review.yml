@@ -1,0 +1,38 @@
+name: Guided Review verification
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'review/**', '.github/workflows/verify-guided-review.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'review/**', '.github/workflows/verify-guided-review.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Verify reproducible embedding and rule assessments
+        run: |
+          python review/build.py
+          git diff --exit-code -- index.html sw.js
+          node --check review/review.js
+          node review/test-core.cjs
+      - name: Run full-app browser and recovery suites
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/review-http.log 2>&1 &
+          REVIEW_URL=http://127.0.0.1:8765/ CHROMIUM_PATH=playwright python review/test-browser.py
+          CHROMIUM_PATH=playwright python review/test-recovery.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: guided-review-verification
+          path: review-test-output/
+          retention-days: 14
