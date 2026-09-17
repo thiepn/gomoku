@@ -36,3 +36,47 @@ jobs:
           name: guided-review-verification
           path: review-test-output/
           retention-days: 14
+  deployed-review:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Wait for this exact Pages build
+        run: |
+          python - <<'PY'
+          import hashlib, time, urllib.request
+          from pathlib import Path
+          root = 'https://thiepn.dev/gomoku/'
+          for name in ['index.html', 'sw.js']:
+              expected = hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request = urllib.request.Request(root+name+'?guided-review-check='+expected+'&attempt='+str(attempt), headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request, timeout=15) as response:
+                          received = hashlib.sha256(response.read()).hexdigest()
+                      if received == expected:
+                          print('EXACT_DEPLOYED_FILE', name, expected, flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__, str(error)[:160], flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Deployed file did not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise the deployed review flow
+        env:
+          REVIEW_URL: https://thiepn.dev/gomoku/?guided-review-ci=${{ github.sha }}
+          CHROMIUM_PATH: playwright
+        run: python review/test-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-guided-review-verification
+          path: review-test-output/
+          retention-days: 14
