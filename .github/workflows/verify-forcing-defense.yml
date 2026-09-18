@@ -2,29 +2,83 @@ name: Forcing defense engine verification
 on:
   push:
     branches: [fix/analysis-forcing-defense]
-  pull_request:
-    paths: ['analysis/**', 'review/**', 'index.html', '.github/workflows/verify-forcing-defense.yml']
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: forcing-defense-install
+  cancel-in-progress: false
 jobs:
   verify:
+    if: github.ref == 'refs/heads/fix/analysis-forcing-defense'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: Baseline engine tests
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Integrate readable reviewed source and build portable application
+        run: python analysis/.install-defense.py
+      - name: Syntax, independent proof tests and preserved-module integrity
         run: |
+          node --check analysis/core.js
+          node --check analysis/runtime.js
+          node --check review/review.js
+          python review/ux/test-integrity.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
           node review/test-core.cjs
           node analysis/test-core.cjs
           node analysis/test-proof-coverage.cjs
-      - name: Capture reproducible source for local regression work
+          node analysis/test-forcing-defense.cjs
+          sha256sum index.html sw.js > /tmp/defense-built.sha256
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          sha256sum --check /tmp/defense-built.sha256
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Real-origin Worker, UI, storage migration, mobile and existing regression suites
+        env:
+          CHROMIUM_PATH: playwright
+          WORKSPACE_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+          UI_URL: http://127.0.0.1:8765/
+          ANALYSIS_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/defense-http.log 2>&1 &
+          python review/test-browser.py
+          python review/test-recovery.py
+          python ui/test-ui.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+          python analysis/test-forcing-defense-browser.py
+      - name: Commit generated application only after all checks pass
+        run: |
+          rm analysis/.install-defense.py analysis/.install-defense-service.js analysis/.install-defense-ranking.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add analysis review ui index.html sw.js
+          git commit -m 'Fix verified forcing defense and upgrade analysis to 2.1'
+          git push origin HEAD:fix/analysis-forcing-defense
+      - name: Capture exact source and execution results
         if: always()
-        run: git archive --format=tar HEAD > gomoku-source.tar
+        run: |
+          tar -cf /tmp/gomoku-defense-source.tar .github analysis review ui icons index.html sw.js manifest.webmanifest
+          cp /tmp/gomoku-defense-source.tar ./gomoku-defense-source.tar
+          git status --short > defense-git-status.txt
+          git rev-parse HEAD > defense-head.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: forcing-defense-source
-          path: gomoku-source.tar
-          retention-days: 3
+          name: forcing-defense-integration
+          path: |
+            gomoku-defense-source.tar
+            defense-git-status.txt
+            defense-head.txt
+            analysis-test-output/
+            review-test-output/
+            ui-test-output/
+            workspace-test-output/
+          retention-days: 7
