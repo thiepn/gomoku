@@ -4,7 +4,7 @@ function createGuidedReviewCore(engineFactory, studioFactory) {
   const C = studioFactory(engineFactory);
   const coord = C.coord;
   const point = i => Number.isInteger(i) && i >= 0 && i < 225;
-  const severity = label => ({'Blunder':5,'Missed win':4,'Mistake':3,'Inaccuracy':2,'Win available':1}[label] || 0);
+  const severity = label => ({'Losing move':5,'Blunder':5,'Missed win':4,'Mistake':3,'Inaccuracy':2,'Win available':1}[label] || 0);
   const key = (b,c,r) => `${r}:${c}:${Array.from(b).join('')}`;
   function positions(game) {
     const e = engineFactory(game.variant), moves = game.moves || [];
@@ -116,7 +116,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='2.0.0', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='2.1.0', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -134,8 +134,9 @@ if(typeof window !== 'undefined') (()=>{
   function loadCache(s) {
     try {
       const raw=localStorage.getItem(STORE);if(!raw || raw.length>2800000)return;
-      const data=JSON.parse(raw);if(data.version!==VERSION||!Array.isArray(data.items))return;
-      const saved=data.items.find(x=>x.fingerprint===s.fingerprint);
+      const data=JSON.parse(raw);if(!['2.0.0',VERSION].includes(data.version)||!Array.isArray(data.items))return;
+      const legacyFingerprint=JSON.stringify(['2.0.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
@@ -179,7 +180,7 @@ if(typeof window !== 'undefined') (()=>{
     <div class="rw-setting-checks"><label><input type="checkbox" id="a2Overlays" checked> Tactical markers</label><label><input type="checkbox" id="rwCandidateMarkers" checked> Number candidates in free analysis</label><label><input type="checkbox" id="rwShowNumbers"> Number every stone</label></div>
     <p>Strength controls deeper analysis, not the initial scan. Search time excludes verification. Estimates can change; a verified threat is shown separately.</p>
     <div class="rw-settings-actions"><button type="button" id="rwExportOption" class="gr-btn">Export review</button><button type="button" id="rwLibraryOption" class="gr-btn">Mistake library</button></div>
-    <details class="gr-details"><summary>Move labels and keyboard controls</summary><p><b>Best found / Good:</b> supported by the current search. <b>Inaccuracy / Mistake / Blunder:</b> increasing loss compared with a searched alternative. <b>Already lost:</b> this was not a new avoidable mistake. <b>Unscored:</b> not enough evidence, not a bad move.</p><p>Left / Right: move through the game; in a test line, undo / redo; in a proof, step through the threat. R: retry. A: free analysis. G: guided review. Escape: leave the test line first, then close review. When the board is focused, arrows move between intersections.</p><div id="grEngineDetails"></div></details>
+    <details class="gr-details"><summary>Move labels and keyboard controls</summary><p><b>Best found / Good:</b> supported by the current search. <b>Inaccuracy / Mistake / Blunder:</b> increasing loss compared with a searched alternative. <b>Losing move:</b> a verified opponent forcing win follows; this does not by itself prove the loss was avoidable. <b>Defensive move:</b> interrupts a verified attack, not a proof of a draw or win. <b>Already lost:</b> this was not a new avoidable mistake. <b>Unscored:</b> not enough evidence, not a bad move.</p><p>Left / Right: move through the game; in a test line, undo / redo; in a proof, step through the threat. R: retry. A: free analysis. G: guided review. Escape: leave the test line first, then close review. When the board is focused, arrows move between intersections.</p><div id="grEngineDetails"></div></details>
   </section>
   <p id="rwGlobalNotice" class="rw-global-notice" role="status" hidden></p>
   <div class="gr-content">
@@ -207,7 +208,7 @@ if(typeof window !== 'undefined') (()=>{
         <div class="rw-verdict-row"><span id="rwGradeIcon" class="rw-grade-icon" aria-hidden="true"></span><div><div class="gr-verdict" id="grVerdict"></div><p class="gr-basis" id="grBasis"></p></div></div>
         <p id="rwShortWhy"></p>
                 <div id="grBranchTools" class="gr-branch-tools" hidden><div class="rw-section-title"><h4>Your test line</h4><span>Original game unchanged</span></div><div id="grBranchMoves" class="gr-branch-moves"></div><div class="gr-action-row"><button type="button" class="gr-btn" id="grUndo">Undo</button><button type="button" class="gr-btn" id="rwRedo">Redo</button><button type="button" class="gr-btn" id="grLineNext">Continue suggested line</button><button type="button" class="gr-btn" id="grReply">Play best reply</button></div><label class="gr-saved-label">Saved test lines <select id="grVariations" aria-label="Saved variations for this decision"></select></label></div>
-<div id="rwCompare" class="rw-compare"><button type="button" id="grPlayed" class="rw-compare-move"><span>Played</span><b id="rwPlayedCoord"></b><small id="rwPlayedGrade"></small></button><button type="button" id="grBest" class="rw-compare-move"><span>Best found</span><b id="rwBestCoord"></b><small id="rwBestGrade"></small></button></div>
+<div id="rwCompare" class="rw-compare"><button type="button" id="grPlayed" class="rw-compare-move"><span>Played</span><b id="rwPlayedCoord"></b><small id="rwPlayedGrade"></small></button><button type="button" id="grBest" class="rw-compare-move"><span id="rwBestHeading">Best found</span><b id="rwBestCoord"></b><small id="rwBestGrade"></small></button></div>
         <div class="gr-action-row rw-main-actions"><button type="button" class="gr-btn gr-primary" id="grRetry">Try again</button><button type="button" class="gr-btn" id="grBefore">Position before move</button><button type="button" class="gr-btn" id="grExplore">Explore alternatives</button><button type="button" class="gr-btn" id="rwReveal" hidden>Reveal an answer</button></div>
         <div class="rw-threat-actions"><button class="gr-btn" type="button" id="a2BestProof" hidden>Show why this wins</button><button class="gr-btn" type="button" id="a2Refutation" hidden>Show the opponent’s threat</button></div>
         <div class="gr-coach"><h4 id="grWhyTitle">Why this move matters</h4><details id="rwExplanation" class="gr-details"><summary>Full explanation</summary><p id="grWhy"></p></details><div class="gr-lesson"><span>REMEMBER NEXT TIME</span><p id="grLesson"></p></div></div>
@@ -281,7 +282,7 @@ if(typeof window !== 'undefined') (()=>{
     if(s.view==='before'||p.played<0)return {board:p.board,color:p.color,context:p.context,result:null};
     return core.line(p.board,p.color,s.game.variant,[p.played],p.context).states.at(-1);
   }
-  function tone(label){return ['Winning move','Winning threat','Winning plan','Best found'].includes(label)?'best':label==='Good'?'good':core.severity(label)>=3?'bad':core.severity(label)?'warn':'neutral';}
+  function tone(label){return ['Winning move','Winning threat','Winning plan','Best found'].includes(label)?'best':['Good','Defensive move'].includes(label)?'good':core.severity(label)>=3?'bad':core.severity(label)?'warn':'neutral';}
   function basisText(r){if(!r)return 'Analysis is queued. You can navigate and explore while it runs.';return r.basis==='rules'?'Rule-checked tactical fact':r.basis==='verified-proof'?'Verified forcing strategy':r.basis==='insufficient-search'?'Insufficient evidence · analyze deeper':`Provisional engine judgment · depth ${r.depth}`;}
   function render() {
     if(!session||!dialog.open)return;
@@ -392,7 +393,7 @@ if(typeof window !== 'undefined') (()=>{
   async function gradeBranchMove(board,color,i,context){const branch=session.branch,signature=JSON.stringify(branch.moves);await interactive(async(s,current)=>{const r=await evaluate(board,color,s.game.variant,i,700,context);if(!current()||s.branch!==branch||JSON.stringify(branch.moves)!==signature)return;branch.last=r;feedback(`${side(color)} ${core.coord(i)}: ${r.label}. ${r.explanation.why}`);});}
   function undoBranch(){const s=session;if(!s?.branch?.moves.length)return;cancelInteraction(s);(s.branch.redo||(s.branch.redo=[])).push(s.branch.moves.pop());s.branch.last=null;feedback('Test move undone. The recorded game is unchanged.');render();}
   function nextLine(){const s=session,b=s.branch,i=b?.pv[b.moves.length];if(core.point(i))boardAction(i);}
-  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100,state.context);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!core.point(r.best)){feedback('No legal reply found.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best,state.context);b.moves.push(r.best);b.redo=[];b.pv=[];const c=r.candidates.find(x=>x.i===r.best);b.last=c?{...r,...c,played:r.best,color:state.color}:null;feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
+  async function bestReply(){const state=chosenState(),b=session.branch;if(!b||state.result)return;const signature=JSON.stringify(b.moves);await interactive(async(s,current)=>{const r=await evaluate(state.board,state.color,s.game.variant,-1,1100,state.context);if(!current()||s.branch!==b||JSON.stringify(b.moves)!==signature)return;if(!core.point(r.best)){feedback('No unrefuted reply established. You can still explore a legal move.');return;}const next=core.apply(state.board,state.color,s.game.variant,r.best,state.context);b.moves.push(r.best);b.redo=[];b.pv=[];const c=r.candidates.find(x=>x.i===r.best);b.last=c?{...r,...c,played:r.best,color:state.color}:null;feedback(`${side(state.color)} replies ${core.coord(r.best)}. ${c?.explanation?.why||'Best found by the current selective search.'}${next.result?' This line has ended.':''}`);});}
   async function deeper(){
     if(session?.mode==='explore'&&session.branch?.moves.length){
       const s=session,b=s.branch,p=entry(),signature=JSON.stringify(b.moves),i=b.moves.at(-1);
@@ -526,7 +527,7 @@ if(typeof window !== 'undefined') (()=>{
     const why=r.explanation?.why||'No explanation has been established.';
     const concrete=why.match(/Concrete reply: (.*?)(?= The selective| A separate|$)/)?.[1];
     if(concrete)return concrete;
-    if(r.refutation&&core.severity(r.label))return `${side(3-(r.color??p.color))} has a verified forcing win after ${core.coord(r.played)}. The search prefers ${core.coord(r.best)}; use the threat viewer to see the danger.`;
+    if(r.refutation&&core.severity(r.label))return `${side(3-(r.color??p.color))} can force a win after ${core.coord(r.played)}, starting at ${core.coord(r.refutation.proof.move)}. Forcing line: ${(r.tactical?.line||[r.refutation.proof.move]).slice(0,5).map(core.coord).join(' → ')}.${core.point(r.best)?` The current defensive candidate is ${core.coord(r.best)}.`:' No unrefuted alternative has been established.'} Open the threat proof to follow the forced replies.`;
     const sentences=why.split(/(?<=[.!?])\s+(?=[A-Z])/);
     return sentences.slice(0,2).join(' ');
   }
@@ -579,13 +580,14 @@ if(typeof window !== 'undefined') (()=>{
     $('rwShortWhy').textContent=concealed?'Find a win, a necessary block, or a stronger threat. Place a stone to check your answer.':shortWhy(assessed,p);
     $('rwExplanation').hidden=concealed||s.mode==='proof';
     if(s.mode==='explore'&&!assessed){$('grVerdict').textContent=s.interacting?'Checking your move…':'Your analysis board';$('grBasis').textContent='Test alternatives without changing the recorded game.';$('grWhy').textContent='Choose an empty point on the board, or select a candidate below.';$('grLesson').textContent='Compare a move with the strongest reply, not just with your intended continuation.';}
-    const icon={'Blunder':'??','Mistake':'?','Inaccuracy':'?!','Missed win':'!','Win available':'!','Winning move':'✓','Winning threat':'✓','Winning plan':'✓','Best found':'★','Good':'✓','Already lost':'—','Unscored':'…'};
+    const icon={'Losing move':'??','Defensive move':'✓','Blunder':'??','Mistake':'?','Inaccuracy':'?!','Missed win':'!','Win available':'!','Winning move':'✓','Winning threat':'✓','Winning plan':'✓','Best found':'★','Good':'✓','Already lost':'—','Unscored':'…'};
     $('rwGradeIcon').textContent=concealed?'?':icon[assessed?.label]||'…';$('rwGradeIcon').dataset.tone=tone(assessed?.label);
     $('rwGradeIcon').hidden=s.mode==='proof';
     $('rwPlayedCoord').textContent=core.coord(p.played);$('rwPlayedGrade').textContent=r?.label||'Checking…';$('rwPlayedGrade').dataset.tone=tone(r?.label);
-    $('rwBestCoord').textContent=r&&core.point(r.best)?core.coord(r.best):'—';$('rwBestGrade').textContent=r?.best===p.played?'You found it':r?.basis==='verified-proof'?'Verified continuation':'Test this alternative';
+    $('rwBestHeading').textContent=r?.defense?.defenses?.includes(r?.best)&&!r?.bestProof?'Defensive candidate':'Best found';
+    $('rwBestCoord').textContent=r&&core.point(r.best)?core.coord(r.best):'—';$('rwBestGrade').textContent=r?.best===p.played?'You found it':r?.bestProof?'Verified winning plan':r?.defense?.defenses?.includes(r?.best)?'Stops the known attack':!core.point(r?.best)?'No unrefuted candidate':'Test this alternative';
     $('grPlayed').setAttribute('aria-pressed',String(!active&&s.view==='played'));
-    $('grBest').disabled=!r||!core.point(r.best);$('grBest').setAttribute('aria-label',r?`Show best found ${core.coord(r.best)}`:'Best move not yet available');
+    $('grBest').disabled=!r||!core.point(r.best);$('grBest').setAttribute('aria-label',r&&core.point(r.best)?`Show best found ${core.coord(r.best)}`:'Best move not yet available');
     $('grBefore').textContent=s.view==='before'?'Show played position':'Position before move';
     $('rwStrengthLabel').textContent=`${s.preset[0].toUpperCase()+s.preset.slice(1)} · ${(A().PRESETS[s.preset].timeMs/1000)} s search budget`;
     $('rwScrubber').max=total;$('rwScrubber').value=panel==='overview'?total:p.ply;$('rwScrubber').setAttribute('aria-valuetext',panel==='overview'?`Final position, move ${total}`:`Move ${p.ply}, ${side(p.color)} ${core.coord(p.played)}, ${r?.label||'not yet assessed'}`);
@@ -602,7 +604,7 @@ if(typeof window !== 'undefined') (()=>{
     $('grKey').disabled=false;
     $('grKey').textContent=active||panel==='analysis'?'Return to review':panel==='overview'?(keys.length?'Start guided review →':'Review every move →'):keys.some(k=>k>s.index)?'Next key moment →':!keys.length&&s.index<total-1?'Next move →':'Finish review ✓';
     const own=s.results.map((v,k)=>({r:v,p:s.positions[k]})).filter(x=>s.game.mode!=='ai'||x.p.color===s.game.humanColor);
-    const good=own.filter(x=>x.r&&['Best found','Good','Winning move','Winning threat','Winning plan'].includes(x.r.label)).length;
+    const good=own.filter(x=>x.r&&['Best found','Good','Defensive move','Winning move','Winning threat','Winning plan'].includes(x.r.label)).length;
     const unclear=own.filter(x=>!x.r||x.r.label==='Unscored').length;
     $('grSummary').setAttribute('aria-label','Your assessed moves. Already-lost positions are not counted as new mistakes.');
     $('grSummary').innerHTML=`<span><b>${good}</b>Strong moves</span><span><b>${keys.length}</b>To explore</span><span><b>${unclear}</b>Unresolved</span>`;

@@ -20,7 +20,7 @@ with sync_playwright() as p:
  page.evaluate('document.getElementById("resultReviewBtn").click()');page.wait_for_function('GomokuReview.state()?.results.every(Boolean) && !GomokuReview.state().scanning',timeout=30000)
  s=state(page);check('post-game button opens one guided review, evaluates both colors',len(s['results'])==10 and len(page.locator('dialog[open]').all())==1)
  check('correct actual move coordinate K7',s['results'][4]['played']==129 and 'K7' in s['results'][4]['explanation']['why'])
- check('decisive mistake is identified',s['results'][6]['label']=='Blunder')
+ check('decisive mistake is identified',s['results'][6]['label']=='Losing move' and s['results'][6]['basis']=='verified-proof')
  check('later forced loss is not blamed again',s['results'][8]['label']=='Already lost')
  check('opponent winning threat and win are evaluated',s['results'][7]['label']=='Winning threat' and s['results'][9]['label']=='Winning move')
  page.evaluate('GomokuReview.select(7)');page.screenshot(path=str(OUT/'01-desktop-review.png'))
