@@ -1,0 +1,30 @@
+name: Forcing defense engine verification
+on:
+  push:
+    branches: [fix/analysis-forcing-defense]
+  pull_request:
+    paths: ['analysis/**', 'review/**', 'index.html', '.github/workflows/verify-forcing-defense.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Baseline engine tests
+        run: |
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
+      - name: Capture reproducible source for local regression work
+        if: always()
+        run: git archive --format=tar HEAD > gomoku-source.tar
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forcing-defense-source
+          path: gomoku-source.tar
+          retention-days: 3
