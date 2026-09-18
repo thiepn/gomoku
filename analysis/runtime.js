@@ -3,7 +3,7 @@ if(typeof window!=='undefined') (()=>{
  'use strict';
  let worker=null,url=null,pending=null,serial=0,timer=null,created=0,completed=0,cacheHits=0;
  const cache=new Map(),clone=x=>JSON.parse(JSON.stringify(x));
- const runtime={version:'2.0.0',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
+ const runtime={version:'2.1.0',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
  function cancel(){
    if(!pending)return;
    const job=pending;pending=null;clearTimeout(timer);worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;
@@ -71,7 +71,7 @@ if(typeof window!=='undefined') (()=>{
  async function add(cards){
    if(!Array.isArray(cards)||cards.length>150)throw Error('Too many mistake positions.');
    const engine=A();const valid=cards.map(c=>{engine.validateCard(c);return clone(c);});
-   await transact(valid.map(x=>x.id),rows=>{const map=new Map(rows.map(x=>[x.id,x]));for(const card of valid){const old=map.get(card.id);if(!old)map.set(card.id,card);else if((card.reference.budget||0)>=(old.reference.budget||0))map.set(card.id,{...card,created:old.created,stats:old.stats,events:old.events});}return [...map.values()];});
+   await transact(valid.map(x=>x.id),rows=>{const map=new Map(rows.map(x=>[x.id,x]));for(const card of valid){const old=map.get(card.id);if(!old)map.set(card.id,card);else if(card.reference.analysisVersion===engine.VERSION&&old.reference.analysisVersion!==engine.VERSION||(card.reference.analysisVersion===old.reference.analysisVersion&&(card.reference.budget||0)>=(old.reference.budget||0)))map.set(card.id,{...card,created:old.created,stats:old.stats,events:old.events});}return [...map.values()];});
  }
  async function record(id,verdict,eventId){
    if(verdict.status==='unresolved')return;

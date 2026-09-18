@@ -10,7 +10,7 @@ URL=os.environ.get('ANALYSIS_URL');checks=[];errors=[]
 def check(name,ok=True):
  assert ok,name
  checks.append(name);print('PASS '+name,flush=True)
-def ready(pg):pg.wait_for_function('window.GomokuReview?.version==="2.0.0" && window.GomokuTraining && window.GomokuMistakes',timeout=20000)
+def ready(pg):pg.wait_for_function('window.GomokuReview?.version==="2.1.0" && window.GomokuTraining && window.GomokuMistakes',timeout=20000)
 def load(ctx):
  pg=ctx.new_page();pg.on('pageerror',lambda e:errors.append(str(e)))
  if URL:pg.goto(URL,wait_until='domcontentloaded',timeout=45000)

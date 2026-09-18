@@ -55,7 +55,7 @@ with sync_playwright() as pw:
     try:
         original = pg.evaluate('GomokuStudio.exportGame()')
         s = state(pg)
-        keys = [i for i,r in enumerate(s['results']) if r['label'] in ['Inaccuracy','Mistake','Blunder','Missed win','Win available'] and s['positions'][i]['color']==GAME['humanColor']]
+        keys = [i for i,r in enumerate(s['results']) if r['label'] in ['Inaccuracy','Mistake','Blunder','Losing move','Missed win','Win available'] and s['positions'][i]['color']==GAME['humanColor']]
         check('one review workspace opens on the Overview tab',s['panel']=='overview' and pg.locator('dialog[open]').count()==1)
         check('Overview reports the actual outcome and player side','White won' in pg.locator('#rwOutcome').inner_text() and 'You played Black' in pg.locator('#rwOutcome').inner_text())
         check('Overview board shows all recorded moves, not the first mistake',pg.locator('#grBoard [data-stone="1"]').count()+pg.locator('#grBoard [data-stone="2"]').count()==10)
@@ -70,14 +70,14 @@ with sync_playwright() as pw:
             pg.locator('#grKey').click()
             check('next key moment moves forward rather than through every move',state(pg)['index']==keys[1])
         pg.evaluate('GomokuReview.select(7)');pg.wait_for_timeout(70)
-        check('played classification is clear and tied to the current coordinate',pg.locator('#grVerdict').inner_text()=='Blunder' and pg.locator('#rwPlayedCoord').inner_text()=='G8')
+        check('played classification is clear and tied to the current coordinate',pg.locator('#grVerdict').inner_text()=='Losing move' and pg.locator('#rwPlayedCoord').inner_text()=='G8')
         check('a concrete threat is visible without opening advanced evidence','G9' in pg.locator('#rwShortWhy').inner_text() and 'F9' in pg.locator('#rwShortWhy').inner_text())
         check('guided review does not reveal candidate markers on the board',pg.locator('#grBoard .gr-suggested').count()==0 and pg.locator('#grBoard .rw-candidate-point').count()==0)
         check('recorded move stays visible in the independently scrolling move list',hit(pg,'#grMoveList .gr-current'))
         check('desktop board and next-step action remain fully visible',in_view(pg,'#grBoard') and hit(pg,'#grKey'))
         pg.screenshot(path=str(OUT/'02-guided-review.png'))
         pg.locator('#rwExplanation summary').click()
-        check('full engine explanation remains available behind the concise one','selective' in pg.locator('#grWhy').inner_text().lower())
+        check('full engine explanation remains available behind the concise one','verified' in pg.locator('#grWhy').inner_text().lower())
         pg.locator('#rwExplanation summary').click()
         pg.locator('#grBefore').click()
         check('before-move view removes only the selected recorded stone',pg.locator('[data-point="111"]').get_attribute('data-stone')=='0' and state(pg)['view']=='before')
