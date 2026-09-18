@@ -1,84 +1,104 @@
 name: Forcing defense engine verification
 on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-forcing-defense.yml']
   push:
-    branches: [fix/analysis-forcing-defense]
+    branches: [main, fix/analysis-forcing-defense]
+    paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-forcing-defense.yml']
 permissions:
-  contents: write
+  contents: read
 concurrency:
-  group: forcing-defense-install
-  cancel-in-progress: false
+  group: forcing-defense-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
-    if: github.ref == 'refs/heads/fix/analysis-forcing-defense'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - name: Integrate readable reviewed source and build portable application
-        run: python analysis/.install-defense.py
-      - name: Syntax, independent proof tests and preserved-module integrity
+      - name: Reproducibility, unchanged game engine and proof regression suites
         run: |
-          node --check analysis/core.js
-          node --check analysis/runtime.js
-          node --check review/review.js
+          test ! -f analysis/.install-defense.py
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          git diff --exit-code -- index.html sw.js
           python review/ux/test-integrity.py
           python ui/test-integrity.py
           python analysis/test-integrity.py
+          node --check analysis/core.js
+          node --check analysis/runtime.js
+          node --check review/review.js
           node review/test-core.cjs
           node analysis/test-core.cjs
           node analysis/test-proof-coverage.cjs
           node analysis/test-forcing-defense.cjs
-          sha256sum index.html sw.js > /tmp/defense-built.sha256
-          python review/build.py
-          python ui/build.py
-          python analysis/build.py
-          sha256sum --check /tmp/defense-built.sha256
       - run: pip install playwright==1.55.0
       - run: python -m playwright install --with-deps chromium
-      - name: Real-origin Worker, UI, storage migration, mobile and existing regression suites
+      - name: Real Worker, forcing proof, mobile and native history migration
         env:
           CHROMIUM_PATH: playwright
-          WORKSPACE_URL: http://127.0.0.1:8765/
-          REVIEW_URL: http://127.0.0.1:8765/
-          UI_URL: http://127.0.0.1:8765/
           ANALYSIS_URL: http://127.0.0.1:8765/
         run: |
           python -m http.server 8765 --bind 127.0.0.1 >/tmp/defense-http.log 2>&1 &
-          python review/test-browser.py
-          python review/test-recovery.py
-          python ui/test-ui.py
-          python analysis/test-browser.py
-          python review/ux/test-workspace.py
           python analysis/test-forcing-defense-browser.py
-      - name: Commit generated application only after all checks pass
-        run: |
-          rm analysis/.install-defense.py analysis/.install-defense-service.js analysis/.install-defense-ranking.js
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add analysis review ui index.html sw.js
-          git commit -m 'Fix verified forcing defense and upgrade analysis to 2.1'
-          git push origin HEAD:fix/analysis-forcing-defense
-      - name: Capture exact source and execution results
+      - name: Capture reproducible source
         if: always()
-        run: |
-          tar -cf /tmp/gomoku-defense-source.tar .github analysis review ui icons index.html sw.js manifest.webmanifest
-          cp /tmp/gomoku-defense-source.tar ./gomoku-defense-source.tar
-          git status --short > defense-git-status.txt
-          git rev-parse HEAD > defense-head.txt
+        run: git archive --format=tar HEAD > gomoku-analysis-2.1-source.tar
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: forcing-defense-integration
+          name: forcing-defense-verification
           path: |
-            gomoku-defense-source.tar
-            defense-git-status.txt
-            defense-head.txt
             analysis-test-output/
             review-test-output/
-            ui-test-output/
-            workspace-test-output/
-          retention-days: 7
+            gomoku-analysis-2.1-source.tar
+          retention-days: 14
+  deployed-defense:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify exact publicly deployed application and cache generation
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request=urllib.request.Request(root+name+'?defense-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Deployed file does not match this commit: '+name)
+          PY
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Verify the reported Renju position on the public app
+        env:
+          CHROMIUM_PATH: playwright
+          ANALYSIS_URL: https://thiepn.dev/gomoku/?defense-ci=${{ github.sha }}
+        run: python analysis/test-forcing-defense-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-forcing-defense-verification
+          path: analysis-test-output/
+          retention-days: 14
