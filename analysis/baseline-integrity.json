@@ -1,5 +1,5 @@
 {
-  "commit": "91bf0547f957f83c6fad241ab5c0ea1903bc99e2",
+  "commit": "0798cf653aec47e01929e9e88cafc26619df292b",
   "preserved": {
     "v117-early-resilience": "0bf3e0db6c5fa4ebcc1467639ed7ec69c2dfbc0b4520bcb36b8f383f4e88258d",
     "rules-engine": "d75e555766fc9259b005e95c043a3e0a6ee0e007809946661f69dfb97be1a550",
@@ -40,6 +40,6 @@
     "course-ch12-v1-script": "c6f455d6613e0b9c0c157e04d4f150389e6658074d273a448b21ead1d782bbb3",
     "course-ch13-v1-script": "19f16e53bf1f86dcf38d31bd8a96604aab1396e09a2553eb2a187d2b9a6942cf",
     "course-ch14-v1-script": "fe18eedb9de0caf3362bf1933ffbf18163370fff68a6c427e758612037b5e1b0",
-    "_game-app-excluding-material": "6243887907f0f828196db176683aece5754fe18653443c166f17925221d500f3"
+    "_game-app-excluding-material": "74a2d99a5f0cbe41c707d65991a75f3c0a454594e1b9b2f120a8142cc6f6ff4c"
   }
 }
