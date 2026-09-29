@@ -5,7 +5,7 @@
   "studio-data": "18f5eaecfa7420f3a80885c834bbb28429e0188c9eb1312f750b37d9a97055c7",
   "studio-core": "973326d6de7bcac1ea03974edeea15d7c90c26f0d525b26ec642770042b0cfde",
   "academy-data": "959d559b1673a757adc03f76297ece2fbc48d603821614a17265717ed0bed9d9",
-  "v92-navigation-ux-script": "300d186d100530122c65e23ace52a05264cfcb1959b3a10e9ea7b78dc84a77dd",
+  "v92-navigation-ux-script": "c5e46eceed5812be9d6e8acc4a8624ddf024bc9de9336baf4877d886450681f7",
   "v93-interaction-simplification-script": "f5267b089913f0a3d5a651b558eb76862fa1ce636fdc4e91ed7e1d30d6382d13",
   "v93-mobile-play-collapse-script": "674e9f2c40c36cd07e0bfbd1c01c05341c34bb02da5000db9c1a86f746470057",
   "v94-game-feel-script": "7afe96ac463a42c265a1eff113b58903435ae6d0a823fc13680bb5e6d4875c72",
@@ -13,7 +13,7 @@
   "v97-competitive-ui-script": "08cd9f597f8579130f632bc2a90b51c8dd2d3af25b0977e0c824fdcf1053b1b9",
   "v10-product-distillation-script": "10df29a5380036699dc04c165d9c16dea390d2f1621a5390c367c7afe217b293",
   "v11-adaptive-development-script": "3bc8fbcaf5c1404eb495269e1a1ac501ad0f8ce1c0d7f9fdde603f241306474e",
-  "v111-simple-navigation-script": "15e0d1a5cdbc7e1b2eaff1b871e1cd5e2be5bc9c4d2dc069504455a1249cc1b8",
+  "v111-simple-navigation-script": "29811d4c8f1f361186fd815320ea9f2b8a0ea7e4e8c0d5e4090bb73c03343f17",
   "v112-first-use-script": "2a10de6dbad189a0773237edd86bd11a96b3e4f10625f9e41addd7fd1956bad6",
   "v113-ai-calibration-script": "206e8960cd86220212ec63d8dcf1b023b8d78b919b7a3814f7d2f5e6cfbf4e7c",
   "v114-training-quality-script": "13ade91e11bb28465328d8d83a8a6b0548cae31465be00f319fccb4840b08bc1",
@@ -24,7 +24,7 @@
   "v119-compat-script": "943f305da65b9a2192b75991fe00c9ed3d8a94e00e24d8ae4605e38b121221ec",
   "v120-production-script": "7c43390494f935832a4589a09ef0bc23c14101a3bb2998836e183dca602175f0",
   "renju-forbidden-hotfix-ui": "4218e4552f7aac70862e37ff6979f0b9eae085e24eb03b147447d9dac9a0df95",
-  "mobile-playability-v12-script": "29d3016a61e467cce1405aca4edb28ca3c72acf5e7180cd52edc129960951859",
+  "mobile-playability-v12-script": "57fbc7d2d537f933c3a8c5543959a0609d163e8ee580dae72ddd7ed04e54f0e6",
   "course-ch1-v1-script": "c0f078c0eea1727d7fc1c11eefda2610d8768a19a5c8da031a32a899ee39b2f1",
   "course-ch2-v1-script": "98b9883ba6c60f04ecd0e025ab049b69bcddecec79e653afd52bcf0c30b9ab6b",
   "course-ch3-v1-script": "1e330c10c4a9c87fa82ac68c1aeaa39058c0b0feb5967a6306e6046f9cef5d0b",
@@ -39,5 +39,5 @@
   "course-ch12-v1-script": "c6f455d6613e0b9c0c157e04d4f150389e6658074d273a448b21ead1d782bbb3",
   "course-ch13-v1-script": "19f16e53bf1f86dcf38d31bd8a96604aab1396e09a2553eb2a187d2b9a6942cf",
   "course-ch14-v1-script": "fe18eedb9de0caf3362bf1933ffbf18163370fff68a6c427e758612037b5e1b0",
-  "_game-app-excluding-material": "e8e8e9bf0ac3f6d3b8211e44ed23e88e89aaf4d069c3912343201758ab6dadcd"
+  "_game-app-excluding-material": "6243887907f0f828196db176683aece5754fe18653443c166f17925221d500f3"
 }
