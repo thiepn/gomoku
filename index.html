@@ -849,7 +849,9 @@ if(typeof module==='object'&&module.exports)module.exports={createV5EngineFactor
     maximum:{label:'Master',seal:'八',timeMs:3400,maxDepth:10,width:22,randomPool:1,humanTag:'Strongest policy',description:'Strongest available local policy. No deliberate humanized deviation from the searched best move.'}
   };
   const rules={
-    'renju-practice':{label:'Renju',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes are forbidden. White: five or more.'}
+    'renju-practice':{label:'Renju',short:'Renju',description:'Black: exactly five; overlines, double-fours and genuine double-threes are forbidden. White: five or more.'},
+    'exact-five':{label:'Gomoku · exact five',short:'Exact five',description:'Legacy/import compatibility only. New playable games use Renju.'},
+    freestyle:{label:'Gomoku · freestyle',short:'Freestyle',description:'Legacy/import compatibility only. New playable games use Renju.'}
   };
   const openings=[
     {id:'empty',label:'Empty board',moves:[]},
@@ -2714,7 +2716,7 @@ for(const [k,cfg]of Object.entries(CFG)){
   const label=document.createElement('span'),strong=document.createElement('b'),small=document.createElement('small');strong.textContent=cfg.label;small.textContent=cfg.humanTag||'Human-calibrated';label.append(strong,small);b.append(no,label);$('levels').append(b);
   for(const id of ['levelSelect','whiteLevelSelect','newWhiteLevelSelect']){const o=document.createElement('option');o.value=k;o.textContent=cfg.label+' · '+(cfg.humanTag||'Human-calibrated');$(id).append(o);}
 }
-for(const [k,rule]of Object.entries(D.rules))for(const id of ['ruleSelect','editorRule']){const o=document.createElement('option');o.value=k;o.textContent=rule.label;$(id).append(o);}
+for(const [k,rule]of Object.entries(D.rules))if(k==='renju-practice')for(const id of ['ruleSelect','editorRule']){const o=document.createElement('option');o.value=k;o.textContent=rule.label;$(id).append(o);}
 for(const opening of D.openings){const o=document.createElement('option');o.value=opening.id;o.textContent=opening.label;$('openingSelect').append(o);}
 for(const theme of [...new Set(D.puzzles.map(p=>p.theme))]){
   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=theme+' · 4 drills';details.append(summary);if(theme==='Finish')details.open=true;
