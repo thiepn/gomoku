@@ -26,6 +26,8 @@ jobs:
           grep -q "link_identity" supabase/functions/gomoku-room/index.ts
           grep -q "black_user_id" supabase/migrations/20260930_gomoku_p6_online_player_identity_profiles.sql
           grep -q "'gomoku','Gomoku Studio'" supabase/migrations/20260930_gomoku_p6_online_player_identity_profiles.sql
+          grep -q "gomoku_player_stats" supabase/functions/gomoku-room/index.ts
+          grep -q "gomoku_player_stats" supabase/migrations/20260930_gomoku_p6_exact_player_stats.sql
       - name: Verify P6 browser source and syntax
         run: node online/test-player-profiles-ui.mjs
       - name: Exercise live anonymous and authorization compatibility
