@@ -25,5 +25,7 @@ jobs:
           grep -q "persistPendingMatch" supabase/functions/gomoku-room/index.ts
           grep -q "listHistory" supabase/functions/gomoku-room/index.ts
           grep -q "historyToken" supabase/functions/gomoku-room/index.ts
+      - name: Verify history UI source and syntax
+        run: node online/test-history-ui.mjs
       - name: Exercise live persistent history
         run: node online/test-history.mjs
