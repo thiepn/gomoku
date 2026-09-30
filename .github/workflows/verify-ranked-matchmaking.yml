@@ -1,0 +1,32 @@
+name: Ranked matchmaking verification
+on:
+  pull_request:
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml']
+  push:
+    branches: [main]
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gomoku-ranked-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ranked:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify P7 backend and schema markers
+        run: |
+          grep -q "gomoku_try_matchmaking" supabase/functions/gomoku-room/index.ts
+          grep -q "gomoku_ranked_leaderboard" supabase/functions/gomoku-room/index.ts
+          grep -q "gomoku_rating_events" supabase/functions/gomoku-room/index.ts
+          grep -q "gomoku_apply_ranked_result" supabase/migrations/20260930_gomoku_p7_ranked_rating_matchmaking.sql
+          grep -q "gomoku_ranked_summary" supabase/migrations/20260930_gomoku_p7_ranked_read_models.sql
+          grep -q "rankedMatchmaking" supabase/migrations/20260930_gomoku_p7_account_capabilities.sql
+      - name: Verify P7 browser source and syntax
+        run: node online/test-ranked-ui.mjs
+      - name: Exercise live P7 public/auth/casual contract
+        run: node online/test-ranked.mjs
