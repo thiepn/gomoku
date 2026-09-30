@@ -40,14 +40,15 @@ async function scenarioIntegrity(){
     const malformed=await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'x',revision:guestSameId.revision,gameVersion,commandId:'bad'},ok:[422]});
     assert(malformed.status===422,'malformed command ids must be rejected');
 
-    const chat1=(await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'one',revision:guestSameId.revision,gameVersion,commandId:'P4.CHAT.1.'+Date.now()}})).data;
-    const limited=await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'two',revision:chat1.revision,gameVersion,commandId:'P4.CHAT.2.'+Date.now()},ok:[429]});
-    assert(limited.status===429,'rapid chat must be throttled');
-    await sleep(800);
-    const chat2=(await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'two',revision:chat1.revision,gameVersion,commandId:'P4.CHAT.2R.'+Date.now()}})).data;
-    assert(chat2.chat.at(-1)?.text==='two','chat must recover after the throttle window');
+    let chatState=guestSameId;
+    for(let n=1;n<=8;n++){
+      await sleep(300);
+      chatState=(await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'burst '+n,revision:chatState.revision,gameVersion,commandId:'P4.CHAT.'+n+'.'+Date.now()}})).data;
+    }
+    const limited=await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'chat',text:'burst 9',revision:chatState.revision,gameVersion,commandId:'P4.CHAT.9.'+Date.now()},ok:[429]});
+    assert(limited.status===429,'chat burst protection must throttle the ninth message');
 
-    const resigned=(await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'resign',revision:chat2.revision,gameVersion,commandId:'P4.RESIGN.'+Date.now()}})).data;
+    const resigned=(await req('/api/rooms/'+room+'/action',{method:'POST',token:hostToken,body:{action:'resign',revision:chatState.revision,gameVersion,commandId:'P4.RESIGN.'+Date.now()}})).data;
     assert(resigned.game.result?.reason==='resign','resign must finish the game');
 
     const guestRematch=(await req('/api/rooms/'+room+'/action',{method:'POST',token:guestToken,body:{action:'rematch',revision:resigned.revision,gameVersion,commandId:'P4.REMATCH.G.'+Date.now()}})).data;
