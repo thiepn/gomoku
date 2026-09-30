@@ -1,0 +1,28 @@
+name: Online room lifecycle verification
+on:
+  pull_request:
+    paths: ['index.html','sw.js','online/**','supabase/**','.github/workflows/verify-online-lifecycle.yml']
+  push:
+    branches: [main]
+    paths: ['index.html','sw.js','online/**','supabase/**','.github/workflows/verify-online-lifecycle.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gomoku-online-lifecycle-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify versioned Edge Function markers
+        run: |
+          grep -q "PLAYER_STALE_TTL_MS=600000" supabase/functions/gomoku-room/index.ts
+          grep -q "async function leavePlayer" supabase/functions/gomoku-room/index.ts
+          grep -q "gomoku_room_player_presence" supabase/functions/gomoku-room/index.ts
+          grep -q "seat=!occupied.has(1)?1:2" supabase/functions/gomoku-room/index.ts
+      - name: Exercise live multiplayer lifecycle
+        run: node online/test-lifecycle.mjs
