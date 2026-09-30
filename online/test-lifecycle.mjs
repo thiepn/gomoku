@@ -13,7 +13,7 @@ const id=prefix=>(prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(
 async function leave(room,token,revision){if(!token)return;try{await req('/api/rooms/'+encodeURIComponent(room)+'/leave',{method:'POST',token,body:{revision},ok:[200,401,404,409]});}catch{}}
 
 async function scenarioDepartureAndReplacement(){
-  const room=id('P3LIFE');let hostToken='',guestToken='',replacementToken='',revision=0,spectatorId='';
+  const room=id('P3LIFE');let hostToken='',guestToken='',departedGuestToken='',replacementToken='',revision=0,spectatorId='';
   try{
     const created=(await req('/api/rooms',{method:'POST',body:{id:room,name:'P3 Host'}})).data;
     hostToken=created.token;revision=created.state.revision;
@@ -32,7 +32,7 @@ async function scenarioDepartureAndReplacement(){
     revision=move.revision;
     assert(move.game.moves.length===1,'first move should commit');
 
-    const left=(await req('/api/rooms/'+room+'/leave',{method:'POST',token:guestToken,body:{revision}})).data;
+    departedGuestToken=guestToken;const left=(await req('/api/rooms/'+room+'/leave',{method:'POST',token:guestToken,body:{revision}})).data;
     guestToken='';
     assert(left.left===true&&!left.roomDeleted,'guest leave should preserve host room');
     assert(left.state.players.length===1,'guest seat should be released');
@@ -46,8 +46,8 @@ async function scenarioDepartureAndReplacement(){
     assert(claimed.state.game.moves.length===0&&!claimed.state.game.result,'replacement should start a fresh round');
     assert(claimed.state.round===2,'replacement after a played round should advance round number');
 
-    const oldGuest=await req('/api/rooms/'+room,{token:'invalid-placeholder',ok:[401]});
-    assert(oldGuest.status===401,'invalid player session must be rejected');
+    const oldGuest=await req('/api/rooms/'+room,{token:departedGuestToken,ok:[401]});
+    assert(oldGuest.status===401,'departed player token must lose seat authorization');
 
     const listed=(await req('/api/rooms')).data.rooms.find(r=>r.id===room);
     assert(listed&&listed.playerCount===2&&listed.onlineCount===2,'lobby should report both replacement players online');
