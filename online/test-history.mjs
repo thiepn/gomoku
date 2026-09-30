@@ -15,6 +15,7 @@ const HX='P5_X_'+crypto.randomUUID().replaceAll('-','');
 async function leave(room,token){if(!token)return;try{await req('/api/rooms/'+room+'/leave',{method:'POST',token,body:{},ok:[200,401,404,409]});}catch{}}
 async function history(token){return (await req('/api/history',{method:'POST',body:{historyToken:token,limit:20}})).data.matches||[];}
 async function detail(token,room,version){return (await req('/api/history/'+room+'/'+version,{method:'POST',body:{historyToken:token}})).data;}
+async function forget(token,room,version){try{await req('/api/history/'+room+'/'+version+'/forget',{method:'POST',body:{historyToken:token},ok:[200,403,404]});}catch{}}
 
 async function scenarioDurableHistory(){
   const room=rid('P5HIST');let a='',b='';
@@ -54,7 +55,7 @@ async function scenarioDurableHistory(){
     assert(ha.filter(m=>m.roomId===room).length===2,'history must survive room deletion');
     d=await detail(HB,room,1);
     assert(d.roomId===room&&d.gameVersion===1,'saved detail must survive room deletion');
-  }finally{await leave(room,b);await leave(room,a);}
+  }finally{await leave(room,b);await leave(room,a);for(const v of [1,2]){await forget(HA,room,v);await forget(HB,room,v);}}
 }
 
 async function scenarioAbandonment(){
@@ -69,7 +70,7 @@ async function scenarioAbandonment(){
     const ha=await history(HA),hb=await history(HB);
     assert(ha.some(m=>m.roomId===room&&m.resultReason==='abandon'),'remaining player must receive abandonment history');
     assert(hb.some(m=>m.roomId===room&&m.resultReason==='abandon'),'departing player must also receive abandonment history');
-  }finally{await leave(room,b);await leave(room,a);}
+  }finally{await leave(room,b);await leave(room,a);await forget(HA,room,1);await forget(HB,room,1);}
 }
 
 await scenarioDurableHistory();
