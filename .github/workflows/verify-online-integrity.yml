@@ -1,0 +1,28 @@
+name: Online match integrity verification
+on:
+  pull_request:
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','.github/workflows/verify-online-integrity.yml']
+  push:
+    branches: [main]
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','.github/workflows/verify-online-integrity.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gomoku-online-integrity-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify P4 server markers
+        run: |
+          grep -q "function commandSeen" supabase/functions/gomoku-room/index.ts
+          grep -q "function enforceActionRate" supabase/functions/gomoku-room/index.ts
+          grep -q "function assertRoomState" supabase/functions/gomoku-room/index.ts
+          grep -q "gameVersion" supabase/functions/gomoku-room/index.ts
+      - name: Exercise live match integrity
+        run: node online/test-integrity.mjs
