@@ -1,0 +1,32 @@
+name: Online player identity verification
+on:
+  pull_request:
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml']
+  push:
+    branches: [main]
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gomoku-online-player-profiles-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify P6 backend and migration markers
+        run: |
+          grep -q "verifiedAccount" supabase/functions/gomoku-room/index.ts
+          grep -q "publicProfileByUsername" supabase/functions/gomoku-room/index.ts
+          grep -q "linkBrowserHistory" supabase/functions/gomoku-room/index.ts
+          grep -q "link_identity" supabase/functions/gomoku-room/index.ts
+          grep -q "black_user_id" supabase/migrations/20260930_gomoku_p6_online_player_identity_profiles.sql
+          grep -q "'gomoku','Gomoku Studio'" supabase/migrations/20260930_gomoku_p6_online_player_identity_profiles.sql
+      - name: Verify P6 browser source and syntax
+        run: node online/test-player-profiles-ui.mjs
+      - name: Exercise live anonymous and authorization compatibility
+        run: node online/test-player-profiles.mjs
