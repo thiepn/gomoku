@@ -1,0 +1,29 @@
+name: Online match history verification
+on:
+  pull_request:
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-history.yml']
+  push:
+    branches: [main]
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-history.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gomoku-online-history-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify P5 persistence markers
+        run: |
+          grep -q "gomoku_matches" supabase/functions/gomoku-room/index.ts
+          grep -q "makeCompletedMatch" supabase/functions/gomoku-room/index.ts
+          grep -q "persistPendingMatch" supabase/functions/gomoku-room/index.ts
+          grep -q "listHistory" supabase/functions/gomoku-room/index.ts
+          grep -q "historyToken" supabase/functions/gomoku-room/index.ts
+      - name: Exercise live persistent history
+        run: node online/test-history.mjs
