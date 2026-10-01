@@ -1,4 +1,4 @@
-name: Verify P9 competition operations
+name: Verify P10 competitive identity
 
 on:
   push:
@@ -8,10 +8,10 @@ on:
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
       - 'online/test-p8-competition.mjs'
-      - 'online/test-p9-competition.mjs'
+      - 'online/test-p9-competition.mjs'\n      - 'online/test-p10-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
-      - 'supabase/migrations/*gomoku_p9*.sql'
+      - 'supabase/migrations/*gomoku_p9*.sql'\n      - 'supabase/migrations/*gomoku_p10*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -22,10 +22,10 @@ on:
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
       - 'online/test-p8-competition.mjs'
-      - 'online/test-p9-competition.mjs'
+      - 'online/test-p9-competition.mjs'\n      - 'online/test-p10-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
-      - 'supabase/migrations/*gomoku_p9*.sql'
+      - 'supabase/migrations/*gomoku_p9*.sql'\n      - 'supabase/migrations/*gomoku_p10*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -51,20 +51,20 @@ jobs:
           python online/build-p8-client.py
       - name: Verify P9 source and live public contracts
         run: node online/test-p9-competition.mjs
-      - name: Ensure P9 builder is idempotent
+      - name: Ensure P10 builder is idempotent
         run: |
-          cp index.html /tmp/p9-index.html
-          cp sw.js /tmp/p9-sw.js
+          cp index.html /tmp/p10-index.html
+          cp sw.js /tmp/p10-sw.js
           python online/build-p8-client.py
-          cmp index.html /tmp/p9-index.html
-          cmp sw.js /tmp/p9-sw.js
-      - name: Commit generated P9 app shell
+          cmp index.html /tmp/p10-index.html
+          cmp sw.js /tmp/p10-sw.js
+      - name: Commit generated P10 app shell
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html sw.js review/build.py manifest.webmanifest
           if ! git diff --cached --quiet; then
-            git commit -m "P9: generate competition operations bundle"
+            git commit -m "P10: generate competitive identity bundle"
             git push
           fi
