@@ -1,4 +1,4 @@
-"""P11 competitive social bridge + UI embedding.
+"""P12 Fair Play, abuse controls & competitive trust UI embedding.
 
 Run after ui/build.py. Idempotent: replaces its own generated blocks.
 """
@@ -45,24 +45,42 @@ for tag,ident,filename in [
         s=s.replace('</body>',block+'\n</body>',1)
 
 
-# Route the existing verified-player profile entrypoint into the richer P10 profile.
+# Route the existing verified-player profile entrypoint into the richer competitive profile.
 profile_start='  async function openPlayerProfile(username){'
 profile_end='  function bindRoomProfileName(el,player){'
 a=s.find(profile_start)
 b=s.find(profile_end,a)
 if a<0 or b<0:
-    raise SystemExit('P10 player profile bridge anchors not found.')
+    raise SystemExit('Competitive player profile bridge anchors not found.')
 fallback=s[a:b]
 delegate="if(window.GomokuCompetition?.openPlayerProfile)return window.GomokuCompetition.openPlayerProfile(username);"
 if delegate not in fallback:
     delegated=profile_start+delegate+fallback[len(profile_start):]
     s=s[:a]+delegated+s[b:]
 
+
+# P12: explain ranked restrictions and repeat-opponent rating protection in generated core UI.
+restricted_marker="if(data.status==='restricted'){stopRankedPolling();"
+if restricted_marker not in s:
+    queue_anchor="roomRankedState.queue=data;roomRankedState.summary="
+    if s.count(queue_anchor)!=1:
+        raise SystemExit('P12 ranked queue anchor not unique.')
+    restricted="if(data.status==='restricted'){stopRankedPolling();roomRankedState.status='idle';roomRankedState.queue=null;const until=data.restrictedUntil?new Date(data.restrictedUntil).toLocaleString():'';roomRankedState.error=(data.reason==='abandonment_cooldown'?'Ranked cooldown after repeated abandonments':'Ranked access is temporarily restricted')+(until?' · until '+until:'');renderRankedPanel();toast(roomRankedState.error);return;}"
+    s=s.replace(queue_anchor,restricted+queue_anchor,1)
+
+protection_marker="Repeat-opponent protection:"
+if protection_marker not in s:
+    rating_anchor="postText+=' · Rating '+rr.before+' → '+rr.after+' ('+rankedDeltaText(delta)+')';"
+    if s.count(rating_anchor)!=1:
+        raise SystemExit('P12 ranked result anchor not unique.')
+    rating_patch=rating_anchor+"if(rr.protection&&rr.protection.level!=='none')postText+=' · Repeat-opponent protection: '+rr.protection.level+' K '+rr.protection.effectiveKFactor+'/'+rr.protection.baseKFactor;"
+    s=s.replace(rating_anchor,rating_patch,1)
+
 INDEX.write_text(s)
 
-cache='gomoku-v12.1.0-p11-social-rivalries-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.1.0-p12-fair-play-trust-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
 review.write_text(re.sub(r"gomoku-v12\.1\.0-[A-Za-z0-9.\-]+-analysis-2\.1\.0-review-ux-2\.1\.0",cache,review.read_text(),count=1))
-print('Embedded P11 social rivalry UI and core bridge.')
+print('Embedded P12 Fair Play trust UI and core bridge.')
