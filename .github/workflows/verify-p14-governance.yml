@@ -1,0 +1,40 @@
+name: Verify P14 competitive governance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/*gomoku_p14*.sql'
+      - 'online/test-p13-reliability.mjs'
+      - 'online/test-p14-governance.mjs'
+      - 'operations/P14-RUNBOOK.md'
+      - '.github/workflows/verify-p14-governance.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/*gomoku_p14*.sql'
+      - 'online/test-p13-reliability.mjs'
+      - 'online/test-p14-governance.mjs'
+      - 'operations/P14-RUNBOOK.md'
+      - '.github/workflows/verify-p14-governance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify P14 governance contracts
+        run: node online/test-p14-governance.mjs
+      - name: Verify migration has no public admin grants
+        shell: bash
+        run: |
+          ! grep -Eiq 'grant .*gomoku_(admin|incident|release|competitive_control).* to (public|anon|authenticated)' supabase/migrations/20261001_gomoku_p14_competitive_administration.sql
+          ! grep -Eiq 'security[[:space:]]+definer' supabase/migrations/20261001_gomoku_p14_competitive_administration.sql
