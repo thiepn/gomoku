@@ -52,6 +52,19 @@ for(const marker of [
   "version:'6.0.0'"
 ]) assert(html.includes(marker),'generated P13 index missing '+marker);
 
+const htmlConfig=fs.readFileSync('index.html','utf8');
+const apiBase=(htmlConfig.match(/const ROOM_API_BASE='([^']+)'/)||[])[1];
+const apiKey=(htmlConfig.match(/const ROOM_API_KEY='([^']+)'/)||[])[1];
+assert(apiBase&&apiKey,'generated room API configuration missing');
+const healthRes=await fetch(apiBase+'/api/health',{headers:{apikey:apiKey}});
+const health=await healthRes.json();
+assert(healthRes.ok,'live health endpoint returned '+healthRes.status+' '+JSON.stringify(health));
+assert(health.service==='gomoku-room'&&health.phase==='P13','live health identity/version mismatch');
+assert(['healthy','degraded','critical'].includes(health.status),'live health status invalid');
+assert(health.persistence&&Number.isFinite(Number(health.persistence.pending)),'live health persistence telemetry missing');
+const publicHealth=JSON.stringify(health);
+for(const forbidden of ['user_id','username','room_id','reporter','target_user'])assert(!publicHealth.includes(forbidden),'live health leaked private identifiers');
+
 const sw=fs.readFileSync('sw.js','utf8');
 assert(sw.includes('gomoku-v12.1.0-p13-reliability-recovery-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
 
