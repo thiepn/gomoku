@@ -1,4 +1,4 @@
-name: Verify P8 competition
+name: Verify P9 competition operations
 
 on:
   push:
@@ -8,8 +8,10 @@ on:
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
       - 'online/test-p8-competition.mjs'
+      - 'online/test-p9-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
+      - 'supabase/migrations/*gomoku_p9*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -20,6 +22,7 @@ on:
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
       - 'online/test-p8-competition.mjs'
+      - 'online/test-p9-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/20261001_gomoku_p8_seasons_tournaments.sql'
       - 'ui/build.py'
@@ -31,7 +34,7 @@ permissions:
   contents: write
 
 jobs:
-  p8:
+  p9:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -45,22 +48,22 @@ jobs:
         run: |
           python ui/build.py
           python online/build-p8-client.py
-      - name: Verify P8 source and live public contracts
-        run: node online/test-p8-competition.mjs
-      - name: Ensure P8 builder is idempotent
+      - name: Verify P9 source and live public contracts
+        run: node online/test-p9-competition.mjs
+      - name: Ensure P9 builder is idempotent
         run: |
-          cp index.html /tmp/p8-index.html
-          cp sw.js /tmp/p8-sw.js
+          cp index.html /tmp/p9-index.html
+          cp sw.js /tmp/p9-sw.js
           python online/build-p8-client.py
-          cmp index.html /tmp/p8-index.html
-          cmp sw.js /tmp/p8-sw.js
-      - name: Commit generated P8 app shell
+          cmp index.html /tmp/p9-index.html
+          cmp sw.js /tmp/p9-sw.js
+      - name: Commit generated P9 app shell
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html sw.js review/build.py manifest.webmanifest
           if ! git diff --cached --quiet; then
-            git commit -m "P8: generate competition client bundle"
+            git commit -m "P9: generate competition operations bundle"
             git push
           fi
