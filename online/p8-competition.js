@@ -170,7 +170,7 @@
       (a.connected&&a.username?'<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">RIVALRIES</p><h4>Recent opponents</h4></div><span>Based only on recorded games</span></div><div class="p11-player-grid">'+(recent.length?recent.map(x=>socialPlayerCard(x,{recent:true})).join(''):'<div class="p8-empty">Play verified opponents to build head-to-head history.</div>')+'</div></section>':'')+
       (a.connected&&a.username?'<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">FAVORITES</p><h4>Players you saved</h4></div><span>Private to you</span></div><div class="p11-player-grid">'+(favorites.length?favorites.map(x=>socialPlayerCard(x)).join(''):'<div class="p8-empty">Favorite players to keep them easy to find.</div>')+'</div></section>':'')+
       '<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">DISCOVER</p><h4>'+(model.communityQuery?'Search results':'Verified players')+'</h4></div><span>'+discover.length+' shown</span></div><div class="p11-player-grid">'+(discover.length?discover.map(x=>socialPlayerCard(x)).join(''):'<div class="p8-empty">No matching players.</div>')+'</div></section>'+
-      (a.connected&&a.username?trustSummaryMarkup():'')+
+      (a.connected&&a.username?trustSummaryMarkup().replace('id="p12TrustCenter"','id="p12TrustCenterDialog"'):'')+
       (a.connected&&a.username?'<section class="p11-section p11-preferences"><div><p class="eyebrow">PRIVACY & AVAILABILITY</p><h4>Community preferences</h4><p>Presence is coarse and never exposes your room. Favorites are always private.</p></div><label><input type="checkbox" id="p11AllowChallenges" '+(prefs.allowChallenges!==false?'checked':'')+'> Accept direct challenges</label><label><input type="checkbox" id="p11ShowPresence" '+(prefs.showPresence!==false?'checked':'')+'> Show online / in-game presence</label><button class="btn ghost" id="p11SavePrefs">Save</button></section>':'')+
     '</div>';
   }
@@ -199,7 +199,7 @@
     body.querySelectorAll('[data-p11-challenge]').forEach(b=>b.onclick=()=>sendChallenge(b.dataset.p11Challenge,b));
     body.querySelectorAll('[data-p11-ch-action]').forEach(b=>b.onclick=()=>challengeAction(b.dataset.id,b.dataset.p11ChAction,b));
     body.querySelectorAll('[data-p11-ch-open]').forEach(b=>b.onclick=()=>openChallenge(b.dataset.p11ChOpen,b));
-    if($('p11SavePrefs'))$('p11SavePrefs').onclick=saveCommunityPreferences;if($('p12TrustCenter'))$('p12TrustCenter').onclick=openTrustCenter;
+    if($('p11SavePrefs'))$('p11SavePrefs').onclick=saveCommunityPreferences;if($('p12TrustCenterDialog'))$('p12TrustCenterDialog').onclick=openTrustCenter;
   }
   async function toggleFavorite(username,favorite){
     try{await accountPost('/api/community/favorite',{username,favorite});notify(favorite?'Player saved to favorites.':'Player removed from favorites.');await loadCommunity(model.communityQuery);renderCommunityDialog();render();}
