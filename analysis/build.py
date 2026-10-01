@@ -2,6 +2,7 @@
 Run after review/build.py and ui/build.py. No gameplay or course code changes.
 """
 from pathlib import Path
+# P9 release reproducibility marker: all builders must preserve the generated competition shell.
 import re,hashlib,json
 ROOT=Path(__file__).resolve().parents[1]
 p=ROOT/'index.html';s=p.read_text()
