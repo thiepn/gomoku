@@ -8,7 +8,7 @@
   const fmtTime = value => { try { return new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(new Date(value)); } catch { return ''; } };
   const bridge = () => window.GomokuCompetitionBridge || null;
   const notifyKey='gomoku.p9.competition.notified.v1';
-  let model={season:null,seasonPlayers:[],seasons:[],tournaments:[],detail:null,me:null,scope:'live',loading:false,error:''},mounted=false,refreshTimer=0,roomTimer=0;
+  let model={season:null,seasonPlayers:[],seasons:[],tournaments:[],detail:null,me:null,community:null,discover:[],communityQuery:'',scope:'live',loading:false,error:''},mounted=false,refreshTimer=0,roomTimer=0;
 
   async function publicGet(path){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.publicGet(path);}
   async function accountPost(path,body={}){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.accountPost(path,body);}
@@ -78,14 +78,14 @@
   async function openCareerProfile(username=account().username){
     const clean=String(username||'').trim();if(!clean)return;
     const own=account().connected&&account().username&&clean.toLowerCase()===String(account().username).toLowerCase(),d=ensureDialog(),body=$('p8CompetitionDetail');
-    if(!d.open)d.showModal();$('p8CompetitionKicker').textContent='PLAYER';$('p8CompetitionTitle').textContent='@'+clean;$('p8CompetitionSubtitle').textContent='Competitive identity & career';body.innerHTML='<div class="p8-loading">Loading competitive career…</div>';
+    if(!d.open)d.showModal();$('p8CompetitionKicker').textContent='PLAYER';$('p8CompetitionTitle').textContent='@'+clean;$('p8CompetitionSubtitle').textContent='Competitive identity, rivalry & career';body.innerHTML='<div class="p8-loading">Loading competitive career…</div>';
     try{
-      let data;
+      let data,profile=null,h2h=null;
       if(own){const res=await accountPost('/api/competition/career',{});data=res.competitive;}
-      else{const res=await publicGet('/api/profiles/'+encodeURIComponent(clean));data=res.profile?.competitive;}
+      else{const res=await publicGet('/api/profiles/'+encodeURIComponent(clean));profile=res.profile||null;data=profile?.competitive;if(account().connected){try{h2h=await accountPost('/api/community/head-to-head/'+encodeURIComponent(clean),{});}catch{}}}
       if(!data)throw Error('Competitive profile is unavailable.');
-      body.innerHTML=careerProfileMarkup(clean,data,own);
-      if(own)wireShowcase(clean,data);
+      body.innerHTML=profileSocialMarkup(clean,profile,h2h)+careerProfileMarkup(clean,data,own);
+      if(own)wireShowcase(clean,data);else wireProfileSocial(clean);
     }catch(err){body.innerHTML='<p class="p8-error">'+esc(err?.message||'Could not load competitive profile.')+'</p>';}
   }
   function wireShowcase(username,data){
@@ -95,6 +95,110 @@
     body.querySelectorAll('[data-p10-pick]').forEach(b=>b.onclick=()=>{const code=b.dataset.p10Pick;if(selected.has(code))selected.delete(code);else if(selected.size<3)selected.add(code);else{notify('Choose at most three showcase achievements.');return;}update();});
     const save=$('p10SaveShowcase');if(save)save.onclick=async()=>{save.disabled=true;try{const res=await accountPost('/api/competition/showcase',{codes:[...selected]});notify('Competitive showcase updated.');body.innerHTML=careerProfileMarkup(username,res.competitive,true);wireShowcase(username,res.competitive);await refresh(true);}catch(err){notify(err?.message||'Could not save showcase.');}finally{save.disabled=false;}};
     update();
+  }
+
+  function presenceLabel(status){return status==='in_game'?'In game':status==='online'?'Online':'Offline';}
+  function favoriteNames(){return new Set((model.community?.favorites||[]).map(x=>String(x.username||'').toLowerCase()));}
+  function socialPlayerCard(p,{recent=false}={}){
+    const favorite=favoriteNames().has(String(p.username||'').toLowerCase())||p.favorite===true,h=p.headToHead||null;
+    return '<div class="p11-player-card"><button class="p11-player-main" data-p11-profile="'+esc(p.username)+'"><span class="p11-presence '+esc(p.presence||'offline')+'"></span><span><b>@'+esc(p.username)+'</b><small>'+esc(p.tier||'Unrated')+' · '+Number(p.rating||1500)+' rating · '+esc(presenceLabel(p.presence))+'</small></span></button>'+
+      (recent&&h?'<div class="p11-h2h"><b>'+Number(h.wins||0)+'-'+Number(h.draws||0)+'-'+Number(h.losses||0)+'</b><span>head-to-head · '+Number(h.games||0)+' games</span></div>':'')+
+      '<div class="p11-player-actions"><button class="btn ghost" data-p11-favorite="'+esc(p.username)+'" data-on="'+favorite+'">'+(favorite?'★':'☆')+'</button><button class="btn ghost" data-p11-challenge="'+esc(p.username)+'" '+(p.canChallenge===false?'disabled':'')+'>Challenge</button></div></div>';
+  }
+  function communitySummaryMarkup(){
+    const a=account(),discover=model.discover||[];
+    if(!a.connected||!a.username){
+      return '<section class="p11-community-card"><div><p class="eyebrow">COMMUNITY</p><h4>Players & rivalries</h4><span>Discover verified players. Connect THIEPN Account for favorites, challenges and head-to-head records.</span></div><div class="p11-community-preview">'+discover.slice(0,4).map(x=>'<button data-p11-profile="'+esc(x.username)+'"><span class="p11-presence '+esc(x.presence||'offline')+'"></span>@'+esc(x.username)+' <small>'+Number(x.rating||1500)+'</small></button>').join('')+'</div><button class="btn ghost" id="p11Community">Discover players</button></section>';
+    }
+    const c=model.community||{},incoming=(c.challenges||[]).filter(x=>x.direction==='incoming'&&x.status==='pending').length,recent=(c.recentOpponents||[]).slice(0,3),favorites=(c.favorites||[]).slice(0,3);
+    return '<section class="p11-community-card"><div class="p11-community-copy"><p class="eyebrow">COMMUNITY</p><h4>Players & rivalries</h4><span>'+(incoming?incoming+' incoming challenge'+(incoming===1?'':'s'):'Recent opponents, favorites and direct Renju challenges')+'</span></div><div class="p11-community-stats"><div><b>'+Number((c.recentOpponents||[]).length)+'</b><span>recent rivals</span></div><div><b>'+Number((c.favorites||[]).length)+'</b><span>favorites</span></div><div><b>'+incoming+'</b><span>incoming</span></div></div><div class="p11-community-preview">'+[...recent,...favorites].slice(0,4).map(x=>'<button data-p11-profile="'+esc(x.username)+'"><span class="p11-presence '+esc(x.presence||'offline')+'"></span>@'+esc(x.username)+' <small>'+Number(x.rating||1500)+'</small></button>').join('')+'</div><button class="btn ghost" id="p11Community">Open community</button></section>';
+  }
+  function challengeMarkup(ch){
+    const pending=ch.status==='pending',incoming=ch.direction==='incoming',accepted=ch.status==='accepted';
+    let actions='';
+    if(pending&&incoming)actions='<button class="btn" data-p11-ch-action="accept" data-id="'+esc(ch.id)+'">Accept</button><button class="btn ghost" data-p11-ch-action="decline" data-id="'+esc(ch.id)+'">Decline</button>';
+    else if(pending)actions='<button class="btn ghost" data-p11-ch-action="cancel" data-id="'+esc(ch.id)+'">Cancel</button>';
+    else if(accepted&&ch.roomId)actions='<button class="btn" data-p11-ch-open="'+esc(ch.id)+'">Open match</button>';
+    return '<div class="p11-challenge" data-state="'+esc(ch.status)+'"><div><span class="p11-direction">'+(incoming?'Incoming from':'Sent to')+'</span><b>@'+esc(ch.other)+'</b><small>'+esc(ch.status)+(ch.expiresAt&&pending?' · expires '+fmtTime(ch.expiresAt):'')+'</small></div><div>'+actions+'</div></div>';
+  }
+  function communityDialogMarkup(){
+    const a=account(),c=model.community||{},discover=model.discover||[],recent=c.recentOpponents||[],favorites=c.favorites||[],challenges=c.challenges||[],prefs=c.preferences||{allowChallenges:true,showPresence:true};
+    return '<div class="p11-community"><section class="p11-community-toolbar"><div><p class="eyebrow">PLAYER DISCOVERY</p><h3>Find people to play</h3><p>Verified profiles, actual head-to-head records, private favorites, and opt-in direct challenges.</p></div><div class="p11-search"><input id="p11Search" maxlength="20" value="'+esc(model.communityQuery||'')+'" placeholder="Search username" aria-label="Search players"><button class="btn" id="p11SearchBtn">Search</button></div></section>'+
+      (a.connected&&a.username?'<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">CHALLENGES</p><h4>Invitations</h4></div><span>'+challenges.length+' active</span></div><div class="p11-challenge-list">'+(challenges.length?challenges.map(challengeMarkup).join(''):'<div class="p8-empty">No pending or active direct challenges.</div>')+'</div></section>':'')+
+      (a.connected&&a.username?'<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">RIVALRIES</p><h4>Recent opponents</h4></div><span>Based only on recorded games</span></div><div class="p11-player-grid">'+(recent.length?recent.map(x=>socialPlayerCard(x,{recent:true})).join(''):'<div class="p8-empty">Play verified opponents to build head-to-head history.</div>')+'</div></section>':'')+
+      (a.connected&&a.username?'<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">FAVORITES</p><h4>Players you saved</h4></div><span>Private to you</span></div><div class="p11-player-grid">'+(favorites.length?favorites.map(x=>socialPlayerCard(x)).join(''):'<div class="p8-empty">Favorite players to keep them easy to find.</div>')+'</div></section>':'')+
+      '<section class="p11-section"><div class="p11-section-head"><div><p class="eyebrow">DISCOVER</p><h4>'+(model.communityQuery?'Search results':'Verified players')+'</h4></div><span>'+discover.length+' shown</span></div><div class="p11-player-grid">'+(discover.length?discover.map(x=>socialPlayerCard(x)).join(''):'<div class="p8-empty">No matching players.</div>')+'</div></section>'+
+      (a.connected&&a.username?'<section class="p11-section p11-preferences"><div><p class="eyebrow">PRIVACY & AVAILABILITY</p><h4>Community preferences</h4><p>Presence is coarse and never exposes your room. Favorites are always private.</p></div><label><input type="checkbox" id="p11AllowChallenges" '+(prefs.allowChallenges!==false?'checked':'')+'> Accept direct challenges</label><label><input type="checkbox" id="p11ShowPresence" '+(prefs.showPresence!==false?'checked':'')+'> Show online / in-game presence</label><button class="btn ghost" id="p11SavePrefs">Save</button></section>':'')+
+    '</div>';
+  }
+  async function loadCommunity(query=model.communityQuery||''){
+    model.communityQuery=String(query||'').trim().slice(0,20);
+    const a=account(),tasks=[publicGet('/api/community/discover?limit=30'+(model.communityQuery?'&q='+encodeURIComponent(model.communityQuery):''))];
+    if(a.connected)tasks.push(accountPost('/api/community/me',{}));
+    const [discover,me]=await Promise.all(tasks);
+    model.discover=Array.isArray(discover.players)?discover.players:[];
+    if(me)model.community=me;
+    return model.community;
+  }
+  async function openCommunity(query=model.communityQuery||''){
+    const d=ensureDialog(),body=$('p8CompetitionDetail');if(!d.open)d.showModal();
+    $('p8CompetitionKicker').textContent='COMMUNITY';$('p8CompetitionTitle').textContent='Players & rivalries';$('p8CompetitionSubtitle').textContent='Lightweight social play · no public follower graph';
+    body.innerHTML='<div class="p8-loading">Loading players…</div>';
+    try{await loadCommunity(query);renderCommunityDialog();}
+    catch(err){body.innerHTML='<p class="p8-error">'+esc(err?.message||'Could not load community.')+'</p>';}
+  }
+  function renderCommunityDialog(){
+    const body=$('p8CompetitionDetail');if(!body)return;
+    body.innerHTML=communityDialogMarkup();
+    const search=$('p11Search'),go=$('p11SearchBtn');if(go)go.onclick=()=>openCommunity(search?.value||'');if(search)search.onkeydown=e=>{if(e.key==='Enter')openCommunity(search.value||'');};
+    body.querySelectorAll('[data-p11-profile]').forEach(b=>b.onclick=()=>openCareerProfile(b.dataset.p11Profile));
+    body.querySelectorAll('[data-p11-favorite]').forEach(b=>b.onclick=()=>toggleFavorite(b.dataset.p11Favorite,b.dataset.on!=='true'));
+    body.querySelectorAll('[data-p11-challenge]').forEach(b=>b.onclick=()=>sendChallenge(b.dataset.p11Challenge,b));
+    body.querySelectorAll('[data-p11-ch-action]').forEach(b=>b.onclick=()=>challengeAction(b.dataset.id,b.dataset.p11ChAction,b));
+    body.querySelectorAll('[data-p11-ch-open]').forEach(b=>b.onclick=()=>openChallenge(b.dataset.p11ChOpen,b));
+    if($('p11SavePrefs'))$('p11SavePrefs').onclick=saveCommunityPreferences;
+  }
+  async function toggleFavorite(username,favorite){
+    try{await accountPost('/api/community/favorite',{username,favorite});notify(favorite?'Player saved to favorites.':'Player removed from favorites.');await loadCommunity(model.communityQuery);renderCommunityDialog();render();}
+    catch(err){notify(err?.message||'Could not update favorite.');}
+  }
+  async function sendChallenge(username,button){
+    if(!account().connected){notify('Connect THIEPN Account to send direct challenges.');return;}
+    button.disabled=true;
+    try{await accountPost('/api/community/challenges',{username});notify('Challenge sent to @'+username+'.');await loadCommunity(model.communityQuery);renderCommunityDialog();render();}
+    catch(err){notify(err?.message||'Could not send challenge.');}
+    finally{button.disabled=false;}
+  }
+  async function challengeAction(id,action,button){
+    button.disabled=true;
+    try{
+      const data=await accountPost('/api/community/challenges/'+encodeURIComponent(id),{action});
+      if(action==='accept'&&data?.id&&data?.state){const ok=await bridge()?.enterChallenge?.(data);if(ok){$('p8CompetitionDialog')?.close();notify('Challenge accepted.');}}
+      else notify(action==='decline'?'Challenge declined.':action==='cancel'?'Challenge cancelled.':'Challenge updated.');
+      await loadCommunity(model.communityQuery);if($('p8CompetitionDialog')?.open)renderCommunityDialog();render();
+    }catch(err){notify(err?.message||'Challenge action failed.');}
+    finally{button.disabled=false;}
+  }
+  async function openChallenge(id,button){
+    button.disabled=true;
+    try{const data=await accountPost('/api/community/challenges/'+encodeURIComponent(id)+'/open',{}),ok=await bridge()?.enterChallenge?.(data);if(ok){$('p8CompetitionDialog')?.close();notify('Direct challenge opened.');}}
+    catch(err){notify(err?.message||'Could not open challenge.');}
+    finally{button.disabled=false;}
+  }
+  async function saveCommunityPreferences(){
+    const button=$('p11SavePrefs');if(button)button.disabled=true;
+    try{await accountPost('/api/community/preferences',{allowChallenges:$('p11AllowChallenges')?.checked!==false,showPresence:$('p11ShowPresence')?.checked!==false});notify('Community preferences updated.');await loadCommunity(model.communityQuery);renderCommunityDialog();render();}
+    catch(err){notify(err?.message||'Could not save preferences.');}
+    finally{if(button)button.disabled=false;}
+  }
+  function profileSocialMarkup(username,profile,h2h){
+    if(!account().connected||String(username).toLowerCase()===String(account().username||'').toLowerCase())return '';
+    const fav=favoriteNames().has(String(username).toLowerCase()),record=h2h?.headToHead||null,pres=h2h?.presence||profile?.presence||'offline',canChallenge=(h2h?.canChallenge??profile?.canChallenge)!==false;
+    return '<section class="p11-profile-social"><div><span class="p11-presence '+esc(pres)+'"></span><div><p class="eyebrow">HEAD TO HEAD</p><h4>'+(record?Number(record.wins||0)+'-'+Number(record.draws||0)+'-'+Number(record.losses||0):'No games yet')+'</h4><span>'+(record?Number(record.games||0)+' recorded games · '+Number(record.ranked||0)+' ranked · '+Number(record.tournament||0)+' tournament':'@'+esc(username)+' is '+esc(presenceLabel(pres).toLowerCase()))+'</span></div></div><div><button class="btn ghost" id="p11ProfileFavorite">'+(fav?'★ Favorited':'☆ Favorite')+'</button><button class="btn" id="p11ProfileChallenge" '+(!canChallenge?'disabled':'')+'>Challenge</button></div></section>';
+  }
+  function wireProfileSocial(username){
+    if($('p11ProfileFavorite'))$('p11ProfileFavorite').onclick=async()=>{const fav=favoriteNames().has(String(username).toLowerCase());try{await accountPost('/api/community/favorite',{username,favorite:!fav});await loadCommunity(model.communityQuery);openCareerProfile(username);}catch(err){notify(err?.message||'Could not update favorite.');}};
+    if($('p11ProfileChallenge'))$('p11ProfileChallenge').onclick=async()=>{try{await accountPost('/api/community/challenges',{username});notify('Challenge sent to @'+username+'.');await loadCommunity(model.communityQuery);openCareerProfile(username);}catch(err){notify(err?.message||'Could not send challenge.');}};
   }
   function tournamentRow(t){
     const open=t.status==='registration'&&t.joined<t.size,archive=['completed','cancelled'].includes(t.status);
@@ -114,7 +218,8 @@
       (model.error?'<p class="p8-error">'+esc(model.error)+'</p>':'')+
       seasonMarkup()+
       careerMarkup()+
-      '<div class="p8-cups-head><div><p class="eyebrow">RENJU CUPS</p><h4>'+(model.scope==='archive'?'Tournament archive':'Live tournaments')+'</h4></div><div class="p9-scope-tabs"><button data-p9-scope="live" aria-pressed="'+(model.scope==='live')+'">Live</button><button data-p9-scope="archive" aria-pressed="'+(model.scope==='archive')+'">Archive</button></div></div>'+
+      communitySummaryMarkup()+
+      '<div class="p8-cups-head"><div><p class="eyebrow">RENJU CUPS</p><h4>'+(model.scope==='archive'?'Tournament archive':'Live tournaments')+'</h4></div><div class="p9-scope-tabs"><button data-p9-scope="live" aria-pressed="'+(model.scope==='live')+'">Live</button><button data-p9-scope="archive" aria-pressed="'+(model.scope==='archive')+'">Archive</button></div></div>'+
       (model.scope==='live'?'<div class="p8-create">'+(a.connected&&a.username?
         '<input id="p8CupName" maxlength="48" placeholder="Tournament name" aria-label="Tournament name"><select id="p8CupSize" aria-label="Tournament size"><option value="4">4 players</option><option value="8" selected>8 players</option></select><button class="btn" id="p8CreateCup">Create cup</button>':
         '<p>Connect THIEPN Account and create a public username to enter or create tournaments.</p>')+'</div>':'')+
@@ -124,6 +229,8 @@
     if($('p9Alerts'))$('p9Alerts').onclick=enableAlerts;
     if($('p9SeasonHistory'))$('p9SeasonHistory').onclick=openSeasonHistory;
     if($('p10Career'))$('p10Career').onclick=()=>openCareerProfile();
+    if($('p11Community'))$('p11Community').onclick=()=>openCommunity();
+    host.querySelectorAll('[data-p11-profile]').forEach(b=>b.onclick=()=>openCareerProfile(b.dataset.p11Profile));
     host.querySelectorAll('[data-p9-season]').forEach(b=>b.onclick=()=>openSeason(b.dataset.p9Season));
     host.querySelectorAll('[data-p9-scope]').forEach(b=>b.onclick=()=>{model.scope=b.dataset.p9Scope;refresh(true);});
     host.querySelectorAll('[data-p8-open]').forEach(b=>b.onclick=()=>openCup(b.dataset.p8Open));
@@ -149,6 +256,11 @@
     }
     saveNotified(seen);
   }
+  function detectChallenges(community){
+    const incoming=(community?.challenges||[]).filter(x=>x.direction==='incoming'&&x.status==='pending'),seen=notifiedSet();
+    for(const ch of incoming){const key='challenge:'+ch.id;if(seen.has(key))continue;seen.add(key);const msg='Direct challenge from @'+ch.other;notify(msg);if(typeof Notification!=='undefined'&&Notification.permission==='granted'){try{new Notification('Gomoku challenge',{body:msg,tag:'gomoku-'+key,renotify:false});}catch{}}}
+    saveNotified(seen);
+  }
   function scheduleRefresh(){
     clearTimeout(refreshTimer);
     if(!mounted||document.hidden)return;
@@ -157,11 +269,13 @@
   async function refresh(force=false){
     if(model.loading&&!force){scheduleRefresh();return;}model.loading=true;model.error='';
     try{
-      const tasks=[publicGet('/api/seasons/current?limit=20'),publicGet('/api/seasons?limit=8'),publicGet('/api/tournaments?scope='+encodeURIComponent(model.scope)+'&limit=50')];
-      if(account().connected)tasks.push(accountPost('/api/competition/me',{}));
-      const [season,seasons,cups,me]=await Promise.all(tasks);
-      model.season=season.season||null;model.seasonPlayers=Array.isArray(season.players)?season.players:[];model.seasons=Array.isArray(seasons.seasons)?seasons.seasons:[];model.tournaments=Array.isArray(cups.tournaments)?cups.tournaments:[];model.me=me||null;
-      if(me)detectAssignments(me);
+      const a=account(),base=[publicGet('/api/seasons/current?limit=20'),publicGet('/api/seasons?limit=8'),publicGet('/api/tournaments?scope='+encodeURIComponent(model.scope)+'&limit=50')];
+      const [season,seasons,cups]=await Promise.all(base);
+      let me=null,community=null,discover=null;
+      if(a.connected)[me,community,discover]=await Promise.all([accountPost('/api/competition/me',{}),accountPost('/api/community/me',{}),publicGet('/api/community/discover?limit=12')]);
+      else discover=await publicGet('/api/community/discover?limit=12');
+      model.season=season.season||null;model.seasonPlayers=Array.isArray(season.players)?season.players:[];model.seasons=Array.isArray(seasons.seasons)?seasons.seasons:[];model.tournaments=Array.isArray(cups.tournaments)?cups.tournaments:[];model.me=me||null;model.community=community||null;model.discover=Array.isArray(discover?.players)?discover.players:[];
+      if(me)detectAssignments(me);if(community)detectChallenges(community);
     }catch(err){model.error=err?.message||'Competition data could not be loaded.';}
     finally{model.loading=false;render();scheduleRefresh();}
   }
@@ -270,12 +384,16 @@
     const d=ensureDialog(),body=$('p8CompetitionDetail');if(!d.open)d.showModal();$('p8CompetitionKicker').textContent='SEASONS';$('p8CompetitionTitle').textContent='Season history';$('p8CompetitionSubtitle').textContent='Quarterly ranked archives';const rows=model.seasons||[];body.innerHTML='<div class="p9-season-history">'+rows.map(s=>'<button data-p9-open-season="'+esc(s.code)+'"><span><b>'+esc(s.name)+'</b><small>'+fmtDate(s.startsAt)+' – '+fmtDate(s.endsAt)+'</small></span><span><em data-state="'+esc(s.status)+'">'+esc(s.status)+'</em>'+(s.champion?'<small>Champion @'+esc(s.champion)+'</small>':'')+'</span></button>').join('')+'</div>';body.querySelectorAll('[data-p9-open-season]').forEach(b=>b.onclick=()=>openSeason(b.dataset.p9OpenSeason));
   }
   function renderRoomBanner(){
-    const info=bridge()?.room?.(),hud=$('roomMatchHud');
-    if(!hud)return;
-    let banner=$('p9TournamentRoomBanner');
-    if(!info?.state?.tournament){if(banner)banner.remove();return;}
+    const info=bridge()?.room?.(),hud=$('roomMatchHud');if(!hud)return;
+    let banner=$('p9TournamentRoomBanner'),t=info?.state?.tournament,ch=info?.state?.challenge;
+    if(!t&&!ch){if(banner)banner.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='p9TournamentRoomBanner';banner.className='p9-room-banner';hud.prepend(banner);}
-    const t=info.state.tournament,ops=info.state.tournamentOps||{},spectator=info.role==='spectator',status=info.state.game?.result||info.state.game?.terminal?'Result recorded':ops.startedAt?'Match in progress':ops.youCheckedIn===true?(ops.opponentCheckedIn?'Both players checked in':'Checked in · waiting for opponent'):'Tournament match';
+    if(ch){
+      const you=String(info.state.you?.profileUsername||''),other=(info.state.players||[]).find(p=>String(p.profileUsername||'')&&String(p.profileUsername)!==you)?.profileUsername||'Opponent',done=!!(info.state.game?.result||info.state.game?.terminal);
+      banner.innerHTML='<div><span class="eyebrow">DIRECT CHALLENGE</span><b>'+(done?'Challenge game complete':'Playing @'+esc(other))+'</b><small>Account-bound Renju match · '+(Number(info.state.spectatorCount)||0)+' watching</small></div><button class="btn ghost" id="p11OpponentProfile">Opponent profile</button>';
+      $('p11OpponentProfile').onclick=()=>openCareerProfile(other);return;
+    }
+    const ops=info.state.tournamentOps||{},spectator=info.role==='spectator',status=info.state.game?.result||info.state.game?.terminal?'Result recorded':ops.startedAt?'Match in progress':ops.youCheckedIn===true?(ops.opponentCheckedIn?'Both players checked in':'Checked in · waiting for opponent'):'Tournament match';
     banner.innerHTML='<div><span class="eyebrow">TOURNAMENT · ROUND '+esc(t.round)+' · MATCH '+esc(t.slot)+'</span><b>'+esc(status)+'</b><small>'+(spectator?'Spectating · ':'')+(ops.readyDeadline&&!ops.startedAt?'check-in deadline '+fmtTime(ops.readyDeadline)+' · ':'')+(Number(info.state.spectatorCount)||0)+' watching</small></div><button class="btn ghost" id="p9ViewBracket">View bracket</button>';
     $('p9ViewBracket').onclick=()=>openCup(t.id);
   }
@@ -290,5 +408,5 @@
   const boot=()=>{if(!mount())setTimeout(boot,250);};boot();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('p8CompetitionPanel'))refresh(true);else clearTimeout(refreshTimer);});
   window.addEventListener('beforeunload',()=>{clearTimeout(refreshTimer);clearInterval(roomTimer);});
-  window.GomokuCompetition=Object.freeze({version:'3.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason,openPlayerProfile:openCareerProfile});
+  window.GomokuCompetition=Object.freeze({version:'4.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason,openPlayerProfile:openCareerProfile,openCommunity});
 })();
