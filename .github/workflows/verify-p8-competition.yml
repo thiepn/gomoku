@@ -9,7 +9,7 @@ on:
       - 'online/build-p8-client.py'
       - 'online/test-p8-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
-      - 'supabase/migrations/20261001_gomoku_p8_seasons_tournaments.sql'
+      - 'supabase/migrations/*gomoku_p8*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
