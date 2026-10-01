@@ -52,8 +52,10 @@ b=s.find(profile_end,a)
 if a<0 or b<0:
     raise SystemExit('P10 player profile bridge anchors not found.')
 fallback=s[a:b]
-delegated=profile_start+"if(window.GomokuCompetition?.openPlayerProfile)return window.GomokuCompetition.openPlayerProfile(username);"+fallback[len(profile_start):]
-s=s[:a]+delegated+s[b:]
+delegate="if(window.GomokuCompetition?.openPlayerProfile)return window.GomokuCompetition.openPlayerProfile(username);"
+if delegate not in fallback:
+    delegated=profile_start+delegate+fallback[len(profile_start):]
+    s=s[:a]+delegated+s[b:]
 
 INDEX.write_text(s)
 
