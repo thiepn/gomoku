@@ -101,9 +101,9 @@
   function favoriteNames(){return new Set((model.community?.favorites||[]).map(x=>String(x.username||'').toLowerCase()));}
   function socialPlayerCard(p,{recent=false}={}){
     const favorite=favoriteNames().has(String(p.username||'').toLowerCase())||p.favorite===true,h=p.headToHead||null;
+    const actions=account().connected?'<div class="p11-player-actions"><button class="btn ghost" data-p11-favorite="'+esc(p.username)+'" data-on="'+favorite+'" aria-label="'+(favorite?'Remove favorite':'Add favorite')+'">'+(favorite?'★':'☆')+'</button><button class="btn ghost" data-p11-challenge="'+esc(p.username)+'" '+(p.canChallenge===false?'disabled':'')+'>Challenge</button></div>':'';
     return '<div class="p11-player-card"><button class="p11-player-main" data-p11-profile="'+esc(p.username)+'"><span class="p11-presence '+esc(p.presence||'offline')+'"></span><span><b>@'+esc(p.username)+'</b><small>'+esc(p.tier||'Unrated')+' · '+Number(p.rating||1500)+' rating · '+esc(presenceLabel(p.presence))+'</small></span></button>'+
-      (recent&&h?'<div class="p11-h2h"><b>'+Number(h.wins||0)+'-'+Number(h.draws||0)+'-'+Number(h.losses||0)+'</b><span>head-to-head · '+Number(h.games||0)+' games</span></div>':'')+
-      '<div class="p11-player-actions"><button class="btn ghost" data-p11-favorite="'+esc(p.username)+'" data-on="'+favorite+'">'+(favorite?'★':'☆')+'</button><button class="btn ghost" data-p11-challenge="'+esc(p.username)+'" '+(p.canChallenge===false?'disabled':'')+'>Challenge</button></div></div>';
+      (recent&&h?'<div class="p11-h2h"><b>'+Number(h.wins||0)+'-'+Number(h.draws||0)+'-'+Number(h.losses||0)+'</b><span>head-to-head · '+Number(h.games||0)+' games</span></div>':'')+actions+'</div>';
   }
   function communitySummaryMarkup(){
     const a=account(),discover=model.discover||[];
@@ -208,7 +208,7 @@
     const a=account();
     if(!a.connected||!a.username||typeof Notification==='undefined')return '';
     const permission=Notification.permission;
-    return '<button class="btn ghost p9-alert-btn" id="p9Alerts" '+(permission==='denied'?'disabled':'')+'>'+(permission==='granted'?'Match alerts on':permission==='denied'?'Alerts blocked':'Enable match alerts')+'</button>';
+    return '<button class="btn ghost p9-alert-btn" id="p9Alerts" '+(permission==='denied'?'disabled':'')+'>'+(permission==='granted'?'Competition alerts on':permission==='denied'?'Alerts blocked':'Enable competition alerts')+'</button>';
   }
   function render(){
     const host=$('p8CompetitionPanel');if(!host)return;
@@ -390,7 +390,7 @@
     if(!banner){banner=document.createElement('div');banner.id='p9TournamentRoomBanner';banner.className='p9-room-banner';hud.prepend(banner);}
     if(ch){
       const you=String(info.state.you?.profileUsername||''),other=(info.state.players||[]).find(p=>String(p.profileUsername||'')&&String(p.profileUsername)!==you)?.profileUsername||'Opponent',done=!!(info.state.game?.result||info.state.game?.terminal);
-      banner.innerHTML='<div><span class="eyebrow">DIRECT CHALLENGE</span><b>'+(done?'Challenge game complete':'Playing @'+esc(other))+'</b><small>Account-bound Renju match · '+(Number(info.state.spectatorCount)||0)+' watching</small></div><button class="btn ghost" id="p11OpponentProfile">Opponent profile</button>';
+      banner.innerHTML='<div><span class="eyebrow">DIRECT CHALLENGE</span><b>'+(done?'Challenge game complete':'Playing @'+esc(other))+'</b><small>Private account-bound Renju match</small></div><button class="btn ghost" id="p11OpponentProfile">Opponent profile</button>';
       $('p11OpponentProfile').onclick=()=>openCareerProfile(other);return;
     }
     const ops=info.state.tournamentOps||{},spectator=info.role==='spectator',status=info.state.game?.result||info.state.game?.terminal?'Result recorded':ops.startedAt?'Match in progress':ops.youCheckedIn===true?(ops.opponentCheckedIn?'Both players checked in':'Checked in · waiting for opponent'):'Tournament match';
