@@ -7,11 +7,11 @@ on:
       - 'online/p8-competition.js'
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
-      - 'online/test-p8-competition.mjs'
-      - 'online/test-p9-competition.mjs'\n      - 'online/test-p10-competition.mjs'
+      - 'online/test-p10-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
-      - 'supabase/migrations/*gomoku_p9*.sql'\n      - 'supabase/migrations/*gomoku_p10*.sql'
+      - 'supabase/migrations/*gomoku_p9*.sql'
+      - 'supabase/migrations/*gomoku_p10*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -21,11 +21,11 @@ on:
       - 'online/p8-competition.js'
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
-      - 'online/test-p8-competition.mjs'
-      - 'online/test-p9-competition.mjs'\n      - 'online/test-p10-competition.mjs'
+      - 'online/test-p10-competition.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
-      - 'supabase/migrations/*gomoku_p9*.sql'\n      - 'supabase/migrations/*gomoku_p10*.sql'
+      - 'supabase/migrations/*gomoku_p9*.sql'
+      - 'supabase/migrations/*gomoku_p10*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -35,7 +35,7 @@ permissions:
   contents: write
 
 jobs:
-  p9:
+  p10:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,8 +49,12 @@ jobs:
         run: |
           python ui/build.py
           python online/build-p8-client.py
-      - name: Verify P9 source and live public contracts
-        run: node online/test-p9-competition.mjs
+      - name: Validate P10 source syntax
+        run: |
+          node --check online/p8-competition.js
+          python -m py_compile online/build-p8-client.py
+      - name: Verify P10 source and live public contracts
+        run: node online/test-p10-competition.mjs
       - name: Ensure P10 builder is idempotent
         run: |
           cp index.html /tmp/p10-index.html
