@@ -1,4 +1,4 @@
-name: Verify P11 competitive social layer
+name: Verify P12 fair play and competitive trust
 
 on:
   push:
@@ -7,12 +7,13 @@ on:
       - 'online/p8-competition.js'
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
-      - 'online/test-p11-social.mjs'
+      - 'online/test-p12-fair-play.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
       - 'supabase/migrations/*gomoku_p9*.sql'
       - 'supabase/migrations/*gomoku_p10*.sql'
       - 'supabase/migrations/*gomoku_p11*.sql'
+      - 'supabase/migrations/*gomoku_p12*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -22,12 +23,13 @@ on:
       - 'online/p8-competition.js'
       - 'online/p8-competition.css'
       - 'online/build-p8-client.py'
-      - 'online/test-p11-social.mjs'
+      - 'online/test-p12-fair-play.mjs'
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p8*.sql'
       - 'supabase/migrations/*gomoku_p9*.sql'
       - 'supabase/migrations/*gomoku_p10*.sql'
       - 'supabase/migrations/*gomoku_p11*.sql'
+      - 'supabase/migrations/*gomoku_p12*.sql'
       - 'ui/build.py'
       - 'analysis/build.py'
       - 'review/build.py'
@@ -37,7 +39,7 @@ permissions:
   contents: write
 
 jobs:
-  p11:
+  p12:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -51,26 +53,26 @@ jobs:
         run: |
           python ui/build.py
           python online/build-p8-client.py
-      - name: Validate P11 source syntax
+      - name: Validate P12 source syntax
         run: |
           node --check online/p8-competition.js
           python -m py_compile online/build-p8-client.py
-      - name: Verify P11 source and live public contracts
-        run: node online/test-p11-social.mjs
-      - name: Ensure P11 builder is idempotent
+      - name: Verify P12 source and generated contracts
+        run: node online/test-p12-fair-play.mjs
+      - name: Ensure P12 builder is idempotent
         run: |
-          cp index.html /tmp/p11-index.html
-          cp sw.js /tmp/p11-sw.js
+          cp index.html /tmp/p12-index.html
+          cp sw.js /tmp/p12-sw.js
           python online/build-p8-client.py
-          cmp index.html /tmp/p11-index.html
-          cmp sw.js /tmp/p11-sw.js
-      - name: Commit generated P11 app shell
+          cmp index.html /tmp/p12-index.html
+          cmp sw.js /tmp/p12-sw.js
+      - name: Commit generated P12 app shell
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html sw.js review/build.py manifest.webmanifest
           if ! git diff --cached --quiet; then
-            git commit -m "P11: generate social rivalry bundle"
+            git commit -m "P12: generate Fair Play trust bundle"
             git push
           fi
