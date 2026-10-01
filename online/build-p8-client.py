@@ -1,4 +1,4 @@
-"""P9 competition operations bridge + UI embedding.
+"""P10 competitive identity bridge + UI embedding.
 
 Run after ui/build.py. Idempotent: replaces its own generated blocks.
 """
@@ -43,11 +43,23 @@ for tag,ident,filename in [
         if s.count('</body>')!=1:raise SystemExit('Expected one closing body tag.')
         s=s.replace('</body>',block+'\n</body>',1)
 
+
+# Route the existing verified-player profile entrypoint into the richer P10 profile.
+profile_start='  async function openPlayerProfile(username){'
+profile_end='  function bindRoomProfileName(el,player){'
+a=s.find(profile_start)
+b=s.find(profile_end,a)
+if a<0 or b<0:
+    raise SystemExit('P10 player profile bridge anchors not found.')
+fallback=s[a:b]
+delegated=profile_start+"if(window.GomokuCompetition?.openPlayerProfile)return window.GomokuCompetition.openPlayerProfile(username);"+fallback[len(profile_start):]
+s=s[:a]+delegated+s[b:]
+
 INDEX.write_text(s)
 
-cache='gomoku-v12.1.0-p9-competitive-ops-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.1.0-p10-competitive-identity-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
 review.write_text(re.sub(r"gomoku-v12\.1\.0-[A-Za-z0-9.\-]+-analysis-2\.1\.0-review-ux-2\.1\.0",cache,review.read_text(),count=1))
-print('Embedded P9 competition operations UI and core bridge.')
+print('Embedded P10 competitive identity UI and core bridge.')
