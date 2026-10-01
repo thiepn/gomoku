@@ -53,7 +53,8 @@ for(const marker of [
 ]) assert(html.includes(marker),'generated P13 index missing '+marker);
 
 const htmlConfig=fs.readFileSync('index.html','utf8');
-const apiBase=(htmlConfig.match(/const ROOM_API_BASE='([^']+)'/)||[])[1];
+const projectUrl=(htmlConfig.match(/const ROOM_PROJECT_URL='([^']+)'/)||[])[1];
+const apiBase=projectUrl?projectUrl+'/functions/v1/gomoku-room':null;
 const apiKey=(htmlConfig.match(/const ROOM_API_KEY='([^']+)'/)||[])[1];
 assert(apiBase&&apiKey,'generated room API configuration missing');
 const healthRes=await fetch(apiBase+'/api/health',{headers:{apikey:apiKey}});
