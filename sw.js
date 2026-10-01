@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-v12.1.0-p7-ranked-matchmaking-analysis-2.1.0-review-ux-2.1.0';
+const CACHE_NAME = 'gomoku-v12.1.0-p7-ranked-matchmaking-r2-analysis-2.1.0-review-ux-2.1.0';
 const APP_SHELL = [
   './',
   './index.html',
