@@ -8,7 +8,7 @@
   const fmtTime = value => { try { return new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(new Date(value)); } catch { return ''; } };
   const bridge = () => window.GomokuCompetitionBridge || null;
   const notifyKey='gomoku.p9.competition.notified.v1';
-  let model={season:null,seasonPlayers:[],seasons:[],tournaments:[],detail:null,me:null,community:null,trust:null,discover:[],communityQuery:'',scope:'live',loading:false,error:''},mounted=false,refreshTimer=0,roomTimer=0;
+  let model={season:null,seasonPlayers:[],seasons:[],tournaments:[],detail:null,me:null,community:null,trust:null,health:null,discover:[],communityQuery:'',scope:'live',loading:false,error:''},mounted=false,refreshTimer=0,roomTimer=0;
 
   async function publicGet(path){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.publicGet(path);}
   async function accountPost(path,body={}){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.accountPost(path,body);}
@@ -123,6 +123,28 @@
   }
 
   function activeUntil(value){return value&&new Date(value).getTime()>Date.now()?value:null;}
+
+  function reliabilitySummaryMarkup(){
+    const h=model.health,p=h?.persistence||{},e=h?.events15m||{},tick=h?.recoveryTick||{},status=String(h?.status||'unknown');
+    return '<section class="p13-reliability-card" data-state="'+esc(status)+'"><div><p class="eyebrow">RELIABILITY</p><h4>Competitive recovery</h4><span>'+(status==='healthy'?'Systems healthy · completed results protected by durable recovery':status==='degraded'?'Recovery system is handling a degraded condition':status==='critical'?'Competitive services require attention':'Health status unavailable')+'</span></div><div class="p13-reliability-mini"><div><b>'+Number(p.pending||0)+'</b><span>pending writes</span></div><div><b>'+Number(p.retrying||0)+'</b><span>retrying</span></div><div><b>'+Number(e.errors||0)+'</b><span>errors / 15m</span></div></div><button class="btn ghost" id="p13Reliability">Recovery & status</button></section>';
+  }
+  function reliabilityDetailMarkup(){
+    const h=model.health||{},p=h.persistence||{},e=h.events15m||{},tick=h.recoveryTick||{},status=String(h.status||'unknown'),last=tick.lastAt?fmtDate(tick.lastAt)+' '+fmtTime(tick.lastAt):'Not available';
+    return '<div class="p13-reliability"><section class="p13-health-hero" data-state="'+esc(status)+'"><div><p class="eyebrow">SERVICE STATUS</p><h3>'+esc(status.charAt(0).toUpperCase()+status.slice(1))+'</h3><p>Room state is authoritative. Completed matches are captured into a durable database outbox and retried independently if the fast persistence path fails.</p></div><div><b>'+Number(p.pending||0)+'</b><span>pending result writes</span></div></section>'+
+      '<section class="p13-health-grid"><div><b>'+Number(h.activeRooms||0)+'</b><span>active rooms</span></div><div><b>'+Number(h.competitiveRooms||0)+'</b><span>competitive rooms</span></div><div><b>'+Number(h.rankedQueue||0)+'</b><span>ranked queue</span></div><div><b>'+Number(h.rankedAssignments||0)+'</b><span>ranked assignments</span></div><div><b>'+Number(p.retrying||0)+'</b><span>outbox retries</span></div><div><b>'+Number(p.oldestPendingSeconds||0)+'s</b><span>oldest pending</span></div><div><b>'+Number(e.errors||0)+'</b><span>errors · 15 min</span></div><div><b>'+Number(e.warnings||0)+'</b><span>warnings · 15 min</span></div></section>'+
+      '<section class="p13-recovery-policy"><div><p class="eyebrow">RECOVERY LOOP</p><h4>Automatic reconciliation</h4><p>The server retries incomplete result persistence, removes stale ranked assignments and queue entries, and reconciles finished room snapshots every minute.</p></div><div class="p13-tick"><span>Latest tick</span><b>'+esc(tick.status||'unknown')+'</b><small>'+esc(last)+'</small></div></section>'+
+      '<p class="p13-health-note">This status is aggregate and intentionally contains no player identities, private room content, reports, or moderation data.</p></div>';
+  }
+  async function loadReliability(){
+    try{model.health=await publicGet('/api/health');return model.health;}catch{model.health=null;return null;}
+  }
+  async function openReliability(){
+    const d=ensureDialog(),body=$('p8CompetitionDetail');if(!d.open)d.showModal();
+    $('p8CompetitionKicker').textContent='RELIABILITY';$('p8CompetitionTitle').textContent='Recovery & status';$('p8CompetitionSubtitle').textContent='Durable result persistence · automatic reconciliation · aggregate telemetry';
+    body.innerHTML='<div class="p8-loading">Checking service health…</div>';
+    await loadReliability();
+    body.innerHTML=model.health?reliabilityDetailMarkup():'<p class="p8-error">Health telemetry is temporarily unavailable. Gameplay recovery continues independently on the server.</p>';
+  }
   function trustSummaryMarkup(){
     const t=model.trust;if(!account().connected||!t)return '';
     const st=t.state||{},ranked=activeUntil(st.rankedSuspendedUntil)||activeUntil(st.rankedCooldownUntil),challenges=activeUntil(st.challengesSuspendedUntil),blocked=(t.blocked||[]).length,reports=(t.reports||[]).length;
@@ -265,6 +287,7 @@
       careerMarkup()+
       communitySummaryMarkup()+
       trustSummaryMarkup()+
+      reliabilitySummaryMarkup()+
       '<div class="p8-cups-head"><div><p class="eyebrow">RENJU CUPS</p><h4>'+(model.scope==='archive'?'Tournament archive':'Live tournaments')+'</h4></div><div class="p9-scope-tabs"><button data-p9-scope="live" aria-pressed="'+(model.scope==='live')+'">Live</button><button data-p9-scope="archive" aria-pressed="'+(model.scope==='archive')+'">Archive</button></div></div>'+
       (model.scope==='live'?'<div class="p8-create">'+(a.connected&&a.username?
         '<input id="p8CupName" maxlength="48" placeholder="Tournament name" aria-label="Tournament name"><select id="p8CupSize" aria-label="Tournament size"><option value="4">4 players</option><option value="8" selected>8 players</option></select><button class="btn" id="p8CreateCup">Create cup</button>':
@@ -275,7 +298,7 @@
     if($('p9Alerts'))$('p9Alerts').onclick=enableAlerts;
     if($('p9SeasonHistory'))$('p9SeasonHistory').onclick=openSeasonHistory;
     if($('p10Career'))$('p10Career').onclick=()=>openCareerProfile();
-    if($('p11Community'))$('p11Community').onclick=()=>openCommunity();if($('p12TrustCenter'))$('p12TrustCenter').onclick=openTrustCenter;
+    if($('p11Community'))$('p11Community').onclick=()=>openCommunity();if($('p12TrustCenter'))$('p12TrustCenter').onclick=openTrustCenter;if($('p13Reliability'))$('p13Reliability').onclick=openReliability;
     host.querySelectorAll('[data-p11-profile]').forEach(b=>b.onclick=()=>openCareerProfile(b.dataset.p11Profile));
     host.querySelectorAll('[data-p9-season]').forEach(b=>b.onclick=()=>openSeason(b.dataset.p9Season));
     host.querySelectorAll('[data-p9-scope]').forEach(b=>b.onclick=()=>{model.scope=b.dataset.p9Scope;refresh(true);});
@@ -315,8 +338,8 @@
   async function refresh(force=false){
     if(model.loading&&!force){scheduleRefresh();return;}model.loading=true;model.error='';
     try{
-      const a=account(),base=[publicGet('/api/seasons/current?limit=20'),publicGet('/api/seasons?limit=8'),publicGet('/api/tournaments?scope='+encodeURIComponent(model.scope)+'&limit=50')];
-      const [season,seasons,cups]=await Promise.all(base);
+      const a=account(),base=[publicGet('/api/seasons/current?limit=20'),publicGet('/api/seasons?limit=8'),publicGet('/api/tournaments?scope='+encodeURIComponent(model.scope)+'&limit=50'),publicGet('/api/health').catch(()=>null)];
+      const [season,seasons,cups,health]=await Promise.all(base);model.health=health||null;
       let me=null,community=null,trust=null,discover=null;
       if(a.connected)[me,community,trust,discover]=await Promise.all([accountPost('/api/competition/me',{}),accountPost('/api/community/me',{}),accountPost('/api/trust/me',{}),publicGet('/api/community/discover?limit=12')]);
       else discover=await publicGet('/api/community/discover?limit=12');
@@ -456,5 +479,5 @@
   const boot=()=>{if(!mount())setTimeout(boot,250);};boot();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('p8CompetitionPanel'))refresh(true);else clearTimeout(refreshTimer);});
   window.addEventListener('beforeunload',()=>{clearTimeout(refreshTimer);clearInterval(roomTimer);});
-  window.GomokuCompetition=Object.freeze({version:'5.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason,openPlayerProfile:openCareerProfile,openCommunity,openTrustCenter,reportPlayer:openReportPlayer});
+  window.GomokuCompetition=Object.freeze({version:'6.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason,openPlayerProfile:openCareerProfile,openCommunity,openTrustCenter,openReliability,reportPlayer:openReportPlayer});
 })();
