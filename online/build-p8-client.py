@@ -1,4 +1,4 @@
-"""P10 competitive identity bridge + UI embedding.
+"""P11 competitive social bridge + UI embedding.
 
 Run after ui/build.py. Idempotent: replaces its own generated blocks.
 """
@@ -17,6 +17,7 @@ bridge=r"""/* P8_COMPETITION_BRIDGE_START */
     account:()=>({connected:roomAccountState.connected===true,username:roomAccountState.profile?.username||null}),
     detail:async id=>{const token=roomAccountToken();if(!token)return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch(ROOM_API_BASE+'/api/tournaments/'+encodeURIComponent(id),{headers:{apikey:ROOM_API_KEY,'X-Gomoku-Account-Token':token},signal:controller.signal,cache:'no-store'}),data=await res.json();if(!res.ok)throw Object.assign(Error(data.error||'Tournament request failed.'),{status:res.status});return data.tournament||null;}finally{clearTimeout(timer);}},
     enterTournament:async data=>{if(!data?.id||!data?.state)return false;if(network&&network.id===data.id)return true;if(network){toast('Leave the current room before opening a tournament match.');return false;}if(S.records.length&&!await archiveGame(true)){toast('Export or save the current game before opening the tournament match.');return false;}await enterRoom({...data,accountBound:true});return true;},
+    enterChallenge:async data=>{if(!data?.id||!data?.state)return false;if(network&&network.id===data.id)return true;if(network){toast('Leave the current room before opening the direct challenge.');return false;}if(S.records.length&&!await archiveGame(true)){toast('Export or save the current game before opening the challenge.');return false;}await enterRoom({...data,accountBound:true});return true;},
     spectateTournament:async roomId=>{const id=normalizeRoomCode(roomId);if(!id)throw Error('Tournament room is unavailable.');if(network&&network.id===id)return true;if(network){toast('Leave the current room before watching another match.');return false;}return await connectRoom({id,spectate:true});},
     room:()=>network?{id:network.id,role:network.role,state:network.state||null}:null,
     toast
@@ -59,9 +60,9 @@ if delegate not in fallback:
 
 INDEX.write_text(s)
 
-cache='gomoku-v12.1.0-p10-competitive-identity-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.1.0-p11-social-rivalries-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
 review.write_text(re.sub(r"gomoku-v12\.1\.0-[A-Za-z0-9.\-]+-analysis-2\.1\.0-review-ux-2\.1\.0",cache,review.read_text(),count=1))
-print('Embedded P10 competitive identity UI and core bridge.')
+print('Embedded P11 social rivalry UI and core bridge.')
