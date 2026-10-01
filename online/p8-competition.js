@@ -42,6 +42,60 @@
     const mine=model.me?.standing;
     return '<div class="p8-season-card"><div class="p9-season-copy"><p class="eyebrow">CURRENT SEASON</p><h4>'+esc(s.name)+'</h4><span>'+fmtDate(s.startsAt)+' – '+fmtDate(s.endsAt)+'</span>'+(mine?'<div class="p9-my-season"><b>#'+mine.rank+'</b><span>'+mine.points+' pts · '+mine.rating+' rating</span></div>':'')+'<div class="p9-season-actions"><button class="btn ghost" data-p9-season="'+esc(s.code)+'">Full standings</button><button class="btn ghost" id="p9SeasonHistory">Season history</button></div></div><div class="p8-season-board">'+(top||'<p class="tiny">No ranked games recorded this season yet.</p>')+'</div></div>';
   }
+  function careerMarkup(){
+    const c=model.me?.career,a=account();
+    if(!a.connected||!a.username)return '';
+    if(!c)return '<section class="p10-career-card"><div><p class="eyebrow">COMPETITIVE IDENTITY</p><h4>@'+esc(a.username)+'</h4><span>Your verified career appears after your first competitive result.</span></div><button class="btn ghost" id="p10Career">Open profile</button></section>';
+    const seasonBest=c.bestSeasonRank?'#'+c.bestSeasonRank:'—';
+    return '<section class="p10-career-card"><div class="p10-career-copy"><p class="eyebrow">COMPETITIVE IDENTITY</p><h4>@'+esc(a.username)+'</h4><span>Real accomplishments only · no XP or artificial levels</span></div><div class="p10-career-mini"><div><b>'+c.currentRating+'</b><span>rating</span></div><div><b>'+c.peakRating+'</b><span>peak</span></div><div><b>'+c.bestRankedWinStreak+'</b><span>best streak</span></div><div><b>'+c.tournamentTitles+'</b><span>cup titles</span></div><div><b>'+seasonBest+'</b><span>best season</span></div><div><b>'+Number(model.me?.achievementCount||0)+'</b><span>badges</span></div></div><button class="btn ghost" id="p10Career">Career & trophies</button></section>';
+  }
+  function achievementBadge(a,{selectable=false,selected=false}={}){
+    if(!a)return '';
+    const cls='p10-badge tier-'+esc(a.tier)+(selected?' is-selected':'')+(a.earned===false?' is-locked':'');
+    const attrs=selectable&&a.earned!==false?' data-p10-pick="'+esc(a.code)+'" aria-pressed="'+selected+'"':'';
+    const progress=a.earned===false?'<span class="p10-progress"><i style="width:'+Math.max(0,Math.min(100,Math.round((Number(a.value)||0)*100/Math.max(1,Number(a.target)||1))))+'%"></i></span><small>'+Math.min(Number(a.value)||0,Number(a.target)||1)+' / '+(Number(a.target)||1)+'</small>':a.earnedAt?'<small>Earned '+fmtDate(a.earnedAt)+'</small>':'';
+    const tag=selectable&&a.earned!==false?'button':'div';
+    return '<'+tag+' class="'+cls+'"'+attrs+'><span class="p10-badge-mark" aria-hidden="true"></span><div><b>'+esc(a.title)+'</b><span>'+esc(a.description)+'</span>'+progress+'</div></'+tag+'>';
+  }
+  function trophyMarkup(t){
+    const icon=t.type==='tournament_title'?'Cup':t.type==='season_title'?'#1':'#'+(t.rank||'');
+    return '<div class="p10-trophy"><b>'+esc(icon)+'</b><div><strong>'+esc(t.label||'Trophy')+'</strong><span>'+esc(t.name||'')+'</span><small>'+fmtDate(t.earnedAt)+'</small></div></div>';
+  }
+  function careerProfileMarkup(username,data,own=false){
+    const c=data?.career||{},showcase=data?.showcase||[],earned=data?.achievements||[],trophies=data?.trophies||[],seasons=data?.seasons||[],tournaments=data?.tournaments||[],progress=data?.progress||[];
+    const record=(c.rankedWins||0)+'-'+(c.rankedDraws||0)+'-'+(c.rankedLosses||0);
+    const showcaseCodes=new Set(showcase.map(x=>x.code));
+    const badgeRows=own&&progress.length?progress:earned;
+    return '<div class="p10-profile">'+
+      '<section class="p10-profile-hero"><div><p class="eyebrow">COMPETITIVE PROFILE</p><h3>@'+esc(username)+'</h3><p>Verified Renju results, tournament finishes, seasonal placements, and earned milestones.</p></div><div class="p10-showcase">'+(showcase.length?showcase.map(a=>achievementBadge(a)).join(''):'<div class="p8-empty">No featured achievements yet.</div>')+'</div></section>'+
+      '<section class="p10-record-grid"><div><b>'+Number(c.currentRating||1500)+'</b><span>Current rating</span></div><div><b>'+Number(c.peakRating||1500)+'</b><span>Peak rating</span></div><div><b>'+esc(record)+'</b><span>Ranked W-D-L</span></div><div><b>'+Number(c.bestRankedWinStreak||0)+'</b><span>Best ranked streak</span></div><div><b>'+Number(c.tournamentTitles||0)+'</b><span>Tournament titles</span></div><div><b>'+(c.bestSeasonRank?'#'+c.bestSeasonRank:'—')+'</b><span>Best season rank</span></div><div><b>'+Number(c.seasonPodiums||0)+'</b><span>Season podiums</span></div><div><b>'+Number(c.seasonsPlayed||0)+'</b><span>Seasons played</span></div></section>'+
+      '<section class="p10-section"><div class="p10-section-head"><div><p class="eyebrow">TROPHY CABINET</p><h4>Competitive finishes</h4></div><span>'+trophies.length+' trophies</span></div><div class="p10-trophy-grid">'+(trophies.length?trophies.map(trophyMarkup).join(''):'<div class="p8-empty">Tournament titles and season podiums appear here.</div>')+'</div></section>'+
+      '<section class="p10-section"><div class="p10-section-head"><div><p class="eyebrow">ACHIEVEMENTS</p><h4>'+(own?'Milestones & showcase':'Earned milestones')+'</h4></div><span>'+earned.length+' earned</span></div>'+(own?'<p class="p10-help">Choose up to three earned badges to feature on your public profile. Locked badges show factual progress toward the next milestone.</p>':'')+'<div class="p10-achievement-grid">'+(badgeRows.length?badgeRows.map(a=>achievementBadge(a,{selectable:own,selected:showcaseCodes.has(a.code)})).join(''):'<div class="p8-empty">No competitive achievements earned yet.</div>')+'</div>'+(own?'<div class="p10-save-row"><span id="p10ShowcaseCount">'+showcaseCodes.size+' / 3 selected</span><button class="btn" id="p10SaveShowcase">Save showcase</button></div>':'')+'</section>'+
+      '<section class="p10-section"><div class="p10-section-head"><div><p class="eyebrow">SEASONS</p><h4>Placement history</h4></div></div><div class="p10-history">'+(seasons.length?seasons.map(x=>'<div><span><b>'+esc(x.name)+'</b><small>'+esc(x.status)+'</small></span><strong>#'+x.rank+'</strong><em>'+x.points+' pts · '+x.wins+'-'+x.draws+'-'+x.losses+'</em></div>').join(''):'<div class="p8-empty">No seasonal ranked record yet.</div>')+'</div></section>'+
+      '<section class="p10-section"><div class="p10-section-head"><div><p class="eyebrow">TOURNAMENTS</p><h4>Event history</h4></div></div><div class="p10-history">'+(tournaments.length?tournaments.map(x=>'<div><span><b>'+esc(x.name)+'</b><small>'+esc(x.status)+(x.seed?' · seed #'+x.seed:'')+'</small></span><strong>'+(x.champion?'Champion':x.eliminatedAt?'Finished':'Active')+'</strong><em>'+fmtDate(x.completedAt||x.joinedAt)+'</em></div>').join(''):'<div class="p8-empty">No tournament record yet.</div>')+'</div></section>'+
+    '</div>';
+  }
+  async function openCareerProfile(username=account().username){
+    const clean=String(username||'').trim();if(!clean)return;
+    const own=account().connected&&account().username&&clean.toLowerCase()===String(account().username).toLowerCase(),d=ensureDialog(),body=$('p8CompetitionDetail');
+    if(!d.open)d.showModal();$('p8CompetitionKicker').textContent='PLAYER';$('p8CompetitionTitle').textContent='@'+clean;$('p8CompetitionSubtitle').textContent='Competitive identity & career';body.innerHTML='<div class="p8-loading">Loading competitive career…</div>';
+    try{
+      let data;
+      if(own){const res=await accountPost('/api/competition/career',{});data=res.competitive;}
+      else{const res=await publicGet('/api/profiles/'+encodeURIComponent(clean));data=res.profile?.competitive;}
+      if(!data)throw Error('Competitive profile is unavailable.');
+      body.innerHTML=careerProfileMarkup(clean,data,own);
+      if(own)wireShowcase(clean,data);
+    }catch(err){body.innerHTML='<p class="p8-error">'+esc(err?.message||'Could not load competitive profile.')+'</p>';}
+  }
+  function wireShowcase(username,data){
+    const body=$('p8CompetitionDetail');if(!body)return;
+    const selected=new Set((data?.showcase||[]).map(x=>x.code));
+    const update=()=>{body.querySelectorAll('[data-p10-pick]').forEach(b=>{const on=selected.has(b.dataset.p10Pick);b.classList.toggle('is-selected',on);b.setAttribute('aria-pressed',String(on));});const count=$('p10ShowcaseCount');if(count)count.textContent=selected.size+' / 3 selected';};
+    body.querySelectorAll('[data-p10-pick]').forEach(b=>b.onclick=()=>{const code=b.dataset.p10Pick;if(selected.has(code))selected.delete(code);else if(selected.size<3)selected.add(code);else{notify('Choose at most three showcase achievements.');return;}update();});
+    const save=$('p10SaveShowcase');if(save)save.onclick=async()=>{save.disabled=true;try{const res=await accountPost('/api/competition/showcase',{codes:[...selected]});notify('Competitive showcase updated.');body.innerHTML=careerProfileMarkup(username,res.competitive,true);wireShowcase(username,res.competitive);await refresh(true);}catch(err){notify(err?.message||'Could not save showcase.');}finally{save.disabled=false;}};
+    update();
+  }
   function tournamentRow(t){
     const open=t.status==='registration'&&t.joined<t.size,archive=['completed','cancelled'].includes(t.status);
     return '<button class="p8-cup-row" data-p8-open="'+esc(t.id)+'"><span><b>'+esc(t.name)+'</b><small>'+esc(t.id)+' · by @'+esc(t.organizer)+'</small></span><span class="p8-cup-meta"><em data-state="'+esc(t.status)+'">'+esc(t.status)+'</em><strong>'+t.joined+' / '+t.size+'</strong>'+(open?'<small>Open</small>':t.champion?'<small>Champion @'+esc(t.champion)+'</small>':archive?'<small>Archived</small>':'')+'</span></button>';
@@ -59,7 +113,8 @@
       '<p class="p8-intro">Ranked games feed quarterly seasons. Renju cups use account-bound rooms, automatic check-in deadlines, live spectating, and server-authoritative brackets without changing Elo.</p>'+
       (model.error?'<p class="p8-error">'+esc(model.error)+'</p>':'')+
       seasonMarkup()+
-      '<div class="p8-cups-head"><div><p class="eyebrow">RENJU CUPS</p><h4>'+(model.scope==='archive'?'Tournament archive':'Live tournaments')+'</h4></div><div class="p9-scope-tabs"><button data-p9-scope="live" aria-pressed="'+(model.scope==='live')+'">Live</button><button data-p9-scope="archive" aria-pressed="'+(model.scope==='archive')+'">Archive</button></div></div>'+
+      careerMarkup()+
+      '<div class="p8-cups-head><div><p class="eyebrow">RENJU CUPS</p><h4>'+(model.scope==='archive'?'Tournament archive':'Live tournaments')+'</h4></div><div class="p9-scope-tabs"><button data-p9-scope="live" aria-pressed="'+(model.scope==='live')+'">Live</button><button data-p9-scope="archive" aria-pressed="'+(model.scope==='archive')+'">Archive</button></div></div>'+
       (model.scope==='live'?'<div class="p8-create">'+(a.connected&&a.username?
         '<input id="p8CupName" maxlength="48" placeholder="Tournament name" aria-label="Tournament name"><select id="p8CupSize" aria-label="Tournament size"><option value="4">4 players</option><option value="8" selected>8 players</option></select><button class="btn" id="p8CreateCup">Create cup</button>':
         '<p>Connect THIEPN Account and create a public username to enter or create tournaments.</p>')+'</div>':'')+
@@ -68,6 +123,7 @@
     if($('p8CreateCup'))$('p8CreateCup').onclick=createCup;
     if($('p9Alerts'))$('p9Alerts').onclick=enableAlerts;
     if($('p9SeasonHistory'))$('p9SeasonHistory').onclick=openSeasonHistory;
+    if($('p10Career'))$('p10Career').onclick=()=>openCareerProfile();
     host.querySelectorAll('[data-p9-season]').forEach(b=>b.onclick=()=>openSeason(b.dataset.p9Season));
     host.querySelectorAll('[data-p9-scope]').forEach(b=>b.onclick=()=>{model.scope=b.dataset.p9Scope;refresh(true);});
     host.querySelectorAll('[data-p8-open]').forEach(b=>b.onclick=()=>openCup(b.dataset.p8Open));
@@ -234,5 +290,5 @@
   const boot=()=>{if(!mount())setTimeout(boot,250);};boot();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('p8CompetitionPanel'))refresh(true);else clearTimeout(refreshTimer);});
   window.addEventListener('beforeunload',()=>{clearTimeout(refreshTimer);clearInterval(roomTimer);});
-  window.GomokuCompetition=Object.freeze({version:'2.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason});
+  window.GomokuCompetition=Object.freeze({version:'3.0.0',refresh:()=>refresh(true),openTournament:openCup,openSeason,openPlayerProfile:openCareerProfile});
 })();
