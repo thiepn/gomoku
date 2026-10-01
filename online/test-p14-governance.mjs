@@ -86,3 +86,8 @@ console.log('PASS P14: explicit operator authorization, incident controls, entry
 const grantFix=fs.readFileSync('supabase/migrations/20261001_gomoku_p14_audit_append_only_grants.sql','utf8');
 assert(grantFix.includes('revoke all on table public.gomoku_admin_audit_log from service_role'),'P14 audit correction must revoke inherited service_role privileges');
 assert(grantFix.includes('grant select,insert on table public.gomoku_admin_audit_log to service_role'),'P14 audit correction must grant SELECT + INSERT only');
+
+
+const sequenceFix=fs.readFileSync('supabase/migrations/20261001_gomoku_p14_audit_sequence_hardening.sql','utf8');
+assert(sequenceFix.includes('revoke all on sequence public.gomoku_admin_audit_log_id_seq from public,anon,authenticated,service_role'),'P14 audit sequence must revoke inherited public/client grants');
+assert(sequenceFix.includes('grant usage,select on sequence public.gomoku_admin_audit_log_id_seq to service_role'),'P14 audit sequence must be service-role only');
