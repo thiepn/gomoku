@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-v12.1.0-p8-seasons-tournaments-analysis-2.1.0-review-ux-2.1.0';
+const CACHE_NAME = 'gomoku-v12.1.0-p9-competitive-ops-analysis-2.1.0-review-ux-2.1.0';
 const APP_SHELL = [
   './',
   './index.html',
