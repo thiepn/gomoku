@@ -134,6 +134,7 @@ revoke all on table public.gomoku_incidents from public,anon,authenticated;
 revoke all on table public.gomoku_release_registry from public,anon,authenticated;
 revoke all on table public.gomoku_competitive_control from public,anon,authenticated;
 revoke all on table public.gomoku_admin_audit_log from public,anon,authenticated;
+revoke all on table public.gomoku_admin_audit_log from service_role;
 
 grant select,insert,update,delete on table public.gomoku_admin_operators to service_role;
 grant select,insert,update,delete on table public.gomoku_incidents to service_role;
