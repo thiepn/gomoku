@@ -10,7 +10,9 @@ for(const marker of [
   'function queueNextRankedMatch',
   "accountBound",
   "Find next ranked match",
-  "RANKED RENJU"
+  "RANKED RENJU",
+  "$('undoBtn').disabled=ranked||",
+  "Find next ranked match"
 ])assert(html.includes(marker),'missing P7 UI marker: '+marker);
 assert((html.match(/id="room-ranked-p7"/g)||[]).length===1,'P7 style block must be unique');
 const pos=html.indexOf("const ROOM_PROJECT_URL=");
