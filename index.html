@@ -3283,6 +3283,18 @@ function initStudioPlus(){
   async function cancelRankedQueue(){stopRankedPolling();const wasSearching=roomRankedState.status==='searching';roomRankedState.status='idle';roomRankedState.queue=null;renderRankedPanel();if(!wasSearching||!roomAccountState.connected)return;try{await roomAccountApi('/api/ranked/cancel',{});}catch{}}
   async function queueNextRankedMatch(){if(!network?.state?.ranked)return;await leaveRoom();if(network)return;openOnline();setTimeout(()=>startRankedQueue(),0);}
 
+/* P8_COMPETITION_BRIDGE_START */
+  window.GomokuCompetitionBridge=Object.freeze({
+    publicGet:rankedPublicFetch,
+    accountPost:roomAccountApi,
+    account:()=>({connected:roomAccountState.connected===true,username:roomAccountState.profile?.username||null}),
+    detail:async id=>{const token=roomAccountToken();if(!token)return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch(ROOM_API_BASE+'/api/tournaments/'+encodeURIComponent(id),{headers:{apikey:ROOM_API_KEY,'X-Gomoku-Account-Token':token},signal:controller.signal,cache:'no-store'}),data=await res.json();if(!res.ok)throw Object.assign(Error(data.error||'Tournament request failed.'),{status:res.status});return data.tournament||null;}finally{clearTimeout(timer);}},
+    enterTournament:async data=>{if(!data?.id||!data?.state)return false;if(network&&network.id===data.id)return true;if(network){toast('Leave the current room before opening a tournament match.');return false;}if(S.records.length&&!await archiveGame(true)){toast('Export or save the current game before opening the tournament match.');return false;}await enterRoom({...data,accountBound:true});return true;},
+    toast
+  });
+  /* P8_COMPETITION_BRIDGE_END */
+
+
   function renderRoomAccount(){const host=$('roomAccountPanel');if(!host)return;host.replaceChildren();const nickname=$('roomNickname');if(nickname)nickname.disabled=false;const head=document.createElement('div');head.className='room-account-head';const copy=document.createElement('div');copy.append(text('p','THIEPN ACCOUNT','eyebrow'),text('h3','Player identity'));const badge=text('span',roomAccountState.status==='loading'?'Checking…':roomAccountState.connected?'Connected':roomAccountState.session?'Not connected':'Anonymous','tiny');head.append(copy,badge);host.append(head);
     const state=text('p','', 'room-account-state');host.append(state);const actions=document.createElement('div');actions.className='room-account-actions';host.append(actions);
     if(roomAccountState.status==='loading'){state.textContent='Checking for an existing account session. Anonymous online play remains available.';return;}
@@ -13666,4 +13678,132 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 
 </style>
 <!-- P1-online-flow-polish: postgame reconnect inline-decisions turn-alert realtime verified -->
+<style id="p8-competition-style">
+/* P8 — Competitive Seasons & Tournaments */
+.p8-competition-panel{margin-top:12px;display:grid;gap:12px}.p8-head,.p8-cups-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.p8-head h3,.p8-cups-head h4{margin:2px 0 0}.p8-intro{margin:0;color:var(--ink2);font-size:10px;line-height:1.55}.p8-error{margin:0;padding:8px 10px;border:1px solid color-mix(in srgb,#b33 45%,var(--hair));border-radius:8px;font-size:9px}.p8-season-card{display:grid;grid-template-columns:minmax(150px,.75fr) minmax(240px,1.25fr);gap:12px;padding:12px;border:1px solid var(--hair);border-radius:10px;background:color-mix(in srgb,var(--card) 92%,var(--seal) 8%)}.p8-season-card h4{margin:2px 0 4px;font:700 17px/1.1 Georgia,serif}.p8-season-card>div>span{font-size:8px;color:var(--ink2)}.p8-season-board{display:grid;gap:4px}.p8-standing{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;gap:7px;align-items:center;min-height:25px;padding:4px 6px;border-bottom:1px solid var(--hair);font-size:9px}.p8-standing:last-child{border-bottom:0}.p8-standing b{font-size:8px;color:var(--ink2)}.p8-standing strong{font-size:9px}.p8-standing small{font-size:7px;color:var(--ink2)}.p8-cups-head{padding-top:2px}.p8-cups-head>span{font-size:8px;color:var(--ink2)}.p8-create{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center}.p8-create input,.p8-create select{min-height:34px;border:1px solid var(--hair);border-radius:7px;background:var(--card);color:var(--ink);padding:6px 9px;font:600 9px system-ui,sans-serif}.p8-create p{grid-column:1/-1;margin:0;color:var(--ink2);font-size:9px}.p8-cup-list{display:grid;gap:6px}.p8-cup-row{width:100%;border:1px solid var(--hair);border-radius:9px;background:var(--card);color:inherit;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer}.p8-cup-row:hover{border-color:color-mix(in srgb,var(--seal) 55%,var(--hair));transform:translateY(-1px)}.p8-cup-row>span:first-child{display:grid;gap:3px;min-width:0}.p8-cup-row b{font:700 13px Georgia,serif}.p8-cup-row small{font-size:7px;color:var(--ink2)}.p8-cup-meta{display:grid;grid-template-columns:auto auto;gap:3px 8px;text-align:right;align-items:center}.p8-cup-meta em,.p8-status{font-style:normal;font-size:7px;text-transform:uppercase;letter-spacing:.08em;border:1px solid var(--hair);border-radius:999px;padding:4px 6px}.p8-cup-meta em[data-state=active],.p8-status[data-state=active]{border-color:color-mix(in srgb,#2f7c55 55%,var(--hair));color:#2f7c55}.p8-cup-meta em[data-state=registration],.p8-status[data-state=registration]{border-color:color-mix(in srgb,var(--seal) 55%,var(--hair));color:var(--seal)}.p8-cup-meta strong{font-size:9px}.p8-cup-meta small{grid-column:1/-1}.p8-empty,.p8-loading{padding:16px;border:1px dashed var(--hair);border-radius:9px;text-align:center;color:var(--ink2);font-size:9px}.p8-competition-dialog{width:min(920px,calc(100vw - 28px));max-height:min(86vh,820px);padding:0;border:1px solid var(--hair);border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 24px 70px #0005}.p8-competition-dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}.p8-competition-shell{padding:18px;display:grid;gap:16px}.p8-competition-shell>header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid var(--hair);padding-bottom:13px}.p8-competition-shell h2{margin:3px 0;font:700 25px/1.05 Georgia,serif}.p8-competition-shell header p:last-child{margin:4px 0 0;color:var(--ink2);font-size:9px}.p8-close{width:34px;height:34px;border:1px solid var(--hair);border-radius:50%;background:transparent;color:inherit;font:300 22px/1 system-ui;cursor:pointer}.p8-detail-top{display:grid;gap:8px}.p8-detail-top>div:first-child{display:flex;align-items:center;gap:9px}.p8-detail-top>div:first-child strong{font-size:9px}.p8-detail-top>p{margin:0;color:var(--ink2);font-size:9px}.p8-detail-actions{min-height:34px;display:flex;align-items:center;gap:8px}.p8-action-note{margin:0!important;font-size:9px!important}.p8-entry-block{border-top:1px solid var(--hair);padding-top:12px}.p8-entry-block h4,.p8-round h4{margin:0 0 8px;font:700 12px Georgia,serif}.p8-entry-block>div{display:flex;flex-wrap:wrap;gap:5px}.p8-entry{padding:5px 7px;border:1px solid var(--hair);border-radius:999px;font-size:8px}.p8-entry.is-out{opacity:.45;text-decoration:line-through}.p8-bracket{overflow:auto;padding:3px 0 8px}.p8-bracket-track{display:flex;gap:12px;min-width:max-content;align-items:flex-start}.p8-round{width:210px;display:grid;gap:7px}.p8-match{border:1px solid var(--hair);border-radius:8px;padding:8px;background:var(--card);display:grid;gap:5px}.p8-match>div{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:5px;align-items:center}.p8-match span{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.p8-match b{text-align:center;font-size:7px;color:var(--ink2)}.p8-match small{font-size:7px;color:var(--ink2)}.p8-match[data-state=active]{border-color:color-mix(in srgb,var(--seal) 60%,var(--hair))}@media(max-width:650px){.p8-season-card{grid-template-columns:1fr}.p8-create{grid-template-columns:1fr 110px}.p8-create .btn{grid-column:1/-1}.p8-standing{grid-template-columns:24px minmax(0,1fr) auto}.p8-standing small{display:none}.p8-cup-row{align-items:flex-start}.p8-competition-shell{padding:14px}.p8-competition-shell h2{font-size:21px}}
+
+</style>
+<script id="p8-competition-script">
+/* P8 — Competitive Seasons & Tournaments. Presentation/client orchestration only. */
+(() => {
+  'use strict';
+  if (window.GomokuCompetition) return;
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate = value => { try { return new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',year:'numeric'}).format(new Date(value)); } catch { return String(value||''); } };
+  const bridge = () => window.GomokuCompetitionBridge || null;
+  let model={season:null,seasonPlayers:[],tournaments:[],detail:null,loading:false,error:''},mounted=false,refreshTimer=0;
+
+  async function publicGet(path){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.publicGet(path);}
+  async function accountPost(path,body={}){const b=bridge();if(!b)throw Error('Competition services are still loading.');return b.accountPost(path,body);}
+  function account(){return bridge()?.account?.()||{connected:false,username:null};}
+  function notify(message){try{bridge()?.toast?.(message);}catch{}}
+
+  function ensureDialog(){
+    if($('p8CompetitionDialog'))return $('p8CompetitionDialog');
+    const d=document.createElement('dialog');d.id='p8CompetitionDialog';d.className='p8-competition-dialog';d.setAttribute('aria-labelledby','p8CompetitionTitle');
+    d.innerHTML='<div class="p8-competition-shell"><header><div><p class="eyebrow">COMPETITION</p><h2 id="p8CompetitionTitle">Tournament</h2><p id="p8CompetitionSubtitle"></p></div><button class="p8-close" id="p8CompetitionClose" aria-label="Close">×</button></header><div id="p8CompetitionDetail"></div></div>';
+    document.body.append(d);$('p8CompetitionClose').onclick=()=>d.close();return d;
+  }
+  function seasonMarkup(){
+    const s=model.season,players=model.seasonPlayers||[];
+    if(!s)return '<div class="p8-empty">No ranked season is active.</div>';
+    const top=players.slice(0,5).map(p=>'<div class="p8-standing"><b>#'+p.rank+'</b><span>@'+esc(p.username)+'</span><strong>'+p.points+' pts</strong><small>'+p.rating+' rating</small></div>').join('');
+    return '<div class="p8-season-card"><div><p class="eyebrow">CURRENT SEASON</p><h4>'+esc(s.name)+'</h4><span>'+fmtDate(s.startsAt)+' – '+fmtDate(s.endsAt)+'</span></div><div class="p8-season-board">'+(top||'<p class="tiny">No ranked games recorded this season yet.</p>')+'</div></div>';
+  }
+  function tournamentRow(t){
+    const open=t.status==='registration'&&t.joined<t.size;
+    return '<button class="p8-cup-row" data-p8-open="'+esc(t.id)+'"><span><b>'+esc(t.name)+'</b><small>'+esc(t.id)+' · by @'+esc(t.organizer)+'</small></span><span class="p8-cup-meta"><em data-state="'+esc(t.status)+'">'+esc(t.status)+'</em><strong>'+t.joined+' / '+t.size+'</strong>'+(open?'<small>Open</small>':t.champion?'<small>Champion @'+esc(t.champion)+'</small>':'')+'</span></button>';
+  }
+  function render(){
+    const host=$('p8CompetitionPanel');if(!host)return;
+    const a=account(),cups=model.tournaments||[];
+    host.innerHTML='<div class="p8-head"><div><p class="eyebrow">COMPETITIVE PLAY</p><h3>Seasons & tournaments</h3></div><button class="btn ghost" id="p8Refresh">Refresh</button></div>'+
+      '<p class="p8-intro">Ranked games feed the seasonal table. Tournaments are separate single-elimination Renju cups and do not change Elo.</p>'+
+      (model.error?'<p class="p8-error">'+esc(model.error)+'</p>':'')+
+      seasonMarkup()+
+      '<div class="p8-cups-head"><div><p class="eyebrow">RENJU CUPS</p><h4>Live tournaments</h4></div><span>'+cups.length+' listed</span></div>'+
+      '<div class="p8-create">'+(a.connected&&a.username?
+        '<input id="p8CupName" maxlength="48" placeholder="Tournament name" aria-label="Tournament name"><select id="p8CupSize" aria-label="Tournament size"><option value="4">4 players</option><option value="8" selected>8 players</option></select><button class="btn" id="p8CreateCup">Create cup</button>':
+        '<p>Connect THIEPN Account and create a public username to enter or create tournaments.</p>')+'</div>'+
+      '<div class="p8-cup-list">'+(cups.length?cups.map(tournamentRow).join(''):'<div class="p8-empty">No tournaments yet. Create the first cup.</div>')+'</div>';
+    $('p8Refresh').onclick=()=>refresh(true);
+    if($('p8CreateCup'))$('p8CreateCup').onclick=createCup;
+    host.querySelectorAll('[data-p8-open]').forEach(b=>b.onclick=()=>openCup(b.dataset.p8Open));
+  }
+  async function refresh(force=false){
+    if(model.loading&&!force)return;model.loading=true;model.error='';
+    try{
+      const [season,cups]=await Promise.all([publicGet('/api/seasons/current?limit=20'),publicGet('/api/tournaments')]);
+      model.season=season.season||null;model.seasonPlayers=Array.isArray(season.players)?season.players:[];model.tournaments=Array.isArray(cups.tournaments)?cups.tournaments:[];
+    }catch(err){model.error=err?.message||'Competition data could not be loaded.';}
+    finally{model.loading=false;render();}
+  }
+  async function createCup(){
+    const name=$('p8CupName')?.value?.trim()||'',size=Number($('p8CupSize')?.value)||8,button=$('p8CreateCup');
+    if(name.length<3){notify('Use at least 3 characters for the tournament name.');return;}
+    if(button)button.disabled=true;
+    try{const data=await accountPost('/api/tournaments',{name,size});notify('Tournament created.');await refresh(true);if(data?.tournament?.id)await openCup(data.tournament.id);}
+    catch(err){notify(err?.message||'Could not create tournament.');}
+    finally{if(button)button.disabled=false;}
+  }
+  function roundName(round,total){if(round===total)return 'Final';if(round===total-1)return 'Semifinals';return 'Round '+round;}
+  function detailMarkup(t){
+    const a=account(),you=t.you,total=Math.log2(Number(t.size)||8),byRound=new Map();
+    for(const m of t.matches||[]){if(!byRound.has(m.round))byRound.set(m.round,[]);byRound.get(m.round).push(m);}
+    const bracket=[...byRound.entries()].map(([round,matches])=>'<section class="p8-round"><h4>'+roundName(Number(round),total)+'</h4>'+matches.map(m=>'<div class="p8-match" data-state="'+esc(m.status)+'"><div><span>'+esc(m.player1||'TBD')+'</span><b>vs</b><span>'+esc(m.player2||'TBD')+'</span></div><small>'+(m.winner?'Winner @'+esc(m.winner):m.status==='active'?'Match ready':m.status==='completed'?'Completed':'Waiting')+'</small></div>').join('')+'</section>').join('');
+    const entries=(t.entries||[]).map(e=>'<span class="p8-entry '+(e.eliminated?'is-out':'')+'">'+(e.seed?'#'+e.seed+' ':'')+'@'+esc(e.username)+'</span>').join('');
+    let action='';
+    if(!a.connected||!a.username)action='<p class="p8-action-note">Connect THIEPN Account to participate.</p>';
+    else if(t.status==='registration'&&!you?.joined&&t.joined<t.size)action='<button class="btn" data-p8-action="join">Join tournament</button>';
+    else if(t.status==='registration'&&you?.joined&&a.username!==t.organizer)action='<button class="btn ghost" data-p8-action="leave">Leave tournament</button>';
+    else if(t.status==='registration'&&you?.joined)action='<p class="p8-action-note">You are registered. The bracket starts automatically when all '+t.size+' places are filled.</p>';
+    else if(t.status==='active'&&you?.activeMatch?.roomId)action='<button class="btn" data-p8-action="play">Open my match</button>';
+    else if(t.status==='active'&&you?.eliminated)action='<p class="p8-action-note">You have been eliminated. The bracket remains available to spectate.</p>';
+    else if(t.status==='active'&&you?.joined)action='<p class="p8-action-note">Waiting for the next bracket match.</p>';
+    else if(t.status==='completed')action='<p class="p8-action-note">Champion: '+(t.champion?'@'+esc(t.champion):'—')+'</p>';
+    return '<div class="p8-detail-top"><div><span class="p8-status" data-state="'+esc(t.status)+'">'+esc(t.status)+'</span><strong>'+t.joined+' / '+t.size+' players</strong></div><p>Organizer @'+esc(t.organizer)+' · Renju · single elimination · unrated</p><div class="p8-detail-actions">'+action+'</div></div>'+
+      '<section class="p8-entry-block"><h4>Players</h4><div>'+entries+'</div></section>'+
+      '<section class="p8-bracket"><div class="p8-bracket-track">'+(bracket||'<div class="p8-empty">The bracket appears when registration fills.</div>')+'</div></section>';
+  }
+  async function fetchCup(id){const data=await publicGet('/api/tournaments/'+encodeURIComponent(id));return data.tournament;}
+  async function openCup(id){
+    const d=ensureDialog(),body=$('p8CompetitionDetail');if(body)body.innerHTML='<div class="p8-loading">Loading tournament…</div>';
+    if(!d.open)d.showModal();
+    try{
+      // Public detail is enough for browsing. Authenticated actions refresh personalized state through play/join responses.
+      let t=await fetchCup(id);
+      if(account().connected){
+        try{
+          // GET accepts the account token only through the bridge's authenticated detail helper when available.
+          t=await bridge().detail?.(id) || t;
+        }catch{}
+      }
+      model.detail=t;$('p8CompetitionTitle').textContent=t.name;$('p8CompetitionSubtitle').textContent=t.id+' · '+t.status;body.innerHTML=detailMarkup(t);
+      body.querySelectorAll('[data-p8-action]').forEach(b=>b.onclick=()=>cupAction(t.id,b.dataset.p8Action,b));
+    }catch(err){body.innerHTML='<p class="p8-error">'+esc(err?.message||'Could not load tournament.')+'</p>';}
+  }
+  async function cupAction(id,action,button){
+    button.disabled=true;
+    try{
+      if(action==='join'){const data=await accountPost('/api/tournaments/'+id+'/join',{});model.detail=data.tournament;notify('Tournament joined.');}
+      else if(action==='leave'){const data=await accountPost('/api/tournaments/'+id+'/leave',{});model.detail=data.tournament;notify('Tournament left.');}
+      else if(action==='play'){const data=await accountPost('/api/tournaments/'+id+'/play',{});const ok=await bridge().enterTournament(data);if(ok){$('p8CompetitionDialog')?.close();notify('Tournament match opened.');return;}}
+      await refresh(true);await openCup(id);
+    }catch(err){notify(err?.message||'Tournament action failed.');}
+    finally{button.disabled=false;}
+  }
+  function mount(){
+    const ranked=$('roomRankedPanel');if(!ranked)return false;
+    if(!$('p8CompetitionPanel')){const panel=document.createElement('section');panel.id='p8CompetitionPanel';panel.className='room-ranked-panel p8-competition-panel';ranked.insertAdjacentElement('afterend',panel);}
+    mounted=true;render();refresh();return true;
+  }
+  const observer=new MutationObserver(()=>{if(!mounted||!$('p8CompetitionPanel'))mount();});
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  const boot=()=>{if(!mount())setTimeout(boot,250);};boot();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('p8CompetitionPanel'))refresh();});
+  window.GomokuCompetition=Object.freeze({version:'1.0.0',refresh:()=>refresh(true),openTournament:openCup});
+})();
+
+</script>
 </body></html>
