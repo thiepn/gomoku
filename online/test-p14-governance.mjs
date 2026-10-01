@@ -54,6 +54,7 @@ for(const marker of [
   'gomoku_admin_transition_release',
   'enable row level security',
   'revoke all on table public.gomoku_admin_operators from public,anon,authenticated',
+  'revoke all on table public.gomoku_admin_audit_log from service_role',
   'grant select,insert on table public.gomoku_admin_audit_log to service_role',
   "where status='active'"
 ]) assert(migration.includes(marker),'P14 migration missing '+marker);
@@ -61,6 +62,9 @@ for(const marker of [
 for(const forbidden of [
   'grant select on table public.gomoku_admin_operators to authenticated',
   'grant select on table public.gomoku_admin_audit_log to authenticated',
+  'grant update on table public.gomoku_admin_audit_log to service_role',
+  'grant delete on table public.gomoku_admin_audit_log to service_role',
+  'grant truncate on table public.gomoku_admin_audit_log to service_role',
   'security definer'
 ]) assert(!migration.toLowerCase().includes(forbidden.toLowerCase()),'P14 security regression: '+forbidden);
 
@@ -77,3 +81,8 @@ const p13=fs.readFileSync('online/test-p13-reliability.mjs','utf8');
 assert(p13.includes("['P13','P14'].includes(health.phase)"),'P13 verification is not forward compatible with P14');
 
 console.log('PASS P14: explicit operator authorization, incident controls, entry kill switches, append-only audit evidence and release governance are wired without terminating active competition.');
+
+
+const grantFix=fs.readFileSync('supabase/migrations/20261001_gomoku_p14_audit_append_only_grants.sql','utf8');
+assert(grantFix.includes('revoke all on table public.gomoku_admin_audit_log from service_role'),'P14 audit correction must revoke inherited service_role privileges');
+assert(grantFix.includes('grant select,insert on table public.gomoku_admin_audit_log to service_role'),'P14 audit correction must grant SELECT + INSERT only');
