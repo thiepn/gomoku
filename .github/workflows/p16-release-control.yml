@@ -12,6 +12,7 @@ on:
       - 'analysis/**'
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
   push:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - 'analysis/**'
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
