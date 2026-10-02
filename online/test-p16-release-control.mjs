@@ -112,6 +112,8 @@ for(const marker of [
   'supabase functions deploy gomoku-room',
   "BUILD_GIT_SHA='$GITHUB_SHA'",
   'node operations/p16-release-control.mjs deployment',
+  'certify_production:',
+  "needs: [qualify, orchestrate]",
   'node operations/p16-release-control.mjs certify'
 ]) assert(workflow.includes(marker),'P16 workflow missing '+marker);
 assert(!workflow.includes('supabase db push'),'P16 must not blindly push schema migrations from an unreconciled migration history');
