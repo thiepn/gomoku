@@ -20,7 +20,7 @@ for(const marker of [
   "await assertEntryEnabled('roomCreation')",
   "if(action==='accept')await assertEntryEnabled('challenges')",
   "parts[1]==='admin'",
-  "phase:'P14'",
+  "phase:'P15'",
   'rpc/gomoku_public_operational_status',
   'rpc/gomoku_admin_operator'
 ]) assert(backend.includes(marker),'P14 backend missing '+marker);
@@ -78,7 +78,7 @@ for(const marker of [
 ]) assert(runbook.includes(marker),'P14 runbook missing '+marker);
 
 const p13=fs.readFileSync('online/test-p13-reliability.mjs','utf8');
-assert(p13.includes("['P13','P14'].includes(health.phase)"),'P13 verification is not forward compatible with P14');
+assert(p13.includes("['P13','P14','P15'].includes(health.phase)"),'P13 verification is not forward compatible with P15');
 
 console.log('PASS P14: explicit operator authorization, incident controls, entry kill switches, append-only audit evidence and release governance are wired without terminating active competition.');
 
