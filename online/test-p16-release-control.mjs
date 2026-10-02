@@ -8,7 +8,7 @@ for(const marker of [
   "GITHUB_OIDC_AUDIENCE='gomoku-production-control'",
   "GITHUB_TRUSTED_REPOSITORY='thiepn/gomoku'",
   "GITHUB_TRUSTED_REPOSITORY_ID='1364049991'",
-  "GITHUB_TRUSTED_WORKFLOW='thiepn/gomoku/.github/workflows/p16-release-control.yml@refs/heads/main'",
+  "GITHUB_TRUSTED_WORKFLOW_P16='thiepn/gomoku/.github/workflows/p16-release-control.yml@refs/heads/main'",
   'async function verifiedGithubAutomation',
   'crypto.subtle.verify',
   'rpc/gomoku_p16_consume_oidc_jti',
@@ -17,7 +17,7 @@ for(const marker of [
   'async function automationDeployment',
   'async function automationCertify',
   "parts[1]==='automation'",
-  "phase:'P16'",
+  "phase:'P17'",
   'rpc/gomoku_p16_public_status',
   "build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}"
 ]) assert(backend.includes(marker),'P16 backend missing '+marker);
@@ -107,10 +107,7 @@ for(const marker of [
   'checks: read',
   'P16_EVIDENCE_FILE: /tmp/p16-check-evidence.json',
   'node operations/p16-release-control.mjs admit',
-  'controlled_schema_apply_required',
   'delegated_to_p17',
-  "BUILD_GIT_SHA='$GITHUB_SHA'",
-  'node operations/p16-release-control.mjs deployment',
   'certify_production:',
   "needs: [qualify, orchestrate]",
   'node operations/p16-release-control.mjs certify'
@@ -123,14 +120,14 @@ for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification
   assert(consoleJs.includes(marker),'P16 operations console missing '+marker);
 
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
-assert(builder.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P16 cache version missing');
+assert(builder.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 cache version missing');
 
 const html=fs.readFileSync('index.html','utf8');
-for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification'])
+for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification','P17 RELEASE ENVIRONMENTS'])
   assert(html.includes(marker),'generated P16 operations console missing '+marker);
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P16 service-worker cache missing');
+assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 service-worker cache missing');
 
 const runbook=fs.readFileSync('operations/P16-RUNBOOK.md','utf8');
 for(const marker of [
