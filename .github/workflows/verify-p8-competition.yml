@@ -26,6 +26,7 @@ on:
       - 'analysis/**'
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
   pull_request:
     paths:
       - 'online/p8-competition.js'
@@ -51,6 +52,7 @@ on:
       - 'analysis/**'
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
 permissions:
   contents: write
 
