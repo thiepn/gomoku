@@ -1,10 +1,10 @@
 name: Online player identity verification
 on:
   pull_request:
-    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml']
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml']
   push:
     branches: [main]
-    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml']
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-online-player-profiles.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml']
 permissions:
   contents: read
 concurrency:
