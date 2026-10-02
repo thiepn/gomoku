@@ -202,7 +202,7 @@ returns boolean
 language plpgsql
 security invoker
 set search_path=''
-as $
+as $$
 declare
   v_count integer;
 begin
@@ -237,7 +237,7 @@ begin
   get diagnostics v_count = row_count;
   return v_count=1;
 end
-$;
+$$;
 
 revoke all on function public.gomoku_p16_consume_oidc_jti(text,text,text,text,timestamptz)
   from public,anon,authenticated;
