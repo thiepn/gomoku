@@ -97,7 +97,7 @@ for(const marker of ['id="p15-operations-style"','id="p15-operations-script"','C
   assert(html.includes(marker),'generated P15 app shell missing '+marker);
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P15 service-worker cache not active');
+assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P15 service-worker cache not active');
 
 const runbook=fs.readFileSync('operations/P15-RUNBOOK.md','utf8');
 for(const marker of [
