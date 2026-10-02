@@ -64,7 +64,7 @@ for(const marker of [
   '/api-keys?reveal=true',
   'POSTGRES_URL_NON_POOLING',
   "mode==='resolve'",
-  '/v1/projects/'+productionRef+'/branches',
+  "management('/v1/projects/'+productionRef+'/branches')",
   "mode==='rehearse'",
   "mode==='apply'",
   "'begin;\\n'+sql+'\\nrollback;'",
