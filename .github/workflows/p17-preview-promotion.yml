@@ -34,6 +34,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  SUPABASE_PROJECT_ID: hycegznamzjhwinegaai
   P17_PREVIEW_BRANCH_NAME: gomoku-preview
   P17_GIT_SHA: ${{ github.sha }}
   P17_MANIFEST_FILE: /tmp/p17-release-manifest.json
@@ -104,22 +105,15 @@ jobs:
         if: steps.capability.outputs.configured == 'true'
         with:
           version: latest
+      - name: Resolve isolated preview branch identity
+        if: steps.capability.outputs.configured == 'true'
+        run: node operations/p17-supabase-branch.mjs resolve
       - name: Resolve isolated preview branch credentials
         if: steps.capability.outputs.configured == 'true'
         shell: bash
         run: |
           supabase --experimental branches get "$P17_PREVIEW_BRANCH_NAME" -o env > /tmp/p17-branch.env
           cat /tmp/p17-branch.env >> "$GITHUB_ENV"
-          set -a
-          source /tmp/p17-branch.env
-          set +a
-          PREVIEW_REF="$(printf '%s' "$SUPABASE_URL" | sed -E 's#https://([a-z0-9]+)\.supabase\.co.*#\1#')"
-          if ! printf '%s' "$PREVIEW_REF" | grep -Eq '^[a-z0-9]{20}$'; then
-            echo "Could not derive preview project ref from Supabase branch credentials."
-            exit 1
-          fi
-          echo "P17_PREVIEW_PROJECT_ID=$PREVIEW_REF" >> "$GITHUB_ENV"
-          echo "P17_PREVIEW_BRANCH_STATUS=ready" >> "$GITHUB_ENV"
       - name: Export preview API credentials
         if: steps.capability.outputs.configured == 'true'
         run: node operations/p17-supabase-branch.mjs export-preview-api
