@@ -4,6 +4,9 @@ const assert=(v,m)=>{if(!v)throw new Error(m);};
 
 const bootstrap=fs.readFileSync('operations/p18-shared-contract-bootstrap.sql','utf8');
 for(const marker of [
+  'public.gomoku_rooms',
+  'private.broadcast_gomoku_room_change',
+  'gomoku_rooms_realtime_broadcast',
   'public.account_apps',
   'public.account_app_manifests',
   'public.account_app_permissions',
@@ -16,6 +19,7 @@ for(const marker of [
 ]) assert(bootstrap.includes(marker),'P18 compatibility bootstrap missing '+marker);
 assert(!bootstrap.includes('hycegznamzjhwinegaai'),'P18 local compatibility bootstrap must not bind to production');
 assert(!/insert\s+into\s+auth\.users/i.test(bootstrap),'P18 compatibility bootstrap must not fabricate production identities');
+assert(bootstrap.indexOf('create table if not exists public.gomoku_rooms')<bootstrap.indexOf('create table if not exists public.account_apps'),'P18 legacy Gomoku foundation must precede shared account compatibility objects');
 
 const builder=fs.readFileSync('operations/p18-build-portable-workspace.mjs','utf8');
 for(const marker of [
