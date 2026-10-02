@@ -56,7 +56,7 @@
   function ensureDialog(){
     if($('p15OpsDialog'))return $('p15OpsDialog');
     const d=document.createElement('dialog');d.id='p15OpsDialog';d.className='p15-ops-dialog';d.setAttribute('aria-labelledby','p15OpsTitle');
-    d.innerHTML='<div class="p15-ops-shell"><header><div><p class="eyebrow">P15 OPERATIONS</p><h2 id="p15OpsTitle">Competitive operations console</h2><p id="p15OpsSubtitle">Incident control · release validation · deployment reconciliation · drills</p></div><div class="p15-head-actions"><button class="btn ghost" id="p15OpsRefresh" type="button">Refresh</button><button class="p15-close" id="p15OpsClose" type="button" aria-label="Close">×</button></div></header><div id="p15OpsBody"></div></div>';
+    d.innerHTML='<div class="p15-ops-shell"><header><div><p class="eyebrow">P17 OPERATIONS</p><h2 id="p15OpsTitle">Competitive operations console</h2><p id="p15OpsSubtitle">Incident control · admission · preview certification · safe promotion · production certification</p></div><div class="p15-head-actions"><button class="btn ghost" id="p15OpsRefresh" type="button">Refresh</button><button class="p15-close" id="p15OpsClose" type="button" aria-label="Close">×</button></div></header><div id="p15OpsBody"></div></div>';
     document.body.append(d);
     $('p15OpsClose').onclick=()=>d.close();
     $('p15OpsRefresh').onclick=()=>refresh();
@@ -144,6 +144,19 @@
       '<div class="p15-subhead"><b>Recent orchestration</b><span>'+certs.length+' certification record'+(certs.length===1?'':'s')+'</span></div><div class="p15-list">'+(eventRows||'<div class="p15-empty">No P16 orchestration events recorded yet.</div>')+'</div></section>';
   }
 
+  function releaseEnvironmentMarkup(o){
+    const p=o?.p17||{},pub=p.publicStatus||{},env=pub.environment||{},schema=pub.localSchemaState||{},cert=pub.previewCertification||{},auth=pub.promotionAuthorization||{},event=pub.promotionEvent||{},certs=Array.isArray(p.previewCertifications)?p.previewCertifications:[],promotions=Array.isArray(p.promotionEvents)?p.promotionEvents:[],migrations=Array.isArray(p.migrationEvents)?p.migrationEvents:[];
+    const environmentState=env.branchStatus||'unconfigured',promotionState=auth.decision||'not_authorized',certState=cert.status||'uncertified';
+    const checks=cert.checks&&typeof cert.checks==='object'?Object.entries(cert.checks).map(([name,ok])=>'<span data-pass="'+(ok===true)+'">'+(ok===true?'✓':'×')+' '+esc(name.replaceAll(/([A-Z])/g,' $1').replaceAll('_',' ').trim())+'</span>').join(''):'';
+    const history=promotions.slice(0,6).map(x=>'<article class="p15-list-row"><div><b>'+esc(String(x.event_type||'promotion').replaceAll('_',' '))+'</b><span>'+shortSha(x.production_git_sha)+' · '+fmt(x.created_at)+'</span></div><code>'+esc(x.source_run_id||'—')+'</code></article>').join('');
+    return '<section class="p15-card p17-environment" data-state="'+esc(environmentState)+'"><div class="p15-section-head"><div><p class="eyebrow">P17 RELEASE ENVIRONMENTS</p><h3>Preview certification & safe promotion</h3></div>'+statusPill(environmentState)+'</div>'+
+      '<div class="p17-status-grid"><div><span>Release environment</span><b>'+esc(env.name||'not configured')+'</b><small>'+(env.projectRef?esc(env.projectRef)+' · '+esc(env.branchName||'branch'):'No isolated preview branch registered')+'</small></div><div><span>Preview certification</span><b>'+esc(certState)+'</b><small>'+(cert.createdAt?fmt(cert.createdAt):'No certified release manifest')+'</small></div><div><span>Promotion authorization</span><b>'+esc(promotionState)+'</b><small>'+(auth.expiresAt?'Expires '+fmt(auth.expiresAt):esc(auth.reason||'No active authorization'))+'</small></div><div><span>Production repo manifest</span><b>'+shortSha(schema.releaseManifestSha256)+'</b><small>'+shortSha(schema.sourceGitSha)+' · '+Number(schema.migrationCount||0)+' migrations</small></div></div>'+
+      '<p class="p15-note">P17 requires the exact schema + Edge release manifest to pass in an isolated Supabase environment before production promotion. Preview data is isolated; promotion evidence is append-only.</p>'+
+      (checks?'<div class="p15-checks p16-checks">'+checks+'</div>':'')+
+      '<div class="p15-current-line"><span>Latest promotion event</span><b>'+esc(event.eventType||'None')+'</b><span>Migration evidence</span><b>'+migrations.length+' recent record'+(migrations.length===1?'':'s')+'</b></div>'+
+      '<div class="p15-subhead"><b>Promotion history</b><span>'+certs.length+' preview certification'+(certs.length===1?'':'s')+'</span></div><div class="p15-list">'+(history||'<div class="p15-empty">No P17 promotion events recorded yet.</div>')+'</div></section>';
+  }
+
   function auditMarkup(o){
     const items=Array.isArray(o?.audit)?o.audit:[];
     return '<section class="p15-card"><div class="p15-section-head"><div><p class="eyebrow">AUDIT EVIDENCE</p><h3>Recent administrative changes</h3></div></div><div class="p15-audit">'+items.slice(0,20).map(x=>'<div><time>'+fmt(x.created_at)+'</time><b>'+esc(x.action)+'</b><span>'+esc(x.actor_role||'')+(x.reason?' · '+esc(x.reason):'')+'</span><code>'+esc(x.request_id||'—')+'</code></div>').join('')+'</div></section>';
@@ -155,7 +168,7 @@
     if(state.error){body.innerHTML='<p class="p15-error">'+esc(state.error)+'</p>';return;}
     const o=state.overview;if(!o){body.innerHTML='<p class="p15-error">Administrative access is unavailable.</p>';return;}
     body.innerHTML='<div class="p15-role-line"><span>Authorized as</span><b>'+esc(o.operatorRole)+'</b><span>Generated '+fmt(o.generatedAt)+'</span></div>'+
-      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+releaseAutomationMarkup(o)+auditMarkup(o);
+      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+releaseAutomationMarkup(o)+releaseEnvironmentMarkup(o)+auditMarkup(o);
     bind();
   }
 
@@ -237,5 +250,5 @@
   window.addEventListener('beforeunload',()=>clearTimeout(state.timer));
   const boot=()=>{if(!bridge())return setTimeout(boot,250);probe(true);};boot();
 
-  window.GomokuOpsConsole=Object.freeze({version:'1.1.0',open,refresh,probe:()=>probe(true)});
+  window.GomokuOpsConsole=Object.freeze({version:'1.2.0',open,refresh,probe:()=>probe(true)});
 })();
