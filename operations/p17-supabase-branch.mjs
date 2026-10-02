@@ -56,6 +56,14 @@ function applySql(url,sql){
 async function main(){
   const mode=String(process.argv[2]||'').toLowerCase();
 
+  if(mode==='export-preview-api'){
+    const key=await publishableKey(previewRef);
+    const api='https://'+previewRef+'.supabase.co/functions/v1/gomoku-room';
+    if(process.env.GITHUB_ENV){
+      fs.appendFileSync(process.env.GITHUB_ENV,'GOMOKU_ROOM_API='+api+'\nGOMOKU_ROOM_KEY='+key+'\n');
+    }
+    console.log(JSON.stringify({api,projectRef:previewRef,keyType:'publishable-or-anon'},null,2));return;
+  }
   if(mode==='probe-preview'){
     const data=await probe(previewRef);
     fs.writeFileSync('/tmp/p17-preview-probe.json',JSON.stringify(data,null,2));
@@ -90,6 +98,6 @@ async function main(){
     const out=await management('/v1/branches/'+encodeURIComponent(branchRef)+'/merge',{method:'POST',body:'{}'});
     console.log(JSON.stringify(out,null,2));return;
   }
-  throw new Error('Usage: node operations/p17-supabase-branch.mjs <probe-preview|probe-production|plan|rehearse|apply|merge>');
+  throw new Error('Usage: node operations/p17-supabase-branch.mjs <export-preview-api|probe-preview|probe-production|plan|rehearse|apply|merge>');
 }
 main().catch(error=>{console.error(error?.stack||String(error));process.exit(1);});
