@@ -63,6 +63,8 @@ for(const marker of [
   '/v1/projects/',
   '/api-keys?reveal=true',
   'POSTGRES_URL_NON_POOLING',
+  "mode==='resolve'",
+  '/v1/projects/'+productionRef+'/branches',
   "mode==='rehearse'",
   "mode==='apply'",
   "'begin;\\n'+sql+'\\nrollback;'",
@@ -77,7 +79,9 @@ for(const marker of ["x?.name==='qualify'",'P16 admission qualifier succeeded','
 
 const workflow=fs.readFileSync('.github/workflows/p17-preview-promotion.yml','utf8');
 for(const marker of [
+  'SUPABASE_PROJECT_ID: hycegznamzjhwinegaai',
   'P17_PREVIEW_BRANCH_NAME: gomoku-preview',
+  'Resolve isolated preview branch identity',
   'SUPABASE_ACCESS_TOKEN',
   'Wait for exact-SHA P16 admission',
   'node operations/p17-await-admission.mjs',
