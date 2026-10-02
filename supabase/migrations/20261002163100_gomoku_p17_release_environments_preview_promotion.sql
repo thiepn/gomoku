@@ -189,6 +189,61 @@ revoke all on sequence public.gomoku_schema_promotion_events_id_seq
 grant usage,select on sequence public.gomoku_repo_migration_events_id_seq to service_role;
 grant usage,select on sequence public.gomoku_schema_promotion_events_id_seq to service_role;
 
+-- Extend the P16 OIDC replay ledger to the P17 main-branch release workflow
+-- without broadening trust to arbitrary workflows or refs.
+create or replace function public.gomoku_p16_consume_oidc_jti(
+  p_jti text,
+  p_repository text,
+  p_workflow_ref text,
+  p_run_id text,
+  p_expires_at timestamptz
+)
+returns boolean
+language plpgsql
+security invoker
+set search_path=''
+as $
+declare
+  v_count integer;
+begin
+  if char_length(btrim(coalesce(p_jti,''))) < 8 then
+    raise exception 'Invalid OIDC token id';
+  end if;
+  if p_repository <> 'thiepn/gomoku' then
+    raise exception 'Untrusted OIDC repository';
+  end if;
+  if p_workflow_ref not in (
+    'thiepn/gomoku/.github/workflows/p16-release-control.yml@refs/heads/main',
+    'thiepn/gomoku/.github/workflows/p17-preview-promotion.yml@refs/heads/main'
+  ) then
+    raise exception 'Untrusted OIDC workflow';
+  end if;
+  if p_expires_at <= now()-interval '1 minute' or p_expires_at > now()+interval '15 minutes' then
+    raise exception 'Invalid OIDC expiry';
+  end if;
+
+  insert into public.gomoku_automation_oidc_jti(
+    jti,repository,workflow_ref,run_id,expires_at,consumed_at
+  ) values (
+    left(btrim(p_jti),200),
+    p_repository,
+    left(p_workflow_ref,300),
+    left(btrim(p_run_id),96),
+    p_expires_at,
+    now()
+  )
+  on conflict (jti) do nothing;
+
+  get diagnostics v_count = row_count;
+  return v_count=1;
+end
+$;
+
+revoke all on function public.gomoku_p16_consume_oidc_jti(text,text,text,text,timestamptz)
+  from public,anon,authenticated;
+grant execute on function public.gomoku_p16_consume_oidc_jti(text,text,text,text,timestamptz)
+  to service_role;
+
 create or replace function public.gomoku_p17_required_preview_checks()
 returns text[]
 language sql
