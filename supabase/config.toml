@@ -1,0 +1,4 @@
+project_id = "hycegznamzjhwinegaai"
+
+[functions.gomoku-room]
+verify_jwt = false
