@@ -16,7 +16,7 @@ for(const marker of [
   "parts[2]==='deployments'",
   "parts[2]==='rollouts'",
   "parts[2]==='drills'",
-  "phase:'P16'"
+  "phase:'P17'"
 ]) assert(backend.includes(marker),'P15 backend missing '+marker);
 
 const migration=fs.readFileSync('supabase/migrations/20261002_gomoku_p15_operations_rollouts_drills.sql','utf8');
