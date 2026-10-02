@@ -40,7 +40,7 @@ for(const marker of [
   'recoveryFailures',
   'Math.pow(2',
   'Result secured for recovery',
-  'p16-release-control'
+  'p17-preview-promotion'
 ]) assert(builder.includes(marker),'P13 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
@@ -60,14 +60,14 @@ assert(apiBase&&apiKey,'generated room API configuration missing');
 const healthRes=await fetch(apiBase+'/api/health',{headers:{apikey:apiKey}});
 const health=await healthRes.json();
 assert(healthRes.ok,'live health endpoint returned '+healthRes.status+' '+JSON.stringify(health));
-assert(health.service==='gomoku-room'&&['P13','P14','P15','P16'].includes(health.phase),'live health identity/version mismatch');
+assert(health.service==='gomoku-room'&&['P13','P14','P15','P16','P17'].includes(health.phase),'live health identity/version mismatch');
 assert(['healthy','degraded','critical','maintenance'].includes(health.status),'live health status invalid');
 assert(health.persistence&&Number.isFinite(Number(health.persistence.pending)),'live health persistence telemetry missing');
 const publicHealth=JSON.stringify(health);
 for(const forbidden of ['user_id','username','room_id','reporter','target_user'])assert(!publicHealth.includes(forbidden),'live health leaked private identifiers');
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
+assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
 
 assert(client.includes('Fair Play center'),'P12 trust UI regressed');
 assert(backend.includes('async function trustReport'),'P12 trust API regressed');
