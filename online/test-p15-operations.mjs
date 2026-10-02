@@ -16,7 +16,7 @@ for(const marker of [
   "parts[2]==='deployments'",
   "parts[2]==='rollouts'",
   "parts[2]==='drills'",
-  "phase:'P15'"
+  "phase:'P16'"
 ]) assert(backend.includes(marker),'P15 backend missing '+marker);
 
 const migration=fs.readFileSync('supabase/migrations/20261002_gomoku_p15_operations_rollouts_drills.sql','utf8');
@@ -89,7 +89,7 @@ for(const marker of [
   'accountGet:async path=>',
   "('style','p15-operations-style','p15-console.css','operations')",
   "('script','p15-operations-script','p15-console.js','operations')",
-  'gomoku-v12.2.0-p15-operations-governance'
+  'gomoku-v12.3.0-p16-release-control'
 ]) assert(builder.includes(marker),'P15 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
@@ -97,7 +97,7 @@ for(const marker of ['id="p15-operations-style"','id="p15-operations-script"','C
   assert(html.includes(marker),'generated P15 app shell missing '+marker);
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.2.0-p15-operations-governance-analysis-2.1.0-review-ux-2.1.0'),'P15 service-worker cache not active');
+assert(sw.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P15 service-worker cache not active');
 
 const runbook=fs.readFileSync('operations/P15-RUNBOOK.md','utf8');
 for(const marker of [
