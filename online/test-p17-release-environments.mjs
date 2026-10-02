@@ -71,10 +71,16 @@ for(const marker of [
   'CREATE\\s+INDEX\\s+CONCURRENTLY'
 ]) assert(branch.includes(marker),'P17 branch client missing '+marker);
 
+const admissionWait=fs.readFileSync('operations/p17-await-admission.mjs','utf8');
+for(const marker of ["x?.name==='qualify'",'P16 admission qualifier succeeded','check-runs?per_page=100'])
+  assert(admissionWait.includes(marker),'P17 admission waiter missing '+marker);
+
 const workflow=fs.readFileSync('.github/workflows/p17-preview-promotion.yml','utf8');
 for(const marker of [
   'P17_PREVIEW_BRANCH_NAME: gomoku-preview',
   'SUPABASE_ACCESS_TOKEN',
+  'Wait for exact-SHA P16 admission',
+  'node operations/p17-await-admission.mjs',
   'supabase --experimental branches get',
   'Rehearse migration rollback transaction',
   'Apply candidate migrations to preview only',
