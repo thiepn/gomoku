@@ -67,7 +67,7 @@ const publicHealth=JSON.stringify(health);
 for(const forbidden of ['user_id','username','room_id','reporter','target_user'])assert(!publicHealth.includes(forbidden),'live health leaked private identifiers');
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
+assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
 
 assert(client.includes('Fair Play center'),'P12 trust UI regressed');
 assert(backend.includes('async function trustReport'),'P12 trust API regressed');
