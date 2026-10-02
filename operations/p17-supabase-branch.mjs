@@ -56,6 +56,28 @@ function applySql(url,sql){
 async function main(){
   const mode=String(process.argv[2]||'').toLowerCase();
 
+  if(mode==='resolve'){
+    const data=await management('/v1/projects/'+productionRef+'/branches');
+    const rows=Array.isArray(data)?data:(data?.branches||[]);
+    const wanted=String(process.env.P17_PREVIEW_BRANCH_NAME||'gomoku-preview');
+    const item=rows.find(x=>String(x?.name||'')===wanted);
+    if(!item)throw new Error('Supabase preview branch '+wanted+' does not exist.');
+    const ref=String(item.ref||item.project_ref||'').trim().toLowerCase();
+    const id=String(item.id||'').trim();
+    const status=String(item.status||item.preview_project_status||'unknown').trim().toLowerCase();
+    if(!/^[a-z0-9]{20}$/.test(ref)||ref===productionRef)throw new Error('Resolved preview branch has an invalid or production project ref.');
+    const normalizedStatus=status.includes('healthy')||status==='ready'?'ready':status.includes('pause')?'paused':status.includes('fail')?'failed':status.includes('provision')?'provisioning':status.includes('degrad')?'degraded':'unknown';
+    if(process.env.GITHUB_ENV){
+      fs.appendFileSync(process.env.GITHUB_ENV,[
+        'P17_PREVIEW_PROJECT_ID='+ref,
+        'P17_PREVIEW_BRANCH_ID='+id,
+        'P17_PREVIEW_BRANCH_STATUS='+normalizedStatus
+      ].join('\n')+'\n');
+    }
+    console.log(JSON.stringify({name:wanted,projectRef:ref,branchId:id,rawStatus:status,branchStatus:normalizedStatus},null,2));
+    if(normalizedStatus!=='ready')throw new Error('Supabase preview branch is not ready: '+status);
+    return;
+  }
   if(mode==='export-preview-api'){
     const key=await publishableKey(previewRef);
     const api='https://'+previewRef+'.supabase.co/functions/v1/gomoku-room';
@@ -98,6 +120,6 @@ async function main(){
     const out=await management('/v1/branches/'+encodeURIComponent(branchRef)+'/merge',{method:'POST',body:'{}'});
     console.log(JSON.stringify(out,null,2));return;
   }
-  throw new Error('Usage: node operations/p17-supabase-branch.mjs <export-preview-api|probe-preview|probe-production|plan|rehearse|apply|merge>');
+  throw new Error('Usage: node operations/p17-supabase-branch.mjs <resolve|export-preview-api|probe-preview|probe-production|plan|rehearse|apply|merge>');
 }
 main().catch(error=>{console.error(error?.stack||String(error));process.exit(1);});
