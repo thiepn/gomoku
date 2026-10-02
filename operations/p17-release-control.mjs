@@ -122,6 +122,16 @@ async function main(){
     fs.writeFileSync('/tmp/p17-promotion-authorization.json',JSON.stringify(out.authorization,null,2));
     return;
   }
+  if(mode==='production-deployment'){
+    const out=await call(PROD_BASE,'production-deployment',{gitSha:sha,frontendSha:process.env.P17_FRONTEND_SHA||sha});
+    console.log(JSON.stringify(out,null,2));return;
+  }
+  if(mode==='production-certify'){
+    const out=await call(PROD_BASE,'production-certify',{});
+    console.log(JSON.stringify(out,null,2));
+    if(out?.certification?.status!=='passed')throw new Error('Promoted production certification failed.');
+    return;
+  }
   if(mode==='promotion-event'){
     const auth=JSON.parse(fs.readFileSync(process.env.P17_AUTH_FILE||'/tmp/p17-promotion-authorization.json','utf8'));
     const out=await call(PROD_BASE,'promotion-event',{
@@ -132,6 +142,6 @@ async function main(){
     console.log(JSON.stringify(out,null,2));return;
   }
 
-  throw new Error('Usage: node operations/p17-release-control.mjs <register-environment|schema-state|migration-event|preview-certification|authorize-promotion|promotion-event>');
+  throw new Error('Usage: node operations/p17-release-control.mjs <register-environment|schema-state|migration-event|preview-certification|authorize-promotion|promotion-event|production-deployment|production-certify>');
 }
 main().catch(error=>{console.error(error?.stack||String(error));process.exit(1);});
