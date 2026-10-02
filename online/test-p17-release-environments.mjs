@@ -20,7 +20,6 @@ for(const marker of [
   'gomoku_p17_admin_summary',
   "interval '72 hours'",
   "interval '2 hours'",
-  'gomoku-preview',
   'p17-preview-promotion.yml@refs/heads/main'
 ]) assert(migration.includes(marker),'P17 migration missing '+marker);
 
@@ -91,6 +90,14 @@ for(const marker of [
 const p16=fs.readFileSync('.github/workflows/p16-release-control.yml','utf8');
 assert(p16.includes('delegated_to_p17'),'P16 production deployment must be delegated to P17');
 assert(!p16.includes('supabase functions deploy gomoku-room'),'P16 must not bypass P17 preview certification with direct Edge deployment');
+
+const consoleJs=fs.readFileSync('operations/p15-console.js','utf8');
+new Function(consoleJs);
+for(const marker of ['P17 RELEASE ENVIRONMENTS','Preview certification & safe promotion','releaseEnvironmentMarkup',"version:'1.2.0'"])
+  assert(consoleJs.includes(marker),'P17 operations console missing '+marker);
+
+const builder=fs.readFileSync('online/build-p8-client.py','utf8');
+assert(builder.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P17 cache version missing');
 
 const runbook=fs.readFileSync('operations/P17-RUNBOOK.md','utf8');
 for(const marker of [
