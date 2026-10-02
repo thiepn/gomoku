@@ -79,11 +79,29 @@ for(const marker of [
   "Release admission was not granted"
 ]) assert(control.includes(marker),'P16 GitHub control client missing '+marker);
 
+const waiter=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
+new Function(waiter.replace(/^import fs from 'node:fs';/m,'const fs={writeFileSync(){}};').replace(/^import process from 'node:process';/m,'const process={env:{},exit(){}};'));
+for(const marker of [
+  'p15_operations',
+  'p14_governance',
+  'p13_reliability',
+  "ranked:'ranked'",
+  "lifecycle:'lifecycle'",
+  "history:'history'",
+  "profiles:'profiles'",
+  "integrity:'integrity'",
+  'checkRunId',
+  '/check-runs?per_page=100'
+]) assert(waiter.includes(marker),'P16 authoritative check aggregator missing '+marker);
+
 const workflow=fs.readFileSync('.github/workflows/p16-release-control.yml','utf8');
 for(const marker of [
   'id-token: write',
   "cron: '17 */6 * * *'",
   'node online/test-p16-release-control.mjs',
+  'node operations/p16-await-checks.mjs',
+  'checks: read',
+  'P16_EVIDENCE_FILE: /tmp/p16-check-evidence.json',
   'node operations/p16-release-control.mjs admit',
   'controlled_schema_apply_required',
   'missing_supabase_access_token',
