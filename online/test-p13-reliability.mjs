@@ -40,7 +40,7 @@ for(const marker of [
   'recoveryFailures',
   'Math.pow(2',
   'Result secured for recovery',
-  'p16-release-control'
+  'p17-preview-promotion'
 ]) assert(builder.includes(marker),'P13 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
