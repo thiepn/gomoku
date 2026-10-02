@@ -12,7 +12,8 @@ const required={
   lifecycle:'lifecycle',
   history:'history',
   profiles:'profiles',
-  integrity:'integrity'
+  integrity:'integrity',
+  p18_portability:'portable-preview'
 };
 const timeoutMs=Math.max(60_000,Number(process.env.P16_CHECK_TIMEOUT_MS)||12*60_000);
 const pollMs=Math.max(5_000,Number(process.env.P16_CHECK_POLL_MS)||10_000);
