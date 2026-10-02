@@ -68,13 +68,20 @@ jobs:
           python online/build-p8-client.py
           cmp index.html /tmp/p13-index.html
           cmp sw.js /tmp/p13-sw.js
-      - name: Commit generated P13 app shell
+      - name: Commit generated competitive app shell
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          # A manual rerun can execute against an older push after main has moved.
+          # Never let a stale checkout generate a non-fast-forward bot push.
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "main advanced after this workflow started; skipping stale generated-shell push"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html sw.js review/build.py manifest.webmanifest
           if ! git diff --cached --quiet; then
-            git commit -m "P13: generate reliability recovery bundle"
-            git push
+            git commit -m "Generate competitive app shell"
+            git push origin HEAD:main
           fi
