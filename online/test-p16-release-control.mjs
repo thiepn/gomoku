@@ -80,7 +80,6 @@ for(const marker of [
 ]) assert(control.includes(marker),'P16 GitHub control client missing '+marker);
 
 const waiter=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
-new Function(waiter.replace(/^import fs from 'node:fs';/m,'const fs={writeFileSync(){}};').replace(/^import process from 'node:process';/m,'const process={env:{},exit(){}};'));
 for(const marker of [
   'p15_operations',
   'p14_governance',
