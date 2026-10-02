@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
   id-token: write
 
 concurrency:
@@ -56,33 +57,19 @@ jobs:
         run: |
           node --check operations/p15-console.js
           node --check operations/p16-release-control.mjs
+          node --check operations/p16-await-checks.mjs
           python -m py_compile online/build-p8-client.py
           node online/test-p16-release-control.mjs
-      - name: Verify governance and recovery compatibility
-        run: |
-          node online/test-p15-operations.mjs
-          node online/test-p14-governance.mjs
-          node online/test-p13-reliability.mjs
-      - name: Exercise ranked matchmaking
-        run: |
-          node online/test-ranked-ui.mjs
-          node online/test-ranked.mjs
-      - name: Exercise online lifecycle
-        run: node online/test-lifecycle.mjs
-      - name: Exercise persistent history
-        run: |
-          node online/test-history-ui.mjs
-          node online/test-history.mjs
-      - name: Exercise player identity
-        run: |
-          node online/test-player-profiles-ui.mjs
-          node online/test-player-profiles.mjs
-      - name: Exercise match integrity
-        run: node online/test-integrity.mjs
+      - name: Wait for authoritative release checks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P16_CHECK_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node operations/p16-await-checks.mjs
       - name: Submit automated admission
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           P16_GIT_SHA: ${{ github.sha }}
+          P16_EVIDENCE_FILE: /tmp/p16-check-evidence.json
         run: node operations/p16-release-control.mjs admit
 
   orchestrate:
