@@ -57,6 +57,7 @@ jobs:
         run: |
           node --check operations/p17-manifest.mjs
           node --check operations/p17-release-control.mjs
+          node --check operations/p17-await-admission.mjs
           node --check operations/p17-supabase-branch.mjs
           node --check operations/p15-console.js
           node operations/p17-manifest.mjs >/tmp/p17-manifest-output.json
@@ -82,6 +83,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Wait for exact-SHA P16 admission
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node operations/p17-await-admission.mjs
       - name: Generate immutable release manifest
         id: manifest
         run: node operations/p17-manifest.mjs >/tmp/p17-manifest-output.json
