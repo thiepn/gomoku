@@ -14,6 +14,7 @@ bridge=r"""/* P8_COMPETITION_BRIDGE_START */
   window.GomokuCompetitionBridge=Object.freeze({
     publicGet:rankedPublicFetch,
     accountPost:roomAccountApi,
+    accountGet:async path=>{const token=roomAccountToken();if(!token)throw Object.assign(Error('Connect THIEPN Account to continue.'),{status:401});const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch(ROOM_API_BASE+path,{headers:{apikey:ROOM_API_KEY,'X-Gomoku-Account-Token':token},signal:controller.signal,cache:'no-store'}),data=await res.json();if(!res.ok)throw Object.assign(Error(data.error||'Administrative request failed.'),{status:res.status,requestId:data.requestId||null});return data;}finally{clearTimeout(timer);}},
     account:()=>({connected:roomAccountState.connected===true,username:roomAccountState.profile?.username||null}),
     detail:async id=>{const token=roomAccountToken();if(!token)return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch(ROOM_API_BASE+'/api/tournaments/'+encodeURIComponent(id),{headers:{apikey:ROOM_API_KEY,'X-Gomoku-Account-Token':token},signal:controller.signal,cache:'no-store'}),data=await res.json();if(!res.ok)throw Object.assign(Error(data.error||'Tournament request failed.'),{status:res.status});return data.tournament||null;}finally{clearTimeout(timer);}},
     enterTournament:async data=>{if(!data?.id||!data?.state)return false;if(network&&network.id===data.id)return true;if(network){toast('Leave the current room before opening a tournament match.');return false;}if(S.records.length&&!await archiveGame(true)){toast('Export or save the current game before opening the tournament match.');return false;}await enterRoom({...data,accountBound:true});return true;},
@@ -31,11 +32,13 @@ else:
     if s.count(anchor)!=1:raise SystemExit('P8 bridge anchor not unique.')
     s=s.replace(anchor,bridge+'\n\n'+anchor,1)
 
-for tag,ident,filename in [
-    ('style','p8-competition-style','p8-competition.css'),
-    ('script','p8-competition-script','p8-competition.js')
+for tag,ident,filename,folder in [
+    ('style','p8-competition-style','p8-competition.css','online'),
+    ('script','p8-competition-script','p8-competition.js','online'),
+    ('style','p15-operations-style','p15-console.css','operations'),
+    ('script','p15-operations-script','p15-console.js','operations')
 ]:
-    content=(ROOT/'online'/filename).read_text()
+    content=(ROOT/folder/filename).read_text()
     block=f'<{tag} id="{ident}">\n{content}\n</{tag}>'
     pattern=rf'<{tag} id="{re.escape(ident)}">.*?</{tag}>'
     if re.search(pattern,s,re.S):
@@ -149,9 +152,9 @@ if pill_old in s:
 
 INDEX.write_text(s)
 
-cache='gomoku-v12.1.0-p13-reliability-recovery-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.2.0-p15-operations-governance-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
 review.write_text(re.sub(r"gomoku-v12\.1\.0-[A-Za-z0-9.\-]+-analysis-2\.1\.0-review-ux-2\.1\.0",cache,review.read_text(),count=1))
-print('Embedded P13 reliability and recovery UI with competitive bridge.')
+print('Embedded P15 operations console with governed rollout and drill bridge.')
