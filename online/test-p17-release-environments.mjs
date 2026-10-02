@@ -32,6 +32,15 @@ for(const forbidden of [
   'grant update on table public.gomoku_schema_promotion_events to service_role'
 ]) assert(!migration.toLowerCase().includes(forbidden.toLowerCase()),'P17 security regression: '+forbidden);
 
+const healthIsolation=fs.readFileSync('supabase/migrations/20261002152600_gomoku_p17_certification_health_isolation.sql','utf8');
+for(const marker of [
+  "component is distinct from 'production_certification'",
+  "'releaseControl15m'",
+  "'certificationErrors'",
+  'security invoker'
+]) assert(healthIsolation.toLowerCase().includes(marker.toLowerCase()),'P17 certification health isolation missing '+marker);
+assert(!healthIsolation.toLowerCase().includes('security definer'),'P17 health isolation must remain SECURITY INVOKER');
+
 const backend=fs.readFileSync('supabase/functions/gomoku-room/index.ts','utf8');
 for(const marker of [
   "GITHUB_TRUSTED_WORKFLOW_P17='thiepn/gomoku/.github/workflows/p17-preview-promotion.yml@refs/heads/main'",

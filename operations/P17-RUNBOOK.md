@@ -160,3 +160,9 @@ P17 itself must be bootstrapped through the existing P16 controlled path:
 10. run its first P17 certification.
 
 After bootstrap, later releases can use the normal P17 preview → authorize → merge → production-certify path.
+
+## Certification health isolation
+
+Production-certification failures are control-plane evidence, not gameplay/runtime failures. P17 keeps them in `gomoku_runtime_events` and exposes their counts separately as `releaseControl15m`, but `gomoku_reliability_snapshot()` excludes `component='production_certification'` from the error/warning counters that determine `healthy | degraded | critical`.
+
+This prevents the certification retry loop from manufacturing the unhealthy signal it is trying to evaluate. Actual room, persistence, queue, recovery-heartbeat and other runtime errors remain health-impacting.
