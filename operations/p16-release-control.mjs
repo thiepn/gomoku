@@ -64,17 +64,18 @@ async function main(){
 
   if(mode==='admit'){
     const sha=gitSha();
+    let external={};
+    const evidenceFile=String(process.env.P16_EVIDENCE_FILE||'').trim();
+    if(evidenceFile){
+      try{external=JSON.parse((await import('node:fs')).readFileSync(evidenceFile,'utf8'));}catch(error){throw new Error('Could not read P16 authoritative evidence: '+error.message);}
+    }
     const checks={
       p16_contract:passed('P16 release-control contracts'),
-      p15_operations:passed('P15 operations governance'),
-      p14_governance:passed('P14 administration governance'),
-      p13_reliability:passed('P13 recovery and live health'),
-      ranked:passed('Ranked matchmaking contract'),
-      lifecycle:passed('Online room lifecycle'),
-      history:passed('Persistent match history'),
-      profiles:passed('Online identity and profiles'),
-      integrity:passed('Online match integrity')
+      ...external
     };
+    for(const name of ['p15_operations','p14_governance','p13_reliability','ranked','lifecycle','history','profiles','integrity']){
+      if(checks[name]?.status!=='passed')throw new Error('Authoritative admission evidence is missing or failed: '+name);
+    }
     const out=await automation('admission',{gitSha:sha,checks,workflowAttempt:Number(process.env.GITHUB_RUN_ATTEMPT)||1});
     console.log(JSON.stringify(out,null,2));
     if(out?.admission?.decision!=='admitted')throw new Error('Release admission was not granted.');
