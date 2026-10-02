@@ -57,7 +57,7 @@ async function main(){
       branchName:process.env.P17_PREVIEW_BRANCH_NAME||null,
       branchStatus:process.env.P17_PREVIEW_BRANCH_STATUS||'ready',
       requiredForPromotion:true,
-      source:'supabase_branch'
+      source:process.env.P17_ENVIRONMENT_SOURCE||'supabase_branch'
     });
     console.log(JSON.stringify(out,null,2));return;
   }
