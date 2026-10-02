@@ -132,6 +132,18 @@
     return '<section class="p15-card"><div class="p15-section-head"><div><p class="eyebrow">INCIDENT DRILLS</p><h3>Non-destructive certification</h3></div></div><p class="p15-note">Drills inspect real production contracts and privilege boundaries without disabling live services, ending rooms, or changing release state.</p><div class="p15-actions"><select id="p15DrillScenario"><option value="full">Full certification</option><option value="ranked_outage">Ranked outage</option><option value="persistence_degradation">Persistence degradation</option><option value="bad_release">Bad release / rollback</option></select><button class="btn" id="p15RunDrill">Run drill</button></div><div class="p15-list">'+(rows||'<div class="p15-empty">No drills recorded yet.</div>')+'</div></section>';
   }
 
+  function releaseAutomationMarkup(o){
+    const p=o?.p16||{},pub=p.publicStatus||{},admissions=Array.isArray(p.admissions)?p.admissions:[],certs=Array.isArray(p.certifications)?p.certifications:[],events=Array.isArray(p.orchestration)?p.orchestration:[],latestAdmission=pub.admission,latestCert=pub.certification,deployment=pub.deployment,drift=String(pub.driftState||'unobserved');
+    const evidence=latestAdmission?.id?(admissions.find(x=>x.id===latestAdmission.id)?.evidence_snapshot||{}):{};
+    const checkRows=Object.entries(evidence).map(([name,v])=>'<span data-pass="'+(v?.status==='passed')+'">'+(v?.status==='passed'?'✓':'×')+' '+esc(name.replaceAll('_',' '))+'</span>').join('');
+    const eventRows=events.slice(0,8).map(x=>'<article class="p15-list-row"><div><b>'+esc(x.stage)+' · '+esc(x.status)+'</b><span>'+shortSha(x.git_sha)+' · '+fmt(x.created_at)+'</span></div><code>'+esc(x.source_run_id||'—')+'</code></article>').join('');
+    return '<section class="p15-card p16-automation" data-state="'+esc(drift)+'"><div class="p15-section-head"><div><p class="eyebrow">P16 RELEASE CONTROL</p><h3>Admission & continuous certification</h3></div>'+statusPill(drift)+'</div>'+
+      '<div class="p16-status-grid"><div><span>Observed deployment</span><b>'+shortSha(deployment?.gitSha)+'</b><small>'+(deployment?.edgeFunctionVersion?'Edge v'+Number(deployment.edgeFunctionVersion):'Edge version unrecorded')+'</small></div><div><span>Automated admission</span><b>'+esc(latestAdmission?.decision||'none')+'</b><small>'+shortSha(latestAdmission?.gitSha)+'</small></div><div><span>Production certification</span><b>'+esc(latestCert?.status||'none')+'</b><small>'+(latestCert?.certifiedAt?fmt(latestCert.certifiedAt):'Not certified')+'</small></div></div>'+
+      '<p class="p15-note">P16 keeps qualification, deployment observation, and production certification separate. GitHub Actions uses short-lived OIDC identity; no THIEPN Account operator authority is granted to automation.</p>'+
+      (checkRows?'<div class="p15-checks p16-checks">'+checkRows+'</div>':'')+
+      '<div class="p15-subhead"><b>Recent orchestration</b><span>'+certs.length+' certification record'+(certs.length===1?'':'s')+'</span></div><div class="p15-list">'+(eventRows||'<div class="p15-empty">No P16 orchestration events recorded yet.</div>')+'</div></section>';
+  }
+
   function auditMarkup(o){
     const items=Array.isArray(o?.audit)?o.audit:[];
     return '<section class="p15-card"><div class="p15-section-head"><div><p class="eyebrow">AUDIT EVIDENCE</p><h3>Recent administrative changes</h3></div></div><div class="p15-audit">'+items.slice(0,20).map(x=>'<div><time>'+fmt(x.created_at)+'</time><b>'+esc(x.action)+'</b><span>'+esc(x.actor_role||'')+(x.reason?' · '+esc(x.reason):'')+'</span><code>'+esc(x.request_id||'—')+'</code></div>').join('')+'</div></section>';
@@ -143,7 +155,7 @@
     if(state.error){body.innerHTML='<p class="p15-error">'+esc(state.error)+'</p>';return;}
     const o=state.overview;if(!o){body.innerHTML='<p class="p15-error">Administrative access is unavailable.</p>';return;}
     body.innerHTML='<div class="p15-role-line"><span>Authorized as</span><b>'+esc(o.operatorRole)+'</b><span>Generated '+fmt(o.generatedAt)+'</span></div>'+
-      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+auditMarkup(o);
+      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+releaseAutomationMarkup(o)+auditMarkup(o);
     bind();
   }
 
@@ -225,5 +237,5 @@
   window.addEventListener('beforeunload',()=>clearTimeout(state.timer));
   const boot=()=>{if(!bridge())return setTimeout(boot,250);probe(true);};boot();
 
-  window.GomokuOpsConsole=Object.freeze({version:'1.0.0',open,refresh,probe:()=>probe(true)});
+  window.GomokuOpsConsole=Object.freeze({version:'1.1.0',open,refresh,probe:()=>probe(true)});
 })();
