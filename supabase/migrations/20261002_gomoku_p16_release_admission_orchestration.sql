@@ -577,7 +577,7 @@ begin
     'latestDeploymentMatchesBuild',v_latest_deployment.id is not null and v_latest_deployment.git_sha=v_git_sha,
     'healthHealthy',v_health='healthy',
     'serviceModeNormal',coalesce(v_operations->>'serviceMode','normal')='normal',
-    'noActiveIncident',v_operations->'incident' is null,
+    'noActiveIncident',v_operations->>'incident' is null,
     'structuralControlsPassed',v_structural_pass
   );
 
