@@ -22,6 +22,10 @@ for(const marker of [
   "build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}"
 ]) assert(backend.includes(marker),'P16 backend missing '+marker);
 
+const nullFix=fs.readFileSync('supabase/migrations/20261002_gomoku_p16_certification_null_fix.sql','utf8');
+assert(nullFix.includes("'noActiveIncident',v_operations->>'incident' is null"),'P16 corrective certification must treat JSON null incident as no active incident');
+assert(!nullFix.toLowerCase().includes('security definer'),'P16 corrective certification must remain SECURITY INVOKER');
+
 const buildMeta=fs.readFileSync('supabase/functions/gomoku-room/build-meta.ts','utf8');
 assert(buildMeta.includes("BUILD_GIT_SHA='SOURCE'"),'P16 source build metadata must not impersonate a deployed immutable SHA');
 
@@ -44,6 +48,7 @@ for(const marker of [
   'Release activation requires a passing P16 production certification',
   'Rollout creation requires a passing P16 automated admission',
   "'latestDeploymentMatchesBuild'",
+  "'noActiveIncident',v_operations->>'incident' is null",
   "'structuralControlsPassed'"
 ]) assert(migration.includes(marker),'P16 migration missing '+marker);
 
