@@ -89,7 +89,7 @@ for(const marker of [
   'accountGet:async path=>',
   "('style','p15-operations-style','p15-console.css','operations')",
   "('script','p15-operations-script','p15-console.js','operations')",
-  'gomoku-v12.3.0-p16-release-control'
+  'gomoku-v12.4.0-p17-preview-promotion'
 ]) assert(builder.includes(marker),'P15 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
