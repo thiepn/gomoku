@@ -5,6 +5,7 @@ const assert=(v,m)=>{if(!v)throw new Error(m);};
 const bootstrap=fs.readFileSync('operations/p18-shared-contract-bootstrap.sql','utf8');
 for(const marker of [
   'public.gomoku_rooms',
+  'public.gomoku_room_spectators',
   'private.broadcast_gomoku_room_change',
   'gomoku_rooms_realtime_broadcast',
   'public.account_apps',
@@ -27,7 +28,9 @@ for(const marker of [
   "'major_version = 17'",
   "20000101000000_p18_shared_contract_bootstrap.sql",
   "preview-p18-local",
-  "sourceMigrations",
+  "dependencyOrder",
+  "P18 dependency order must be updated for new migrations",
+  "dependencyOrderSource:'production-migration-ledger'",
   "portableHead",
   "fs.rmSync(out,{recursive:true,force:true})"
 ]) assert(builder.includes(marker),'P18 workspace builder missing '+marker);
