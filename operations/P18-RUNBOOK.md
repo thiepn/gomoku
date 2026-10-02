@@ -27,6 +27,7 @@ Supabase Branching requires Pro or above. P18 instead uses the all-plan local Su
 
 Gomoku runs inside the shared THIEPN Account project but owns only its own migrations. A clean standalone environment therefore needs a small compatibility layer for shared contracts that Gomoku reads:
 
+- the legacy P1/P2 room store and spectator-presence objects
 - account app registry
 - account app manifest
 - account app permissions
@@ -38,9 +39,9 @@ Gomoku runs inside the shared THIEPN Account project but owns only its own migra
 
 ## Deterministic migration replay
 
-The repository contains historical migration filenames with duplicate date prefixes. A normal Supabase migration history cannot safely treat those filenames as globally unique versions.
+The repository contains historical migration filenames with duplicate date prefixes, and filename ordering does not always match the order in which production applied dependent migrations. For example, P6 identity columns were applied before the later P6 exact-statistics function even though the filenames sort the other way.
 
-`operations/p18-build-portable-workspace.mjs` therefore materializes a disposable workspace with synthetic, unique 14-digit migration versions while preserving the repository's exact lexicographic migration order and SQL bytes.
+`operations/p18-build-portable-workspace.mjs` therefore carries an explicit dependency order derived from the production Supabase migration ledger. It refuses to run if a canonical migration is missing from that order or if a new migration appears without an explicit placement. The disposable workspace then assigns synthetic, unique 14-digit migration versions while preserving each migration's SQL bytes.
 
 This transformation is CI-only. Canonical migration files are never renamed or rewritten.
 
