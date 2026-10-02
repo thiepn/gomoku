@@ -1,10 +1,10 @@
 name: Ranked matchmaking verification
 on:
   pull_request:
-    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml']
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml','.github/workflows/p17-preview-promotion.yml']
   push:
     branches: [main]
-    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml']
+    paths: ['index.html','online/**','supabase/functions/gomoku-room/**','supabase/migrations/**','.github/workflows/verify-ranked-matchmaking.yml','operations/**','supabase/**','ui/**','analysis/**','review/**','.github/workflows/p16-release-control.yml','.github/workflows/p17-preview-promotion.yml']
 permissions:
   contents: read
 concurrency:
