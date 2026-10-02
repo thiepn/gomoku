@@ -152,9 +152,9 @@ if pill_old in s:
 
 INDEX.write_text(s)
 
-cache='gomoku-v12.2.0-p15-operations-governance-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
 review.write_text(re.sub(r"gomoku-v12\.1\.0-[A-Za-z0-9.\-]+-analysis-2\.1\.0-review-ux-2\.1\.0",cache,review.read_text(),count=1))
-print('Embedded P15 operations console with governed rollout and drill bridge.')
+print('Embedded P16 release-control operations console and competitive bridge.')

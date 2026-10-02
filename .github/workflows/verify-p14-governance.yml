@@ -10,6 +10,13 @@ on:
       - 'online/test-p14-governance.mjs'
       - 'operations/P14-RUNBOOK.md'
       - '.github/workflows/verify-p14-governance.yml'
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
   pull_request:
     paths:
       - 'supabase/functions/gomoku-room/**'
@@ -19,6 +26,13 @@ on:
       - 'operations/P14-RUNBOOK.md'
       - '.github/workflows/verify-p14-governance.yml'
 
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
 permissions:
   contents: read
 

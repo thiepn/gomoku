@@ -1,0 +1,184 @@
+name: P16 release control
+
+on:
+  pull_request:
+    paths:
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: read
+  id-token: write
+
+concurrency:
+  group: p16-release-control-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild generated application shell
+        run: |
+          python ui/build.py
+          python online/build-p8-client.py
+      - name: Validate P16 source syntax and contracts
+        run: |
+          node --check operations/p15-console.js
+          node --check operations/p16-release-control.mjs
+          node --check operations/p16-await-checks.mjs
+          python -m py_compile online/build-p8-client.py
+          node online/test-p16-release-control.mjs
+      - name: Wait for authoritative release checks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P16_CHECK_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node operations/p16-await-checks.mjs
+      - name: Submit automated admission
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          P16_GIT_SHA: ${{ github.sha }}
+          P16_EVIDENCE_FILE: /tmp/p16-check-evidence.json
+        run: node operations/p16-release-control.mjs admit
+
+  orchestrate:
+    needs: qualify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      deployed: ${{ steps.deploy_state.outputs.deployed }}
+    env:
+      P16_GIT_SHA: ${{ github.sha }}
+      SUPABASE_PROJECT_ID: hycegznamzjhwinegaai
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Record orchestration start
+        env:
+          P16_STAGE: deployment
+          P16_STATUS: started
+          P16_DETAILS_JSON: '{"source":"github_actions","policy":"p16.v1"}'
+        run: node operations/p16-release-control.mjs event
+      - name: Detect schema changes and deployment capability
+        id: preflight
+        shell: bash
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse HEAD^)"
+          fi
+          if git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -q '^supabase/migrations/'; then
+            echo "migration_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "migration_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "edge_capable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "edge_capable=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Block on unapplied schema migration
+        if: steps.preflight.outputs.migration_changed == 'true'
+        env:
+          P16_STAGE: schema
+          P16_STATUS: blocked
+          P16_DETAILS_JSON: '{"reason":"controlled_schema_apply_required","message":"P16 never guesses migration history or blindly runs db push."}'
+        run: node operations/p16-release-control.mjs event
+      - name: Block when Supabase deploy credential is unavailable
+        if: steps.preflight.outputs.migration_changed != 'true' && steps.preflight.outputs.edge_capable != 'true'
+        env:
+          P16_STAGE: edge
+          P16_STATUS: blocked
+          P16_DETAILS_JSON: '{"reason":"missing_supabase_access_token","message":"Edge deployment is armed but requires the repository SUPABASE_ACCESS_TOKEN secret."}'
+        run: node operations/p16-release-control.mjs event
+      - uses: supabase/setup-cli@v1
+        if: steps.preflight.outputs.migration_changed != 'true' && steps.preflight.outputs.edge_capable == 'true'
+        with:
+          version: latest
+      - name: Stamp immutable runtime build metadata
+        if: steps.preflight.outputs.migration_changed != 'true' && steps.preflight.outputs.edge_capable == 'true'
+        shell: bash
+        run: |
+          cat > supabase/functions/gomoku-room/build-meta.ts <<EOF
+          export const BUILD_GIT_SHA='$GITHUB_SHA';
+          export const BUILD_CHANNEL='github-actions';
+          EOF
+      - name: Deploy admitted Edge Function
+        if: steps.preflight.outputs.migration_changed != 'true' && steps.preflight.outputs.edge_capable == 'true'
+        run: supabase functions deploy gomoku-room --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+      - name: Record deployed runtime
+        if: steps.preflight.outputs.migration_changed != 'true' && steps.preflight.outputs.edge_capable == 'true'
+        env:
+          P16_FRONTEND_SHA: ${{ github.sha }}
+        run: node operations/p16-release-control.mjs deployment
+      - name: Mark deployment output
+        id: deploy_state
+        shell: bash
+        run: |
+          if [ "${{ steps.preflight.outputs.migration_changed }}" != "true" ] && [ "${{ steps.preflight.outputs.edge_capable }}" = "true" ]; then
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  certify_after_deploy:
+    needs: orchestrate
+    if: needs.orchestrate.outputs.deployed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Certify deployed production build
+        run: node operations/p16-release-control.mjs certify
+
+  continuous_certification:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Continuous production certification
+        run: node operations/p16-release-control.mjs certify

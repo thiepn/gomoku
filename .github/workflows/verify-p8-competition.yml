@@ -19,6 +19,13 @@ on:
       - 'analysis/build.py'
       - 'review/build.py'
       - '.github/workflows/verify-p8-competition.yml'
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
   pull_request:
     paths:
       - 'online/p8-competition.js'
@@ -37,6 +44,13 @@ on:
       - 'review/build.py'
       - '.github/workflows/verify-p8-competition.yml'
 
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
 permissions:
   contents: write
 
