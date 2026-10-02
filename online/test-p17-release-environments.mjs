@@ -90,21 +90,26 @@ const workflow=fs.readFileSync('.github/workflows/p17-preview-promotion.yml','ut
 for(const marker of [
   'SUPABASE_PROJECT_ID: hycegznamzjhwinegaai',
   'P17_PREVIEW_BRANCH_NAME: gomoku-preview',
-  'Resolve isolated preview branch identity',
+  'Resolve hosted preview mode',
+  'P17_ENABLE_BRANCHING',
+  'P18_HOSTED_PREVIEW_PROJECT_ID',
   'SUPABASE_ACCESS_TOKEN',
   'Wait for exact-SHA P16 admission',
   'node operations/p17-await-admission.mjs',
   'supabase --experimental branches get',
-  'Rehearse migration rollback transaction',
-  'Apply candidate migrations to preview only',
-  "BUILD_CHANNEL='preview-p17'",
-  'Exercise isolated preview contracts',
-  'Certify preview release',
+  'Plan dedicated preview',
+  'rehearse-preview',
+  'apply-preview',
+  "BUILD_CHANNEL='preview-p18-hosted'",
+  'Exercise isolated hosted preview contracts',
+  'Certify hosted preview release',
   'Authorize exact production promotion',
-  'Merge certified Supabase branch to production',
+  'Merge certified Supabase branch schema',
+  'Apply certified dedicated-preview schema to production',
+  'Deploy certified Edge Function to production',
   'Certify promoted production',
   'Preserve fail-closed promotion evidence'
-]) assert(workflow.includes(marker),'P17 workflow missing '+marker);
+]) assert(workflow.includes(marker),'P17/P18 hosted promotion workflow missing '+marker);
 
 const p16=fs.readFileSync('.github/workflows/p16-release-control.yml','utf8');
 assert(p16.includes('delegated_to_p17'),'P16 production deployment must be delegated to P17');
