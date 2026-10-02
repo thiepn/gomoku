@@ -1,0 +1,68 @@
+name: Verify P15 operations governance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'operations/p15-console.js'
+      - 'operations/p15-console.css'
+      - 'operations/P15-RUNBOOK.md'
+      - 'online/build-p8-client.py'
+      - 'online/test-p13-reliability.mjs'
+      - 'online/test-p14-governance.mjs'
+      - 'online/test-p15-operations.mjs'
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/*gomoku_p15*.sql'
+      - '.github/workflows/verify-p15-operations.yml'
+  pull_request:
+    paths:
+      - 'operations/p15-console.js'
+      - 'operations/p15-console.css'
+      - 'operations/P15-RUNBOOK.md'
+      - 'online/build-p8-client.py'
+      - 'online/test-p13-reliability.mjs'
+      - 'online/test-p14-governance.mjs'
+      - 'online/test-p15-operations.mjs'
+      - 'supabase/functions/gomoku-room/**'
+      - 'supabase/migrations/*gomoku_p15*.sql'
+      - '.github/workflows/verify-p15-operations.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p15:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild generated app shell
+        run: |
+          python ui/build.py
+          python online/build-p8-client.py
+      - name: Validate source syntax
+        run: |
+          node --check operations/p15-console.js
+          node --check online/p8-competition.js
+          python -m py_compile online/build-p8-client.py
+      - name: Verify P15 contracts
+        run: node online/test-p15-operations.mjs
+      - name: Verify P14/P13 regression contracts
+        run: |
+          node online/test-p14-governance.mjs
+          node online/test-p13-reliability.mjs
+      - name: Ensure P15 builder is idempotent
+        run: |
+          cp index.html /tmp/p15-index.html
+          cp sw.js /tmp/p15-sw.js
+          python online/build-p8-client.py
+          cmp index.html /tmp/p15-index.html
+          cmp sw.js /tmp/p15-sw.js
+      - name: Reject public P15 admin grants
+        shell: bash
+        run: |
+          ! grep -Eiq 'grant .*gomoku_(rollouts|deployment_observations|incident_drill_runs).* to (public|anon|authenticated)' supabase/migrations/20261002_gomoku_p15_operations_rollouts_drills.sql
+          ! grep -Eiq 'security[[:space:]]+definer' supabase/migrations/20261002_gomoku_p15_operations_rollouts_drills.sql
