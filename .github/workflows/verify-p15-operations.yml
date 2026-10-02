@@ -14,6 +14,13 @@ on:
       - 'supabase/functions/gomoku-room/**'
       - 'supabase/migrations/*gomoku_p15*.sql'
       - '.github/workflows/verify-p15-operations.yml'
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
   pull_request:
     paths:
       - 'operations/p15-console.js'
@@ -27,6 +34,13 @@ on:
       - 'supabase/migrations/*gomoku_p15*.sql'
       - '.github/workflows/verify-p15-operations.yml'
 
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
 permissions:
   contents: read
 
