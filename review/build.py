@@ -38,5 +38,5 @@ if '<style id="review-workspace-style">' in s:
 else:
     s=s.replace('</body>',block+'\n</body>')
 path.write_text(s)
-sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.2.0-p15-operations-governance-analysis-2.1.0-review-ux-2.1.0';",t,count=1);sw.write_text(t)
+sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0';",t,count=1);sw.write_text(t)
 print('Embedded Guided Review / Analysis 2.1.0; existing game, course and storage formats preserved.')
