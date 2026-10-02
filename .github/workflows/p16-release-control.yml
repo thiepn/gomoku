@@ -158,9 +158,9 @@ jobs:
             echo "deployed=false" >> "$GITHUB_OUTPUT"
           fi
 
-  certify_after_deploy:
-    needs: orchestrate
-    if: needs.orchestrate.outputs.deployed == 'true'
+  certify_production:
+    needs: [qualify, orchestrate]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.qualify.result == 'success' && needs.orchestrate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -168,7 +168,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Certify deployed production build
+      - name: Certify currently running production build
         run: node operations/p16-release-control.mjs certify
 
   continuous_certification:
