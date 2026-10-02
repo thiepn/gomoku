@@ -13,9 +13,44 @@ fs.rmSync(out,{recursive:true,force:true});
 fs.mkdirSync(migrationsDir,{recursive:true});
 fs.mkdirSync(functionDir,{recursive:true});
 
-const sourceMigrations=fs.readdirSync(path.join(root,'supabase','migrations'))
-  .filter(name=>/\.sql$/i.test(name))
-  .sort((a,b)=>a.localeCompare(b));
+const dependencyOrder=[
+  '20260930_gomoku_p3_lifecycle.sql',
+  '20260930_gomoku_p4_match_integrity_rate_limits.sql',
+  '20260930_gomoku_p5_match_history_persistence.sql',
+  '20260930_gomoku_p6_online_player_identity_profiles.sql',
+  '20260930_gomoku_p6_exact_player_stats.sql',
+  '20260930_gomoku_p7_ranked_rating_matchmaking.sql',
+  '20260930_gomoku_p7_ranked_read_models.sql',
+  '20260930_gomoku_p7_account_capabilities.sql',
+  '20260930_gomoku_p7_ranked_active_opponent_index.sql',
+  '20261001_gomoku_p8_seasons_tournaments.sql',
+  '20261001_gomoku_p8_fk_indexes.sql',
+  '20261001_gomoku_p9_competitive_operations.sql',
+  '20261001_gomoku_p10_competitive_identity.sql',
+  '20261001_gomoku_p11_social_layer.sql',
+  '20261001_gomoku_p11_social_indexes.sql',
+  '20261001_gomoku_p11_social_cron.sql',
+  '20261001_gomoku_p12_fair_play_trust.sql',
+  '20261001_gomoku_p12_trust_indexes.sql',
+  '20261001_gomoku_p12_moderation_review.sql',
+  '20261001_gomoku_p13_reliability_observability_recovery.sql',
+  '20261001_gomoku_p13_reliability_heartbeat.sql',
+  '20261001_gomoku_p14_competitive_administration.sql',
+  '20261001_gomoku_p14_audit_append_only_grants.sql',
+  '20261001_gomoku_p14_audit_sequence_hardening.sql',
+  '20261002_gomoku_p15_operations_rollouts_drills.sql',
+  '20261002_gomoku_p16_release_admission_orchestration.sql',
+  '20261002_gomoku_p16_certification_null_fix.sql',
+  '20261002163100_gomoku_p17_release_environments_preview_promotion.sql',
+  '20261002152600_gomoku_p17_certification_health_isolation.sql'
+];
+const discovered=fs.readdirSync(path.join(root,'supabase','migrations'))
+  .filter(name=>/\.sql$/i.test(name));
+const unknown=discovered.filter(name=>!dependencyOrder.includes(name));
+const missing=dependencyOrder.filter(name=>!discovered.includes(name));
+if(missing.length)throw new Error('P18 dependency order references missing migrations: '+missing.join(', '));
+if(unknown.length)throw new Error('P18 dependency order must be updated for new migrations: '+unknown.join(', '));
+const sourceMigrations=[...dependencyOrder];
 
 const bootstrapSource=path.join(root,'operations','p18-shared-contract-bootstrap.sql');
 const bootstrap=fs.readFileSync(bootstrapSource);
@@ -72,6 +107,7 @@ const manifest={
     sha256:sha256(bootstrap),
     bytes:bootstrap.length
   },
+  dependencyOrderSource:'production-migration-ledger',
   migrations:mapping,
   migrationCount:mapping.length,
   migrationHead:mapping.at(-1)?.source||null,
