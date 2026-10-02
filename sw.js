@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-v12.2.0-p15-operations-governance-analysis-2.1.0-review-ux-2.1.0';
+const CACHE_NAME = 'gomoku-v12.3.0-p16-release-control-analysis-2.1.0-review-ux-2.1.0';
 const APP_SHELL = [
   './',
   './index.html',
