@@ -24,3 +24,11 @@
 .p16-automation[data-state=unadmitted_deployment],.p16-automation[data-state=admission_revoked],.p16-automation[data-state=certification_drift],.p16-automation[data-state=certification_failed]{border-color:color-mix(in srgb,#9d3e37 60%,var(--hair))}
 .p16-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.p16-status-grid>div{display:grid;gap:3px;padding:9px;border:1px solid var(--hair);border-radius:8px;background:var(--paper)}.p16-status-grid span,.p16-status-grid small{font-size:6px;color:var(--ink2)}.p16-status-grid b{font:700 13px Georgia,serif;text-transform:capitalize}.p16-checks{justify-content:flex-start;max-width:none}
 @media(max-width:760px){.p16-status-grid{grid-template-columns:1fr}}
+
+/* P17 — Release environments, preview certification & safe schema promotion */
+.p17-environment[data-state=ready]{border-color:color-mix(in srgb,#39765a 50%,var(--hair))}
+.p17-environment[data-state=provisioning],.p17-environment[data-state=paused],.p17-environment[data-state=unknown],.p17-environment[data-state=unconfigured]{border-color:color-mix(in srgb,#a4782d 50%,var(--hair))}
+.p17-environment[data-state=degraded],.p17-environment[data-state=failed]{border-color:color-mix(in srgb,#9d3e37 60%,var(--hair))}
+.p17-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.p17-status-grid>div{display:grid;gap:3px;padding:9px;border:1px solid var(--hair);border-radius:8px;background:var(--paper);min-width:0}.p17-status-grid span,.p17-status-grid small{font-size:6px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis}.p17-status-grid b{font:700 12px Georgia,serif;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){.p17-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.p17-status-grid{grid-template-columns:1fr}}
