@@ -55,7 +55,7 @@ for(const marker of [
   'async function automationP17ProductionCertify',
   "parts[1]==='environment'",
   "parts[3]==='preview-certification'",
-  "phase:'P17'",
+  "phase:'P18'",
   'rpc/gomoku_p17_public_status'
 ]) assert(backend.includes(marker),'P17 backend missing '+marker);
 
@@ -64,7 +64,7 @@ for(const marker of ['schemaManifestSha256','edgeManifestSha256','releaseManifes
   assert(manifest.includes(marker),'P17 manifest generator missing '+marker);
 
 const control=fs.readFileSync('operations/p17-release-control.mjs','utf8');
-for(const marker of ['register-environment','schema-state','preview-certification','authorize-promotion','production-deployment','production-certify','gomoku-production-control'])
+for(const marker of ['register-environment','schema-state','preview-certification','authorize-promotion','production-deployment','production-certify','gomoku-production-control','P17_ENVIRONMENT_SOURCE'])
   assert(control.includes(marker),'P17 OIDC control client missing '+marker);
 
 const branch=fs.readFileSync('operations/p17-supabase-branch.mjs','utf8');
