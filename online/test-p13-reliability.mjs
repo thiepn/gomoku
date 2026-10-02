@@ -60,7 +60,7 @@ assert(apiBase&&apiKey,'generated room API configuration missing');
 const healthRes=await fetch(apiBase+'/api/health',{headers:{apikey:apiKey}});
 const health=await healthRes.json();
 assert(healthRes.ok,'live health endpoint returned '+healthRes.status+' '+JSON.stringify(health));
-assert(health.service==='gomoku-room'&&['P13','P14','P15','P16','P17'].includes(health.phase),'live health identity/version mismatch');
+assert(health.service==='gomoku-room'&&['P13','P14','P15','P16','P17','P18'].includes(health.phase),'live health identity/version mismatch');
 assert(['healthy','degraded','critical','maintenance'].includes(health.status),'live health status invalid');
 assert(health.persistence&&Number.isFinite(Number(health.persistence.pending)),'live health persistence telemetry missing');
 const publicHealth=JSON.stringify(health);
