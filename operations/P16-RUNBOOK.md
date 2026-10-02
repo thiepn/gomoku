@@ -94,7 +94,7 @@ The Supabase project reference is not a secret. The access token is.
 
 ## Continuous certification
 
-The workflow runs every six hours at minute 17 and can also be dispatched manually.
+Every successful admitted `main` release-control run certifies the **currently running production build** after orchestration completes, even when the new candidate was intentionally held at a schema or credential gate. The workflow also runs certification every six hours at minute 17 and can be dispatched manually.
 
 Certification executes against the **currently running Edge bundle**, not against a Git checkout claim. The runtime build SHA must:
 
