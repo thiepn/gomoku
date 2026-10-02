@@ -33,7 +33,7 @@ permissions:
 
 concurrency:
   group: p17-preview-promotion-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   SUPABASE_PROJECT_ID: hycegznamzjhwinegaai
@@ -56,15 +56,17 @@ jobs:
         run: |
           python ui/build.py
           python online/build-p8-client.py
-      - name: Validate P17 source and manifest
+      - name: Validate P17/P18 source and manifest
         run: |
           node --check operations/p17-manifest.mjs
           node --check operations/p17-release-control.mjs
           node --check operations/p17-await-admission.mjs
           node --check operations/p17-supabase-branch.mjs
+          node --check operations/p18-hosted-preview.mjs
           node --check operations/p15-console.js
           node operations/p17-manifest.mjs >/tmp/p17-manifest-output.json
           node online/test-p17-release-environments.mjs
+          node online/test-p18-portability-recovery.mjs
       - name: Verify P16/P15/P14/P13 compatibility
         run: |
           node online/test-p16-release-control.mjs
@@ -76,9 +78,13 @@ jobs:
     needs: contracts
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      P17_ENABLE_BRANCHING: ${{ secrets.P17_ENABLE_BRANCHING }}
+      P18_HOSTED_PREVIEW_PROJECT_ID: ${{ secrets.P18_HOSTED_PREVIEW_PROJECT_ID }}
+      P18_HOSTED_PREVIEW_DB_URL: ${{ secrets.P18_HOSTED_PREVIEW_DB_URL }}
+      P18_PRODUCTION_DB_URL: ${{ secrets.P18_PRODUCTION_DB_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,46 +99,59 @@ jobs:
       - name: Generate immutable release manifest
         id: manifest
         run: node operations/p17-manifest.mjs >/tmp/p17-manifest-output.json
-      - name: Check release-environment capability
+
+      - name: Resolve hosted preview mode
         id: capability
         shell: bash
         run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$P18_HOSTED_PREVIEW_PROJECT_ID" ] && [ -n "$P18_HOSTED_PREVIEW_DB_URL" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "mode=dedicated" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ "$P17_ENABLE_BRANCHING" = "true" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "mode=branch" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "P17 preview promotion is armed but blocked: SUPABASE_ACCESS_TOKEN is not configured."
+            echo "mode=none" >> "$GITHUB_OUTPUT"
+            echo "P17 hosted promotion is fail-closed. P18 portable-preview remains the mandatory admission gate."
           fi
+
       - uses: supabase/setup-cli@v1
         if: steps.capability.outputs.configured == 'true'
         with:
-          version: latest
-      - name: Resolve isolated preview branch identity
-        if: steps.capability.outputs.configured == 'true'
-        run: node operations/p17-supabase-branch.mjs resolve
-      - name: Resolve isolated preview branch credentials
-        if: steps.capability.outputs.configured == 'true'
-        shell: bash
+          version: 2.119.0
+
+      - name: Resolve Supabase branch preview
+        if: steps.capability.outputs.mode == 'branch'
         run: |
+          node operations/p17-supabase-branch.mjs resolve
           supabase --experimental branches get "$P17_PREVIEW_BRANCH_NAME" -o env > /tmp/p17-branch.env
           cat /tmp/p17-branch.env >> "$GITHUB_ENV"
-      - name: Export preview API credentials
-        if: steps.capability.outputs.configured == 'true'
-        run: node operations/p17-supabase-branch.mjs export-preview-api
+          node operations/p17-supabase-branch.mjs export-preview-api
+
+      - name: Plan dedicated preview
+        if: steps.capability.outputs.mode == 'dedicated'
+        run: |
+          node operations/p18-hosted-preview.mjs plan-preview
+          cp /tmp/p18-preview-plan.json /tmp/p17-migration-plan.json
+          node operations/p18-hosted-preview.mjs rehearse-preview
+          node operations/p18-hosted-preview.mjs apply-preview
+          node operations/p18-hosted-preview.mjs export-api
+
       - name: Register preview environment
         if: steps.capability.outputs.configured == 'true'
         run: node operations/p17-release-control.mjs register-environment
-      - name: Read preview baseline and plan repo migrations
-        if: steps.capability.outputs.configured == 'true'
-        run: |
-          node operations/p17-supabase-branch.mjs probe-preview
-          node operations/p17-supabase-branch.mjs plan
-      - name: Rehearse migration rollback transaction
-        if: steps.capability.outputs.configured == 'true'
+
+      - name: Plan Supabase branch migrations
+        if: steps.capability.outputs.mode == 'branch'
+        run: node operations/p17-supabase-branch.mjs plan
+      - name: Rehearse Supabase branch migrations
+        if: steps.capability.outputs.mode == 'branch'
         run: node operations/p17-supabase-branch.mjs rehearse
-      - name: Apply candidate migrations to preview only
-        if: steps.capability.outputs.configured == 'true'
+      - name: Apply candidate migrations to Supabase branch
+        if: steps.capability.outputs.mode == 'branch'
         run: node operations/p17-supabase-branch.mjs apply
+
       - name: Record preview migration evidence
         if: steps.capability.outputs.configured == 'true'
         shell: bash
@@ -144,27 +163,32 @@ jobs:
             export P17_MIGRATION_RESULT=applied
             node operations/p17-release-control.mjs migration-event
           done
+
       - name: Stamp preview runtime provenance
         if: steps.capability.outputs.configured == 'true'
         shell: bash
         run: |
           cat > supabase/functions/gomoku-room/build-meta.ts <<EOF
           export const BUILD_GIT_SHA='$GITHUB_SHA';
-          export const BUILD_CHANNEL='preview-p17';
+          export const BUILD_CHANNEL='preview-p18-hosted';
           EOF
-      - name: Deploy candidate Edge Function to preview
+
+      - name: Deploy candidate Edge Function to hosted preview
         if: steps.capability.outputs.configured == 'true'
         run: supabase functions deploy gomoku-room --project-ref "$P17_PREVIEW_PROJECT_ID" --no-verify-jwt
+
       - name: Commit preview schema manifest state
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_TARGET_BASE: https://${{ env.P17_PREVIEW_PROJECT_ID }}.supabase.co/functions/v1/gomoku-room
           P17_ENVIRONMENT_LABEL: preview
         run: node operations/p17-release-control.mjs schema-state
+
       - name: Probe preview after migration and Edge deployment
         if: steps.capability.outputs.configured == 'true'
         run: node operations/p17-supabase-branch.mjs probe-preview
-      - name: Exercise isolated preview contracts
+
+      - name: Exercise isolated hosted preview contracts
         if: steps.capability.outputs.configured == 'true'
         run: |
           node online/test-lifecycle.mjs
@@ -172,28 +196,68 @@ jobs:
           node online/test-ranked.mjs
           node online/test-history.mjs
           node online/test-player-profiles.mjs
-      - name: Certify preview release
+
+      - name: Certify hosted preview release
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_MIGRATION_REPLAY_PASSED: 'true'
           P17_ROLLBACK_REHEARSAL_PASSED: 'true'
         run: node operations/p17-release-control.mjs preview-certification
+
       - name: Authorize exact production promotion
         if: steps.capability.outputs.configured == 'true'
         run: node operations/p17-release-control.mjs authorize-promotion
+
+      - name: Require production database credential for dedicated promotion
+        if: steps.capability.outputs.mode == 'dedicated'
+        shell: bash
+        run: |
+          if [ -z "$P18_PRODUCTION_DB_URL" ]; then
+            echo "P18_PRODUCTION_DB_URL is required after dedicated preview certification."
+            exit 1
+          fi
+
       - name: Record rollback rehearsal
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_PROMOTION_EVENT: rollback_rehearsed
         run: node operations/p17-release-control.mjs promotion-event
+
+      - name: Plan and rehearse dedicated production schema
+        if: steps.capability.outputs.mode == 'dedicated'
+        shell: bash
+        run: |
+          node operations/p18-hosted-preview.mjs plan-production
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('/tmp/p18-preview-plan.json')),b=JSON.parse(fs.readFileSync('/tmp/p18-production-plan.json')); if(JSON.stringify(a.migrations)!==JSON.stringify(b.migrations)) throw new Error('Preview and production migration plans differ.');"
+          node operations/p18-hosted-preview.mjs rehearse-production
+
       - name: Record promotion start
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_PROMOTION_EVENT: started
         run: node operations/p17-release-control.mjs promotion-event
-      - name: Merge certified Supabase branch to production
-        if: steps.capability.outputs.configured == 'true'
+
+      - name: Merge certified Supabase branch schema
+        if: steps.capability.outputs.mode == 'branch'
         run: node operations/p17-supabase-branch.mjs merge
+
+      - name: Apply certified dedicated-preview schema to production
+        if: steps.capability.outputs.mode == 'dedicated'
+        run: node operations/p18-hosted-preview.mjs apply-production
+
+      - name: Stamp production runtime provenance
+        if: steps.capability.outputs.configured == 'true'
+        shell: bash
+        run: |
+          cat > supabase/functions/gomoku-room/build-meta.ts <<EOF
+          export const BUILD_GIT_SHA='$GITHUB_SHA';
+          export const BUILD_CHANNEL='production-p18-promoted';
+          EOF
+
+      - name: Deploy certified Edge Function to production
+        if: steps.capability.outputs.configured == 'true'
+        run: supabase functions deploy gomoku-room --project-ref hycegznamzjhwinegaai --no-verify-jwt
+
       - name: Wait for promoted production runtime
         if: steps.capability.outputs.configured == 'true'
         shell: bash
@@ -213,16 +277,19 @@ jobs:
             echo "Promoted production runtime did not converge to $GITHUB_SHA."
             exit 1
           fi
+
       - name: Record production repo schema state
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_ENVIRONMENT_LABEL: production
         run: node operations/p17-release-control.mjs schema-state
+
       - name: Reconcile promoted production deployment
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_FRONTEND_SHA: ${{ github.sha }}
         run: node operations/p17-release-control.mjs production-deployment
+
       - name: Record production migration verification
         if: steps.capability.outputs.configured == 'true'
         shell: bash
@@ -233,19 +300,23 @@ jobs:
             export P17_MIGRATION_RESULT=verified
             node operations/p17-release-control.mjs migration-event
           done
+
       - name: Record applied promotion
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_PROMOTION_EVENT: applied
         run: node operations/p17-release-control.mjs promotion-event
+
       - name: Certify promoted production
         if: steps.capability.outputs.configured == 'true'
         run: node operations/p17-release-control.mjs production-certify
+
       - name: Record verified promotion
         if: steps.capability.outputs.configured == 'true'
         env:
           P17_PROMOTION_EVENT: verified
         run: node operations/p17-release-control.mjs promotion-event
+
       - name: Preserve fail-closed promotion evidence
         if: failure() && steps.capability.outputs.configured == 'true'
         env:
