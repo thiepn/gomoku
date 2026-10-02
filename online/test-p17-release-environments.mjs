@@ -70,7 +70,7 @@ for(const marker of [
   "'begin;\\n'+sql+'\\nrollback;'",
   '/v1/branches/',
   '/merge',
-  'CREATE\\s+INDEX\\s+CONCURRENTLY'
+  'create\\s+index\\s+concurrently'
 ]) assert(branch.includes(marker),'P17 branch client missing '+marker);
 
 const admissionWait=fs.readFileSync('operations/p17-await-admission.mjs','utf8');
