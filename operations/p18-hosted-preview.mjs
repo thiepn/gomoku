@@ -12,6 +12,8 @@ const token=String(process.env.SUPABASE_ACCESS_TOKEN||'');
 
 if(!/^[0-9a-f]{40}$/.test(current))throw new Error('An immutable candidate Git SHA is required.');
 if(!/^[a-z0-9]{20}$/.test(previewRef)||previewRef===productionRef)throw new Error('P18_HOSTED_PREVIEW_PROJECT_ID must be a distinct Supabase project ref.');
+if(previewUrl&&!previewUrl.includes(previewRef))throw new Error('Preview DB URL does not match P18_HOSTED_PREVIEW_PROJECT_ID.');
+if(productionUrl&&!productionUrl.includes(productionRef))throw new Error('Production DB URL does not match the THIEPN Account production project.');
 
 function psql(url,args,{capture=false}={}){
   if(!url)throw new Error('Database URL is required for this operation.');
@@ -45,8 +47,10 @@ function rejectNonTransactional(name,sql){
   if(/\b(create\s+index\s+concurrently|drop\s+index\s+concurrently|vacuum|reindex\s+concurrently)\b/i.test(sql))
     throw new Error('P18 automatic replay rejects non-transactional SQL in '+name);
 }
-function writePlan(url,label){
-  const base=baseSha(url),migrations=changed(base);
+function writePlan(url,label,requireBase=false){
+  const base=baseSha(url);
+  if(requireBase&&!base)throw new Error('Production repo schema baseline is unavailable; refusing automatic replay.');
+  const migrations=changed(base);
   const plan={label,baseSourceGitSha:base,currentGitSha:current,migrations};
   fs.writeFileSync('/tmp/p18-'+label+'-plan.json',JSON.stringify(plan,null,2));
   console.log(JSON.stringify(plan,null,2));
@@ -97,7 +101,7 @@ else if(mode==='rehearse-preview')runPlan(previewUrl,'preview','rehearse');
 else if(mode==='apply-preview')runPlan(previewUrl,'preview','apply');
 else if(mode==='plan-production'){
   if(!productionUrl)throw new Error('P18_PRODUCTION_DB_URL is required for safe hosted promotion.');
-  writePlan(productionUrl,'production');
+  writePlan(productionUrl,'production',true);
 }
 else if(mode==='rehearse-production')runPlan(productionUrl,'production','rehearse');
 else if(mode==='apply-production')runPlan(productionUrl,'production','apply');
