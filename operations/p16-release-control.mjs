@@ -73,7 +73,7 @@ async function main(){
       p16_contract:passed('P16 release-control contracts'),
       ...external
     };
-    for(const name of ['p15_operations','p14_governance','p13_reliability','ranked','lifecycle','history','profiles','integrity']){
+    for(const name of ['p15_operations','p14_governance','p13_reliability','ranked','lifecycle','history','profiles','integrity','p18_portability','p19_supply_chain','p20_slo_governance','p21_capacity']){
       if(checks[name]?.status!=='passed')throw new Error('Authoritative admission evidence is missing or failed: '+name);
     }
     const out=await automation('admission',{gitSha:sha,checks,workflowAttempt:Number(process.env.GITHUB_RUN_ATTEMPT)||1});
