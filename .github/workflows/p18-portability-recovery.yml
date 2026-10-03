@@ -98,6 +98,32 @@ jobs:
             cat /tmp/p18-functions.log || true
             exit 1
           fi
+          api_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
+          app_ok=0
+          auth_ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/rooms" > /tmp/p18-rooms-probe.json; then
+              app_ok=1
+            fi
+            code="$(curl -sS -o /tmp/p18-auth-probe.json -w '%{http_code}' \
+              -H "apikey: $GOMOKU_ROOM_KEY" \
+              -H "Authorization: Bearer not-a-real-account-jwt" \
+              "$api_base/auth/v1/user" || true)"
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              auth_ok=1
+            fi
+            if [ "$app_ok" = "1" ] && [ "$auth_ok" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$app_ok" != "1" ] || [ "$auth_ok" != "1" ]; then
+            echo "Portable Supabase application surfaces did not become ready."
+            cat /tmp/p18-rooms-probe.json || true
+            cat /tmp/p18-auth-probe.json || true
+            cat /tmp/p18-functions.log || true
+            exit 1
+          fi
           cat /tmp/p18-health.json
 
       - name: Lint reconstructed database
@@ -179,22 +205,30 @@ jobs:
             cat /tmp/p18-recovered-functions.log || true
             exit 1
           fi
-          auth_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
+          api_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
+          app_ok=0
           auth_ok=0
           for attempt in $(seq 1 30); do
-            code="$(curl -sS -o /tmp/p18-auth-probe.json -w '%{http_code}' \
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/rooms" > /tmp/p18-recovered-rooms-probe.json; then
+              app_ok=1
+            fi
+            code="$(curl -sS -o /tmp/p18-recovered-auth-probe.json -w '%{http_code}' \
               -H "apikey: $GOMOKU_ROOM_KEY" \
               -H "Authorization: Bearer not-a-real-account-jwt" \
-              "$auth_base/auth/v1/user" || true)"
+              "$api_base/auth/v1/user" || true)"
             if [ "$code" = "401" ] || [ "$code" = "403" ]; then
               auth_ok=1
+            fi
+            if [ "$app_ok" = "1" ] && [ "$auth_ok" = "1" ]; then
               break
             fi
             sleep 2
           done
-          if [ "$auth_ok" != "1" ]; then
-            echo "Recovered Supabase Auth did not become ready."
-            cat /tmp/p18-auth-probe.json || true
+          if [ "$app_ok" != "1" ] || [ "$auth_ok" != "1" ]; then
+            echo "Recovered Supabase application surfaces did not become ready."
+            cat /tmp/p18-recovered-rooms-probe.json || true
+            cat /tmp/p18-recovered-auth-probe.json || true
+            cat /tmp/p18-recovered-functions.log || true
             exit 1
           fi
 
