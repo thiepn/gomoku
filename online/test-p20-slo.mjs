@@ -52,6 +52,10 @@ assert(waiter.includes("p20_slo_governance:'p20-slo'"),'P16 admission does not r
 const portable=fs.readFileSync('operations/p18-build-portable-workspace.mjs','utf8');
 assert(portable.includes('20261003105645_gomoku_p20_production_slos_error_budgets.sql'),'P18 portable migration order omits P20');
 
+const recoveryWorkflow=fs.readFileSync('.github/workflows/p18-portability-recovery.yml','utf8');
+for(const marker of ['--exclude-table-data=public.gomoku_slo_samples','--exclude-table-data=public.gomoku_slo_alert_state'])
+  assert(recoveryWorkflow.includes(marker),'P18 recovery must exclude migration-seeded P20 telemetry: '+marker);
+
 const workflow=fs.readFileSync('.github/workflows/verify-p20-slo.yml','utf8');
 for(const marker of ['name: p20-slo','contents: read','online/test-p20-slo.mjs'])
   assert(workflow.includes(marker),'P20 workflow missing '+marker);
