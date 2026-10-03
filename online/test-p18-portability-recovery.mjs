@@ -69,7 +69,6 @@ for(const marker of [
   'postgres:17',
   'pg_dump "$P18_LOCAL_DB_URL"',
   '--table="public.gomoku_*"',
-  '--disable-triggers',
   'if [ -d .p18-portable ]; then',
   'supabase stop --no-backup',
   'Rebuild environment from zero',
@@ -88,6 +87,7 @@ for(const forbidden of [
   'supabase db push',
   '/tmp/gomoku-data.dump\n          retention-days'
 ]) assert(!workflow.includes(forbidden),'P18 workflow contains unsafe marker '+forbidden);
+assert(!workflow.includes('--disable-triggers'),'P18 restore must keep FK/system-trigger enforcement active');
 
 const admissionMigration=fs.readFileSync('supabase/migrations/20261003_gomoku_p18_portability_admission_gate.sql','utf8');
 for(const marker of ['gomoku_p16_required_checks',"'p18_portability'",'security invoker'])
