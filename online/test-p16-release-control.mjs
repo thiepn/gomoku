@@ -17,7 +17,7 @@ for(const marker of [
   'async function automationDeployment',
   'async function automationCertify',
   "parts[1]==='automation'",
-  "phase:'P17'",
+  "phase:'P18'",
   'rpc/gomoku_p16_public_status',
   "build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}"
 ]) assert(backend.includes(marker),'P16 backend missing '+marker);

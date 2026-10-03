@@ -1,0 +1,309 @@
+name: P18 portable preview and disaster recovery
+
+on:
+  pull_request:
+    paths:
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
+      - '.github/workflows/p18-portability-recovery.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'online/**'
+      - 'operations/**'
+      - 'supabase/**'
+      - 'ui/**'
+      - 'analysis/**'
+      - 'review/**'
+      - '.github/workflows/p16-release-control.yml'
+      - '.github/workflows/p17-preview-promotion.yml'
+      - '.github/workflows/p18-portability-recovery.yml'
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: p18-portable-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  P18_GIT_SHA: ${{ github.sha }}
+  P18_WORKSPACE: .p18-portable
+
+jobs:
+  portable-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: Verify P18 source contracts
+        run: |
+          node --check operations/p18-build-portable-workspace.mjs
+          node --check operations/p18-hosted-preview.mjs
+          node --check operations/p18-local-fixture.mjs
+          node --check operations/p18-retry-contract.mjs
+          node online/test-p18-portability-recovery.mjs
+
+      - name: Build isolated portable Supabase workspace
+        id: portable
+        run: node operations/p18-build-portable-workspace.mjs > /tmp/p18-portable-build.json
+
+      - name: Start clean local Supabase stack
+        working-directory: .p18-portable
+        run: |
+          supabase start
+          supabase status -o env > /tmp/p18-local.env
+          set -a
+          source /tmp/p18-local.env
+          set +a
+          {
+            echo "GOMOKU_ROOM_API=$API_URL/functions/v1/gomoku-room"
+            echo "GOMOKU_ROOM_KEY=$ANON_KEY"
+            echo "P18_LOCAL_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Serve candidate Edge Function locally
+        working-directory: .p18-portable
+        shell: bash
+        run: |
+          nohup supabase functions serve gomoku-room --no-verify-jwt > /tmp/p18-functions.log 2>&1 &
+          echo $! > /tmp/p18-functions.pid
+          ok=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" > /tmp/p18-health.json; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            cat /tmp/p18-functions.log || true
+            exit 1
+          fi
+          api_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
+          app_ok=0
+          auth_ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/rooms" > /tmp/p18-rooms-probe.json; then
+              app_ok=1
+            fi
+            code="$(curl -sS -o /tmp/p18-auth-probe.json -w '%{http_code}' \
+              -H "apikey: $GOMOKU_ROOM_KEY" \
+              -H "Authorization: Bearer not-a-real-account-jwt" \
+              "$api_base/auth/v1/user" || true)"
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              auth_ok=1
+            fi
+            if [ "$app_ok" = "1" ] && [ "$auth_ok" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$app_ok" != "1" ] || [ "$auth_ok" != "1" ]; then
+            echo "Portable Supabase application surfaces did not become ready."
+            cat /tmp/p18-rooms-probe.json || true
+            cat /tmp/p18-auth-probe.json || true
+            cat /tmp/p18-functions.log || true
+            exit 1
+          fi
+          cat /tmp/p18-health.json
+
+      - name: Lint reconstructed database
+        working-directory: .p18-portable
+        run: supabase db lint --local --fail-on error
+
+      - name: Exercise isolated candidate
+        shell: bash
+        run: |
+          trap 'echo "--- gomoku-room local Edge log ---"; cat /tmp/p18-functions.log || true' ERR
+          node operations/p18-local-fixture.mjs create
+          node online/test-lifecycle.mjs
+          node online/test-integrity.mjs
+          node online/test-ranked.mjs
+          node online/test-history.mjs
+          node online/test-player-profiles.mjs
+
+      - name: Create synthetic local recovery image
+        shell: bash
+        run: |
+          docker run --rm --network host \
+            -e P18_LOCAL_DB_URL \
+            -v /tmp:/backup \
+            postgres:17 \
+            sh -ec 'pg_dump "$P18_LOCAL_DB_URL" --data-only --no-owner --no-privileges \
+              --table="public.gomoku_*" \
+              --exclude-table-data=public.gomoku_seasons \
+              --exclude-table-data=public.gomoku_competitive_control \
+              --exclude-table-data=public.gomoku_reliability_heartbeat \
+              --exclude-table-data=public.gomoku_repo_schema_state \
+              --file=/backup/p18-local-data.sql'
+          test -s /tmp/p18-local-data.sql
+          ! grep -Eq '^(COPY|INSERT INTO) (storage|auth|realtime|extensions)\.' /tmp/p18-local-data.sql
+
+      - name: Destroy preview environment completely
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/p18-functions.pid ]; then kill "$(cat /tmp/p18-functions.pid)" 2>/dev/null || true; fi
+          if [ -d .p18-portable ]; then
+            (cd .p18-portable && supabase stop --no-backup) || true
+          fi
+
+      - name: Rebuild environment from zero
+        working-directory: .p18-portable
+        shell: bash
+        run: |
+          supabase start
+          supabase status -o env > /tmp/p18-recovery.env
+          set -a
+          source /tmp/p18-recovery.env
+          set +a
+          docker run --rm --network host \
+            -e DB_URL \
+            -v /tmp:/backup \
+            postgres:17 \
+            sh -ec 'psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f /backup/p18-local-data.sql'
+          {
+            echo "GOMOKU_ROOM_API=$API_URL/functions/v1/gomoku-room"
+            echo "GOMOKU_ROOM_KEY=$ANON_KEY"
+            echo "P18_LOCAL_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Serve recovered Edge Function
+        working-directory: .p18-portable
+        shell: bash
+        run: |
+          nohup supabase functions serve gomoku-room --no-verify-jwt > /tmp/p18-recovered-functions.log 2>&1 &
+          echo $! > /tmp/p18-functions.pid
+          ok=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" > /tmp/p18-recovered-health.json; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            cat /tmp/p18-recovered-functions.log || true
+            exit 1
+          fi
+          api_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
+          app_ok=0
+          auth_ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/rooms" > /tmp/p18-recovered-rooms-probe.json; then
+              app_ok=1
+            fi
+            code="$(curl -sS -o /tmp/p18-recovered-auth-probe.json -w '%{http_code}' \
+              -H "apikey: $GOMOKU_ROOM_KEY" \
+              -H "Authorization: Bearer not-a-real-account-jwt" \
+              "$api_base/auth/v1/user" || true)"
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              auth_ok=1
+            fi
+            if [ "$app_ok" = "1" ] && [ "$auth_ok" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$app_ok" != "1" ] || [ "$auth_ok" != "1" ]; then
+            echo "Recovered Supabase application surfaces did not become ready."
+            cat /tmp/p18-recovered-rooms-probe.json || true
+            cat /tmp/p18-recovered-auth-probe.json || true
+            cat /tmp/p18-recovered-functions.log || true
+            exit 1
+          fi
+
+      - name: Verify disaster-recovery restore
+        shell: bash
+        run: |
+          trap 'echo "--- recovered gomoku-room Edge log ---"; cat /tmp/p18-recovered-functions.log || true' ERR
+          node operations/p18-local-fixture.mjs verify
+          node operations/p18-retry-contract.mjs online/test-ranked.mjs
+          node operations/p18-retry-contract.mjs online/test-player-profiles.mjs
+          node -e "const fs=require('fs'),crypto=require('crypto'); const h=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); fs.writeFileSync('/tmp/p18-recovery-evidence.json',JSON.stringify({version:'p18.recovery.v1',gitSha:process.env.GITHUB_SHA,cliVersion:'2.119.0',portableManifestSha256:h('.p18-portable/p18-portable-manifest.json'),syntheticRecoveryImageSha256:h('/tmp/p18-local-data.sql'),recoveredHealth:JSON.parse(fs.readFileSync('/tmp/p18-recovered-health.json','utf8')),verifiedAt:new Date().toISOString()},null,2)+'\n');"
+          cat /tmp/p18-recovery-evidence.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p18-recovery-evidence-${{ github.sha }}
+          path: |
+            .p18-portable/p18-portable-manifest.json
+            /tmp/p18-recovery-evidence.json
+            /tmp/p18-local-data.sql
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Stop recovered local stack
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/p18-functions.pid ]; then kill "$(cat /tmp/p18-functions.pid)" 2>/dev/null || true; fi
+          if [ -d .p18-portable ]; then
+            (cd .p18-portable && supabase stop --no-backup) || true
+          fi
+
+  encrypted-production-backup:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      P18_PRODUCTION_DB_URL: ${{ secrets.P18_PRODUCTION_DB_URL }}
+      P18_BACKUP_PASSPHRASE: ${{ secrets.P18_BACKUP_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check encrypted backup capability
+        id: capability
+        shell: bash
+        run: |
+          if [ -n "$P18_PRODUCTION_DB_URL" ] && [ "${#P18_BACKUP_PASSPHRASE}" -ge 32 ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "P18 encrypted production backup is not configured; local recovery rehearsal remains active." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Dump Gomoku-owned production data
+        if: steps.capability.outputs.configured == 'true'
+        shell: bash
+        run: |
+          docker run --rm             -e P18_PRODUCTION_DB_URL             -v /tmp:/backup             postgres:17             sh -ec 'pg_dump "$P18_PRODUCTION_DB_URL" --format=custom --data-only --no-owner --no-privileges --table="public.gomoku_*" --file=/backup/gomoku-data.dump'
+          test -s /tmp/gomoku-data.dump
+
+      - name: Encrypt before artifact storage
+        if: steps.capability.outputs.configured == 'true'
+        shell: bash
+        run: |
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000             -pass env:P18_BACKUP_PASSPHRASE             -in /tmp/gomoku-data.dump             -out /tmp/gomoku-data.dump.enc
+          sha256sum /tmp/gomoku-data.dump.enc > /tmp/gomoku-data.dump.enc.sha256
+          rm -f /tmp/gomoku-data.dump
+          test ! -e /tmp/gomoku-data.dump
+
+      - uses: actions/upload-artifact@v4
+        if: steps.capability.outputs.configured == 'true'
+        with:
+          name: p18-encrypted-gomoku-backup-${{ github.run_id }}
+          path: |
+            /tmp/gomoku-data.dump.enc
+            /tmp/gomoku-data.dump.enc.sha256
+          retention-days: 7
+          if-no-files-found: error

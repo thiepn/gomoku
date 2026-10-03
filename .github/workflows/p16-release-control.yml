@@ -13,6 +13,7 @@ on:
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
+      - '.github/workflows/p18-portability-recovery.yml'
   push:
     branches: [main]
     paths:
@@ -26,6 +27,7 @@ on:
       - 'review/**'
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
+      - '.github/workflows/p18-portability-recovery.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
