@@ -14,6 +14,7 @@ on:
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
       - '.github/workflows/p18-portability-recovery.yml'
+      - '.github/workflows/verify-p19-supply-chain.yml'
   push:
     branches: [main]
     paths:
@@ -28,6 +29,7 @@ on:
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
       - '.github/workflows/p18-portability-recovery.yml'
+      - '.github/workflows/verify-p19-supply-chain.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
@@ -47,10 +49,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Rebuild generated application shell
@@ -84,10 +86,10 @@ jobs:
     env:
       P16_GIT_SHA: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Delegate deployment to P17 preview promotion
@@ -103,8 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Certify currently running production build
@@ -115,8 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Continuous production certification

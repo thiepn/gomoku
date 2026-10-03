@@ -28,6 +28,7 @@ on:
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
       - '.github/workflows/p18-portability-recovery.yml'
+      - '.github/workflows/verify-p19-supply-chain.yml'
   pull_request:
     paths:
       - 'online/p8-competition.js'
@@ -55,18 +56,19 @@ on:
       - '.github/workflows/p16-release-control.yml'
       - '.github/workflows/p17-preview-promotion.yml'
       - '.github/workflows/p18-portability-recovery.yml'
+      - '.github/workflows/verify-p19-supply-chain.yml'
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   p13:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Rebuild shared presentation
@@ -86,11 +88,25 @@ jobs:
           python online/build-p8-client.py
           cmp index.html /tmp/p13-index.html
           cmp sw.js /tmp/p13-sw.js
-      - name: Commit generated competitive app shell
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+  publish-generated:
+    name: publish-generated
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: p13
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild generated competitive app shell
         run: |
-          # A manual rerun can execute against an older push after main has moved.
-          # Never let a stale checkout generate a non-fast-forward bot push.
+          python ui/build.py
+          python online/build-p8-client.py
+      - name: Commit generated competitive app shell
+        run: |
           git fetch origin main
           if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
             echo "main advanced after this workflow started; skipping stale generated-shell push"

@@ -1,0 +1,30 @@
+name: P19 CI supply-chain integrity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p19-supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p19-supply-chain:
+    name: p19-supply-chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify CI supply-chain policy
+        run: |
+          node --check operations/p19-supply-chain-policy.mjs
+          node --check online/test-p19-supply-chain.mjs
+          node online/test-p19-supply-chain.mjs
