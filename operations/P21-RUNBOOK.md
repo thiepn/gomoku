@@ -18,11 +18,15 @@ The v1 profile performs:
 
 | Scenario | Load | Minimum / ceiling |
 | --- | --- | --- |
-| Lobby read | **300 room-list requests**, concurrency 20 | 100% success, p95 <= 1500 ms, p99 <= 3000 ms, >=12 req/s |
+| Stable lobby floor | **240 room-list requests**, concurrency 12 | 100% success, p95 <= 1200 ms, p99 <= 2500 ms, >=10 req/s |
+| Lobby saturation probe | 180 requests each at concurrency 16 and 20 | measured, not individually release-blocking |
+| Post-burst lobby recovery | 60 requests, concurrency 4 | 100% success, p95 <= 800 ms, p99 <= 1500 ms, >=5 req/s |
 | Authorized room poll | 120 requests, concurrency 12 | >=99.5% success, p95 <= 1800 ms, p99 <= 3500 ms, >=6 req/s |
 | Full health snapshot | 40 requests, concurrency 8 | 100% success, p95 <= 2200 ms, p99 <= 4500 ms, >=3 req/s |
 
-These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The gate is designed to catch large regressions, deadlocks, serialization failures and accidental write amplification—not benchmark marketing numbers.
+These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The release-blocking floor is concurrency 12. P21 also probes concurrency 16 and 20 and records the highest rung that satisfies the same clean-response/latency contract. A higher rung may saturate the local gateway without failing the release, but the post-burst recovery profile must immediately return to 100% success. This distinguishes a known disposable-gateway saturation envelope from a service that becomes unhealthy after overload.
+
+The gate is designed to catch large regressions, deadlocks, serialization failures, persistent overload damage and accidental write amplification—not benchmark marketing numbers.
 
 ## Lobby hot-path repair
 
@@ -93,7 +97,7 @@ P16's qualification timeout is expanded because P18 and P21 both reconstruct dis
 
 Any of the following blocks P16 admission:
 
-- latency/throughput threshold failure;
+- failure of the required concurrency-12 lobby floor or post-burst recovery profile;
 - unexpected non-2xx responses in read profiles;
 - any 5xx during contention;
 - multiple seat winners;

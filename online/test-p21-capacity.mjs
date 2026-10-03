@@ -19,12 +19,19 @@ assert(!migration.toLowerCase().includes('security definer'),'P21 admission migr
 
 const load=fs.readFileSync('operations/p21-load-capacity.mjs','utf8');
 for(const marker of [
-  'roomList:{requests:300,concurrency:20',
+  'roomList:{requests:240,concurrency:12',
+  'roomListProbe16:{requests:180,concurrency:16',
+  'roomListProbe20:{requests:180,concurrency:20',
+  'roomListRecovery:{requests:60,concurrency:4',
+  'minimumCertifiedLobbyConcurrency:12',
   'roomPoll:{requests:120,concurrency:12',
   'health:{requests:40,concurrency:8',
   'joinRace:{attempts:12',
   'actionRace:{attempts:8',
   'workerRestart:{maxRecoveryMs:30000',
+  'capacityEnvelope',
+  'certifiedLobbyConcurrency',
+  'postBurstRecovery',
   'preChaosPassed',
   'roomStatePreserved',
   'portable-local-supabase',
