@@ -56,6 +56,7 @@ if(parts.length!==2){
 }
 const waiter=fs.readFileSync(path.join(root,'operations','p16-await-checks.mjs'),'utf8');
 if(!waiter.includes("p19_supply_chain:'p19-supply-chain'"))fail('P16 exact-SHA admission waiter does not require P19.');
+if(!waiter.includes("p21_capacity:'p21-capacity'"))fail('P16 exact-SHA admission waiter does not require P21 capacity certification.');
 
 const dependabotPath=path.join(root,'.github','dependabot.yml');
 if(!fs.existsSync(dependabotPath))fail('Dependabot github-actions maintenance is missing.');
