@@ -42,7 +42,8 @@ const dependencyOrder=[
   '20261002_gomoku_p16_release_admission_orchestration.sql',
   '20261002_gomoku_p16_certification_null_fix.sql',
   '20261002163100_gomoku_p17_release_environments_preview_promotion.sql',
-  '20261002152600_gomoku_p17_certification_health_isolation.sql'
+  '20261002152600_gomoku_p17_certification_health_isolation.sql',
+  '20261003_gomoku_p18_portability_admission_gate.sql'
 ];
 const discovered=fs.readdirSync(path.join(root,'supabase','migrations'))
   .filter(name=>/\.sql$/i.test(name));
