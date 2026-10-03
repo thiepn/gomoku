@@ -32,7 +32,8 @@ for(const marker of [
   "P18 dependency order must be updated for new migrations",
   "dependencyOrderSource:'production-migration-ledger'",
   "portableHead",
-  "fs.rmSync(out,{recursive:true,force:true})"
+  "fs.rmSync(out,{recursive:true,force:true})",
+  '20261003_gomoku_p18_portability_admission_gate.sql'
 ]) assert(builder.includes(marker),'P18 workspace builder missing '+marker);
 assert(!builder.includes('writeFileSync(path.join(root,\'supabase\',\'migrations\''),'P18 workspace builder must not mutate canonical migrations');
 
