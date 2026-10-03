@@ -14,6 +14,8 @@ for(const marker of [
   'public.account_app_connections',
   'public.account_app_grants',
   'public.leaderboard_profiles',
+  'public.gomoku_room_spectators',
+  'gomoku_room_spectators_last_seen_idx',
   'references auth.users(id)',
   'enable row level security',
   'grant select,insert,update,delete'
@@ -65,6 +67,7 @@ for(const marker of [
   'supabase start',
   'supabase db lint --local --fail-on error',
   'Exercise isolated candidate',
+  'gomoku-room local Edge log',
   'docker run --rm --network host',
   'postgres:17',
   'pg_dump "$P18_LOCAL_DB_URL"',
