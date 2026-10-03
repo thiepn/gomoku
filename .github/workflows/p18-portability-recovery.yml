@@ -105,7 +105,9 @@ jobs:
         run: supabase db lint --local --fail-on error
 
       - name: Exercise isolated candidate
+        shell: bash
         run: |
+          trap 'echo "--- gomoku-room local Edge log ---"; cat /tmp/p18-functions.log || true' ERR
           node operations/p18-local-fixture.mjs create
           node online/test-lifecycle.mjs
           node online/test-integrity.mjs
