@@ -157,6 +157,20 @@
       '<div class="p15-subhead"><b>Promotion history</b><span>'+certs.length+' preview certification'+(certs.length===1?'':'s')+'</span></div><div class="p15-list">'+(history||'<div class="p15-empty">No P17 promotion events recorded yet.</div>')+'</div></section>';
   }
 
+  function sloMarkup(o){
+    const p=o?.p20||{},slo=p.slo||{},guard=p.releaseGuard||{},windows=slo.windows||{},one=windows['1h']||{},day=windows['24h']||{},week=windows['7d']||{};
+    const label=k=>String(k||'').replaceAll('_',' ');
+    const indicatorRows=Object.entries(one).map(([name,v])=>{
+      const x=v||{},sufficient=x.sufficientData===true,good=Number(x.sliPct);
+      return '<span data-pass="'+(sufficient&&good>=Number(x.objective||0)*100)+'">'+(sufficient?'':'… ') + esc(label(name))+' · '+(Number.isFinite(good)?good.toFixed(3)+'%':'—')+' · budget '+(x.budgetRemainingPct==null?'—':Number(x.budgetRemainingPct).toFixed(1)+'%')+'</span>';
+    }).join('');
+    const sample=(w,name)=>{const x=(w||{})[name]||{};return x.samples==null?'0':String(x.samples);};
+    return '<section class="p15-card p20-slo" data-state="'+esc(slo.status||'unknown')+'"><div class="p15-section-head"><div><p class="eyebrow">P20 PRODUCTION SLOS</p><h3>Error budgets & release guard</h3></div>'+statusPill(slo.status||'unknown')+'</div>'+
+      '<div class="p17-status-grid"><div><span>Release guard</span><b>'+esc(guard.status||'unknown')+'</b><small>'+esc(guard.allowed===true?'Certification permitted':'Certification frozen')+'</small></div><div><span>1h fast burn</span><b>'+esc(slo.fastBurn1h==null?'—':String(slo.fastBurn1h)+'×')+'</b><small>'+sample(one,'service_availability')+' minute samples</small></div><div><span>24h budget</span><b>'+esc(slo.budgetExhausted24h===true?'exhausted':'available')+'</b><small>'+sample(day,'service_availability')+' minute samples</small></div><div><span>7d evidence</span><b>'+sample(week,'service_availability')+' min</b><small>Rolling SLO evidence</small></div></div>'+
+      '<p class="p15-note">'+esc(guard.reason||'SLO guard status unavailable.')+' P20 uses minute-level health evidence and does not add a database write to every player request.</p>'+
+      '<div class="p15-checks p16-checks">'+indicatorRows+'</div></section>';
+  }
+
   function auditMarkup(o){
     const items=Array.isArray(o?.audit)?o.audit:[];
     return '<section class="p15-card"><div class="p15-section-head"><div><p class="eyebrow">AUDIT EVIDENCE</p><h3>Recent administrative changes</h3></div></div><div class="p15-audit">'+items.slice(0,20).map(x=>'<div><time>'+fmt(x.created_at)+'</time><b>'+esc(x.action)+'</b><span>'+esc(x.actor_role||'')+(x.reason?' · '+esc(x.reason):'')+'</span><code>'+esc(x.request_id||'—')+'</code></div>').join('')+'</div></section>';
@@ -168,7 +182,7 @@
     if(state.error){body.innerHTML='<p class="p15-error">'+esc(state.error)+'</p>';return;}
     const o=state.overview;if(!o){body.innerHTML='<p class="p15-error">Administrative access is unavailable.</p>';return;}
     body.innerHTML='<div class="p15-role-line"><span>Authorized as</span><b>'+esc(o.operatorRole)+'</b><span>Generated '+fmt(o.generatedAt)+'</span></div>'+
-      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+releaseAutomationMarkup(o)+releaseEnvironmentMarkup(o)+auditMarkup(o);
+      operationsMarkup(o)+incidentsMarkup(o)+releasesMarkup(o)+deploymentsMarkup(o)+drillsMarkup(o)+releaseAutomationMarkup(o)+releaseEnvironmentMarkup(o)+sloMarkup(o)+auditMarkup(o);
     bind();
   }
 
@@ -250,5 +264,5 @@
   window.addEventListener('beforeunload',()=>clearTimeout(state.timer));
   const boot=()=>{if(!bridge())return setTimeout(boot,250);probe(true);};boot();
 
-  window.GomokuOpsConsole=Object.freeze({version:'1.2.0',open,refresh,probe:()=>probe(true)});
+  window.GomokuOpsConsole=Object.freeze({version:'1.3.0',open,refresh,probe:()=>probe(true)});
 })();

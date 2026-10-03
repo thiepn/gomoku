@@ -1,0 +1,39 @@
+name: P20 production SLO governance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p20-slo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p20-slo:
+    name: p20-slo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Rebuild generated app shell
+        run: |
+          python ui/build.py
+          python online/build-p8-client.py
+      - name: Validate P20 source syntax
+        run: |
+          node --check operations/p15-console.js
+          node --check online/test-p20-slo.mjs
+          node --check operations/p16-await-checks.mjs
+          node --check operations/p18-build-portable-workspace.mjs
+      - name: Verify P20 SLO and release-governance contracts
+        run: node online/test-p20-slo.mjs
+      - name: Preserve P19 supply-chain policy
+        run: node operations/p19-supply-chain-policy.mjs
