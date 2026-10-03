@@ -116,13 +116,17 @@ jobs:
       - name: Create synthetic local recovery image
         shell: bash
         run: |
-          pg_dump "$P18_LOCAL_DB_URL" --data-only --no-owner --no-privileges --disable-triggers \
-            --table='public.gomoku_*' \
-            --exclude-table-data=public.gomoku_seasons \
-            --exclude-table-data=public.gomoku_competitive_control \
-            --exclude-table-data=public.gomoku_reliability_heartbeat \
-            --exclude-table-data=public.gomoku_repo_schema_state \
-            --file=/tmp/p18-local-data.sql
+          docker run --rm --network host \
+            -e P18_LOCAL_DB_URL \
+            -v /tmp:/backup \
+            postgres:17 \
+            sh -ec 'pg_dump "$P18_LOCAL_DB_URL" --data-only --no-owner --no-privileges --disable-triggers \
+              --table="public.gomoku_*" \
+              --exclude-table-data=public.gomoku_seasons \
+              --exclude-table-data=public.gomoku_competitive_control \
+              --exclude-table-data=public.gomoku_reliability_heartbeat \
+              --exclude-table-data=public.gomoku_repo_schema_state \
+              --file=/backup/p18-local-data.sql'
           test -s /tmp/p18-local-data.sql
           ! grep -Eq '^(COPY|INSERT INTO) (storage|auth|realtime|extensions)\.' /tmp/p18-local-data.sql
 
@@ -143,7 +147,11 @@ jobs:
           set -a
           source /tmp/p18-recovery.env
           set +a
-          psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f /tmp/p18-local-data.sql
+          docker run --rm --network host \
+            -e DB_URL \
+            -v /tmp:/backup \
+            postgres:17 \
+            sh -ec 'psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f /backup/p18-local-data.sql'
           {
             echo "GOMOKU_ROOM_API=$API_URL/functions/v1/gomoku-room"
             echo "GOMOKU_ROOM_KEY=$ANON_KEY"
