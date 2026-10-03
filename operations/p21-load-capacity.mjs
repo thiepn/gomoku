@@ -53,12 +53,15 @@ function summarize(name,results,threshold){
   const latencies=results.map(x=>x.latencyMs);
   const ok=results.filter(x=>x.status>=200&&x.status<300).length;
   const statusCounts={};for(const x of results)statusCounts[String(x.status)]=(statusCounts[String(x.status)]||0)+1;
+  const errorSamples=results.filter(x=>!(x.status>=200&&x.status<300)).slice(0,5).map(x=>({
+    status:x.status,error:x.error||null,body:x.data&&typeof x.data==='object'?x.data:null
+  }));
   const s={
     name,requests:results.length,concurrency:threshold.concurrency,success:ok,
     successRate:round(ok/results.length),durationMs:round(durationMs),
     throughputRps:round(results.length/(durationMs/1000)),
     p50Ms:percentile(latencies,.50),p95Ms:percentile(latencies,.95),
-    p99Ms:percentile(latencies,.99),maxMs:round(Math.max(...latencies)),statusCounts
+    p99Ms:percentile(latencies,.99),maxMs:round(Math.max(...latencies)),statusCounts,errorSamples
   };
   s.passed=s.successRate>=threshold.minSuccessRate
     && s.p95Ms<=threshold.p95Ms

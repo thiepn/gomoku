@@ -29,6 +29,15 @@ for(const marker of [
 assert(!load.includes('hycegznamzjhwinegaai'),'P21 load harness must not contain the production project ref');
 assert(!/https:\/\//.test(load),'P21 load harness must require an injected local API instead of a production fallback');
 
+const backend=fs.readFileSync('supabase/functions/gomoku-room/index.ts','utf8');
+for(const marker of [
+  'LOBBY_MAINTENANCE_INTERVAL_MS=10_000',
+  'lobbyMaintenancePromise:Promise<void>|null',
+  "runtimeEvent('warning','lobby_maintenance','maintenance_failed'",
+  'async function listRooms(){await maintainLobby();'
+]) assert(backend.includes(marker),'P21 lobby maintenance hardening missing '+marker);
+assert(!backend.includes("async function listRooms(){await rest('gomoku_rooms?expires_at=lt."),'Lobby reads must not launch duplicate global cleanup work');
+
 const workflow=fs.readFileSync('.github/workflows/verify-p21-capacity.yml','utf8');
 for(const marker of [
   'name: p21-capacity',

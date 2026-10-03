@@ -24,6 +24,14 @@ The v1 profile performs:
 
 These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The gate is designed to catch large regressions, deadlocks, serialization failures and accidental write amplification—not benchmark marketing numbers.
 
+## Lobby hot-path repair
+
+The first P21 qualification run exposed a real bottleneck rather than a benchmark problem: 300 lobby reads at concurrency 20 produced 82 gateway 502s even though successful requests had p95 1203 ms. The lobby endpoint was launching expired-room deletion, spectator pruning and a full room-lifecycle scan on **every read**, multiplying global maintenance work during bursts.
+
+P21 fixes the hot path by coalescing lobby maintenance inside the Edge worker and throttling it to at most once per 10 seconds. Concurrent lobby readers share the same in-flight maintenance pass, and cleanup failure is recorded as a sanitized warning instead of converting an otherwise readable lobby into a 5xx. The actual lobby data read remains fresh on every request.
+
+The capacity harness also retains up to five sanitized non-2xx samples per scenario so future regressions show the failing response class instead of only a status count.
+
 ## Concurrency correctness
 
 Latency without correctness is not capacity.
