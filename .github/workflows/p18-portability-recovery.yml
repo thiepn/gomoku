@@ -132,11 +132,12 @@ jobs:
 
       - name: Destroy preview environment completely
         if: always()
-        working-directory: .p18-portable
         shell: bash
         run: |
           if [ -f /tmp/p18-functions.pid ]; then kill "$(cat /tmp/p18-functions.pid)" 2>/dev/null || true; fi
-          supabase stop --no-backup || true
+          if [ -d .p18-portable ]; then
+            (cd .p18-portable && supabase stop --no-backup) || true
+          fi
 
       - name: Rebuild environment from zero
         working-directory: .p18-portable
@@ -197,11 +198,12 @@ jobs:
 
       - name: Stop recovered local stack
         if: always()
-        working-directory: .p18-portable
         shell: bash
         run: |
           if [ -f /tmp/p18-functions.pid ]; then kill "$(cat /tmp/p18-functions.pid)" 2>/dev/null || true; fi
-          supabase stop --no-backup || true
+          if [ -d .p18-portable ]; then
+            (cd .p18-portable && supabase stop --no-backup) || true
+          fi
 
   encrypted-production-backup:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
