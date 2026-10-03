@@ -245,7 +245,7 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto'); const h=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); fs.writeFileSync('/tmp/p18-recovery-evidence.json',JSON.stringify({version:'p18.recovery.v1',gitSha:process.env.GITHUB_SHA,cliVersion:'2.119.0',portableManifestSha256:h('.p18-portable/p18-portable-manifest.json'),syntheticRecoveryImageSha256:h('/tmp/p18-local-data.sql'),recoveredHealth:JSON.parse(fs.readFileSync('/tmp/p18-recovered-health.json','utf8')),verifiedAt:new Date().toISOString()},null,2)+'\n');"
           cat /tmp/p18-recovery-evidence.json
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: p18-recovery-evidence-${{ github.sha }}
           path: |
@@ -300,7 +300,7 @@ jobs:
           rm -f /tmp/gomoku-data.dump
           test ! -e /tmp/gomoku-data.dump
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.capability.outputs.configured == 'true'
         with:
           name: p18-encrypted-gomoku-backup-${{ github.run_id }}
