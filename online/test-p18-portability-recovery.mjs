@@ -59,6 +59,11 @@ const fixture=fs.readFileSync('operations/p18-local-fixture.mjs','utf8');
 for(const marker of ['P18-DR-FIXTURE','create','verify','Recovered fixture room is missing'])
   assert(fixture.includes(marker),'P18 recovery fixture missing '+marker);
 
+const retryContract=fs.readFileSync('operations/p18-retry-contract.mjs','utf8');
+for(const marker of ['invalid response was received from the upstream server','502|503','spawnSync','attempts'])
+  assert(retryContract.includes(marker),'P18 transient contract retry missing '+marker);
+assert(retryContract.includes("if(!transient||attempt===attempts)"),'P18 retry must fail closed on non-transient errors');
+
 const workflow=fs.readFileSync('.github/workflows/p18-portability-recovery.yml','utf8');
 for(const marker of [
   'portable-preview:',
@@ -83,6 +88,8 @@ for(const marker of [
   'Recovered Supabase application surfaces did not become ready.',
   'not-a-real-account-jwt',
   'recovered gomoku-room Edge log',
+  'node operations/p18-retry-contract.mjs online/test-ranked.mjs',
+  'node operations/p18-retry-contract.mjs online/test-player-profiles.mjs',
   'encrypted-production-backup:',
   'P18_PRODUCTION_DB_URL',
   'P18_BACKUP_PASSPHRASE',
