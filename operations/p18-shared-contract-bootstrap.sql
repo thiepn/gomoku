@@ -29,6 +29,21 @@ alter table public.gomoku_rooms enable row level security;
 revoke all on table public.gomoku_rooms from public,anon,authenticated;
 grant select,insert,update,delete on table public.gomoku_rooms to service_role;
 
+create table if not exists public.gomoku_room_spectators (
+  room_id text not null references public.gomoku_rooms(id) on delete cascade,
+  viewer_id text not null,
+  created_at timestamptz not null default now(),
+  last_seen timestamptz not null default now(),
+  primary key (room_id,viewer_id)
+);
+
+create index if not exists gomoku_room_spectators_last_seen_idx
+  on public.gomoku_room_spectators(last_seen);
+
+alter table public.gomoku_room_spectators enable row level security;
+revoke all on table public.gomoku_room_spectators from public,anon,authenticated;
+grant select,insert,update,delete on table public.gomoku_room_spectators to service_role;
+
 create schema if not exists private;
 
 create or replace function private.broadcast_gomoku_room_change()
