@@ -4,6 +4,10 @@ const assert=(v,m)=>{if(!v)throw new Error(m);};
 const migration=fs.readFileSync('supabase/migrations/20261003120500_gomoku_p21_capacity_admission_gate.sql','utf8');
 for(const marker of [
   'gomoku_p16_required_checks',
+  'gomoku_p21_lobby_snapshot',
+  'jsonb_array_elements',
+  'gomoku_room_player_presence',
+  'gomoku_room_spectators',
   "'p18_portability'",
   "'p19_supply_chain'",
   "'p20_slo_governance'",
@@ -34,9 +38,11 @@ for(const marker of [
   'LOBBY_MAINTENANCE_INTERVAL_MS=10_000',
   'lobbyMaintenancePromise:Promise<void>|null',
   "runtimeEvent('warning','lobby_maintenance','maintenance_failed'",
-  'async function listRooms(){await maintainLobby();'
+  'async function listRooms(){await maintainLobby();',
+  "rpc/gomoku_p21_lobby_snapshot"
 ]) assert(backend.includes(marker),'P21 lobby maintenance hardening missing '+marker);
 assert(!backend.includes("async function listRooms(){await rest('gomoku_rooms?expires_at=lt."),'Lobby reads must not launch duplicate global cleanup work');
+assert(!backend.includes("const [rows,spectators,presenceRows]=await Promise.all"),'Lobby reads must not fan out to three backend reads per request');
 
 const workflow=fs.readFileSync('.github/workflows/verify-p21-capacity.yml','utf8');
 for(const marker of [

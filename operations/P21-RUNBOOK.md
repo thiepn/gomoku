@@ -30,6 +30,10 @@ The first P21 qualification run exposed a real bottleneck rather than a benchmar
 
 P21 fixes the hot path by coalescing lobby maintenance inside the Edge worker and throttling it to at most once per 10 seconds. Concurrent lobby readers share the same in-flight maintenance pass, and cleanup failure is recorded as a sanitized warning instead of converting an otherwise readable lobby into a 5xx. The actual lobby data read remains fresh on every request.
 
+The first repair reduced the burst failures from 82/300 to 22/300. Those remaining responses were gateway-generated `502 {"message":"An invalid response was received from the upstream server"}` responses with no Gomoku exception, while the same candidate continued to pass room polling, health and both contention races.
+
+P21 therefore also adds `gomoku_p21_lobby_snapshot()`, a service-role-only SQL read model that builds the public lobby projection, spectator counts and presence state in one server-side snapshot. The Edge endpoint now performs one backend read instead of three parallel REST reads for every lobby request. This attacks the remaining local gateway fan-out instead of lowering the 20-way load requirement.
+
 The capacity harness also retains up to five sanitized non-2xx samples per scenario so future regressions show the failing response class instead of only a status count.
 
 ## Concurrency correctness
