@@ -57,7 +57,7 @@ for(const marker of ['name: p20-slo','contents: read','online/test-p20-slo.mjs']
   assert(workflow.includes(marker),'P20 workflow missing '+marker);
 
 const runbook=fs.readFileSync('operations/P20-RUNBOOK.md','utf8');
-for(const marker of ['99.9%','99.0%','1h / 24h / 7d','30-minute','release guard','per-request','P21'])
+for(const marker of ['99.9%','99.0%','1h / 24h / 7d','30-minute','release guard','database write to every player request','P21'])
   assert(runbook.includes(marker),'P20 runbook missing '+marker);
 
 console.log('PASS P20: minute-level SLO evidence, deduplicated alerts, error budgets, operator visibility and production release guard are wired without per-request telemetry amplification.');
