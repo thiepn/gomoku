@@ -60,6 +60,7 @@ jobs:
           node --check operations/p18-build-portable-workspace.mjs
           node --check operations/p18-hosted-preview.mjs
           node --check operations/p18-local-fixture.mjs
+          node --check operations/p18-retry-contract.mjs
           node online/test-p18-portability-recovery.mjs
 
       - name: Build isolated portable Supabase workspace
@@ -237,8 +238,8 @@ jobs:
         run: |
           trap 'echo "--- recovered gomoku-room Edge log ---"; cat /tmp/p18-recovered-functions.log || true' ERR
           node operations/p18-local-fixture.mjs verify
-          node online/test-ranked.mjs
-          node online/test-player-profiles.mjs
+          node operations/p18-retry-contract.mjs online/test-ranked.mjs
+          node operations/p18-retry-contract.mjs online/test-player-profiles.mjs
           node -e "const fs=require('fs'),crypto=require('crypto'); const h=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); fs.writeFileSync('/tmp/p18-recovery-evidence.json',JSON.stringify({version:'p18.recovery.v1',gitSha:process.env.GITHUB_SHA,cliVersion:'2.119.0',portableManifestSha256:h('.p18-portable/p18-portable-manifest.json'),syntheticRecoveryImageSha256:h('/tmp/p18-local-data.sql'),recoveredHealth:JSON.parse(fs.readFileSync('/tmp/p18-recovered-health.json','utf8')),verifiedAt:new Date().toISOString()},null,2)+'\n');"
           cat /tmp/p18-recovery-evidence.json
 
