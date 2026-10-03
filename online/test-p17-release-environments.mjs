@@ -117,7 +117,7 @@ assert(!p16.includes('supabase functions deploy gomoku-room'),'P16 must not bypa
 
 const consoleJs=fs.readFileSync('operations/p15-console.js','utf8');
 new Function(consoleJs);
-for(const marker of ['P17 RELEASE ENVIRONMENTS','Preview certification & safe promotion','releaseEnvironmentMarkup',"version:'1.2.0'"])
+for(const marker of ['P17 RELEASE ENVIRONMENTS','Preview certification & safe promotion','releaseEnvironmentMarkup',"version:'1.3.0'"])
   assert(consoleJs.includes(marker),'P17 operations console missing '+marker);
 
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
