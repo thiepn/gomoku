@@ -179,12 +179,13 @@ jobs:
             cat /tmp/p18-recovered-functions.log || true
             exit 1
           fi
+          auth_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"
           auth_ok=0
           for attempt in $(seq 1 30); do
             code="$(curl -sS -o /tmp/p18-auth-probe.json -w '%{http_code}' \
               -H "apikey: $GOMOKU_ROOM_KEY" \
               -H "Authorization: Bearer not-a-real-account-jwt" \
-              "$API_URL/auth/v1/user" || true)"
+              "$auth_base/auth/v1/user" || true)"
             if [ "$code" = "401" ] || [ "$code" = "403" ]; then
               auth_ok=1
               break
