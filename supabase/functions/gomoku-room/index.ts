@@ -118,12 +118,17 @@ async function automationDeployment(req:Request){
 async function automationCertify(req:Request){
   const identity=await verifiedGithubAutomation(req,['push','workflow_dispatch','schedule']);
   if(!/^[0-9a-f]{40}$/.test(BUILD_GIT_SHA))return fail('Runtime build is not traceable to an immutable Git SHA.',503);
+  const sloGuard=await rest('rpc/gomoku_p20_release_guard',{method:'POST',body:{}});
+  if(sloGuard?.allowed!==true){
+    await runtimeEvent('warning','slo','release_certification_blocked',{buildGitSha:BUILD_GIT_SHA,runId:identity.runId,sloStatus:sloGuard?.sloStatus||'unknown'});
+    return json({error:'Production SLO release guard is frozen.',sloGuard,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},409);
+  }
   const result=await rest('rpc/gomoku_p16_certify_production',{method:'POST',body:{
     p_build_git_sha:BUILD_GIT_SHA,p_source_run_id:identity.runId,p_workflow_sha:identity.workflowSha||null
   }});
   const passed=result?.certification?.status==='passed';
   await runtimeEvent(passed?'info':'error','production_certification',passed?'certification_passed':'certification_failed',{buildGitSha:BUILD_GIT_SHA,runId:identity.runId});
-  return json({...result,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},passed?200:503);
+  return json({...result,sloGuard,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},passed?200:503);
 }
 
 
@@ -236,12 +241,17 @@ async function automationP17ProductionDeployment(req:Request){
 async function automationP17ProductionCertify(req:Request){
   const identity=await verifiedGithubAutomation(req,['push','workflow_dispatch'],GITHUB_TRUSTED_WORKFLOW_P17);
   if(!/^[0-9a-f]{40}$/.test(BUILD_GIT_SHA))return fail('Runtime build is not traceable to an immutable Git SHA.',503);
+  const sloGuard=await rest('rpc/gomoku_p20_release_guard',{method:'POST',body:{}});
+  if(sloGuard?.allowed!==true){
+    await runtimeEvent('warning','slo','p17_production_certification_blocked',{buildGitSha:BUILD_GIT_SHA,runId:identity.runId,sloStatus:sloGuard?.sloStatus||'unknown'});
+    return json({error:'Production SLO release guard is frozen.',sloGuard,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},409);
+  }
   const result=await rest('rpc/gomoku_p16_certify_production',{method:'POST',body:{
     p_build_git_sha:BUILD_GIT_SHA,p_source_run_id:identity.runId,p_workflow_sha:identity.workflowSha||null
   }});
   const passed=result?.certification?.status==='passed';
   await runtimeEvent(passed?'info':'error','production_certification',passed?'p17_promotion_certified':'p17_promotion_failed',{buildGitSha:BUILD_GIT_SHA,runId:identity.runId});
-  return json({...result,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},passed?200:503);
+  return json({...result,sloGuard,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},passed?200:503);
 }
 
 async function readBody(req:Request){const len=Number(req.headers.get('content-length')||0);if(len>32768)throw Object.assign(new Error('Request body is too large.'),{status:413});try{return await req.json();}catch{throw Object.assign(new Error('Invalid JSON body.'),{status:400});}}const nowIso=()=>new Date().toISOString(),expiry=()=>new Date(Date.now()+86400000).toISOString(),q=(v:string)=>encodeURIComponent(v);
@@ -312,12 +322,13 @@ async function adminOperator(req:Request,allowed:AdminRole[]|null=null){
 async function adminOverview(req:Request){
   await enforceRequestLimit(req,'admin-overview',120,300);
   const admin=await adminOperator(req);
-  const [out,p16,p17]=await Promise.all([
+  const [out,p16,p17,p20]=await Promise.all([
     rest('rpc/gomoku_admin_overview',{method:'POST',body:{p_actor_user_id:admin.userId}}),
     rest('rpc/gomoku_p16_admin_summary',{method:'POST',body:{p_actor_user_id:admin.userId}}),
-    rest('rpc/gomoku_p17_admin_summary',{method:'POST',body:{p_actor_user_id:admin.userId}})
+    rest('rpc/gomoku_p17_admin_summary',{method:'POST',body:{p_actor_user_id:admin.userId}}),
+    rest('rpc/gomoku_p20_admin_summary',{method:'POST',body:{p_actor_user_id:admin.userId}})
   ]);
-  return json({...out,p16,p17});
+  return json({...out,p16,p17,p20});
 }
 async function adminControls(req:Request){
   await enforceRequestLimit(req,'admin-controls',30,300);
@@ -409,16 +420,18 @@ async function adminTransitionRelease(req:Request,id:string){
 
 async function governanceHealth(){
   try{
-    const [snapshot,operations]=await Promise.all([
+    const [snapshot,operations,sloGuard]=await Promise.all([
       rest('rpc/gomoku_reliability_snapshot',{method:'POST',body:{}}),
-      operationalStatus()
+      operationalStatus(),
+      rest('rpc/gomoku_p20_release_guard',{method:'POST',body:{}})
     ]);
     const serviceMode=String(operations?.serviceMode||'normal');
     const raw=serviceMode==='maintenance'?'maintenance':String(snapshot?.status||'unknown');
-    const status=['healthy','degraded','critical','maintenance'].includes(raw)?raw:'unknown';
-    return {status,snapshot,operations};
+    let status=['healthy','degraded','critical','maintenance'].includes(raw)?raw:'unknown';
+    if(serviceMode!=='maintenance'&&sloGuard?.allowed!==true)status='critical';
+    return {status,snapshot,operations,sloGuard};
   }catch{
-    return {status:'unknown',snapshot:null,operations:null};
+    return {status:'unknown',snapshot:null,operations:null,sloGuard:null};
   }
 }
 async function adminRecordDeployment(req:Request){
@@ -482,7 +495,26 @@ async function adminRunDrill(req:Request){
   return json({drill,requestId});
 }
 
-async function reliabilityHealth(req:Request){await enforceRequestLimit(req,'health',120,300);let snapshot:any={status:'degraded'},operations:any=null,releaseControl:any=null,releaseEnvironments:any=null;try{[snapshot,operations,releaseControl,releaseEnvironments]=await Promise.all([rest('rpc/gomoku_reliability_snapshot',{method:'POST',body:{}}),operationalStatus(),rest('rpc/gomoku_p16_public_status',{method:'POST',body:{}}),rest('rpc/gomoku_p17_public_status',{method:'POST',body:{}})]);}catch(error){console.warn('gomoku health snapshot failed',safeErrorText(error));return json({service:'gomoku-room',phase:'P18',status:'degraded',database:'unavailable',operations,releaseControl,releaseEnvironments,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL},generatedAt:nowIso()},503);}const serviceMode=String(operations?.serviceMode||'normal'),status=serviceMode==='maintenance'?'maintenance':snapshot?.status||'degraded';return json({service:'gomoku-room',phase:'P18',...snapshot,status,operations,releaseControl,releaseEnvironments,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}});}
+async function reliabilityHealth(req:Request){
+  await enforceRequestLimit(req,'health',120,300);
+  let snapshot:any={status:'degraded'},operations:any=null,releaseControl:any=null,releaseEnvironments:any=null,slo:any=null;
+  try{
+    [snapshot,operations,releaseControl,releaseEnvironments,slo]=await Promise.all([
+      rest('rpc/gomoku_reliability_snapshot',{method:'POST',body:{}}),
+      operationalStatus(),
+      rest('rpc/gomoku_p16_public_status',{method:'POST',body:{}}),
+      rest('rpc/gomoku_p17_public_status',{method:'POST',body:{}}),
+      rest('rpc/gomoku_p20_public_status',{method:'POST',body:{}})
+    ]);
+  }catch(error){
+    console.warn('gomoku health snapshot failed',safeErrorText(error));
+    return json({service:'gomoku-room',phase:'P20',status:'degraded',database:'unavailable',operations,releaseControl,releaseEnvironments,slo,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL},generatedAt:nowIso()},503);
+  }
+  const serviceMode=String(operations?.serviceMode||'normal');
+  let status=serviceMode==='maintenance'?'maintenance':snapshot?.status||'degraded';
+  if(serviceMode!=='maintenance'&&slo?.releaseGuard?.allowed!==true)status='critical';
+  return json({service:'gomoku-room',phase:'P20',...snapshot,status,operations,releaseControl,releaseEnvironments,slo,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}});
+}
 async function matchPersistenceStatus(row:any){const snapshot=row?.state?.completedMatch;if(!snapshot)return null;const roomId=normalizeRoomId(snapshot.room_id||row?.id),gameVersion=Math.max(1,Number(snapshot.game_version)||Number(row?.state?.gameVersion)||1);if(!roomId)return null;const [matches,outboxRows]=await Promise.all([rest('gomoku_matches?room_id=eq.'+q(roomId)+'&game_version=eq.'+gameVersion+'&select=room_id'),rest('gomoku_match_persistence_outbox?room_id=eq.'+q(roomId)+'&game_version=eq.'+gameVersion+'&select=attempts,next_attempt_at,last_error,persisted_at,updated_at')]),persisted=Array.isArray(matches)&&matches.length>0,outbox=Array.isArray(outboxRows)?outboxRows[0]:null;if(persisted)return{status:'persisted',attempts:Number(outbox?.attempts)||0};if(outbox)return{status:'recovering',attempts:Number(outbox.attempts)||0,nextRetryAt:outbox.next_attempt_at||null};return{status:'pending',attempts:0};}
 async function rankedLeaderboard(req:Request,url:URL){await enforceRequestLimit(req,'ranked-leaderboard',120,300);const limit=Math.max(1,Math.min(100,Number(url.searchParams.get('limit'))||50)),rows=await rest('rpc/gomoku_ranked_leaderboard',{method:'POST',body:{p_limit:limit}}),items=Array.isArray(rows)?rows:[];return json({players:items.map((x:any)=>({rank:Number(x.rank)||0,username:cleanProfileUsername(x.username),rating:Number(x.rating)||1500,peakRating:Number(x.peakRating)||Number(x.rating)||1500,games:Number(x.games)||0,wins:Number(x.wins)||0,draws:Number(x.draws)||0,losses:Number(x.losses)||0,provisional:x.provisional===true,lastPlayedAt:x.lastPlayedAt||null,tier:rankedTier(Number(x.rating)||1500,Number(x.games)||0)})),generatedAt:nowIso()});}
 async function rankedMe(req:Request){await enforceRequestLimit(req,'ranked-me',120,300);const account=await verifiedAccount(req,true);return json({username:account!.username,ranked:await rankedSummary(account!.userId)});}

@@ -60,7 +60,7 @@ It:
 5. lints the reconstructed database;
 6. runs lifecycle, integrity, ranked, history and player-profile live suites against the isolated stack;
 7. creates a synthetic anonymous room fixture;
-8. produces a local data-only recovery image;
+8. produces a local data-only recovery image, excluding migration-seeded/recomputed operational state (including P20 SLO samples and alert state);
 9. destroys the entire stack and Docker data;
 10. recreates the stack from zero;
 11. restores the synthetic recovery image;
@@ -94,7 +94,7 @@ The passphrase must be at least 32 characters and should be a random high-entrop
 The job:
 
 - uses PostgreSQL 17 tooling;
-- exports only `public.gomoku_*` table data;
+- exports only `public.gomoku_*` table data, excluding P20's recomputable SLO samples and alert state;
 - never exports unrelated THIEPN Account app data;
 - encrypts with AES-256-CBC + PBKDF2 before artifact upload;
 - deletes the plaintext dump before upload;

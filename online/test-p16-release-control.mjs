@@ -116,7 +116,7 @@ assert(!workflow.includes('supabase db push'),'P16 must not blindly push schema 
 
 const consoleJs=fs.readFileSync('operations/p15-console.js','utf8');
 new Function(consoleJs);
-for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification','releaseAutomationMarkup','driftState',"version:'1.2.0'"])
+for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification','releaseAutomationMarkup','driftState',"version:'1.3.0'"])
   assert(consoleJs.includes(marker),'P16 operations console missing '+marker);
 
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');

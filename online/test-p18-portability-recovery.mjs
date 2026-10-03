@@ -79,6 +79,8 @@ for(const marker of [
   'postgres:17',
   'pg_dump "$P18_LOCAL_DB_URL"',
   '--table="public.gomoku_*"',
+  '--exclude-table-data=public.gomoku_slo_samples',
+  '--exclude-table-data=public.gomoku_slo_alert_state',
   'if [ -d .p18-portable ]; then',
   'supabase stop --no-backup',
   'Rebuild environment from zero',
@@ -94,6 +96,8 @@ for(const marker of [
   'P18_PRODUCTION_DB_URL',
   'P18_BACKUP_PASSPHRASE',
   '--table="public.gomoku_*"',
+  '--exclude-table-data=public.gomoku_slo_samples',
+  '--exclude-table-data=public.gomoku_slo_alert_state',
   'openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000',
   'rm -f /tmp/gomoku-data.dump',
   '/tmp/gomoku-data.dump.enc'
