@@ -79,7 +79,7 @@ for(const marker of [
   'Rebuild environment from zero',
   "sh -ec 'psql \"$DB_URL\" -X -v ON_ERROR_STOP=1 -f /backup/p18-local-data.sql'",
   'Verify disaster-recovery restore',
-  'auth_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"',
+  'api_base="${GOMOKU_ROOM_API%/functions/v1/gomoku-room}"',
   'Recovered Supabase application surfaces did not become ready.',
   'not-a-real-account-jwt',
   'recovered gomoku-room Edge log',
