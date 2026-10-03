@@ -85,6 +85,11 @@ for(const forbidden of [
   '/tmp/gomoku-data.dump\n          retention-days'
 ]) assert(!workflow.includes(forbidden),'P18 workflow contains unsafe marker '+forbidden);
 
+const admissionMigration=fs.readFileSync('supabase/migrations/20261003_gomoku_p18_portability_admission_gate.sql','utf8');
+for(const marker of ['gomoku_p16_required_checks',"'p18_portability'",'security invoker'])
+  assert(admissionMigration.toLowerCase().includes(marker.toLowerCase()),'P18 durable admission gate missing '+marker);
+assert(!admissionMigration.toLowerCase().includes('security definer'),'P18 durable admission gate must remain SECURITY INVOKER');
+
 const p16Wait=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
 assert(p16Wait.includes("p18_portability:'portable-preview'"),'P16 admission must wait for P18 portable preview');
 
