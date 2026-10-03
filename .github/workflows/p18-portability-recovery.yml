@@ -114,10 +114,17 @@ jobs:
           node online/test-player-profiles.mjs
 
       - name: Create synthetic local recovery image
-        working-directory: .p18-portable
+        shell: bash
         run: |
-          supabase db dump --local --data-only --use-copy             -f /tmp/p18-local-data.sql             -x public.account_apps             -x public.account_app_manifests             -x public.account_app_permissions             -x public.gomoku_seasons             -x public.gomoku_competitive_control             -x public.gomoku_reliability_heartbeat             -x public.gomoku_repo_schema_state
+          pg_dump "$P18_LOCAL_DB_URL" --data-only --no-owner --no-privileges --disable-triggers \
+            --table='public.gomoku_*' \
+            --exclude-table-data=public.gomoku_seasons \
+            --exclude-table-data=public.gomoku_competitive_control \
+            --exclude-table-data=public.gomoku_reliability_heartbeat \
+            --exclude-table-data=public.gomoku_repo_schema_state \
+            --file=/tmp/p18-local-data.sql
           test -s /tmp/p18-local-data.sql
+          ! grep -Eq '^(COPY|INSERT INTO) (storage|auth|realtime|extensions)\.' /tmp/p18-local-data.sql
 
       - name: Destroy preview environment completely
         if: always()
