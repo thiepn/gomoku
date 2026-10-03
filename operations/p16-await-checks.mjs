@@ -13,7 +13,8 @@ const required={
   history:'history',
   profiles:'profiles',
   integrity:'integrity',
-  p18_portability:'portable-preview'
+  p18_portability:'portable-preview',
+  p19_supply_chain:'p19-supply-chain'
 };
 const timeoutMs=Math.max(60_000,Number(process.env.P16_CHECK_TIMEOUT_MS)||12*60_000);
 const pollMs=Math.max(5_000,Number(process.env.P16_CHECK_POLL_MS)||10_000);
