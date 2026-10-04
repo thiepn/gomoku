@@ -84,12 +84,14 @@ const css=fs.readFileSync('operations/p15-console.css','utf8');
 for(const marker of ['.p15-ops-dialog','.p15-switch-grid','.p15-reconcile','.p15-checks','@media(max-width:760px)'])
   assert(css.includes(marker),'P15 console CSS missing '+marker);
 
+const cacheVersion=fs.readFileSync('client-cache-version.txt','utf8').trim();
+assert(cacheVersion.startsWith('gomoku-'),'client cache version is invalid');
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
 for(const marker of [
   'accountGet:async path=>',
   "('style','p15-operations-style','p15-console.css','operations')",
   "('script','p15-operations-script','p15-console.js','operations')",
-  'gomoku-v12.4.0-p17-preview-promotion'
+  'client-cache-version.txt'
 ]) assert(builder.includes(marker),'P15 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
@@ -97,7 +99,7 @@ for(const marker of ['id="p15-operations-style"','id="p15-operations-script"','C
   assert(html.includes(marker),'generated P15 app shell missing '+marker);
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P15 service-worker cache not active');
+assert(sw.includes(cacheVersion),'P15 service-worker cache not active');
 
 const runbook=fs.readFileSync('operations/P15-RUNBOOK.md','utf8');
 for(const marker of [

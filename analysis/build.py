@@ -5,6 +5,8 @@ from pathlib import Path
 # P9 release reproducibility marker: all builders must preserve the generated competition shell.
 import re,hashlib,json
 ROOT=Path(__file__).resolve().parents[1]
+cache=(ROOT/'client-cache-version.txt').read_text().strip()
+if not cache.startswith('gomoku-'):raise SystemExit('Invalid client cache version.')
 p=ROOT/'index.html';s=p.read_text()
 for name,file,anchor in [('analysis2-core','core.js','<script id="guided-review-script">'),('analysis2-runtime','runtime.js','<script id="guided-review-script">'),('analysis2-training','training.js','</body>')]:
     text=(ROOT/'analysis'/file).read_text()
@@ -21,5 +23,5 @@ text=(ROOT/'analysis/analysis.css').read_text();block=f'<style id="analysis2-sty
 if '<style id="analysis2-style">' in s:s=re.sub(r'<style id="analysis2-style">.*?</style>',lambda _:block,s,count=1,flags=re.S)
 else:s=s.replace('</body>',block+'\n</body>')
 p.write_text(s)
-sw=ROOT/'sw.js';sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';",sw.read_text(),count=1))
+sw=ROOT/'sw.js';sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 print('Embedded Analysis 2.1 worker, evidence viewer and private mistake training.')

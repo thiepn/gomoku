@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 
 const assert=(v,m)=>{if(!v)throw new Error(m);};
-const cache='gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';
+const expectedCache='gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';
+const cache=fs.readFileSync('client-cache-version.txt','utf8').trim();
+assert(cache===expectedCache,'P22 authoritative client cache version drifted');
 const sw=fs.readFileSync('sw.js','utf8');
 
 for(const marker of [
@@ -20,7 +22,7 @@ assert(!/request\.mode\s*===\s*['"]navigate['"][\s\S]{0,400}cache\.put\(['"]\.\/
 
 for(const file of ['ui/build.py','review/build.py','analysis/build.py','online/build-p8-client.py']){
   const source=fs.readFileSync(file,'utf8');
-  assert(source.includes(cache),file+' does not preserve the P22 cache version');
+  assert(source.includes('client-cache-version.txt'),file+' does not read the authoritative client cache version');
   assert(!source.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),file+' can regress the service-worker cache version');
 }
 

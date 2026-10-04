@@ -73,3 +73,10 @@ P22 ports only the still-relevant PWA/service-worker repair and its executable r
 ## Non-goals
 
 P22 does not claim physical iOS/Android certification, perfect browser storage durability under device-level eviction, or multiplayer packet-loss recovery. Those require separate targeted work rather than being inferred from an offline shell test.
+
+
+## Single cache-version authority
+
+Deployment verification exposed a broader reproducibility problem: UI, Review, Analysis, P13 and several historical contract tests each carried their own copy of the cache-generation string. P22 removes that duplication.
+
+`client-cache-version.txt` is now the single authoritative cache generation. Every builder that may rewrite `sw.js` reads that file, while P13/P15/P16/P17 tests verify the generated worker against the same source. P22 alone pins the expected current generation. Future phases therefore advance one version file rather than synchronizing unrelated historical literals.
