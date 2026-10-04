@@ -17,6 +17,8 @@ for(const marker of [
   "touchCapabilityObserved",
   "keyboard commit path remains available",
   "state survives tab/background proxy",
+  "First-run onboarding is intentionally asynchronous",
+  "close_dialogs(page)",
   "landscape proxy has no horizontal overflow",
   "360px narrow proxy has no horizontal overflow",
   "produced no uncaught page errors"

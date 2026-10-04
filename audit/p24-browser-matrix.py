@@ -60,6 +60,10 @@ with sync_playwright() as p:
       game.aiPaused=false;game.gameId='p24-'+Math.random().toString(36).slice(2);
       GomokuStudio.importGame(game);
     }""")
+    # First-run onboarding is intentionally asynchronous. Settle it once after
+    # fixture setup so browser speed cannot determine whether it intercepts
+    # the navigation matrix.
+    page.wait_for_timeout(700);close_dialogs(page)
 
     check(PROFILE+' app booted',page.locator('#boardGrid').is_visible())
     check(PROFILE+' exposes 225 board intersections',page.locator('[id^="point-"]').count()==225)
@@ -67,12 +71,13 @@ with sync_playwright() as p:
     check(PROFILE+' initial layout has no horizontal overflow',no_overflow(page))
 
     for route in ['play','improve','library']:
+        close_dialogs(page)
         page.locator('#v92Primary button[data-v92-route="'+route+'"]').click()
         page.wait_for_timeout(80)
         check(PROFILE+' '+route+' route remains visible',page.locator('#v92Primary').is_visible())
         check(PROFILE+' '+route+' route has no horizontal overflow',no_overflow(page))
 
-    page.locator('#v92Primary button[data-v92-route="play"]').click();page.wait_for_timeout(80)
+    close_dialogs(page);page.locator('#v92Primary button[data-v92-route="play"]').click();page.wait_for_timeout(80)
     page.locator('#point-112').focus();page.keyboard.press('ArrowRight')
     check(PROFILE+' board keyboard navigation works',page.evaluate('document.activeElement?.id')=='point-113')
     page.locator('#point-112').focus()

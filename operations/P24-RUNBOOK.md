@@ -28,6 +28,8 @@ The required CI matrix contains five profiles:
 4. Chromium using Playwright's Pixel 7 device descriptor (or the documented fallback dimensions if unavailable).
 5. WebKit using Playwright's iPhone 13 device descriptor (or the documented fallback dimensions if unavailable).
 
+Each profile first waits for authoritative core restoration, installs a deterministic local-multiplayer fixture, then settles/dismisses the asynchronous first-run welcome dialog. This prevents runner speed from deciding whether onboarding intercepts later navigation clicks.
+
 Every profile must prove:
 
 - UI boot completes;
