@@ -85,13 +85,11 @@ with sync_playwright() as p:
     check('PWA/network lifecycle produced no uncaught page errors',len(ERRORS)==0,ERRORS)
     context.close();browser.close()
 
-    # High-latency cold-load proxy runs with service workers blocked so every
-    # static request experiences the artificial delay.
-    slow=browser_type=None
-
+# High-latency cold-load proxy runs with service workers blocked so every
+# static request experiences the artificial delay.
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
-    context=p.chromium.launch(headless=True,args=['--no-sandbox']).new_context(service_workers='block',viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
+    context=browser.new_context(service_workers='block',viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
     def delayed(route):
         time.sleep(0.12)
         route.continue_()
