@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0';
+const CACHE_NAME = 'gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,6 +9,11 @@ const APP_SHELL = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png'
 ];
+
+const scopeURL = new URL('./', self.location.href);
+const shellURL = new URL('index.html', scopeURL).href;
+const shellPath = new URL(shellURL).pathname;
+const assetPaths = new Set(APP_SHELL.map((path) => new URL(path, scopeURL).pathname));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -38,34 +43,53 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== scopeURL.origin || !url.pathname.startsWith(scopeURL.pathname)) return;
+
+  const isShell = url.pathname === scopeURL.pathname || url.pathname === shellPath;
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+    // Only the Gomoku shell may refresh the cached shell. Documentation or
+    // sibling pages inside the service-worker scope must remain normal pages.
+    if (!isShell) return;
+
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME).catch(() => null);
+      let response = null;
+      try {
+        response = await fetch(request);
+      } catch {}
+
+      if (response?.ok) {
+        if (cache) await cache.put(shellURL, response.clone()).catch(() => {});
+        return response;
+      }
+
+      const cached = cache ? await cache.match(shellURL).catch(() => null) : null;
+      return cached || response || Response.error();
+    })());
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
-  );
+  // The worker is deliberately not a generic same-origin HTTP cache. Room
+  // APIs, Hub routes, generated reports and arbitrary files must bypass it.
+  if (!assetPaths.has(url.pathname)) return;
+
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME).catch(() => null);
+    const cached = cache
+      ? await cache.match(request, { ignoreSearch: true }).catch(() => null)
+      : null;
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(request);
+      if (response?.ok && cache) {
+        const canonical = new URL(url.pathname, scopeURL.origin).href;
+        await cache.put(canonical, response.clone()).catch(() => {});
+      }
+      return response;
+    } catch {
+      return Response.error();
+    }
+  })());
 });
