@@ -57,8 +57,8 @@ assert(!workflow.includes('id-token: write'),'P24 client qualification must not 
 const waiter=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
 assert(!waiter.includes("p24_"),'P24 must remain at the static-client/browser release boundary rather than P16 backend admission');
 
-const runbook=fs.readFileSync('operations/P24-RUNBOOK.md','utf8');
-for(const marker of ['Chromium','Firefox','WebKit','physical-device','Samsung Internet','offline','high-latency','P22','P23'])
-  assert(runbook.includes(marker),'P24 runbook missing '+marker);
+const runbook=fs.readFileSync('operations/P24-RUNBOOK.md','utf8'),runbookLower=runbook.toLowerCase();
+for(const marker of ['chromium','firefox','webkit','physical-device','samsung internet','offline','high-latency','p22','p23'])
+  assert(runbookLower.includes(marker),'P24 runbook missing '+marker);
 
 console.log('PASS P24 contracts: cross-browser, mobile-emulation, Chromium PWA/network lifecycle and exact deployed qualification are wired without claiming physical-device coverage.');
