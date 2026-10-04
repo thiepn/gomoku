@@ -26,7 +26,7 @@ The worker now derives its application scope from its own URL and recognizes exa
 - If CacheStorage is unavailable, online shell navigation still works.
 - Activation removes only older `gomoku-*` caches and preserves unrelated application caches.
 
-The cache generation is **gomoku-v12.5.0-p22-client-resilience**. All three existing builders are pinned to that generation so a rebuild cannot silently revert the worker to the P17 cache name.
+The cache generation is **gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0**. All three existing builders are pinned to that generation so a rebuild cannot silently revert the worker to the P17 cache name.
 
 ## Regression evidence
 

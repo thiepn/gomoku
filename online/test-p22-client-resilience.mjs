@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 const assert=(v,m)=>{if(!v)throw new Error(m);};
-const cache='gomoku-v12.5.0-p22-client-resilience';
+const cache='gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';
 const sw=fs.readFileSync('sw.js','utf8');
 
 for(const marker of [
