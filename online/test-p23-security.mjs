@@ -66,6 +66,8 @@ assert(!source.includes('return await req.json()'),'P23 body bound can be bypass
 
 const adversarial=fs.readFileSync('audit/p23-adversarial.mjs','utf8');
 assert(adversarial.includes("authorization:'Bearer '+service"),'P23 local fixture must authenticate the local legacy service_role JWT to PostgREST');
+assert(adversarial.includes("if(![502,503].includes(res.status))return last"),'P23 may retry only disposable gateway 502/503 transients');
+assert(adversarial.includes("gatewayRetries=8"),'P23 gateway transient retries are not bounded');
 assert(!source.includes("Authorization:'Bearer '+secretKey()"),'Production Edge REST calls must not send a Supabase secret key as a Bearer JWT');
 
 const migration=fs.readFileSync('supabase/migrations/20261004170000_gomoku_p23_security_admission_gate.sql','utf8');

@@ -13,10 +13,16 @@ const record=(name,ok,details={})=>{checks.push({name,ok,...details});if(!ok)thr
 const randomToken=(prefix='tok')=>prefix+'_'+crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');
 const jsonHeaders=(key=anon)=>({apikey:key,'content-type':'application/json'});
 
-async function request(path,{method='GET',body,headers={}}={}){
-  const res=await fetch(api+path,{method,headers:{apikey:anon,...headers,...(body===undefined?{}:{'content-type':'application/json'})},body:body===undefined?undefined:(typeof body==='string'?body:JSON.stringify(body))});
-  let data=null;try{data=await res.json();}catch{}
-  return {status:res.status,data,headers:Object.fromEntries(res.headers.entries())};
+async function request(path,{method='GET',body,headers={},gatewayRetries=8}={}){
+  let last=null;
+  for(let attempt=0;attempt<gatewayRetries;attempt++){
+    const res=await fetch(api+path,{method,headers:{apikey:anon,...headers,...(body===undefined?{}:{'content-type':'application/json'})},body:body===undefined?undefined:(typeof body==='string'?body:JSON.stringify(body))});
+    let data=null;try{data=await res.json();}catch{}
+    last={status:res.status,data,headers:Object.fromEntries(res.headers.entries())};
+    if(![502,503].includes(res.status))return last;
+    if(attempt<gatewayRetries-1)await new Promise(r=>setTimeout(r,250*(attempt+1)));
+  }
+  return last;
 }
 async function auth(path,{method='POST',body,token}={}){
   return request(path,{method,body,headers:{'x-gomoku-account-token':token}});
