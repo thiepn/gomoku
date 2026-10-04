@@ -1,0 +1,118 @@
+# P21 — Load, Concurrency, Chaos & Capacity Certification
+
+P21 converts the performance gap left by P20 into a repeatable release gate. It measures the actual candidate Edge Function and reconstructed Gomoku database on a disposable local Supabase stack, then makes the result an exact-SHA requirement for P16 admission.
+
+## Safety boundary
+
+P21 generates **zero production traffic**.
+
+The workflow has no production URL fallback, no production database secret, no OIDC write permission and no hosted Supabase project identifier. `GOMOKU_ROOM_API` and the publishable key must come from the disposable local stack created inside the GitHub runner.
+
+This is a CI regression and minimum-capacity certification. It is **not a hosted-production capacity claim** and does not attempt to infer the Free-plan service's maximum throughput from a GitHub runner.
+
+## Measurement profile
+
+The portable profile records p50 / p95 / p99 latency, maximum latency, success rate, status distribution, total duration and achieved requests per second.
+
+The v1 profile performs:
+
+| Scenario | Load | Minimum / ceiling |
+| --- | --- | --- |
+| Cold-start observation | 36 room-list requests, concurrency 4 | diagnostic only; records local Edge/gateway startup behavior |
+| Stable lobby floor | **240 room-list requests**, concurrency 12 | 100% success, p95 <= 1200 ms, p99 <= 2500 ms, >=10 req/s |
+| Lobby saturation probe | 180 requests each at concurrency 16 and 20 | measured, not individually release-blocking |
+| Post-burst lobby recovery | 60 requests, concurrency 4 | 100% success, p95 <= 800 ms, p99 <= 1500 ms, >=5 req/s |
+| Authorized room poll | 120 requests, concurrency 12 | >=99.5% success, p95 <= 1800 ms, p99 <= 3500 ms, >=6 req/s |
+| Full health snapshot | 40 requests, concurrency 8 | 100% success, p95 <= 2200 ms, p99 <= 4500 ms, >=3 req/s |
+
+The local Supabase Edge runtime has a distinct startup transient. A P21 run on 2026-10-04 showed the first batch at c12 returning 211/240 clean responses, while the immediately following c16 and c20 batches both returned 180/180 clean responses and post-burst recovery returned 60/60. Treating the first batch as the steady-state floor would therefore make the result depend on measurement order.
+
+P21 now records a separate diagnostic cold-start observation and then uses a readiness barrier instead of a fixed delay. The barrier requires **three consecutive clean batches of 12 lobby requests at concurrency 4**, retrying for at most 20 seconds. Only after that condition is demonstrated does the release-blocking steady-state profile begin. Cold-start behavior and readiness time remain visible in evidence but are not mislabeled as sustained capacity.
+
+These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The release-blocking floor is concurrency 12. P21 also probes concurrency 16 and 20 and records the highest rung that satisfies the same clean-response/latency contract. A higher rung may saturate the local gateway without failing the release, but the post-burst recovery profile must immediately return to 100% success. This distinguishes a known disposable-gateway saturation envelope from a service that becomes unhealthy after overload.
+
+The gate is designed to catch large regressions, deadlocks, serialization failures, persistent overload damage and accidental write amplification—not benchmark marketing numbers.
+
+## Lobby hot-path repair
+
+The first P21 qualification run exposed a real bottleneck rather than a benchmark problem: 300 lobby reads at concurrency 20 produced 82 gateway 502s even though successful requests had p95 1203 ms. The lobby endpoint was launching expired-room deletion, spectator pruning and a full room-lifecycle scan on **every read**, multiplying global maintenance work during bursts.
+
+P21 fixes the hot path by coalescing lobby maintenance inside the Edge worker and throttling it to at most once per 10 seconds. Concurrent lobby readers share the same in-flight maintenance pass, and cleanup failure is recorded as a sanitized warning instead of converting an otherwise readable lobby into a 5xx. The actual lobby data read remains fresh on every request.
+
+The first repair reduced the burst failures from 82/300 to 22/300. Those remaining responses were gateway-generated `502 {"message":"An invalid response was received from the upstream server"}` responses with no Gomoku exception, while the same candidate continued to pass room polling, health and both contention races.
+
+P21 therefore also adds `gomoku_p21_lobby_snapshot()`, a service-role-only SQL read model that builds the public lobby projection, spectator counts and presence state in one server-side snapshot. The Edge endpoint now performs one backend read instead of three parallel REST reads for every lobby request. This attacks the remaining local gateway fan-out instead of lowering the 20-way load requirement.
+
+The capacity harness also retains up to five sanitized non-2xx samples per scenario so future regressions show the failing response class instead of only a status count.
+
+## Concurrency correctness
+
+Latency without correctness is not capacity.
+
+P21 therefore adds two deterministic contention tests:
+
+1. **12 simultaneous seat claims** against one one-player room. Exactly one request may claim the open player seat; the other 11 must become spectators. No 5xx response is allowed.
+2. **8 simultaneous move commands** using the same valid revision. Exactly one command may commit; the other seven must resolve as revision/turn conflicts. No double-commit and no 5xx response is allowed.
+
+This exercises the optimistic-concurrency boundary used by real rooms under races.
+
+## Worker-restart chaos
+
+After load and contention pass, P21 creates a two-player room and commits one move. The workflow then deliberately terminates the local `gomoku-room` Edge worker process group.
+
+The test must prove the worker became unavailable before restart. The workflow records both (a) time from termination injection until unavailability is observed and (b) actual outage time from observed unavailability until the replacement is healthy. A graceful local `supabase functions serve` shutdown may keep serving while it drains, so that drain time is not falsely counted as outage recovery.
+
+It then starts a new worker against the same database and requires:
+
+- health recovery within 30 seconds **from the first observed unavailable probe**;
+- the pre-crash room to remain readable with its original player token;
+- the committed move and revision to survive the worker restart.
+
+P18 already proves full environment destroy/rebuild/restore. P21's chaos scope is intentionally different: transient compute-worker loss while durable database state remains available.
+
+## Evidence
+
+`operations/p21-load-capacity.mjs` writes `/tmp/p21-capacity-evidence.json` containing:
+
+- exact source Git SHA;
+- runner/runtime metadata;
+- threshold profile;
+- latency and throughput measurements;
+- join-race result;
+- action-race result;
+- worker-restart recovery evidence;
+- final pass/fail state.
+
+The workflow also writes the concise metrics to the GitHub job summary and uploads the machine-readable evidence for 14 days.
+
+## Release admission
+
+The authoritative GitHub check is named `p21-capacity`.
+
+`operations/p16-await-checks.mjs` waits for it on the exact candidate SHA. The P21 migration also updates `gomoku_p16_required_checks()` so the database admission ledger now durably requires:
+
+- P18 portability/recovery;
+- P19 supply-chain integrity;
+- P20 SLO governance;
+- P21 capacity certification.
+
+This corrects the prior mismatch where P19/P20 were enforced by the waiter but were not part of the database-side required-check list.
+
+P16's qualification timeout is expanded because P18 and P21 both reconstruct disposable Supabase environments before admission can complete.
+
+## Failure policy
+
+Any of the following blocks P16 admission:
+
+- inability to reach three consecutive clean readiness batches within 20 seconds;
+- failure of the required concurrency-12 lobby floor or post-burst recovery profile;
+- unexpected non-2xx responses in read profiles;
+- any 5xx during contention;
+- multiple seat winners;
+- multiple move commits;
+- worker restart whose unavailable state cannot be proven;
+- outage recovery beyond 30 seconds after unavailability is observed;
+- room state loss after restart;
+- missing P21 check on the exact candidate SHA.
+
+P21 never disables matchmaking, changes ratings, mutates production rooms or opens a production incident.

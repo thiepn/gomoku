@@ -78,7 +78,7 @@ for(const marker of [
 ]) assert(runbook.includes(marker),'P14 runbook missing '+marker);
 
 const p13=fs.readFileSync('online/test-p13-reliability.mjs','utf8');
-assert(p13.includes("['P13','P14','P15','P16','P17','P18'].includes(health.phase)"),'P13 verification is not forward compatible with P18');
+assert(p13.includes("'P20'")&&p13.includes('includes(health.phase)'),'P13 verification is not forward compatible with the deployed P20 health phase');
 
 console.log('PASS P14: explicit operator authorization, incident controls, entry kill switches, append-only audit evidence and release governance are wired without terminating active competition.');
 

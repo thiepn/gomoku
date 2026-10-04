@@ -1,0 +1,153 @@
+name: P21 load concurrency chaos and capacity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p21-capacity-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  P18_WORKSPACE: .p21-portable
+  P18_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  P21_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  P21_EVIDENCE_FILE: /tmp/p21-capacity-evidence.json
+
+jobs:
+  p21-capacity:
+    name: p21-capacity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
+        with:
+          version: 2.119.0
+
+      - name: Verify P21 source and safety contracts
+        run: |
+          node --check operations/p21-load-capacity.mjs
+          node --check operations/p16-await-checks.mjs
+          node --check operations/p16-release-control.mjs
+          node --check operations/p18-build-portable-workspace.mjs
+          node online/test-p21-capacity.mjs
+          node operations/p19-supply-chain-policy.mjs
+
+      - name: Build isolated portable Supabase workspace
+        run: node operations/p18-build-portable-workspace.mjs > /tmp/p21-portable-build.json
+
+      - name: Start clean local Supabase stack
+        working-directory: .p21-portable
+        shell: bash
+        run: |
+          supabase start
+          supabase status -o env > /tmp/p21-local.env
+          set -a
+          source /tmp/p21-local.env
+          set +a
+          {
+            echo "GOMOKU_ROOM_API=$API_URL/functions/v1/gomoku-room"
+            echo "GOMOKU_ROOM_KEY=$ANON_KEY"
+            echo "P21_LOCAL_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Serve candidate Edge Function
+        working-directory: .p21-portable
+        shell: bash
+        run: |
+          nohup setsid supabase functions serve gomoku-room --no-verify-jwt > /tmp/p21-functions.log 2>&1 &
+          echo $! > /tmp/p21-functions.pid
+          ok=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" > /tmp/p21-health.json; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            cat /tmp/p21-functions.log || true
+            exit 1
+          fi
+
+      - name: Run latency throughput and contention certification
+        shell: bash
+        run: |
+          trap 'echo "--- P21 gomoku-room Edge log ---"; tail -n 300 /tmp/p21-functions.log || true' ERR
+          node operations/p21-load-capacity.mjs benchmark
+          node operations/p21-load-capacity.mjs chaos-prepare
+
+      - name: Inject Edge worker restart and verify recovery
+        working-directory: .p21-portable
+        shell: bash
+        run: |
+          echo "$(date +%s%3N)" > /tmp/p21-chaos-injected-ms
+          old_pid="$(cat /tmp/p21-functions.pid)"
+          kill -TERM -- "-$old_pid" 2>/dev/null || kill -TERM "$old_pid" 2>/dev/null || true
+          down=0
+          for attempt in $(seq 1 30); do
+            if ! curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" >/dev/null 2>&1; then
+              down=1
+              echo "$(date +%s%3N)" > /tmp/p21-chaos-down-ms
+              break
+            fi
+            sleep 0.25
+          done
+          if [ "$down" != "1" ]; then
+            echo "P21 could not prove the Edge worker stopped."
+            exit 1
+          fi
+
+          nohup setsid supabase functions serve gomoku-room --no-verify-jwt > /tmp/p21-restarted-functions.log 2>&1 &
+          echo $! > /tmp/p21-functions.pid
+          recovered=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" >/tmp/p21-recovered-health.json; then
+              recovered=1
+              break
+            fi
+            sleep 0.5
+          done
+          echo "$(date +%s%3N)" > /tmp/p21-chaos-recovered-ms
+          if [ "$recovered" != "1" ]; then
+            cat /tmp/p21-restarted-functions.log || true
+            exit 1
+          fi
+          cd "$GITHUB_WORKSPACE"
+          node operations/p21-load-capacity.mjs chaos-verify
+          node operations/p21-load-capacity.mjs summary >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p21-capacity-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/p21-capacity-evidence.json
+            /tmp/p21-portable-build.json
+            /tmp/p21-health.json
+            /tmp/p21-recovered-health.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Stop portable capacity stack
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/p21-functions.pid ]; then
+            pid="$(cat /tmp/p21-functions.pid)"
+            kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+          fi
+          if [ -d .p21-portable ]; then
+            (cd .p21-portable && supabase stop --no-backup) || true
+          fi
