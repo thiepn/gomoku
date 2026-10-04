@@ -6,7 +6,7 @@ const manifest=JSON.parse(fs.readFileSync('operations/p23-attack-surface.json','
 
 assert(manifest.version==='p23.attack-surface.v1','P23 manifest version mismatch');
 assert(manifest.routeCount===manifest.routes.length,'P23 manifest route count mismatch');
-assert(manifest.routes.length===68,'P23 expected 68 routed handlers; review any attack-surface change explicitly');
+assert(manifest.routes.length===67,'P23 expected 67 routed handlers; review any attack-surface change explicitly');
 assert(manifest.verifyJwt===false,'P23 must document the Edge verify_jwt=false boundary');
 
 const router=source.slice(source.indexOf('export default {fetch'));

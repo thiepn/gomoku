@@ -20,7 +20,7 @@ That means the primary attack surface is the service-role Edge Function, not dir
 
 ## Machine-readable attack surface
 
-`operations/p23-attack-surface.json` enumerates all **68 routed handlers** with:
+`operations/p23-attack-surface.json` enumerates all **67 routed handlers** with:
 
 - HTTP method;
 - path template;
