@@ -69,6 +69,8 @@ jobs:
       - run: npm install --no-save --ignore-scripts axe-core@4.13.0
       - run: pip install playwright==1.62.0
       - run: python -m playwright install --with-deps chromium
+      - name: Build candidate presentation from durable sources
+        run: python ui/build.py
       - name: Audit local UX and accessibility
         env:
           P25_URL: http://127.0.0.1:8765/

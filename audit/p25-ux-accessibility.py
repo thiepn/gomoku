@@ -83,6 +83,7 @@ with sync_playwright() as p:
 
     # 02 — Improve.
     page.locator('#v92Primary button[data-v92-route="improve"]').click();page.wait_for_timeout(250)
+    check(PROFILE+' route change is announced without moving focus',page.locator('#uiRouteStatus').text_content().strip()=='Learn section' and page.evaluate('document.activeElement?.dataset?.v92Route')=='improve')
     screenshot(page,'02-'+PROFILE+'-improve')
     serious=axe(page,'improve')
     check(PROFILE+' improve has no serious/critical WCAG AA violations',len(serious)==0,[v['id'] for v in serious])
@@ -93,15 +94,19 @@ with sync_playwright() as p:
     serious=axe(page,'library')
     check(PROFILE+' library has no serious/critical WCAG AA violations',len(serious)==0,[v['id'] for v in serious])
 
-    # 04 — Settings dialog.
-    page.locator('#settingsBtn').click();page.wait_for_timeout(100)
+    # 04 — Settings through the visible Menu journey, not the hidden legacy proxy.
+    page.locator('#v111MenuBtn').click();page.wait_for_timeout(80)
+    check(PROFILE+' menu opens from visible header control',page.locator('#v111MenuDialog').evaluate('(e)=>e.open'))
+    page.locator('#v111MenuDialog [data-v111-action="settings"]').click()
+    page.wait_for_function('document.querySelector("#settingsDialog")?.open===true')
     screenshot(page,'04-'+PROFILE+'-settings')
     serious=axe(page,'settings')
     check(PROFILE+' settings has no serious/critical WCAG AA violations',len(serious)==0,[v['id'] for v in serious])
     dialog=page.locator('#settingsDialog')
-    check(PROFILE+' settings dialog has accessible name',dialog.get_attribute('aria-labelledby') is not None)
+    check(PROFILE+' settings dialog has accessible name',dialog.get_attribute('aria-labelledby') is not None or dialog.get_attribute('aria-label') is not None)
     page.keyboard.press('Escape');page.wait_for_timeout(80)
     check(PROFILE+' Escape closes settings dialog',not dialog.evaluate('(e)=>e.open'))
+    check(PROFILE+' settings returns focus to visible menu trigger',page.evaluate('document.activeElement?.id')=='v111MenuBtn')
 
     # Global focus/target checks. Board points are a spatial input target and
     # are excluded from WCAG 2.5.8 target-size minimum by the criterion itself.
