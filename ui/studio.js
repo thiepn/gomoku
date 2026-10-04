@@ -181,6 +181,8 @@
     const menuTitle=$('v111MenuTitle');if(menuTitle)menuTitle.textContent='Your studio.';
     const menuIntro=$('v111MenuDialog')?.querySelector('.v111-menu-head p:last-child');if(menuIntro)menuIntro.textContent='Appearance, help, and the tools for a deeper game.';
     buildMatch();buildLearning();
+    const modeGroup=$('v92PlayHeader')?.querySelector('.v92-mode-switch');
+    if(modeGroup)modeGroup.setAttribute('role','group');
 
     /* P25 accessibility: the skip link moves real keyboard focus to the board,
        and SPA route changes are announced without stealing focus. */

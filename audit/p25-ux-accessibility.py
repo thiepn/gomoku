@@ -35,11 +35,23 @@ def axe(page,step):
       resultTypes:['violations','incomplete']
     })""")
     serious=[v for v in result['violations'] if v.get('impact') in ('critical','serious')]
-    VIOLATIONS.append({'step':step,'violations':result['violations'],'incomplete':result['incomplete']})
-    print('AXE '+step+' violations='+str(len(result['violations']))+' serious_or_critical='+str(len(serious)),flush=True)
+    unresolved=[]
+    for v in result['incomplete']:
+        if v.get('impact') not in ('critical','serious'): continue
+        for n in v.get('nodes',[]):
+            target=' '.join(str(x) for x in n.get('target',[]));html=n.get('html','')
+            menu_controls_ok=(v.get('id')=='aria-valid-attr-value' and '#v111MenuBtn' in target and page.evaluate("""()=>{
+              const b=document.querySelector('#v111MenuBtn'),id=b?.getAttribute('aria-controls');return !!id&&!!document.getElementById(id)&&b.getAttribute('aria-haspopup')==='dialog';
+            }"""))
+            decorative_contrast=(v.get('id')=='color-contrast' and ('aria-hidden="true"' in html or ('<button' in html and 'aria-label=' in html)))
+            if not (menu_controls_ok or decorative_contrast):
+                unresolved.append({'id':v.get('id'),'impact':v.get('impact'),'target':n.get('target'),'html':html})
+    VIOLATIONS.append({'step':step,'violations':result['violations'],'incomplete':result['incomplete'],'unresolvedIncomplete':unresolved})
+    print('AXE '+step+' violations='+str(len(result['violations']))+' serious_or_critical='+str(len(serious))+' unresolved_incomplete='+str(len(unresolved)),flush=True)
     for v in serious:
         print('AXE_FAIL '+v['id']+' '+str(v.get('impact'))+' '+v['help']+' targets='+str([n['target'] for n in v['nodes'][:6]]),flush=True)
-    return serious
+    for item in unresolved: print('AXE_REVIEW_FAIL '+json.dumps(item),flush=True)
+    return serious+unresolved
 
 def assert_focus_not_obscured(page):
     return page.evaluate("""()=>{
