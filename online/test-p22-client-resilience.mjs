@@ -18,7 +18,7 @@ for(const marker of [
 assert(!sw.includes("cache.put('./index.html'"),'P22 must not cache arbitrary navigations as index.html');
 assert(!/request\.mode\s*===\s*['"]navigate['"][\s\S]{0,400}cache\.put\(['"]\.\/index\.html/.test(sw),'P22 navigation cache poisoning pattern remains');
 
-for(const file of ['ui/build.py','review/build.py','analysis/build.py']){
+for(const file of ['ui/build.py','review/build.py','analysis/build.py','online/build-p8-client.py']){
   const source=fs.readFileSync(file,'utf8');
   assert(source.includes(cache),file+' does not preserve the P22 cache version');
   assert(!source.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),file+' can regress the service-worker cache version');

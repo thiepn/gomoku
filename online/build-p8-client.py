@@ -152,7 +152,7 @@ if pill_old in s:
 
 INDEX.write_text(s)
 
-cache='gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'
+cache='gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0'
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'
