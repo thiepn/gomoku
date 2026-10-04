@@ -1,0 +1,141 @@
+name: P25 product UX accessibility and final quality
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'ui/**'
+      - 'review/**'
+      - 'analysis/**'
+      - 'online/**'
+      - 'training/**'
+      - 'audit/p25-*'
+      - 'operations/P25-RUNBOOK.md'
+      - '.github/workflows/verify-p25-ux-accessibility.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'ui/**'
+      - 'review/**'
+      - 'analysis/**'
+      - 'online/**'
+      - 'training/**'
+      - 'audit/p25-*'
+      - 'operations/P25-RUNBOOK.md'
+      - '.github/workflows/verify-p25-ux-accessibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p25-ux-accessibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p25-contract:
+    name: p25-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22'}
+      - run: |
+          node --check online/test-p25-ux-accessibility.mjs
+          node online/test-p25-ux-accessibility.mjs
+          node operations/p19-supply-chain-policy.mjs
+
+  audit:
+    name: p25-${{ matrix.profile }}
+    needs: p25-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: desktop
+            mobile: '0'
+          - profile: mobile
+            mobile: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: '3.12'}
+      - run: npm install --no-save --ignore-scripts axe-core@4.13.0
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Audit local UX and accessibility
+        env:
+          P25_URL: http://127.0.0.1:8765/
+          P25_MOBILE: ${{ matrix.mobile }}
+          P25_AXE_PATH: node_modules/axe-core/axe.min.js
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/p25-http.log 2>&1 &
+          python audit/p25-ux-accessibility.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p25-${{ matrix.profile }}-${{ github.sha }}
+          path: p25-test-output/
+          retention-days: 14
+          if-no-files-found: warn
+
+  p25-ux-accessibility:
+    name: p25-ux-accessibility
+    if: always()
+    needs: [p25-contract, audit]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          test "${{ needs.p25-contract.result }}" = success
+          test "${{ needs.audit.result }}" = success
+
+  deployed:
+    name: p25-deployed-quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: p25-ux-accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: '3.12'}
+      - name: Verify exact deployed P25 artifact
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          expected=hashlib.sha256(Path('index.html').read_bytes()).hexdigest()
+          for attempt in range(120):
+              try:
+                  req=urllib.request.Request('https://thiepn.dev/gomoku/index.html?p25='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                  with urllib.request.urlopen(req,timeout=15) as response:
+                      got=hashlib.sha256(response.read()).hexdigest()
+                  if got==expected:
+                      print('EXACT_DEPLOYED_FILE index.html '+expected,flush=True);break
+              except Exception as e: print(type(e).__name__,str(e)[:140],flush=True)
+              time.sleep(5)
+          else: raise SystemExit('Public P25 index.html did not match this commit')
+          PY
+      - run: npm install --no-save --ignore-scripts axe-core@4.13.0
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Audit public desktop quality
+        env:
+          P25_URL: https://thiepn.dev/gomoku/
+          P25_MOBILE: '0'
+          P25_AXE_PATH: node_modules/axe-core/axe.min.js
+        run: python audit/p25-ux-accessibility.py
+      - name: Audit public mobile quality
+        env:
+          P25_URL: https://thiepn.dev/gomoku/
+          P25_MOBILE: '1'
+          P25_AXE_PATH: node_modules/axe-core/axe.min.js
+        run: python audit/p25-ux-accessibility.py
