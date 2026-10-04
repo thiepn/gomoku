@@ -34,13 +34,15 @@ for(const marker of [
   'gomoku-p13-reliability-tick'
 ]) assert(migration.includes(marker),'P13 migration missing '+marker);
 
+const cacheVersion=fs.readFileSync('client-cache-version.txt','utf8').trim();
+assert(cacheVersion.startsWith('gomoku-'),'client cache version is invalid');
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
 for(const marker of [
   'retryRoomConnection',
   'recoveryFailures',
   'Math.pow(2',
   'Result secured for recovery',
-  'p17-preview-promotion'
+  'client-cache-version.txt'
 ]) assert(builder.includes(marker),'P13 builder missing '+marker);
 
 const html=fs.readFileSync('index.html','utf8');
@@ -67,7 +69,7 @@ const publicHealth=JSON.stringify(health);
 for(const forbidden of ['user_id','username','room_id','reporter','target_user'])assert(!publicHealth.includes(forbidden),'live health leaked private identifiers');
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P13 service-worker cache not active');
+assert(sw.includes(cacheVersion),'P13 service-worker cache not active');
 
 assert(client.includes('Fair Play center'),'P12 trust UI regressed');
 assert(backend.includes('async function trustReport'),'P12 trust API regressed');

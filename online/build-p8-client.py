@@ -152,7 +152,8 @@ if pill_old in s:
 
 INDEX.write_text(s)
 
-cache='gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'
+cache=(ROOT/'client-cache-version.txt').read_text().strip()
+if not cache.startswith('gomoku-'):raise SystemExit('Invalid client cache version.')
 sw=ROOT/'sw.js'
 sw.write_text(re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",sw.read_text(),count=1))
 review=ROOT/'review'/'build.py'

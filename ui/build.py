@@ -2,6 +2,8 @@
 from pathlib import Path
 import re
 root=Path(__file__).resolve().parents[1]
+cache=(root/'client-cache-version.txt').read_text().strip()
+if not cache.startswith('gomoku-'):raise SystemExit('Invalid client cache version.')
 p=root/'index.html';s=p.read_text()
 # Change only the canvas material and stone renderer, not grid geometry or moves.
 a=s.index('function bake(){');b=s.index('function drawTri(',a)
@@ -25,10 +27,10 @@ if 'ui-studio' not in body.group():
 s=re.sub(r'(<meta name="theme-color" content=")[^"]+("[^>]*>)',r'\g<1>#192420\2',s,count=1)
 p.write_text(s)
 # Keep the existing review builder and this builder on one PWA cache version.
-r=root/'review/build.py';t=re.sub(r"gomoku-v12\.1\.0-review-1\.0\.0(?:-table-[A-Za-z0-9.\-]+)?",'gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0',r.read_text())
+r=root/'review/build.py';t=re.sub(r"gomoku-v12\.1\.0-review-1\.0\.0(?:-table-[A-Za-z0-9.\-]+)?",cache,r.read_text())
 # Avoid repeated suffixes if the source is already migrated.
 t=t.replace('-table-1.0.0-table-1.0.0','-table-1.0.0');r.write_text(t)
-sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';","const CACHE_NAME = 'gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';",t,count=1);sw.write_text(t)
+sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",t,count=1);sw.write_text(t)
 print('Embedded Tournament Table 1.0.1; visual system preserved and Renju center-first enforcement repaired.')
 # Match installed app chrome to the shared visual identity.
 import json
