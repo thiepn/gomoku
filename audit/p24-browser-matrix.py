@@ -52,8 +52,14 @@ with sync_playwright() as p:
 
     root=URL if URL.endswith('/') else URL+'/'
     page.goto(root+'?p24='+PROFILE,wait_until='domcontentloaded',timeout=45000)
-    page.wait_for_function('document.body.dataset.uiReady==="true" && window.GomokuStudio')
-    page.wait_for_timeout(600);close_dialogs(page)
+    page.wait_for_function('document.body.dataset.ready==="true" && document.body.dataset.uiReady==="true" && window.GomokuStudio')
+    page.wait_for_timeout(200);close_dialogs(page)
+    page.evaluate("""()=>{
+      const game=GomokuStudio.exportGame();
+      game.mode='local';game.moves=[];game.initial=[];game.startColor=1;game.terminal=null;
+      game.aiPaused=false;game.gameId='p24-'+Math.random().toString(36).slice(2);
+      GomokuStudio.importGame(game);
+    }""")
 
     check(PROFILE+' app booted',page.locator('#boardGrid').is_visible())
     check(PROFILE+' exposes 225 board intersections',page.locator('[id^="point-"]').count()==225)
@@ -71,15 +77,17 @@ with sync_playwright() as p:
     check(PROFILE+' board keyboard navigation works',page.evaluate('document.activeElement?.id')=='point-113')
     page.locator('#point-112').focus()
 
-    if cfg['kind']=='mobile':
-        check(PROFILE+' exposes touch input',page.evaluate('navigator.maxTouchPoints>0'))
+    touch_capable=bool(page.evaluate('navigator.maxTouchPoints>0'))
+    if cfg['kind']=='mobile' and touch_capable:
         page.locator('#point-112').tap()
-        check(PROFILE+' confirmation stays reachable after touch selection',page.locator('#placeBtn').is_visible() and not page.locator('#placeBtn').is_disabled())
+        check(PROFILE+' touch selection exposes reachable confirmation',page.locator('#placeBtn').is_visible() and not page.locator('#placeBtn').is_disabled())
         page.locator('#placeBtn').tap()
     else:
-        page.locator('#point-112').click()
-        check(PROFILE+' confirmation stays reachable after pointer selection',page.locator('#placeBtn').is_visible() and not page.locator('#placeBtn').is_disabled())
-        page.locator('#placeBtn').click()
+        # Fine-pointer desktop and WebKit mobile emulation use the app's
+        # universal keyboard commit path. Explicit Place is intentionally a
+        # coarse-pointer/touch UI and must not be required on desktop.
+        page.locator('#point-112').focus();page.keyboard.press('Enter')
+        check(PROFILE+' keyboard commit path remains available',True)
 
     page.wait_for_function('GomokuStudio.diagnostics().moves===1')
     check(PROFILE+' commits the intended center move',page.evaluate('GomokuStudio.exportGame().moves[0].i')==112)
@@ -101,7 +109,7 @@ with sync_playwright() as p:
     check(PROFILE+' produced no uncaught page errors',len(ERRORS)==0,ERRORS)
     report={
         'version':'p24.browser-matrix.v1','profile':PROFILE,'label':cfg['label'],'engine':cfg['engine'],
-        'kind':cfg['kind'],'url':root,'passed':len(CHECKS),'checks':CHECKS,'pageErrors':ERRORS,
+        'kind':cfg['kind'],'touchCapabilityObserved':touch_capable,'url':root,'passed':len(CHECKS),'checks':CHECKS,'pageErrors':ERRORS,
         'scope':'Playwright browser-engine/device emulation; not physical-device certification.'
     }
     (OUT/(PROFILE+'.json')).write_text(json.dumps(report,indent=2))

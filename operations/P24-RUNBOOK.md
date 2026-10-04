@@ -35,8 +35,8 @@ Every profile must prove:
 - exactly three primary destinations remain available;
 - Play / Improve / Library produce no document horizontal overflow;
 - keyboard board navigation works;
-- the center move can be selected and committed;
-- mobile profiles expose touch input and keep confirmation reachable;
+- the center move can be selected and committed through the browser's supported input path;
+- Chromium mobile proves the coarse-pointer touch-confirm path; WebKit mobile records whether Playwright actually exposes touch capability and otherwise uses the universal keyboard commit path rather than falsely claiming touch coverage;
 - mobile landscape and 360px narrow layouts do not overflow;
 - game state survives a second-tab/background proxy;
 - no uncaught page error is emitted.
@@ -50,7 +50,7 @@ Service-worker automation is intentionally isolated to Chromium.
 The P24 network suite proves:
 
 - active worker control and correct scope;
-- a committed local move survives offline reload;
+- a committed **local-multiplayer** move survives offline reload, eliminating AI-turn timing from lifecycle evidence;
 - network restoration preserves state;
 - a second offline→online flap recovers;
 - deleting the active Gomoku cache while online is repaired by the next navigation;
@@ -58,6 +58,8 @@ The P24 network suite proves:
 - unregistering the worker plus seeding a stale `gomoku-*` cache is repaired by fresh worker activation;
 - switching to another tab and back does not lose game state;
 - a cold load with artificial per-request latency still reaches a usable, non-overflowing UI.
+
+Startup assertions wait for both the UI marker and the core `data-ready="true"` marker. The UI can mount before IndexedDB/localStorage recovery finishes, so testing only `data-ui-ready` would create a false state-loss result.
 
 This builds on P22 rather than duplicating its service-worker unit model.
 

@@ -14,7 +14,8 @@ const browser=fs.readFileSync('audit/p24-browser-matrix.py','utf8');
 for(const marker of [
   "'chromium-desktop'","'firefox-desktop'","'webkit-desktop'","'chromium-android'","'webkit-ios'",
   "service_workers':'block'",
-  "navigator.maxTouchPoints>0",
+  "touchCapabilityObserved",
+  "keyboard commit path remains available",
   "state survives tab/background proxy",
   "landscape proxy has no horizontal overflow",
   "360px narrow proxy has no horizontal overflow",
@@ -24,6 +25,8 @@ for(const marker of [
 const pwa=fs.readFileSync('audit/p24-pwa-network.py','utf8');
 for(const marker of [
   "service_workers='allow'",
+  'document.body.dataset.ready==="true"',
+  "game.mode='local'",
   "context.set_offline(True)",
   "offline reload preserves committed local game state",
   "second offline-online flap recovers without state loss",

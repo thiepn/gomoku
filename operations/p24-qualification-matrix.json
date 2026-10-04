@@ -72,6 +72,7 @@
     "Emulated mobile profiles are not physical-device certifications.",
     "Playwright WebKit is not branded Safari.",
     "Chromium emulation is not branded Samsung Internet.",
-    "OS-level process kill, sleep, radio handoff and device storage pressure require later physical-device testing."
+    "OS-level process kill, sleep, radio handoff and device storage pressure require later physical-device testing.",
+    "WebKit mobile emulation may not expose navigator.maxTouchPoints; P24 records observed touch capability instead of treating emulation metadata as physical touch evidence."
   ]
 }

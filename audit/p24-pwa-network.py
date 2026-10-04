@@ -13,7 +13,7 @@ def check(name,condition=True,details=None):
     CHECKS.append(name);print('PASS '+name,flush=True)
 
 def ready(page):
-    page.wait_for_function('document.body.dataset.uiReady==="true" && window.GomokuStudio',timeout=30000)
+    page.wait_for_function('document.body.dataset.ready==="true" && document.body.dataset.uiReady==="true" && window.GomokuStudio',timeout=30000)
     page.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
 
 def controlled(page):
@@ -34,6 +34,12 @@ with sync_playwright() as p:
     scope=page.evaluate('navigator.serviceWorker.getRegistration().then(r=>r?.scope||"")')
     check('PWA worker scope matches application root',scope.rstrip('/')==root.rstrip('/'))
 
+    page.evaluate("""()=>{
+      const game=GomokuStudio.exportGame();
+      game.mode='local';game.moves=[];game.initial=[];game.startColor=1;game.terminal=null;
+      game.aiPaused=false;game.gameId='p24-pwa-'+Math.random().toString(36).slice(2);
+      GomokuStudio.importGame(game);
+    }""")
     page.locator('#point-112').tap();page.locator('#placeBtn').tap()
     page.wait_for_function('GomokuStudio.diagnostics().moves===1')
     check('pre-network-change game move committed')
@@ -78,7 +84,7 @@ with sync_playwright() as p:
     page.reload(wait_until='domcontentloaded');ready(page)
     page.evaluate('navigator.serviceWorker.ready.then(()=>true)')
     page.reload(wait_until='domcontentloaded');ready(page);controlled(page)
-    page.wait_for_function("!window.caches || true")
+    page.wait_for_function("async()=>!(await caches.keys()).includes('gomoku-p24-stale-fixture')")
     keys=page.evaluate('caches.keys()')
     check('fresh worker activation removes stale Gomoku cache generation','gomoku-p24-stale-fixture' not in keys,keys)
 
