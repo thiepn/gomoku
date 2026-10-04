@@ -82,7 +82,8 @@ assert(!workflow.includes('id-token: write'),'P21 portable load job must not rec
 
 const waiter=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
 assert(waiter.includes("p21_capacity:'p21-capacity'"),'P16 exact-SHA admission does not wait for P21');
-assert(waiter.includes('22*60_000'),'P16 waiter timeout was not expanded for portable capacity qualification');
+const timeoutMatch=waiter.match(/\|\|(\d+)\*60_000/);
+assert(timeoutMatch&&Number(timeoutMatch[1])>=22,'P16 waiter timeout must remain at least 22 minutes for portable capacity qualification');
 
 const release=fs.readFileSync('operations/p16-release-control.mjs','utf8');
 for(const marker of ['p18_portability','p19_supply_chain','p20_slo_governance','p21_capacity'])
