@@ -27,7 +27,7 @@ The v1 profile performs:
 
 The local Supabase Edge runtime has a distinct startup transient. A P21 run on 2026-10-04 showed the first batch at c12 returning 211/240 clean responses, while the immediately following c16 and c20 batches both returned 180/180 clean responses and post-burst recovery returned 60/60. Treating the first batch as the steady-state floor would therefore make the result depend on measurement order.
 
-P21 now records a separate diagnostic cold-start observation, allows the local worker/gateway to settle, and only then begins the release-blocking steady-state profile. Cold-start behavior remains visible in evidence but is not mislabeled as sustained capacity.
+P21 now records a separate diagnostic cold-start observation and then uses a readiness barrier instead of a fixed delay. The barrier requires **three consecutive clean batches of 12 lobby requests at concurrency 4**, retrying for at most 20 seconds. Only after that condition is demonstrated does the release-blocking steady-state profile begin. Cold-start behavior and readiness time remain visible in evidence but are not mislabeled as sustained capacity.
 
 These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The release-blocking floor is concurrency 12. P21 also probes concurrency 16 and 20 and records the highest rung that satisfies the same clean-response/latency contract. A higher rung may saturate the local gateway without failing the release, but the post-burst recovery profile must immediately return to 100% success. This distinguishes a known disposable-gateway saturation envelope from a service that becomes unhealthy after overload.
 
@@ -102,6 +102,7 @@ P16's qualification timeout is expanded because P18 and P21 both reconstruct dis
 
 Any of the following blocks P16 admission:
 
+- inability to reach three consecutive clean readiness batches within 20 seconds;
 - failure of the required concurrency-12 lobby floor or post-burst recovery profile;
 - unexpected non-2xx responses in read profiles;
 - any 5xx during contention;

@@ -11,6 +11,7 @@ if(!api||!key)throw new Error('GOMOKU_ROOM_API and GOMOKU_ROOM_KEY are required.
 
 const thresholds={
   roomListColdStart:{requests:36,concurrency:4,minSuccessRate:0,p95Ms:5000,p99Ms:8000,minRps:0,diagnostic:true},
+  readiness:{batchRequests:12,concurrency:4,consecutiveCleanBatches:3,maxWaitMs:20000},
   roomList:{requests:240,concurrency:12,minSuccessRate:1,p95Ms:1200,p99Ms:2500,minRps:10},
   roomListProbe16:{requests:180,concurrency:16,minSuccessRate:1,p95Ms:1500,p99Ms:3000,minRps:10,diagnostic:true},
   roomListProbe20:{requests:180,concurrency:20,minSuccessRate:1,p95Ms:1500,p99Ms:3000,minRps:10,diagnostic:true},
@@ -82,6 +83,26 @@ async function bench(name,path,threshold,opts={}){
   });
   return summarize(name,results,threshold);
 }
+
+async function waitForSteadyLobby(){
+  const cfg=thresholds.readiness,started=Date.now(),batches=[];
+  let consecutive=0,attempt=0;
+  while(Date.now()-started<cfg.maxWaitMs){
+    attempt++;
+    const threshold={
+      requests:cfg.batchRequests,concurrency:cfg.concurrency,
+      minSuccessRate:1,p95Ms:5000,p99Ms:8000,minRps:0
+    };
+    const result=await bench('lobby-readiness-'+attempt,'/api/rooms',threshold);
+    batches.push(result);
+    if(result.successRate===1)consecutive++;else consecutive=0;
+    if(consecutive>=cfg.consecutiveCleanBatches){
+      return {passed:true,waitMs:Date.now()-started,attempts:attempt,consecutiveCleanBatches:consecutive,batches};
+    }
+    await new Promise(r=>setTimeout(r,250));
+  }
+  return {passed:false,waitMs:Date.now()-started,attempts:attempt,consecutiveCleanBatches:consecutive,batches};
+}
 async function cleanup(room,token){
   if(!room||!token)return;
   try{
@@ -95,7 +116,8 @@ async function benchmark(){
   await requireRequest('/api/rooms');
 
   const coldStart=await bench('room-list-cold-start','/api/rooms',thresholds.roomListColdStart);
-  await new Promise(r=>setTimeout(r,500));
+  const readiness=await waitForSteadyLobby();
+  if(!readiness.passed)throw new Error('P21 local Edge/lobby never reached a steady ready state: '+JSON.stringify(readiness));
   const list=await bench('room-list-stable','/api/rooms',thresholds.roomList);
   const probe16=await bench('room-list-probe-c16','/api/rooms',thresholds.roomListProbe16);
   const probe20=await bench('room-list-probe-c20','/api/rooms',thresholds.roomListProbe20);
@@ -173,6 +195,7 @@ async function benchmark(){
         minimumCertifiedLobbyConcurrency:thresholds.minimumCertifiedLobbyConcurrency,
         certifiedLobbyConcurrency,
         coldStart,
+        readiness,
         probes:[list,probe16,probe20],
         postBurstRecovery:listRecovery
       },
@@ -236,6 +259,7 @@ function summary(){
   console.log('### P21 capacity certification');
   console.log('');
   console.log('- Result: **'+(e.passed?'PASS':'FAIL')+'**');
+  console.log('- Readiness barrier: '+e.capacityEnvelope.readiness.attempts+' batches · '+e.capacityEnvelope.readiness.waitMs+' ms · passed '+e.capacityEnvelope.readiness.passed);
   console.log('- Certified lobby concurrency: **'+e.capacityEnvelope.certifiedLobbyConcurrency+'** (required floor '+e.capacityEnvelope.minimumCertifiedLobbyConcurrency+')');
   for(const k of ['roomListColdStart','roomList','roomListProbe16','roomListProbe20','roomListRecovery','roomPoll','health']){
     const x=s[k];
