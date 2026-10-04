@@ -1,0 +1,119 @@
+name: P23 security assurance and abuse resistance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p23-security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  P18_WORKSPACE: .p23-portable
+  P18_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  P23_EVIDENCE_FILE: /tmp/p23-adversarial-evidence.json
+
+jobs:
+  p23-security:
+    name: p23-security
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
+        with:
+          version: 2.119.0
+
+      - name: Verify P23 static security contracts
+        run: |
+          node --check audit/p23-adversarial.mjs
+          node --check online/test-p23-security.mjs
+          node online/test-p23-security.mjs
+          node operations/p19-supply-chain-policy.mjs
+
+      - name: Build isolated portable Supabase workspace
+        run: node operations/p18-build-portable-workspace.mjs > /tmp/p23-portable-build.json
+
+      - name: Start clean local Supabase stack
+        working-directory: .p23-portable
+        shell: bash
+        run: |
+          supabase start
+          supabase status -o env > /tmp/p23-local.env
+          set -a
+          source /tmp/p23-local.env
+          set +a
+          {
+            echo "GOMOKU_ROOM_API=$API_URL/functions/v1/gomoku-room"
+            echo "GOMOKU_ROOM_KEY=$ANON_KEY"
+            echo "P23_SUPABASE_URL=$API_URL"
+            echo "P23_SERVICE_KEY=$SERVICE_ROLE_KEY"
+            echo "P23_LOCAL_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Audit database privilege and RLS boundary
+        shell: bash
+        run: |
+          psql "$P23_LOCAL_DB_URL" -v ON_ERROR_STOP=1 -X -q -t -A -f operations/p23-db-audit.sql | tail -1 > /tmp/p23-db-boundary.json
+          test -s /tmp/p23-db-boundary.json
+          cat /tmp/p23-db-boundary.json
+
+      - name: Serve candidate Edge Function
+        working-directory: .p23-portable
+        shell: bash
+        run: |
+          nohup setsid supabase functions serve gomoku-room --no-verify-jwt > /tmp/p23-functions.log 2>&1 &
+          echo $! > /tmp/p23-functions.pid
+          ok=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" > /tmp/p23-health.json; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            cat /tmp/p23-functions.log || true
+            exit 1
+          fi
+
+      - name: Run adversarial authorization and abuse suite
+        shell: bash
+        run: |
+          trap 'echo "--- P23 gomoku-room Edge log ---"; tail -n 400 /tmp/p23-functions.log || true' ERR
+          node audit/p23-adversarial.mjs
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p23-security-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            operations/p23-attack-surface.json
+            /tmp/p23-adversarial-evidence.json
+            /tmp/p23-db-boundary.json
+            /tmp/p23-portable-build.json
+            /tmp/p23-health.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Stop portable security stack
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/p23-functions.pid ]; then
+            pid="$(cat /tmp/p23-functions.pid)"
+            kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+          fi
+          if [ -d .p23-portable ]; then
+            (cd .p23-portable && supabase stop --no-backup) || true
+          fi

@@ -254,7 +254,33 @@ async function automationP17ProductionCertify(req:Request){
   return json({...result,sloGuard,build:{gitSha:BUILD_GIT_SHA,channel:BUILD_CHANNEL}},passed?200:503);
 }
 
-async function readBody(req:Request){const len=Number(req.headers.get('content-length')||0);if(len>32768)throw Object.assign(new Error('Request body is too large.'),{status:413});try{return await req.json();}catch{throw Object.assign(new Error('Invalid JSON body.'),{status:400});}}const nowIso=()=>new Date().toISOString(),expiry=()=>new Date(Date.now()+86400000).toISOString(),q=(v:string)=>encodeURIComponent(v);
+const MAX_REQUEST_BODY_BYTES=32*1024;
+async function readBody(req:Request){
+  const declared=Number(req.headers.get('content-length')||0);
+  if(Number.isFinite(declared)&&declared>MAX_REQUEST_BODY_BYTES)throw Object.assign(new Error('Request body is too large.'),{status:413});
+  if(!req.body)throw Object.assign(new Error('Invalid JSON body.'),{status:400});
+  const reader=req.body.getReader(),decoder=new TextDecoder();
+  let total=0,raw='';
+  try{
+    while(true){
+      const chunk=await reader.read();
+      if(chunk.done)break;
+      total+=chunk.value.byteLength;
+      if(total>MAX_REQUEST_BODY_BYTES){
+        try{await reader.cancel();}catch{}
+        throw Object.assign(new Error('Request body is too large.'),{status:413});
+      }
+      raw+=decoder.decode(chunk.value,{stream:true});
+    }
+    raw+=decoder.decode();
+  }finally{
+    try{reader.releaseLock();}catch{}
+  }
+  try{return JSON.parse(raw);}catch(error){
+    if(Number((error as any)?.status)===413)throw error;
+    throw Object.assign(new Error('Invalid JSON body.'),{status:400});
+  }
+}const nowIso=()=>new Date().toISOString(),expiry=()=>new Date(Date.now()+86400000).toISOString(),q=(v:string)=>encodeURIComponent(v);
 async function loadRoom(id:string){const rows=await rest(`gomoku_rooms?id=eq.${q(id)}&select=*`),row=Array.isArray(rows)?rows[0]:null;if(!row)return null;if(new Date(row.expires_at).getTime()<=Date.now()){await rest(`gomoku_rooms?id=eq.${q(id)}`,{method:'DELETE'});return null;}return row;}
 const SPECTATOR_TTL_MS=45000,PLAYER_ONLINE_TTL_MS=45000,PLAYER_STALE_TTL_MS=600000,COMPETITIVE_STALE_TTL_MS=120000;
 function cleanViewerId(value:unknown){const out=String(value??'').trim();return /^[A-Za-z0-9_-]{12,96}$/.test(out)?out:'';}
