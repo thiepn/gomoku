@@ -64,6 +64,10 @@ for(const marker of [
 ]) assert(source.includes(marker),'P23 Edge hardening marker missing '+marker);
 assert(!source.includes('return await req.json()'),'P23 body bound can be bypassed by direct req.json()');
 
+const adversarial=fs.readFileSync('audit/p23-adversarial.mjs','utf8');
+assert(adversarial.includes("authorization:'Bearer '+service"),'P23 local fixture must authenticate the local legacy service_role JWT to PostgREST');
+assert(!source.includes("Authorization:'Bearer '+secretKey()"),'Production Edge REST calls must not send a Supabase secret key as a Bearer JWT');
+
 const migration=fs.readFileSync('supabase/migrations/20261004170000_gomoku_p23_security_admission_gate.sql','utf8');
 for(const marker of ["'p23_security'",'security invoker','grant execute on function public.gomoku_p16_required_checks()'])
   assert(migration.toLowerCase().includes(marker.toLowerCase()),'P23 admission migration missing '+marker);

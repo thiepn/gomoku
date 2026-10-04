@@ -52,6 +52,8 @@ The adversarial suite sends an oversized `ReadableStream` with no Content-Length
 
 P23 reconstructs Gomoku in a disposable P18 Supabase project and creates two disposable local Auth users. They receive only the shared contracts needed by Gomoku; no production identity is used.
 
+The Supabase CLI exposes a legacy JWT-based `SERVICE_ROLE_KEY` to the local test process. The fixture therefore sends that **local-only** key as both `apikey` and `Authorization: Bearer ...` when seeding disposable shared-contract rows through PostgREST. This does not change production Edge behavior: current Supabase secret keys remain sent through the `apikey` header only and are never placed in the Bearer header.
+
 The suite proves:
 
 - account-only endpoints reject anonymous and malformed sessions;

@@ -35,7 +35,7 @@ async function signup(label){
   return {id:data.user.id,token:data.access_token,email};
 }
 async function serviceRest(path,{method='POST',body,prefer='resolution=merge-duplicates,return=minimal'}={}){
-  const res=await fetch(supabase+'/rest/v1/'+path,{method,headers:{...jsonHeaders(service),Prefer:prefer},body:body===undefined?undefined:JSON.stringify(body)});
+  const res=await fetch(supabase+'/rest/v1/'+path,{method,headers:{...jsonHeaders(service),authorization:'Bearer '+service,Prefer:prefer},body:body===undefined?undefined:JSON.stringify(body)});
   if(!res.ok)throw new Error('service REST '+path+' -> '+res.status+' '+await res.text());
 }
 async function bootstrapShared(){
