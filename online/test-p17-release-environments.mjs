@@ -121,7 +121,7 @@ for(const marker of ['P17 RELEASE ENVIRONMENTS','Preview certification & safe pr
   assert(consoleJs.includes(marker),'P17 operations console missing '+marker);
 
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
-assert(builder.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P17 cache version missing');
+assert(builder.includes('gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0'),'P17 cache version missing');
 
 const runbook=fs.readFileSync('operations/P17-RUNBOOK.md','utf8');
 for(const marker of [

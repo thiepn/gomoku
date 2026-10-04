@@ -120,14 +120,14 @@ for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification
   assert(consoleJs.includes(marker),'P16 operations console missing '+marker);
 
 const builder=fs.readFileSync('online/build-p8-client.py','utf8');
-assert(builder.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 cache version missing');
+assert(builder.includes('gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 cache version missing');
 
 const html=fs.readFileSync('index.html','utf8');
 for(const marker of ['P16 RELEASE CONTROL','Admission & continuous certification','P17 RELEASE ENVIRONMENTS'])
   assert(html.includes(marker),'generated P16 operations console missing '+marker);
 
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes('gomoku-v12.4.0-p17-preview-promotion-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 service-worker cache missing');
+assert(sw.includes('gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0'),'P16/P17 service-worker cache missing');
 
 const runbook=fs.readFileSync('operations/P16-RUNBOOK.md','utf8');
 for(const marker of [
