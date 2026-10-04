@@ -1,0 +1,244 @@
+name: P24 browser device and network qualification
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'client-cache-version.txt'
+      - 'online/**'
+      - 'ui/**'
+      - 'review/**'
+      - 'analysis/**'
+      - 'training/**'
+      - 'audit/p24-*'
+      - 'operations/P24-RUNBOOK.md'
+      - 'operations/p24-qualification-matrix.json'
+      - '.github/workflows/verify-p24-browser-device-network.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'client-cache-version.txt'
+      - 'online/**'
+      - 'ui/**'
+      - 'review/**'
+      - 'analysis/**'
+      - 'training/**'
+      - 'audit/p24-*'
+      - 'operations/P24-RUNBOOK.md'
+      - 'operations/p24-qualification-matrix.json'
+      - '.github/workflows/verify-p24-browser-device-network.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p24-browser-device-network-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p24-contract:
+    name: p24-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify P24 source and qualification boundaries
+        run: |
+          node --check online/test-p24-browser-device-network.mjs
+          node online/test-p24-browser-device-network.mjs
+          node operations/p19-supply-chain-policy.mjs
+
+  browser-matrix:
+    name: p24-${{ matrix.id }}
+    needs: p24-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: chromium-desktop
+            engine: chromium
+          - id: firefox-desktop
+            engine: firefox
+          - id: webkit-desktop
+            engine: webkit
+          - id: chromium-android
+            engine: chromium
+          - id: webkit-ios
+            engine: webkit
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps ${{ matrix.engine }}
+      - name: Exercise local browser/device profile
+        env:
+          P24_PROFILE: ${{ matrix.id }}
+          P24_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/p24-http.log 2>&1 &
+          python audit/p24-browser-matrix.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p24-${{ matrix.id }}-${{ github.sha }}
+          path: p24-test-output/
+          retention-days: 14
+          if-no-files-found: warn
+
+  pwa-network:
+    name: p24-pwa-network
+    needs: p24-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise local Chromium PWA/network lifecycle
+        env:
+          P24_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/p24-http.log 2>&1 &
+          python audit/p24-pwa-network.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p24-pwa-network-${{ github.sha }}
+          path: p24-test-output/
+          retention-days: 14
+          if-no-files-found: warn
+
+  p24-browser-matrix:
+    name: p24-browser-matrix
+    if: always()
+    needs: [p24-contract, browser-matrix, pwa-network]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete local P24 qualification
+        env:
+          CONTRACT: ${{ needs.p24-contract.result }}
+          MATRIX: ${{ needs.browser-matrix.result }}
+          PWA: ${{ needs.pwa-network.result }}
+        run: |
+          test "$CONTRACT" = success
+          test "$MATRIX" = success
+          test "$PWA" = success
+
+  deployed-artifacts:
+    name: p24-exact-deployed-artifacts
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: p24-browser-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify exact deployed P24 artifacts
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js','manifest.webmanifest']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(120):
+                  try:
+                      request=urllib.request.Request(root+name+'?p24-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(5)
+              else:
+                  raise SystemExit('Public P24 artifact did not match this commit: '+name)
+          PY
+
+  deployed-browser-matrix:
+    name: p24-deployed-${{ matrix.id }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deployed-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: chromium-desktop
+            engine: chromium
+          - id: firefox-desktop
+            engine: firefox
+          - id: webkit-desktop
+            engine: webkit
+          - id: chromium-android
+            engine: chromium
+          - id: webkit-ios
+            engine: webkit
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps ${{ matrix.engine }}
+      - name: Exercise exact public browser/device profile
+        env:
+          P24_PROFILE: ${{ matrix.id }}
+          P24_URL: https://thiepn.dev/gomoku/
+        run: python audit/p24-browser-matrix.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p24-deployed-${{ matrix.id }}-${{ github.sha }}
+          path: p24-test-output/
+          retention-days: 14
+          if-no-files-found: warn
+
+  deployed-pwa-network:
+    name: p24-deployed-pwa-network
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deployed-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Exercise exact public Chromium PWA/network lifecycle
+        env:
+          P24_URL: https://thiepn.dev/gomoku/
+        run: python audit/p24-pwa-network.py
+
+  p24-deployed-qualified:
+    name: p24-deployed-qualified
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [deployed-browser-matrix, deployed-pwa-network]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete deployed P24 qualification
+        env:
+          MATRIX: ${{ needs.deployed-browser-matrix.result }}
+          PWA: ${{ needs.deployed-pwa-network.result }}
+        run: |
+          test "$MATRIX" = success
+          test "$PWA" = success

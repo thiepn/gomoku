@@ -1,0 +1,78 @@
+{
+  "version": "p24.qualification-matrix.v1",
+  "automatedRequired": [
+    {
+      "id": "chromium-desktop",
+      "engine": "Chromium",
+      "formFactor": "desktop",
+      "scope": "Playwright browser engine"
+    },
+    {
+      "id": "firefox-desktop",
+      "engine": "Firefox",
+      "formFactor": "desktop",
+      "scope": "Playwright browser engine"
+    },
+    {
+      "id": "webkit-desktop",
+      "engine": "WebKit",
+      "formFactor": "desktop",
+      "scope": "Playwright browser engine; Safari compatibility proxy, not branded Safari"
+    },
+    {
+      "id": "chromium-android",
+      "engine": "Chromium",
+      "formFactor": "Pixel 7 emulation",
+      "scope": "touch/mobile emulation; Android Chrome compatibility proxy"
+    },
+    {
+      "id": "webkit-ios",
+      "engine": "WebKit",
+      "formFactor": "iPhone 13 emulation",
+      "scope": "touch/mobile emulation; iOS Safari compatibility proxy"
+    }
+  ],
+  "chromiumPwaNetwork": {
+    "required": true,
+    "scenarios": [
+      "service-worker control",
+      "offline reload",
+      "network restoration",
+      "repeat flap",
+      "cache eviction recovery",
+      "stale worker/cache update proxy",
+      "tab/background proxy",
+      "high-latency cold-load proxy"
+    ],
+    "note": "Playwright service-worker automation is Chromium-only."
+  },
+  "deferredPhysical": [
+    {
+      "id": "android-chrome-physical",
+      "status": "deferred_physical",
+      "blockingNow": false
+    },
+    {
+      "id": "samsung-internet-physical",
+      "status": "deferred_physical",
+      "blockingNow": false
+    },
+    {
+      "id": "ios-safari-physical",
+      "status": "deferred_physical",
+      "blockingNow": false
+    },
+    {
+      "id": "installed-pwa-physical",
+      "status": "deferred_physical",
+      "blockingNow": false
+    }
+  ],
+  "nonClaims": [
+    "Emulated mobile profiles are not physical-device certifications.",
+    "Playwright WebKit is not branded Safari.",
+    "Chromium emulation is not branded Samsung Internet.",
+    "OS-level process kill, sleep, radio handoff and device storage pressure require later physical-device testing.",
+    "WebKit mobile emulation may not expose navigator.maxTouchPoints; P24 records observed touch capability instead of treating emulation metadata as physical touch evidence."
+  ]
+}
