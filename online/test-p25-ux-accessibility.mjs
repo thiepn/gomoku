@@ -9,7 +9,7 @@ for(const marker of [
 ]) assert(audit.includes(marker),'P25 audit missing '+marker);
 const workflow=fs.readFileSync('.github/workflows/verify-p25-ux-accessibility.yml','utf8');
 for(const marker of [
-  'name: p25-desktop','name: p25-mobile','axe-core@4.13.0',
+  'name: p25-${{ matrix.profile }}','profile: desktop','profile: mobile','axe-core@4.13.0',
   'playwright==1.62.0','p25-test-output','p25-ux-accessibility',
   'https://thiepn.dev/gomoku/','Verify exact deployed P25 artifact'
 ]) assert(workflow.includes(marker),'P25 workflow missing '+marker);
