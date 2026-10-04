@@ -1,0 +1,130 @@
+name: P22 client resilience and offline recovery
+
+on:
+  pull_request:
+    paths:
+      - 'sw.js'
+      - 'ui/build.py'
+      - 'review/build.py'
+      - 'analysis/build.py'
+      - 'audit/p22-*'
+      - 'online/test-p22-client-resilience.mjs'
+      - 'operations/P22-RUNBOOK.md'
+      - '.github/workflows/verify-p22-client-resilience.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sw.js'
+      - 'ui/build.py'
+      - 'review/build.py'
+      - 'analysis/build.py'
+      - 'audit/p22-*'
+      - 'online/test-p22-client-resilience.mjs'
+      - 'operations/P22-RUNBOOK.md'
+      - '.github/workflows/verify-p22-client-resilience.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p22-client-resilience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p22-client-resilience:
+    name: p22-client-resilience
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: '3.12'}
+
+      - name: Verify source contracts and deterministic service-worker behavior
+        run: |
+          node --check audit/p22-service-worker.cjs
+          node --check online/test-p22-client-resilience.mjs
+          node online/test-p22-client-resilience.mjs
+          node audit/p22-service-worker.cjs
+          node operations/p19-supply-chain-policy.mjs
+
+      - name: Verify existing builders preserve the P22 cache contract
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          git diff --exit-code -- index.html sw.js ui/build.py review/build.py analysis/build.py
+          node audit/p22-service-worker.cjs
+
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+
+      - name: Exercise real-origin install and offline recovery
+        env:
+          CHROMIUM_PATH: playwright
+          P22_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/p22-http.log 2>&1 &
+          python audit/p22-offline-browser.py
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p22-client-resilience-${{ github.sha }}
+          path: p22-test-output/
+          retention-days: 14
+          if-no-files-found: warn
+
+  p22-deployed-offline:
+    name: p22-deployed-offline
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: p22-client-resilience
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: '3.12'}
+
+      - name: Verify exact deployed client artifacts
+        run: |
+          python - <<'PY'
+          import hashlib,time,urllib.request
+          from pathlib import Path
+          root='https://thiepn.dev/gomoku/'
+          for name in ['index.html','sw.js']:
+              expected=hashlib.sha256(Path(name).read_bytes()).hexdigest()
+              for attempt in range(90):
+                  try:
+                      request=urllib.request.Request(root+name+'?p22-check='+expected+'&attempt='+str(attempt),headers={'Cache-Control':'no-cache'})
+                      with urllib.request.urlopen(request,timeout=15) as response:
+                          received=hashlib.sha256(response.read()).hexdigest()
+                      if received==expected:
+                          print('EXACT_DEPLOYED_FILE',name,expected,flush=True)
+                          break
+                  except Exception as error:
+                      print(type(error).__name__,str(error)[:160],flush=True)
+                  time.sleep(4)
+              else:
+                  raise SystemExit('Public client artifact did not match this commit: '+name)
+          PY
+
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+
+      - name: Prove deployed PWA survives documentation then offline return
+        env:
+          CHROMIUM_PATH: playwright
+          P22_URL: https://thiepn.dev/gomoku/
+        run: python audit/p22-offline-browser.py
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p22-deployed-offline-${{ github.sha }}
+          path: p22-test-output/
+          retention-days: 14
+          if-no-files-found: warn
