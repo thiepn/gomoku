@@ -18,11 +18,16 @@ The v1 profile performs:
 
 | Scenario | Load | Minimum / ceiling |
 | --- | --- | --- |
+| Cold-start observation | 36 room-list requests, concurrency 4 | diagnostic only; records local Edge/gateway startup behavior |
 | Stable lobby floor | **240 room-list requests**, concurrency 12 | 100% success, p95 <= 1200 ms, p99 <= 2500 ms, >=10 req/s |
 | Lobby saturation probe | 180 requests each at concurrency 16 and 20 | measured, not individually release-blocking |
 | Post-burst lobby recovery | 60 requests, concurrency 4 | 100% success, p95 <= 800 ms, p99 <= 1500 ms, >=5 req/s |
 | Authorized room poll | 120 requests, concurrency 12 | >=99.5% success, p95 <= 1800 ms, p99 <= 3500 ms, >=6 req/s |
 | Full health snapshot | 40 requests, concurrency 8 | 100% success, p95 <= 2200 ms, p99 <= 4500 ms, >=3 req/s |
+
+The local Supabase Edge runtime has a distinct startup transient. A P21 run on 2026-10-04 showed the first batch at c12 returning 211/240 clean responses, while the immediately following c16 and c20 batches both returned 180/180 clean responses and post-burst recovery returned 60/60. Treating the first batch as the steady-state floor would therefore make the result depend on measurement order.
+
+P21 now records a separate diagnostic cold-start observation, allows the local worker/gateway to settle, and only then begins the release-blocking steady-state profile. Cold-start behavior remains visible in evidence but is not mislabeled as sustained capacity.
 
 These ceilings are intentionally conservative because GitHub-hosted runner CPU and Docker scheduling are noisy. The release-blocking floor is concurrency 12. P21 also probes concurrency 16 and 20 and records the highest rung that satisfies the same clean-response/latency contract. A higher rung may saturate the local gateway without failing the release, but the post-burst recovery profile must immediately return to 100% success. This distinguishes a known disposable-gateway saturation envelope from a service that becomes unhealthy after overload.
 

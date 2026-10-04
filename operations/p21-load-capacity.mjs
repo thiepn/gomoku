@@ -10,6 +10,7 @@ const chaosPath=String(process.env.P21_CHAOS_FILE||'/tmp/p21-chaos-fixture.json'
 if(!api||!key)throw new Error('GOMOKU_ROOM_API and GOMOKU_ROOM_KEY are required.');
 
 const thresholds={
+  roomListColdStart:{requests:36,concurrency:4,minSuccessRate:0,p95Ms:5000,p99Ms:8000,minRps:0,diagnostic:true},
   roomList:{requests:240,concurrency:12,minSuccessRate:1,p95Ms:1200,p99Ms:2500,minRps:10},
   roomListProbe16:{requests:180,concurrency:16,minSuccessRate:1,p95Ms:1500,p99Ms:3000,minRps:10,diagnostic:true},
   roomListProbe20:{requests:180,concurrency:20,minSuccessRate:1,p95Ms:1500,p99Ms:3000,minRps:10,diagnostic:true},
@@ -93,6 +94,8 @@ async function benchmark(){
   await requireRequest('/api/health');
   await requireRequest('/api/rooms');
 
+  const coldStart=await bench('room-list-cold-start','/api/rooms',thresholds.roomListColdStart);
+  await new Promise(r=>setTimeout(r,500));
   const list=await bench('room-list-stable','/api/rooms',thresholds.roomList);
   const probe16=await bench('room-list-probe-c16','/api/rooms',thresholds.roomListProbe16);
   const probe20=await bench('room-list-probe-c20','/api/rooms',thresholds.roomListProbe20);
@@ -169,10 +172,11 @@ async function benchmark(){
       capacityEnvelope:{
         minimumCertifiedLobbyConcurrency:thresholds.minimumCertifiedLobbyConcurrency,
         certifiedLobbyConcurrency,
+        coldStart,
         probes:[list,probe16,probe20],
         postBurstRecovery:listRecovery
       },
-      scenarios:{roomList:list,roomListProbe16:probe16,roomListProbe20:probe20,roomListRecovery:listRecovery,roomPoll:poll,health,joinRace,actionRace,workerRestart:null},
+      scenarios:{roomListColdStart:coldStart,roomList:list,roomListProbe16:probe16,roomListProbe20:probe20,roomListRecovery:listRecovery,roomPoll:poll,health,joinRace,actionRace,workerRestart:null},
       generatedAt:new Date().toISOString()
     };
     evidence.preChaosPassed=certifiedLobbyConcurrency>=thresholds.minimumCertifiedLobbyConcurrency
@@ -233,7 +237,7 @@ function summary(){
   console.log('');
   console.log('- Result: **'+(e.passed?'PASS':'FAIL')+'**');
   console.log('- Certified lobby concurrency: **'+e.capacityEnvelope.certifiedLobbyConcurrency+'** (required floor '+e.capacityEnvelope.minimumCertifiedLobbyConcurrency+')');
-  for(const k of ['roomList','roomListProbe16','roomListProbe20','roomListRecovery','roomPoll','health']){
+  for(const k of ['roomListColdStart','roomList','roomListProbe16','roomListProbe20','roomListRecovery','roomPoll','health']){
     const x=s[k];
     console.log('- '+x.name+': c'+x.concurrency+' · p95 '+x.p95Ms+' ms · p99 '+x.p99Ms+' ms · '+x.throughputRps+' req/s · '+(x.successRate*100).toFixed(2)+'% success'+(x.passed?'':' · saturation/fail'));
   }
