@@ -60,9 +60,11 @@ This exercises the optimistic-concurrency boundary used by real rooms under race
 
 After load and contention pass, P21 creates a two-player room and commits one move. The workflow then deliberately terminates the local `gomoku-room` Edge worker process group.
 
-The test must prove the worker became unavailable before restart. It then starts a new worker against the same database and requires:
+The test must prove the worker became unavailable before restart. The workflow records both (a) time from termination injection until unavailability is observed and (b) actual outage time from observed unavailability until the replacement is healthy. A graceful local `supabase functions serve` shutdown may keep serving while it drains, so that drain time is not falsely counted as outage recovery.
 
-- health recovery within 30 seconds;
+It then starts a new worker against the same database and requires:
+
+- health recovery within 30 seconds **from the first observed unavailable probe**;
 - the pre-crash room to remain readable with its original player token;
 - the committed move and revision to survive the worker restart.
 
@@ -108,8 +110,8 @@ Any of the following blocks P16 admission:
 - any 5xx during contention;
 - multiple seat winners;
 - multiple move commits;
-- worker restart that cannot be proven;
-- recovery beyond 30 seconds;
+- worker restart whose unavailable state cannot be proven;
+- outage recovery beyond 30 seconds after unavailability is observed;
 - room state loss after restart;
 - missing P21 check on the exact candidate SHA.
 

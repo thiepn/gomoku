@@ -92,13 +92,14 @@ jobs:
         working-directory: .p21-portable
         shell: bash
         run: |
-          echo "$(date +%s%3N)" > /tmp/p21-chaos-start-ms
+          echo "$(date +%s%3N)" > /tmp/p21-chaos-injected-ms
           old_pid="$(cat /tmp/p21-functions.pid)"
           kill -TERM -- "-$old_pid" 2>/dev/null || kill -TERM "$old_pid" 2>/dev/null || true
           down=0
           for attempt in $(seq 1 30); do
             if ! curl -fsS -H "apikey: $GOMOKU_ROOM_KEY" "$GOMOKU_ROOM_API/api/health" >/dev/null 2>&1; then
               down=1
+              echo "$(date +%s%3N)" > /tmp/p21-chaos-down-ms
               break
             fi
             sleep 0.25

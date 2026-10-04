@@ -231,15 +231,17 @@ async function chaosPrepare(){
 
 async function chaosVerify(){
   const fixture=JSON.parse(fs.readFileSync(chaosPath,'utf8'));
-  const start=Number(fs.readFileSync('/tmp/p21-chaos-start-ms','utf8').trim());
+  const injected=Number(fs.readFileSync('/tmp/p21-chaos-injected-ms','utf8').trim());
+  const down=Number(fs.readFileSync('/tmp/p21-chaos-down-ms','utf8').trim());
   const recovered=Number(fs.readFileSync('/tmp/p21-chaos-recovered-ms','utf8').trim());
-  const recoveryMs=recovered-start;
+  const shutdownDetectionMs=down-injected;
+  const recoveryMs=recovered-down;
   const state=(await requireRequest('/api/rooms/'+fixture.room,{token:fixture.hostToken})).data;
   const preserved=Number(state?.revision)>=Number(fixture.expectedRevision)
     && Array.isArray(state?.game?.moves)
     && state.game.moves.length===fixture.expectedMoves;
   const scenario={
-    recoveryMs,roomStatePreserved:preserved,revision:state?.revision??null,
+    shutdownDetectionMs,recoveryMs,roomStatePreserved:preserved,revision:state?.revision??null,
     moves:state?.game?.moves?.length??null,
     passed:recoveryMs>=0&&recoveryMs<=thresholds.workerRestart.maxRecoveryMs&&preserved
   };
@@ -267,7 +269,7 @@ function summary(){
   }
   console.log('- Join contention: '+s.joinRace.players+' seat winner / '+s.joinRace.spectators+' spectators · '+s.joinRace.durationMs+' ms');
   console.log('- Action contention: '+s.actionRace.commits+' commit / '+s.actionRace.conflicts+' conflicts · '+s.actionRace.durationMs+' ms');
-  console.log('- Worker restart: recovered in '+s.workerRestart.recoveryMs+' ms · state preserved: '+s.workerRestart.roomStatePreserved);
+  console.log('- Worker restart: shutdown detected in '+s.workerRestart.shutdownDetectionMs+' ms · outage recovered in '+s.workerRestart.recoveryMs+' ms · state preserved: '+s.workerRestart.roomStatePreserved);
   console.log('');
   console.log('Portable CI qualification only; not a hosted-production maximum-capacity claim.');
 }

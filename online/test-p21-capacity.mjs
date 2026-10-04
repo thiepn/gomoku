@@ -33,6 +33,8 @@ for(const marker of [
   'joinRace:{attempts:12',
   'actionRace:{attempts:8',
   'workerRestart:{maxRecoveryMs:30000',
+  'shutdownDetectionMs=down-injected',
+  'recoveryMs=recovered-down',
   'room-list-cold-start',
   'waitForSteadyLobby',
   'consecutiveCleanBatches',
@@ -67,6 +69,9 @@ for(const marker of [
   'node operations/p21-load-capacity.mjs benchmark',
   'node operations/p21-load-capacity.mjs chaos-prepare',
   'Inject Edge worker restart and verify recovery',
+  '/tmp/p21-chaos-injected-ms',
+  '/tmp/p21-chaos-down-ms',
+  '/tmp/p21-chaos-recovered-ms',
   'node operations/p21-load-capacity.mjs chaos-verify',
   'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
   'retention-days: 14'
