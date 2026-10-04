@@ -99,11 +99,11 @@ as $$
           'rule','renju-practice',
           'mode',case
             when r.state->>'mode'='tournament' then 'tournament'
-            when r.state->>'mode'='ranked' or coalesce((r.state->>'ranked')::boolean,false) then 'ranked'
+            when coalesce(r.state->>'mode'='ranked',false) or coalesce((r.state->>'ranked')::boolean,false) then 'ranked'
             else 'casual'
           end,
-          'ranked',(r.state->>'mode'='ranked' or coalesce((r.state->>'ranked')::boolean,false)),
-          'tournament',(r.state->>'mode'='tournament'),
+          'ranked',(coalesce(r.state->>'mode'='ranked',false) or coalesce((r.state->>'ranked')::boolean,false)),
+          'tournament',coalesce(r.state->>'mode'='tournament',false),
           'playerCount',r.player_count,
           'onlineCount',r.online_count,
           'capacity',2,

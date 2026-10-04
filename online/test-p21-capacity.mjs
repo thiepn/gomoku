@@ -8,6 +8,8 @@ for(const marker of [
   'jsonb_array_elements',
   'gomoku_room_player_presence',
   'gomoku_room_spectators',
+  "coalesce(r.state->>'mode'='ranked',false)",
+  "coalesce(r.state->>'mode'='tournament',false)",
   "'p18_portability'",
   "'p19_supply_chain'",
   "'p20_slo_governance'",
@@ -87,7 +89,7 @@ const supply=fs.readFileSync('operations/p19-supply-chain-policy.mjs','utf8');
 assert(supply.includes("p21_capacity:'p21-capacity'"),'P19 policy does not protect the P21 admission dependency');
 
 const runbook=fs.readFileSync('operations/P21-RUNBOOK.md','utf8');
-for(const marker of ['p50 / p95 / p99','300 room-list requests','12 simultaneous seat claims','8 simultaneous move commands','worker restart','zero production traffic','not a hosted-production capacity claim','P16'])
+for(const marker of ['p50 / p95 / p99','240 room-list requests','concurrency 16 and 20','12 simultaneous seat claims','8 simultaneous move commands','worker restart','zero production traffic','not a hosted-production capacity claim','P16'])
   assert(runbook.includes(marker),'P21 runbook missing '+marker);
 
 console.log('PASS P21 contracts: portable load, concurrency races, worker-restart chaos, evidence artifacts and durable P16 capacity admission are wired without production load.');
