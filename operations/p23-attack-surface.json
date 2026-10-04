@@ -1,0 +1,487 @@
+{
+  "version": "p23.attack-surface.v1",
+  "edgeFunction": "gomoku-room",
+  "verifyJwt": false,
+  "routeCount": 67,
+  "authClasses": [
+    "public",
+    "optional_account",
+    "account",
+    "admin",
+    "github_oidc",
+    "room_session",
+    "history_capability",
+    "spectator_capability"
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "handler": "reliabilityHealth",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/environment/probe",
+      "handler": "p17EnvironmentProbe",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/admission",
+      "handler": "automationAdmission",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/orchestration",
+      "handler": "automationOrchestration",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/deployment",
+      "handler": "automationDeployment",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/certify",
+      "handler": "automationCertify",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/environment",
+      "handler": "automationP17Environment",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/schema-state",
+      "handler": "automationP17SchemaState",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/migration-event",
+      "handler": "automationP17MigrationEvent",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/preview-certification",
+      "handler": "automationP17PreviewCertification",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/authorize-promotion",
+      "handler": "automationP17AuthorizePromotion",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/promotion-event",
+      "handler": "automationP17PromotionEvent",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/production-deployment",
+      "handler": "automationP17ProductionDeployment",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/p17/production-certify",
+      "handler": "automationP17ProductionCertify",
+      "auth": "github_oidc",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/overview",
+      "handler": "adminOverview",
+      "auth": "admin",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/controls",
+      "handler": "adminControls",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/incidents",
+      "handler": "adminCreateIncident",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/incidents/:id",
+      "handler": "adminUpdateIncident",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/releases",
+      "handler": "adminRegisterRelease",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/releases/:id/transition",
+      "handler": "adminTransitionRelease",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/deployments",
+      "handler": "adminRecordDeployment",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/rollouts",
+      "handler": "adminCreateRollout",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/rollouts/:id/transition",
+      "handler": "adminTransitionRollout",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/drills",
+      "handler": "adminRunDrill",
+      "auth": "admin",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/ranked/leaderboard",
+      "handler": "rankedLeaderboard",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/ranked/me",
+      "handler": "rankedMe",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/ranked/queue",
+      "handler": "rankedQueue",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/ranked/cancel",
+      "handler": "rankedCancel",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/competition/me",
+      "handler": "competitionMe",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/competition/career",
+      "handler": "competitionCareer",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/competition/showcase",
+      "handler": "competitionShowcase",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/community/discover",
+      "handler": "communityDiscover",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/me",
+      "handler": "communityMe",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/preferences",
+      "handler": "communityPreferences",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/favorite",
+      "handler": "communityFavorite",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/head-to-head/:username",
+      "handler": "communityHeadToHead",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/challenges",
+      "handler": "createDirectChallenge",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/challenges/:id",
+      "handler": "respondDirectChallenge",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/challenges/:id/open",
+      "handler": "openDirectChallenge",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/trust/me",
+      "handler": "trustMe",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/trust/block",
+      "handler": "trustBlock",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/trust/report",
+      "handler": "trustReport",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/seasons",
+      "handler": "listSeasons",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/seasons/current",
+      "handler": "seasonBoard",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/seasons/me",
+      "handler": "seasonMe",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/seasons/:code",
+      "handler": "seasonByCode",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/tournaments",
+      "handler": "listTournaments",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/tournaments",
+      "handler": "createTournament",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/tournaments/:id",
+      "handler": "getTournament",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/tournaments/:id/join",
+      "handler": "joinTournament",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/tournaments/:id/leave",
+      "handler": "leaveTournament",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/tournaments/:id/play",
+      "handler": "playTournament",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/tournaments/:id/organizer",
+      "handler": "organizerTournament",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/profiles/:username",
+      "handler": "publicProfileByUsername",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/account/profile",
+      "handler": "accountProfile",
+      "auth": "account",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/account/link-history",
+      "handler": "linkBrowserHistory",
+      "auth": "account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/history",
+      "handler": "listHistory",
+      "auth": "history_capability",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/history/:roomId/:gameVersion",
+      "handler": "getHistoryMatch",
+      "auth": "history_capability",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/history/:roomId/:gameVersion/forget",
+      "handler": "forgetHistoryMatch",
+      "auth": "history_capability",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms",
+      "handler": "listRooms",
+      "auth": "public",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms",
+      "handler": "createRoom",
+      "auth": "optional_account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/:id/join",
+      "handler": "joinRoom",
+      "auth": "optional_account",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/:id/leave",
+      "handler": "leavePlayer",
+      "auth": "room_session",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/:id/spectate",
+      "handler": "spectateRoom",
+      "auth": "public",
+      "mutates": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/:id/spectate/leave",
+      "handler": "leaveSpectator",
+      "auth": "spectator_capability",
+      "mutates": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/:id",
+      "handler": "getRoom",
+      "auth": "room_session",
+      "mutates": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/:id/action",
+      "handler": "act",
+      "auth": "room_session",
+      "mutates": true
+    }
+  ]
+}
