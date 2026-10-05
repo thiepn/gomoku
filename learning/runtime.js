@@ -51,16 +51,22 @@
     if(!p)return 'Complete a lesson or practice session to build a recommendation.';
     if(p.type==='mistakes')return 'Recall your saved '+p.title.toLowerCase()+' positions before adding new material.';
     if(p.type==='course')return 'Continue '+p.chapterTitle+' and then test the idea in mixed practice.';
+    if(p.type==='review')return 'Review a real game and retry a '+p.title.toLowerCase()+' decision without revealing the answer.';
+    if(p.reason?.includes('Academy review'))return 'Retrieve the due '+p.title.toLowerCase()+' material before adding new examples.';
     return 'Use Weakness Review to retrieve '+p.title.toLowerCase()+' without a hint.';
   }
   function actionLabel(p){
     if(!p)return 'Start practice';
-    return p.type==='mistakes'?'Review due positions':p.type==='course'?'Continue chapter':'Practice weakness';
+    if(p.type==='mistakes')return 'Review due positions';
+    if(p.type==='course')return 'Continue chapter';
+    if(p.type==='review')return 'Review a game';
+    return p.reason?.includes('Academy review')?'Practice due review':'Practice weakness';
   }
   async function runPrescription(p){
     if(!p)return window.GomokuStudio?.startPracticeSession?.('weakness');
-    if(p.type==='mistakes'&&snapshot?.dueMistakeIds?.length&&window.GomokuTraining?.open){
-      return window.GomokuTraining.open({ids:snapshot.dueMistakeIds});
+    if(p.type==='mistakes'&&window.GomokuTraining?.open){
+      const ids=Array.isArray(p.mistakeIds)&&p.mistakeIds.length?p.mistakeIds:(snapshot?.dueMistakeIds||[]);
+      if(ids.length)return window.GomokuTraining.open({ids});
     }
     if(p.type==='course'){
       const button=document.querySelector('[data-open-chapter="'+p.chapter+'"]');
@@ -69,8 +75,15 @@
       if(api?.open)return api.open();
       if(api?.openSection)return api.openSection(0,0);
     }
-    const motif=motifForSkill(p.skillId);
-    return window.GomokuStudio?.startPracticeSession?.('weakness',motif===undefined?{}:{motif});
+    if(p.type==='review'){
+      if(window.GomokuStudio?.openReviewCenter)return window.GomokuStudio.openReviewCenter();
+      const proxy=document.querySelector('[data-ui-proxy="v92ReviewChoice"]');if(proxy)return proxy.click();
+    }
+    const motif=Number.isInteger(p.practiceMotif)?p.practiceMotif:motifForSkill(p.skillId);
+    return window.GomokuStudio?.startPracticeSession?.('weakness',motif===undefined||motif===null?{}:{motif});
+  }
+  function skillPrescription(id){
+    return snapshot?.skills?.find(s=>s.id===id)?.recommendation||null;
   }
   function homeHost(){
     return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');
@@ -93,7 +106,7 @@
     section.innerHTML='<div class="li11-head"><div><p class="li11-kicker">LEARNING INTELLIGENCE · 1.1</p><h3>Your next useful work.</h3><p>Course progress, clean practice, reviewed mistakes and recall history now contribute to one skill model.</p></div><button class="li11-map" type="button" id="li11OpenMap">Skill map →</button></div>'+
       '<div class="li11-metrics" aria-label="Learning summary">'+
         '<div><strong>'+s.mastered+'</strong><span>skills mastered</span></div>'+
-        '<div><strong>'+s.dueMistakes+'</strong><span>mistakes due</span></div>'+
+        '<div><strong>'+s.dueReviews+'</strong><span>reviews due</span></div>'+
         '<div><strong>'+s.average+'%</strong><span>evidenced mastery</span></div>'+
       '</div>'+
       '<article class="li11-focus"><div class="li11-focus-score" aria-label="'+esc(strengthText(focus))+'"><strong>'+Number(focus?.score||0)+'</strong><span>/ 100</span></div><div class="li11-focus-copy"><span>FOCUS NOW</span><h4>'+esc(focus?.title||'Build your baseline')+'</h4><p>'+esc(prescriptionCopy(p))+'</p><small>'+esc(p?.reason||'Your first evidence will establish a baseline.')+'</small></div><button class="li11-primary" type="button" id="li11DoNext">'+esc(actionLabel(p))+'</button></article>'+
@@ -124,15 +137,22 @@
     if(!snapshot)return;
     const d=ensureDialog(),body=$('li11DialogBody');body.replaceChildren();
     const summary=document.createElement('div');summary.className='li11-dialog-summary';
-    summary.innerHTML='<div><strong>'+snapshot.summary.mastered+'</strong><span>Mastered</span></div><div><strong>'+snapshot.summary.strong+'</strong><span>Strong</span></div><div><strong>'+snapshot.summary.developing+'</strong><span>Developing</span></div><div><strong>'+snapshot.summary.dueMistakes+'</strong><span>Due</span></div>';
+    summary.innerHTML='<div><strong>'+snapshot.summary.mastered+'</strong><span>Mastered</span></div><div><strong>'+snapshot.summary.strong+'</strong><span>Strong</span></div><div><strong>'+snapshot.summary.developing+'</strong><span>Developing</span></div><div><strong>'+snapshot.summary.dueReviews+'</strong><span>Due reviews</span></div>';
     body.append(summary);
+    const byId=Object.fromEntries(snapshot.skills.map(s=>[s.id,s]));
     for(const group of snapshot.groups){
       const skills=snapshot.skills.filter(s=>s.group===group.id);if(!skills.length)continue;
       const section=document.createElement('section');section.className='li11-group';
       const average=Math.round(skills.reduce((a,s)=>a+s.score,0)/skills.length);
-      section.innerHTML='<div class="li11-group-head"><h3>'+esc(group.title)+'</h3><span>'+average+'% average</span></div><div class="li11-skill-list">'+skills.map(s=>'<article class="li11-skill" data-state="'+esc(s.state)+'"><div class="li11-skill-title"><b>'+esc(s.title)+'</b><span>'+s.score+'%</span></div><progress max="100" value="'+s.score+'" aria-label="'+esc(s.title)+' mastery '+s.score+' percent"></progress><div class="li11-skill-meta"><span>'+esc(titleCase(s.state))+'</span><span>'+s.evidence.toFixed(1)+' evidence</span><span>'+s.confidence+'% confidence</span>'+(s.due?'<span class="is-due">'+s.due+' due</span>':'')+'</div></article>').join('')+'</div>';
+      section.innerHTML='<div class="li11-group-head"><h3>'+esc(group.title)+'</h3><span>'+average+'% average</span></div><div class="li11-skill-list">'+skills.map(s=>{
+        const gaps=s.prerequisites.filter(id=>(byId[id]?.score||0)<38).map(id=>byId[id]?.title||id);
+        const transfer=s.needsTransfer?'<span class="is-transfer">needs game transfer</span>':'';
+        const gap=gaps.length?'<small class="li11-prereq">Build first: '+esc(gaps.slice(0,2).join(' · '))+'</small>':'';
+        return '<article class="li11-skill" data-state="'+esc(s.state)+'"><div class="li11-skill-title"><b>'+esc(s.title)+'</b><span>'+s.score+'%</span></div><progress max="100" value="'+s.score+'" aria-label="'+esc(s.title)+' mastery '+s.score+' percent"></progress><div class="li11-skill-meta"><span>'+esc(titleCase(s.state))+'</span><span>'+s.evidence.toFixed(1)+' evidence</span><span>'+s.contexts+' context'+(s.contexts===1?'':'s')+'</span>'+(s.due?'<span class="is-due">'+s.due+' due</span>':'')+transfer+'</div>'+gap+'<button class="li11-skill-action" type="button" data-li11-skill="'+esc(s.id)+'">'+esc(actionLabel(s.recommendation))+'</button></article>';
+      }).join('')+'</div>';
       body.append(section);
     }
+    body.querySelectorAll('[data-li11-skill]').forEach(button=>button.onclick=()=>{const p=skillPrescription(button.dataset.li11Skill);if(p){d.close();runPrescription(p);}});
     if(!d.open)d.showModal();
     d.querySelector('.li11-close').focus();
   }
@@ -142,8 +162,10 @@
     let focus=[];try{focus=Core.reviewFocus(window.GomokuStudio.reviewReport());}catch{}
     if(!focus.length){row?.remove();return;}
     if(!row){row=document.createElement('div');row.id='li11ReviewPrescription';row.className='li11-review';const practice=overview.querySelector('.rw-practice');if(practice)practice.insertAdjacentElement('beforebegin',row);else overview.append(row);}
-    const sig=focus.map(x=>x.id+':'+x.count).join('|');if(row.dataset.signature===sig)return;row.dataset.signature=sig;
-    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
+    const p=skillPrescription(focus[0].id),sig=focus.map(x=>x.id+':'+x.count).join('|')+'|'+(p?.type||'')+'|'+(p?.score||0)+'|'+(p?.mistakeIds?.length||0);
+    if(row.dataset.signature===sig)return;row.dataset.signature=sig;
+    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Reviewed decisions feed the same mastery model as lessons and practice. Use the next action to close the loop.</small><div class="li11-review-actions"><button type="button" class="gr-btn" id="li11ReviewAction">'+esc(actionLabel(p))+'</button><button type="button" class="gr-link" id="li11ReviewMap">Skill map</button></div>';
+    $('li11ReviewAction').onclick=()=>p&&runPrescription(p);$('li11ReviewMap').onclick=openDashboard;
   }
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
