@@ -22,8 +22,7 @@ const p16=fs.readFileSync('operations/p16-await-checks.mjs','utf8');
 assert(!p16.includes('p25_'),'P25 stays at the client/product-quality boundary');
 console.log('PASS P25 source contracts.');
 
-const studio=fs.readFileSync('ui/studio.js','utf8');
-for(const marker of ["dialogLabelSequence","event.preventDefault()","boardGrid.focus()","uiRouteStatus","improve:'Improve'","modeGroup.setAttribute('role','group')"])
+for(const marker of ["dialogLabelSequence","event.preventDefault()","focusBoardTarget","uiRouteStatus","improve:'Improve'","modeGroup.setAttribute('role','group')"])
   assert(studio.includes(marker),'P25 Studio accessibility fix missing '+marker);
 const css=fs.readFileSync('ui/studio.css','utf8');
 for(const marker of ['#boardGrid:focus-visible','.ui-sr-only','opacity:.78'])
