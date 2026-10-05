@@ -81,6 +81,8 @@ jobs:
       - name: Verify exact public candidate
         run: node operations/p26-release-candidate.mjs deployed
       - name: Run final P27 preflight
+        env:
+          P27_CHECK_SHA: ${{ github.sha }}
         run: node operations/p27-stable-release.mjs preflight
       - name: Refuse duplicate GitHub Release
         run: |
