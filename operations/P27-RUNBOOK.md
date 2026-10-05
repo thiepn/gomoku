@@ -23,9 +23,10 @@ P27 may create no stable tag and no GitHub Release until all of the following ar
    - installed Android PWA.
 3. No P26 device profile reports fail.
 4. The live public index.html, sw.js and manifest.webmanifest still exactly match the pinned product candidate.
-5. The repository is on the current main head at release time.
-6. The v1.0.0 tag and GitHub Release do not already exist.
-7. The release workspace is clean.
+5. The current main SHA has green P16 release-control, P24 browser/device, P25 product-quality, and P26 release-candidate checks.
+6. The repository is on the current main head at release time.
+7. The v1.0.0 GitHub Release does not already exist; an existing v1.0.0 tag is accepted only as recovery from an interrupted release when it points to the exact current release commit.
+8. The release workspace is clean.
 
 Automated browser emulation never substitutes for the required physical evidence.
 
@@ -48,12 +49,13 @@ A successful P27 release dispatch performs this sequence:
 1. validate P27 contracts;
 2. run the strict P26 release-ready gate;
 3. verify the exact deployed P26 product candidate;
-4. run P27 preflight;
-5. confirm the workflow commit still equals origin/main;
-6. confirm neither v1.0.0 tag nor GitHub Release already exists;
-7. create annotated tag v1.0.0;
-8. push the tag;
-9. create the GitHub Release with operations/P27-RELEASE-NOTES.md.
+4. require the current SHA's P16/P24/P25/P26 qualification runs to be complete and successful;
+5. run P27 preflight;
+6. confirm the workflow commit still equals origin/main;
+7. refuse an existing GitHub Release and verify any recovery tag points to this exact commit;
+8. create annotated tag v1.0.0 when needed;
+9. push the tag when newly created;
+10. create the GitHub Release with operations/P27-RELEASE-NOTES.md.
 
 No database migration, Edge deployment, frontend rebuild, or product mutation occurs during P27 release creation.
 
