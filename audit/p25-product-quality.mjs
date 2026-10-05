@@ -73,7 +73,7 @@ await page.waitForTimeout(900);
 let n=1;
 await capture(page,n++,'first-launch','Initial app state including first-run UI when present.');
 await closeDialogs(page);
-const skip=page.locator('a.skip').first();
+const skip=page.locator('a.skip[href="#boardGrid"]').first();
 await skip.focus();
 const skipFocus=await page.evaluate(()=>{const e=document.activeElement,r=e?.getBoundingClientRect?.();return {id:e?.id||null,visible:!!r&&r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight};});
 if(!skipFocus.visible)throw new Error('Skip link is not visibly focusable: '+JSON.stringify(skipFocus));

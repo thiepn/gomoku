@@ -9,7 +9,7 @@ for(const marker of [
 ]) assert(studio.includes(marker),'P25 skip-link focus repair missing '+marker);
 
 const audit=fs.readFileSync('audit/p25-product-quality.mjs','utf8');
-for(const marker of ['@axe-core/playwright','wcag22aa','first-launch','play-after-move','improve-catalog','learning-dialog','guided-review','high-contrast-large-text','mobile-play','smallTargets','focusWalk','x.width<24||x.height<24','outlineWidth','page.screenshot'])
+for(const marker of ['@axe-core/playwright','wcag22aa','first-launch','play-after-move','improve-catalog','learning-dialog','guided-review','high-contrast-large-text','mobile-play','smallTargets','focusWalk','x.width<24||x.height<24','outlineWidth','page.screenshot','a.skip[href="#boardGrid"]'])
   assert(audit.includes(marker),'P25 audit missing '+marker);
 const workflow=fs.readFileSync('.github/workflows/verify-p25-product-quality.yml','utf8');
 for(const marker of ['name: p25-product-quality','@axe-core/playwright@4.13.0','playwright@1.62.0','node audit/p25-product-quality.mjs','p25-audit-output/','name: p25-deployed-quality','Verify exact deployed P25 artifact','https://thiepn.dev/gomoku/'])
