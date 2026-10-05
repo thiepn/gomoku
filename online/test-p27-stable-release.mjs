@@ -12,7 +12,7 @@ assert(config.policy?.allow_automatic_release===false,'P27 release must require 
 assert(config.policy?.maintenance_mode_after_release===true,'P27 must hand off to maintenance');
 
 const script=fs.readFileSync('operations/p27-stable-release.mjs','utf8');
-for(const marker of ['runP26Strict','release-ready','deployed','Stable tag already exists','Release workspace must be clean','P27 is prepared but blocked'])
+for(const marker of ['runP26Strict','release-ready','deployed','requireCurrentReleaseChecks','P16 release control','P24 browser device and network qualification','P25 product UX accessibility and final quality','P26 release candidate burn-in and real-device qualification','Stable tag already exists','Release workspace must be clean','P27 is prepared but blocked'])
   assert(script.includes(marker),'P27 preflight missing '+marker);
 
 const workflow=fs.readFileSync('.github/workflows/p27-stable-release.yml','utf8');
@@ -22,6 +22,7 @@ for(const marker of [
   'node operations/p26-release-candidate.mjs release-ready',
   'node operations/p26-release-candidate.mjs deployed',
   'node operations/p27-stable-release.mjs preflight',
+  'P27_CHECK_SHA: ${{ github.sha }}',
   'git tag -a v1.0.0',
   'gh release create v1.0.0',
   'git rev-parse origin/main'
