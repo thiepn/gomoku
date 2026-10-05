@@ -1,7 +1,8 @@
 {
   "version": "p26.release-candidate.v1",
   "candidate_source_sha": "d7481e80a5956584ad5956e897f28e3bb04674d2",
-  "started_at": "2026-10-05T18:36:43Z",
+  "started_at": "2026-10-05T18:39:38Z",
+  "p25_deployed_qualification_run_id": 37357262703,
   "minimum_burn_in_hours": 24,
   "public_base_url": "https://thiepn.dev/gomoku/",
   "immutable_artifacts": [
