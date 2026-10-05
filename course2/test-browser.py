@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'course2-test-output';OUT.mkdir(exist_ok=True)
 URL=os.environ.get('COURSE2_URL');ERRORS=[];PASSED=[]
 def check(name,ok=True): assert ok,name;PASSED.append(name);print('PASS '+name,flush=True)
-def route(p,n): p.locator('#v92Primary button[data-v92-route="'+n+'"]').click();p.wait_for_timeout(120)
+def route(p,n): close(p);p.locator('#v92Primary button[data-v92-route="'+n+'"]').click();p.wait_for_timeout(120)
 def close(p): p.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
 def load(browser,viewport,mobile=False,reduced='no-preference'):
     ctx=browser.new_context(viewport=viewport,is_mobile=mobile,has_touch=mobile,reduced_motion=reduced);page=ctx.new_page();page.set_default_timeout(18000)

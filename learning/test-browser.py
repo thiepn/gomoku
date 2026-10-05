@@ -13,6 +13,7 @@ def check(name,ok=True):
     PASSED.append(name);print('PASS '+name,flush=True)
 
 def route(page,name):
+    close_dialogs(page)
     page.locator('#v92Primary button[data-v92-route="'+name+'"]').click()
     page.wait_for_timeout(120)
 
