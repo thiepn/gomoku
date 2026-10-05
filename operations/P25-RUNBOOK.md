@@ -44,7 +44,7 @@ The baseline audit found two real issues after false-positive triage.
 
 On mobile, the large chapter numbers inside `.ui-course-art` measured **2.93:1** against their card background. Axe requires 3:1 for that large text.
 
-P25 increases the chapter-number opacity from 0.67 to **0.78**, retaining the visual hierarchy while moving the text safely above the large-text contrast threshold.
+P25 increases the chapter-number opacity to **0.78** in both the base rule and the later mobile override. The first repair changed only the base rule; Axe correctly caught that the mobile media query still reset it to 0.5. The final fix repairs the actual cascade while retaining the intended hierarchy.
 
 ### Competition Live / Archive targets
 
@@ -83,7 +83,7 @@ P25 is a static-client/browser quality gate, like P22 and P24. It does not enter
 
 The candidate shell is rebuilt from `ui/` and `online/` source before the audit so generated HTML cannot hide a source-level regression.
 
-A main-only deployed audit is added once the PR is ready to merge: it waits for the exact generated client to reach `https://thiepn.dev/gomoku/` and repeats the same audited journeys against production.
+The main-only `p25-deployed-quality` job waits until `https://thiepn.dev/gomoku/index.html` matches the exact generated client hash, then repeats the same desktop/mobile Axe and custom journey audit against production.
 
 ## Evidence limits
 

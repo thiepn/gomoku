@@ -319,7 +319,7 @@ html body.ui-studio footer{font-size:11px;}
  html body.ui-studio .ui-course-copy>p:not(.ui-kicker){font-size:12px;min-height:60px;}
  html body.ui-studio .ui-course-art{height:105px;padding:0 8px;}
  html body.ui-studio .ui-course-art>svg{height:101px;width:120px;}
- html body.ui-studio .ui-course-art>span{font-size:27px;left:12px;bottom:10px;opacity:.5;}
+ html body.ui-studio .ui-course-art>span{font-size:27px;left:12px;bottom:10px;opacity:.78;}
  html body.ui-studio .ui-course-progress{flex-wrap:wrap;gap:6px;padding:15px 0 10px;}
  html body.ui-studio .ui-course-progress progress{width:100%;flex:auto;}
  html body.ui-studio .ui-course-open{font-size:11px;min-height:43px;}

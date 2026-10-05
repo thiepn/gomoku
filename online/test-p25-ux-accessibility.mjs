@@ -4,6 +4,7 @@ const assert=(v,m)=>{if(!v)throw new Error(m);};
 
 const ui=fs.readFileSync('ui/studio.css','utf8');
 assert(ui.includes('.ui-course-art>span')&&ui.includes('opacity:.78'),'P25 Learn chapter-number contrast repair missing');
+assert(ui.includes('.ui-course-art>span{font-size:27px;left:12px;bottom:10px;opacity:.78;}'),'P25 mobile Learn chapter-number contrast override regressed');
 
 const competition=fs.readFileSync('online/p8-competition.css','utf8');
 assert(/\.p9-scope-tabs button\{[^}]*min-height:28px/.test(competition),'P25 Live/Archive target-size repair missing');
@@ -26,7 +27,10 @@ for(const marker of [
   'python ui/build.py',
   'python online/build-p8-client.py',
   'axe-core@4.10.3',
-  'python audit/p25-ux-a11y.py'
+  'python audit/p25-ux-a11y.py',
+  'name: p25-deployed-quality',
+  'Wait for exact P25 client on GitHub Pages',
+  'https://thiepn.dev/gomoku/'
 ]) assert(workflow.includes(marker),'P25 workflow missing '+marker);
 
 const runbook=fs.readFileSync('operations/P25-RUNBOOK.md','utf8');
