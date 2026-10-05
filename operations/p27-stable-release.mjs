@@ -51,9 +51,35 @@ function runP26Strict(){
   if(deployed.status!==0)fail('P26 exact public candidate verification failed.');
 }
 
-function preflight(){
+async function requireCurrentReleaseChecks(){
+  const token=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;
+  const repo=process.env.GITHUB_REPOSITORY||'thiepn/gomoku';
+  const sha=process.env.P27_CHECK_SHA||process.env.GITHUB_SHA;
+  if(!token||!sha)fail('P27 preflight requires GitHub token and exact check SHA.');
+  const response=await fetch('https://api.github.com/repos/'+repo+'/actions/runs?head_sha='+encodeURIComponent(sha)+'&per_page=100',{
+    headers:{authorization:'Bearer '+token,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28'}
+  });
+  if(!response.ok)fail('Unable to read current GitHub Actions evidence: '+response.status);
+  const body=await response.json();
+  const required=[
+    'P16 release control',
+    'P24 browser device and network qualification',
+    'P25 product UX accessibility and final quality',
+    'P26 release candidate burn-in and real-device qualification'
+  ];
+  for(const name of required){
+    const runs=(body.workflow_runs||[]).filter(r=>r.name===name);
+    if(!runs.length)fail('Missing current release check: '+name);
+    const newest=runs.sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at))[0];
+    if(newest.status!=='completed'||newest.conclusion!=='success')
+      fail('Current release check is not green: '+name+' status='+newest.status+' conclusion='+newest.conclusion);
+  }
+}
+
+async function preflight(){
   validateContract();
   runP26Strict();
+  await requireCurrentReleaseChecks();
   const existing=git(['tag','--list',config.release_tag],{encoding:'utf8'}).trim();
   if(existing){
     const tagSha=git(['rev-list','-n','1',config.release_tag],{encoding:'utf8'}).trim();
@@ -86,7 +112,7 @@ if(command==='validate'){
 }else if(command==='status'){
   printStatus(readiness());
 }else if(command==='preflight'){
-  const status=preflight();
+  const status=await preflight();
   printStatus(status);
 }else{
   fail('Usage: node operations/p27-stable-release.mjs <validate|status|preflight>');
