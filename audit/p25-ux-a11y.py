@@ -116,10 +116,17 @@ with sync_playwright() as p:
     returned=page.evaluate('document.activeElement?.id')
     if returned!='v111MenuBtn':add(profile,'dialog-focus-return','Closing Settings does not return focus to the visible Menu trigger',{'after':returned},'06-settings','high')
 
-    # Step 7: online entry / recovery messaging, no mutations.
-    if page.locator('#v92OnlineMode').count():
-      page.locator('#v92OnlineMode').click();page.wait_for_timeout(1000)
+    # Step 7: online entry through a visible route on every viewport, no mutations.
+    page.locator('#v111MenuBtn').click();page.wait_for_timeout(80)
+    advanced=page.locator('#v111MenuDialog details.v111-advanced')
+    if advanced.count() and not advanced.get_attribute('open'):
+      advanced.locator('summary').click();page.wait_for_timeout(60)
+    online_tool=page.locator('#v111MenuDialog [data-v111-tool="online"]')
+    if online_tool.count() and online_tool.is_visible():
+      online_tool.click();page.wait_for_timeout(1000)
       steps.append({'step':'07-online-entry','screenshot':screenshot(page,profile,'07-online-entry'),'axe':axe(page,profile,'07-online-entry'),'custom':custom(page,profile,'07-online-entry')})
+    else:
+      add(profile,'navigation','Visible Online rooms entry is unavailable from Menu',None,'07-online-entry','high')
 
     if page_errors:add(profile,'runtime','Uncaught page errors during journey',page_errors,None,'high')
     RESULT['profiles'][profile]={'steps':steps,'pageErrors':page_errors}
