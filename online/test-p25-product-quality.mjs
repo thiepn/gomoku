@@ -32,3 +32,5 @@ assert(workflow.includes('python ui/build.py')&&workflow.includes('python online
 
 assert(css.includes('#settingsDialog input[type="checkbox"]{width:24px;height:24px;min-width:24px'),'P25 settings checkboxes must meet the 24px target floor');
 assert(css.includes('#settingsDialog a')&&css.includes('display:inline-flex')&&css.includes('min-height:24px'),'P25 settings links must meet the 24px target floor');
+
+assert(css.includes('#newDialog input[type="checkbox"]{width:24px;height:24px;min-width:24px'),'P25 new-game preservation checkbox must meet the 24px target floor');
