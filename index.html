@@ -14776,6 +14776,15 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
         else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
+    for(const a of Array.isArray(input.course2)?input.course2:[]){
+      const ids=(Array.isArray(a?.skillIds)?a.skillIds:[]).filter(id=>BY_ID[id]);
+      if(!ids.length||typeof a?.correct!=='boolean')continue;
+      const w=recency(a.at,now),context='course2:'+(Number(a.chapter)||0)+':'+dayBucket(a.at);
+      for(const id of ids){
+        if(a.correct)add(rows[id],{positive:(a.assisted?.48:.92)*w,clean:a.assisted?0:.72*w,events:.62*w,at:a.at,source:'course2-check',context});
+        else add(rows[id],{negative:.78*w,events:.54*w,at:a.at,source:'course2-check',context});
+      }
+    }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;
@@ -14899,7 +14908,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   'use strict';
   if(window.GomokuLearningV11)return;
   const Core=window.GomokuLearningCore;if(!Core)return;
-  const ACADEMY_KEY='gomoku.studio.academy.v4';
+  const ACADEMY_KEY='gomoku.studio.academy.v4',COURSE2_KEY='gomoku.course2.v1';
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const titleCase=s=>String(s||'').replaceAll('-',' ').replace(/\b\w/g,m=>m.toUpperCase());
@@ -14919,6 +14928,13 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
       const value=JSON.parse(raw);
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch{return {};}
+  }
+  function course2Attempts(){
+    try{
+      const raw=localStorage.getItem(COURSE2_KEY);if(!raw||raw.length>2000000)return [];
+      const state=JSON.parse(raw),rows=Array.isArray(state?.events)?state.events:[];
+      return rows.filter(x=>x&&typeof x.correct==='boolean'&&Array.isArray(x.skillIds)).slice(-500);
+    }catch{return [];}
   }
   function courses(){
     const out=[];
@@ -15069,7 +15085,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
     if(reloadMistakes)mistakes=await readMistakes();
-    const next=Core.analyze({course:courses(),academy:academy(),mistakes,now:Date.now()});
+    const next=Core.analyze({course:courses(),academy:academy(),mistakes,course2:course2Attempts(),now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
     snapshot=next;
     if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
@@ -15089,7 +15105,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   function boot(){
     if(document.body)observer.observe(document.body,{childList:true,subtree:true});
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(20,true));
-    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20,false);});
+    window.addEventListener('gomoku-course2-transfer-changed',()=>schedule(20,false));
+    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY||e.key===COURSE2_KEY)schedule(20,false);});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
     setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
     schedule(0,true);
@@ -15133,6 +15150,22 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     {id:13,title:'Expert Calculation',band:'Advanced',tagline:'Generate candidates and test the best defense.'},
     {id:14,title:'Full-Game Mastery',band:'Advanced',tagline:'Transfer every skill into complete games.'}
   ]);
+  const CHAPTER_SKILLS=Object.freeze({
+    1:Object.freeze(['board-scan','immediate-win','threat-scan']),
+    2:Object.freeze(['closed-four','open-four','broken-four']),
+    3:Object.freeze(['legal-three','straight-three','broken-three']),
+    4:Object.freeze(['double-threat','four-three']),
+    5:Object.freeze(['forced-defense','counter-win','remote-defense']),
+    6:Object.freeze(['forcing-order','vcf-reading','vct-reading']),
+    7:Object.freeze(['shape-efficiency','connection','flexibility']),
+    8:Object.freeze(['initiative','move-priority']),
+    9:Object.freeze(['attack-construction','flexibility']),
+    10:Object.freeze(['candidate-generation','whole-board','plan-comparison']),
+    11:Object.freeze(['opening-shape','opening-flexibility']),
+    12:Object.freeze(['exact-five','overline','double-three-rule','double-four-rule']),
+    13:Object.freeze(['candidate-generation','calculation-depth','best-defense']),
+    14:Object.freeze(['full-game-transfer','whole-board','best-defense'])
+  });
   const q=(prompt,choices,answer,why)=>Object.freeze({prompt,choices:Object.freeze(choices),answer,why});
   const TRANSFER=Object.freeze({
     1:q('You see an attractive attacking move. What should happen first?',['Calculate it immediately','Scan both sides for immediate wins','Count only your longest line'],1,'Urgent wins and losses dominate every slower plan.'),
@@ -15266,8 +15299,9 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   }
   function demo(chapter){return (DEMOS[Number(chapter)]||[]).map(x=>JSON.parse(JSON.stringify(x)));}
   function transfer(chapter){const x=TRANSFER[Number(chapter)];return x?JSON.parse(JSON.stringify(x)):null;}
-  function metadata(chapter){const x=CHAPTERS.find(c=>c.id===Number(chapter));return x?{...x}:null;}
-  return Object.freeze({VERSION,CHAPTERS,metadata,chapterState,journey,demo,transfer});
+  function chapterSkills(chapter){return [...(CHAPTER_SKILLS[Number(chapter)]||[])];}
+  function metadata(chapter){const x=CHAPTERS.find(c=>c.id===Number(chapter));return x?{...x,skills:chapterSkills(chapter)}:null;}
+  return Object.freeze({VERSION,CHAPTERS,metadata,chapterSkills,chapterState,journey,demo,transfer});
 });
 
 </script>
@@ -15297,6 +15331,32 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 @media(max-width:420px){.c20-next{padding:12px}.c20-node-main{grid-template-columns:31px 1fr;padding:7px}.c20-dialog{width:calc(100vw - 12px)}.c20-dialog-head{padding:15px}.c20-copy h3{font-size:21px}.c20-scene-actions{display:grid;grid-template-columns:1fr 1fr}.c20-scene-actions .c20-primary{grid-column:1/-1}.c20-board-wrap{width:min(94vw,420px)}}
 @media(prefers-reduced-motion:reduce){.c20-stone,.c20-line,.c20-cell[data-mark]:after{animation:none!important}.c20-library-link *{scroll-behavior:auto!important}}
 
+
+/* v1.2 final interaction polish */
+.c20-stone.is-static{animation:none}
+.c20-copy.is-entering h3,.c20-copy.is-entering>p{animation:c20CopyIn .22s ease-out both}
+.c20-copy.is-entering>p{animation-delay:.035s}
+.c20-cell[data-mark]:after{animation-delay:var(--c20-delay,0s)}
+.c20-transfer-choices button:not(:disabled):hover,.c20-transfer-choices button:not(:disabled):focus-visible{border-color:var(--ui-accent,var(--seal));transform:translateY(-1px)}
+.c20-transfer-choices button.is-shake{animation:c20Wrong .22s ease}
+.c20-transfer.is-correct{position:relative;border-color:color-mix(in srgb,#4f7e5d 70%,var(--hair));overflow:hidden}
+.c20-burst{position:absolute;right:28px;top:31px;width:8px;height:8px;pointer-events:none}
+.c20-burst i{--a:calc(var(--i) * 45deg);position:absolute;width:5px;height:5px;border-radius:50%;background:var(--ui-accent-bright,#dc9664);animation:c20Burst .52s ease-out both;transform:rotate(var(--a)) translateY(-2px)}
+.c20-tile-demo{align-self:flex-start;margin-top:8px;min-height:38px;padding:7px 10px;border:1px solid var(--hair);border-radius:5px;background:transparent;color:var(--ink);font:inherit;font-size:9px;font-weight:750;cursor:pointer}
+.c20-tile-demo:hover,.c20-tile-demo:focus-visible{border-color:var(--ui-accent,var(--seal));background:var(--card2)}
+@keyframes c20CopyIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes c20Wrong{0%,100%{transform:translateX(0)}35%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+@keyframes c20Burst{0%{opacity:1;transform:rotate(var(--a)) translateY(-2px) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(-34px) scale(.4)}}
+@media(max-width:780px),(pointer:coarse){
+  .c20-node-demo{width:44px;height:44px}
+  .c20-checkpoint button,.c20-tile-demo,.c20-scene-actions button,.c20-transfer-choices button,.c20-dialog-foot button{min-height:44px}
+  .c20-close{width:44px;height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  .c20-copy.is-entering h3,.c20-copy.is-entering>p,.c20-transfer-choices button.is-shake,.c20-burst i{animation:none!important}
+  .c20-transfer-choices button:not(:disabled):hover,.c20-transfer-choices button:not(:disabled):focus-visible{transform:none}
+}
+
 </style>
 <script id="course2-runtime">
 /* Gomoku 1.2 — Course 2.0 runtime.
@@ -15310,16 +15370,23 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   const $=id=>document.getElementById(id);
   const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const reduceMotion=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',refreshTimer=0;
+  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',refreshTimer=0,transferMisses=0;
 
   function readState(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{};}catch{return {};}
   }
   function writeState(next){try{localStorage.setItem(KEY,JSON.stringify(next));return true;}catch{return false;}}
-  function recordTransfer(chapter,correct){
-    const state=readState(),transfer=state.transfer&&typeof state.transfer==='object'?state.transfer:{},prior=transfer[chapter]||{};
-    transfer[chapter]={attempts:(Number(prior.attempts)||0)+1,correct:correct===true||(prior.correct===true),at:Date.now()};
-    state.transfer=transfer;writeState(state);
+  function transferEvents(){
+    const rows=readState().events;
+    return Array.isArray(rows)?rows.filter(x=>x&&Number.isInteger(Number(x.chapter))&&typeof x.correct==='boolean').slice(-500):[];
+  }
+  function recordTransfer(chapter,correct,assisted=false){
+    const state=readState(),transfer=state.transfer&&typeof state.transfer==='object'?state.transfer:{},prior=transfer[chapter]||{},at=Date.now();
+    transfer[chapter]={attempts:(Number(prior.attempts)||0)+1,correct:correct===true||(prior.correct===true),at};
+    const events=Array.isArray(state.events)?state.events:[];
+    events.push({version:1,chapter:Number(chapter),skillIds:Core.chapterSkills(chapter),correct:correct===true,assisted:assisted===true,at});
+    state.transfer=transfer;state.events=events.slice(-500);writeState(state);
+    window.dispatchEvent(new CustomEvent('gomoku-course2-transfer-changed',{detail:{chapter:Number(chapter),correct:correct===true,assisted:assisted===true}}));
   }
   function reports(){
     const out=[];
@@ -15414,43 +15481,56 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     $('c20Transfer').hidden=true;
     const board=$('c20Board'),svg=$('c20Lines');board.replaceChildren();svg.replaceChildren();
     board.setAttribute('aria-label',scene.title+'. '+scene.text);
-    const marks=new Map((scene.marks||[]).map(x=>[x.x+','+x.y,x.kind]));
+    const previous=sceneIndex>0?scenes[sceneIndex-1]:null;
+    const previousStones=new Set((previous?.stones||[]).map(x=>x.x+','+x.y+':'+x.c));
+    const marks=new Map((scene.marks||[]).map((x,i)=>[x.x+','+x.y,{kind:x.kind,order:i}]));
     const stones=new Map((scene.stones||[]).map(x=>[x.x+','+x.y,x.c]));
     for(let y=0;y<9;y++)for(let x=0;x<9;x++){
       const cell=document.createElement('span');cell.className='c20-cell';
-      const mark=marks.get(x+','+y);if(mark)cell.dataset.mark=mark;
-      const color=stones.get(x+','+y);if(color){const stone=document.createElement('i');stone.className='c20-stone '+(color===1?'black':'white');cell.append(stone);}
+      const mark=marks.get(x+','+y);if(mark){cell.dataset.mark=mark.kind;cell.style.setProperty('--c20-delay',(mark.order*.07)+'s');}
+      const color=stones.get(x+','+y);if(color){const stone=document.createElement('i'),key=x+','+y+':'+color;stone.className='c20-stone '+(color===1?'black':'white')+' '+(previousStones.has(key)?'is-static':'is-new');cell.append(stone);}
       board.append(cell);
     }
-    for(const l of scene.lines||[]){
+    for(const [i,l] of (scene.lines||[]).entries()){
       const path=document.createElementNS('http://www.w3.org/2000/svg','line');
       path.setAttribute('x1',(l.a[0]+.5)*100);path.setAttribute('y1',(l.a[1]+.5)*100);
       path.setAttribute('x2',(l.b[0]+.5)*100);path.setAttribute('y2',(l.b[1]+.5)*100);
-      path.setAttribute('class','c20-line '+(l.kind||'threat'));svg.append(path);
+      path.setAttribute('class','c20-line '+(l.kind||'threat'));path.style.animationDelay=(.12+i*.08)+'s';svg.append(path);
     }
     $('c20SceneEyebrow').textContent='STEP '+(sceneIndex+1)+' OF '+scenes.length;
     $('c20SceneTitle').textContent=scene.title;$('c20SceneText').textContent=scene.text;
+    const copy=document.querySelector('#c20ConceptDialog .c20-copy');if(copy&&!reduceMotion()){copy.classList.remove('is-entering');void copy.offsetWidth;copy.classList.add('is-entering');}
     $('c20Back').disabled=sceneIndex===0;
     $('c20Next').onclick=advanceScene;$('c20Next').disabled=false;
     $('c20Next').textContent=sceneIndex===scenes.length-1?'Transfer check →':'Next →';
     $('c20SceneProgress').innerHTML=scenes.map((_,i)=>'<i class="'+(i<=sceneIndex?'active':'')+'"></i>').join('');
   }
   function renderTransfer(){
-    stopAuto();
+    stopAuto();transferMisses=0;
     const t=Core.transfer(activeChapter),host=$('c20Transfer'),saved=readState().transfer?.[activeChapter];
-    host.hidden=false;
-    host.innerHTML='<p class="c20-transfer-kicker">TRANSFER CHECK</p><h4>'+esc(t.prompt)+'</h4><div class="c20-transfer-choices">'+t.choices.map((x,i)=>'<button type="button" data-c20-choice="'+i+'">'+esc(x)+'</button>').join('')+'</div><p id="c20TransferFeedback" class="c20-transfer-feedback">'+(saved?.correct?'You have already answered this transfer check correctly. Try it again if you want.':'Choose the principle that should survive outside the lesson.')+'</p>';
-    host.querySelectorAll('[data-c20-choice]').forEach(b=>b.onclick=()=>answerTransfer(Number(b.dataset.c20Choice),t));
+    host.hidden=false;host.classList.remove('is-correct');
+    host.innerHTML='<p class="c20-transfer-kicker">TRANSFER CHECK</p><h4>'+esc(t.prompt)+'</h4><div class="c20-transfer-choices">'+t.choices.map((x,i)=>'<button type="button" data-c20-choice="'+i+'">'+esc(x)+'</button>').join('')+'</div><p id="c20TransferFeedback" class="c20-transfer-feedback">'+(saved?.correct?'You have already solved this comprehension check. A clean retry still tests recall.':'Choose the principle that should survive outside the lesson.')+'</p>';
+    host.querySelectorAll('[data-c20-choice]').forEach(b=>b.onclick=()=>answerTransfer(Number(b.dataset.c20Choice),t,b));
     $('c20Next').textContent='Transfer check';$('c20Next').disabled=true;
   }
-  function answerTransfer(choice,t){
-    const correct=choice===t.answer;recordTransfer(activeChapter,correct);
-    const buttons=[...$('c20Transfer').querySelectorAll('[data-c20-choice]')];
-    buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';else if(i===choice&&!correct)b.dataset.result='wrong';});
-    $('c20TransferFeedback').textContent=(correct?'Correct. ':'Not quite. ')+t.why;
-    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';
-    $('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
-    renderJourney();decorateChapterDialogs();
+  function finishTransfer(t,assisted){
+    const host=$('c20Transfer'),burst=document.createElement('div');burst.className='c20-burst';burst.setAttribute('aria-hidden','true');
+    burst.innerHTML=Array.from({length:8},(_,i)=>'<i style="--i:'+i+'"></i>').join('');host.append(burst);host.classList.add('is-correct');
+    recordTransfer(activeChapter,true,assisted);try{navigator.vibrate?.(18);}catch{}
+    $('c20TransferFeedback').textContent='Correct. '+t.why+(assisted?' You found it after a retry; come back later for a clean recall.':' Clean first-try recall recorded.');
+    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';$('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
+    renderJourney();decorateCatalog();decorateChapterDialogs();
+  }
+  function answerTransfer(choice,t,button){
+    const correct=choice===t.answer,host=$('c20Transfer'),buttons=[...host.querySelectorAll('[data-c20-choice]')];
+    if(correct){buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';});finishTransfer(t,transferMisses>0);return;}
+    transferMisses++;if(transferMisses===1)recordTransfer(activeChapter,false,false);
+    button.disabled=true;button.dataset.result='wrong';button.classList.remove('is-shake');void button.offsetWidth;button.classList.add('is-shake');try{navigator.vibrate?.(12);}catch{}
+    if(transferMisses<2){$('c20TransferFeedback').textContent='Not quite. Try one more answer before the explanation is revealed.';return;}
+    buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';});
+    $('c20TransferFeedback').textContent='The answer is highlighted. '+t.why+' Replay the concept, then try it clean later.';
+    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';$('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
+    renderJourney();decorateCatalog();decorateChapterDialogs();
   }
   function stopAuto(){clearInterval(autoTimer);autoTimer=0;if($('c20Auto'))$('c20Auto').textContent='Play animation';}
   function toggleAuto(){
@@ -15464,6 +15544,14 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     },1450);
   }
 
+  function decorateCatalog(){
+    document.querySelectorAll('#uiCourseGrid .ui-course-tile[data-chapter]').forEach(tile=>{
+      if(tile.querySelector('.c20-tile-demo'))return;
+      const n=Number(tile.dataset.chapter),copy=tile.querySelector('.ui-course-copy');if(!copy||!n)return;
+      const b=document.createElement('button');b.type='button';b.className='c20-tile-demo';b.textContent='Visual concept';b.setAttribute('aria-label','Watch animated concept for chapter '+n);
+      b.onclick=e=>{e.preventDefault();e.stopPropagation();openDemo(n);};copy.append(b);
+    });
+  }
   function decorateChapterDialogs(){
     const j=model(),byId=Object.fromEntries(j.chapters.map(x=>[x.id,x]));
     for(let n=1;n<=14;n++){
@@ -15485,13 +15573,13 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   function refresh(){
     const sig=signature();
     if(sig!==lastSignature){lastSignature=sig;renderJourney();}
-    decorateChapterDialogs();
+    decorateCatalog();decorateChapterDialogs();
   }
   function schedule(ms=100){clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,ms);}
   const observer=new MutationObserver(muts=>{
     for(const m of muts)for(const node of m.addedNodes||[]){
       if(node?.nodeType!==1)continue;
-      if(node.matches?.('.ui-curriculum,dialog,[id$="CourseDialog"]')||node.querySelector?.('.ui-curriculum,[id$="CourseDialog"]')){schedule();return;}
+      if(node.matches?.('.ui-curriculum,.ui-course-tile,dialog,[id$="CourseDialog"]')||node.querySelector?.('.ui-curriculum,.ui-course-tile,[id$="CourseDialog"]')){schedule();return;}
     }
   });
   function boot(){
@@ -15508,7 +15596,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     refresh,
     openDemo,
     openChapter,
-    transferState:()=>JSON.parse(JSON.stringify(readState().transfer||{}))
+    transferState:()=>JSON.parse(JSON.stringify(readState().transfer||{})),
+    attempts:()=>JSON.parse(JSON.stringify(transferEvents()))
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
