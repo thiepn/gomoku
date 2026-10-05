@@ -40,7 +40,7 @@
     return out;
   }
   async function readMistakes(){
-    try{return Array.isArray(await window.GomokuMistakes?.list?.())?await window.GomokuMistakes.list():[];}catch{return [];}
+    try{const rows=await window.GomokuMistakes?.list?.();return Array.isArray(rows)?rows:[];}catch{return [];}
   }
   function strengthText(skill){
     if(!skill)return 'No learning evidence yet';
