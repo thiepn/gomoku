@@ -55,7 +55,11 @@ function preflight(){
   validateContract();
   runP26Strict();
   const existing=git(['tag','--list',config.release_tag],{encoding:'utf8'}).trim();
-  if(existing)fail('Stable tag already exists: '+config.release_tag);
+  if(existing){
+    const tagSha=git(['rev-list','-n','1',config.release_tag],{encoding:'utf8'}).trim();
+    const headSha=git(['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+    if(tagSha!==headSha)fail('Stable tag already exists at a different commit: '+config.release_tag+' -> '+tagSha);
+  }
   const dirty=git(['status','--porcelain'],{encoding:'utf8'}).trim();
   if(dirty)fail('Release workspace must be clean.');
   return readiness();
