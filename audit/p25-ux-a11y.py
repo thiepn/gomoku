@@ -86,22 +86,13 @@ with sync_playwright() as p:
       else:
         page.keyboard.press('Escape');page.wait_for_timeout(100)
 
-    # Step 2: exercise the visible New game proxy after the onboarding quick-start.
-    page.locator('[data-v92-route="play"]').first.click()
-    if page.locator('#v92New').count() and page.locator('#v92New').is_visible():
-      page.locator('#v92New').click()
-    else:
-      page.evaluate("document.querySelector('#newBtn')?.click()")
-    page.wait_for_timeout(120)
-    if page.locator('#modeSelect').count(): page.locator('#modeSelect').select_option('local')
-    steps.append({'step':'02-new-game','screenshot':screenshot(page,profile,'02-new-game'),'axe':axe(page,profile,'02-new-game'),'custom':custom(page,profile,'02-new-game')})
-    focus_in_dialog=page.evaluate('document.activeElement && document.activeElement.closest("dialog[open]")?.id || null')
-    if focus_in_dialog!='newDialog':add(profile,'dialog-focus','New game dialog did not receive focus',focus_in_dialog,'02-new-game','high')
-    page.locator('#newForm button[type="submit"]').click();page.wait_for_timeout(200)
+    # Step 2: the onboarding choice already starts the visible local game.
+    page.locator('[data-v92-route="play"]').first.click();page.wait_for_timeout(180)
+    steps.append({'step':'02-local-game','screenshot':screenshot(page,profile,'02-local-game'),'axe':axe(page,profile,'02-local-game'),'custom':custom(page,profile,'02-local-game')})
     page.locator('#point-112').focus();page.keyboard.press('ArrowRight')
-    if page.evaluate('document.activeElement?.id')!='point-113':add(profile,'keyboard','Board arrow-key navigation failed',None,'03-play','high')
+    if page.evaluate('document.activeElement?.id')!='point-113':add(profile,'keyboard','Board arrow-key navigation failed',None,'03-first-move','high')
     page.locator('#point-112').click();page.locator('#placeBtn').click();page.wait_for_function('GomokuStudio.diagnostics().moves===1')
-    steps.append({'step':'03-play','screenshot':screenshot(page,profile,'03-play'),'axe':axe(page,profile,'03-play'),'custom':custom(page,profile,'03-play')})
+    steps.append({'step':'03-first-move','screenshot':screenshot(page,profile,'03-first-move'),'axe':axe(page,profile,'03-first-move'),'custom':custom(page,profile,'03-first-move')})
 
     # Step 4: improve landing.
     page.locator('[data-v92-route="improve"]').first.click();page.wait_for_timeout(180)
