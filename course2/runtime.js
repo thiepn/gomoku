@@ -218,7 +218,7 @@
   const observer=new MutationObserver(muts=>{
     for(const m of muts)for(const node of m.addedNodes||[]){
       if(node?.nodeType!==1)continue;
-      if(node.matches?.('.ui-curriculum,dialog,[id$="CourseDialog"]')||node.querySelector?.('.ui-curriculum,[id$="CourseDialog"]')){schedule();return;}
+      if(node.matches?.('.ui-curriculum,.ui-course-tile,dialog,[id$="CourseDialog"]')||node.querySelector?.('.ui-curriculum,.ui-course-tile,[id$="CourseDialog"]')){schedule();return;}
     }
   });
   function boot(){
