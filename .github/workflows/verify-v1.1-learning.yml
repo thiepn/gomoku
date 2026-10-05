@@ -1,0 +1,50 @@
+name: v1.1 learning intelligence
+
+on:
+  pull_request:
+    paths:
+      - 'learning/**'
+      - 'index.html'
+      - 'sw.js'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-v1.1-learning.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'learning/**'
+      - 'index.html'
+      - 'sw.js'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-v1.1-learning.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learning-intelligence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify pure learning model
+        run: node learning/test-core.mjs
+      - name: Rebuild portable learning artifact
+        run: python learning/build.py
+      - name: Require committed generated artifact
+        run: git diff --exit-code -- index.html sw.js
+      - name: Verify v1.1 integration contract
+        run: python learning/test-integration.py
+      - name: Preserve approved product modules
+        run: |
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
+      - name: Preserve review and analysis behavior
+        run: |
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs
