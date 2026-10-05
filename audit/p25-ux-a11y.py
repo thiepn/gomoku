@@ -105,15 +105,16 @@ with sync_playwright() as p:
     page.locator('[data-v92-route="library"]').first.click();page.wait_for_timeout(180)
     steps.append({'step':'05-library','screenshot':screenshot(page,profile,'05-library'),'axe':axe(page,profile,'05-library'),'custom':custom(page,profile,'05-library')})
 
-    # Step 6: settings and dialog close/focus return.
-    page.locator('[data-v92-route="play"]').first.click();page.locator('#settingsBtn').focus()
-    opener_id=page.evaluate('document.activeElement?.id')
-    page.locator('#settingsBtn').click();page.wait_for_timeout(100)
+    # Step 6: settings through the visible Menu path and focus return to Menu.
+    page.locator('[data-v92-route="play"]').first.click();page.locator('#v111MenuBtn').focus()
+    page.locator('#v111MenuBtn').click();page.wait_for_timeout(80)
+    if not page.evaluate('!!document.activeElement?.closest("#v111MenuDialog")'): add(profile,'dialog-focus','Menu dialog does not contain focus after open',None,'06-settings','high')
+    page.locator('#v111MenuDialog [data-v111-action="settings"]').click();page.wait_for_timeout(120)
     steps.append({'step':'06-settings','screenshot':screenshot(page,profile,'06-settings'),'axe':axe(page,profile,'06-settings'),'custom':custom(page,profile,'06-settings')})
-    if not page.evaluate('!!document.activeElement?.closest("dialog[open]")'): add(profile,'dialog-focus','Settings dialog does not contain focus after open',None,'06-settings','high')
-    page.keyboard.press('Escape');page.wait_for_timeout(100)
+    if not page.evaluate('!!document.activeElement?.closest("#settingsDialog")'): add(profile,'dialog-focus','Settings dialog does not contain focus after open',None,'06-settings','high')
+    page.keyboard.press('Escape');page.wait_for_timeout(120)
     returned=page.evaluate('document.activeElement?.id')
-    if returned!='settingsBtn':add(profile,'dialog-focus-return','Settings dialog does not return focus to opener',{'before':opener_id,'after':returned},'06-settings','medium')
+    if returned!='v111MenuBtn':add(profile,'dialog-focus-return','Closing Settings does not return focus to the visible Menu trigger',{'after':returned},'06-settings','high')
 
     # Step 7: online entry / recovery messaging, no mutations.
     if page.locator('#v92OnlineMode').count():
