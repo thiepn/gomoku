@@ -24,13 +24,20 @@ for marker in [
     "gomoku-mistakes-changed",
     "v11LearningIntelligence",
     "li11ReviewPrescription",
+    "li11ReviewAction",
+    "skillPrescription",
+    "openReviewCenter",
     "GomokuLearningV11",
 ]:
     assert marker in runtime,'Missing runtime integration: '+marker
 
 core=(ROOT/'learning/core.js').read_text()
-for marker in ['Immediate wins','Remote defense','VCF calculation','Opening flexibility','Full-game transfer']:
-    assert marker in core,'Missing skill graph concept: '+marker
+for marker in ['Immediate wins','Remote defense','VCF calculation','Opening flexibility','Full-game transfer','masteryReady','duePracticeIds','transferEvidence','mistakeIds','practiceMotif']:
+    assert marker in core,'Missing skill graph/evidence concept: '+marker
+
+browser=(ROOT/'learning/test-browser.py').read_text()
+for marker in ['35 skills','duePractice','practiceMotif','practiceState','mobile learning surface']:
+    assert marker in browser,'Missing browser acceptance coverage: '+marker
 
 cache=(ROOT/'client-cache-version.txt').read_text().strip()
 assert 'learning-1.1.0' in cache
