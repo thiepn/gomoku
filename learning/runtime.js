@@ -142,7 +142,8 @@
     let focus=[];try{focus=Core.reviewFocus(window.GomokuStudio.reviewReport());}catch{}
     if(!focus.length){row?.remove();return;}
     if(!row){row=document.createElement('div');row.id='li11ReviewPrescription';row.className='li11-review';const practice=overview.querySelector('.rw-practice');if(practice)practice.insertAdjacentElement('beforebegin',row);else overview.append(row);}
-    const sig=focus.map(x=>x.id+':'+x.count).join('|');if(row.dataset.signature===sig)return;row.dataset.signature=sig;\n    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
+    const sig=focus.map(x=>x.id+':'+x.count).join('|');if(row.dataset.signature===sig)return;row.dataset.signature=sig;
+    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
   }
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
