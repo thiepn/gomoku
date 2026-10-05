@@ -79,4 +79,11 @@ const chapter=core.chapterSummary(snap,5);
 assert.equal(chapter.chapter,5);
 assert.ok(chapter.skills>=3);
 
+const beforeCourse2=core.analyze({course:fullCourse,academy:{},mistakes:[],now:100000000});
+const withCourse2=core.analyze({course:fullCourse,academy:{},mistakes:[],now:100000000,course2:[{chapter:4,skillIds:['double-threat','four-three'],correct:true,assisted:false,at:99999000}]});
+const dt0=beforeCourse2.skills.find(x=>x.id==='double-threat'),dt1=withCourse2.skills.find(x=>x.id==='double-threat');
+assert.ok(dt1.score>dt0.score,'Course 2.0 clean check should contribute near-transfer evidence');
+assert.ok(dt1.cleanEvidence>dt0.cleanEvidence,'Course 2.0 clean check should contribute clean evidence');
+assert.equal(dt1.transferEvidence,dt0.transferEvidence,'Course 2.0 check must not impersonate real-game transfer');
+
 console.log('PASS Gomoku 1.1 Learning Intelligence core contracts.');

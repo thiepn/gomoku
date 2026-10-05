@@ -20,7 +20,8 @@ assert html.index('id="course2-core"')<html.index('id="course2-runtime"')
 runtime=(ROOT/'course2/runtime.js').read_text()
 for marker in [
     'c20Journey','c20ConceptDialog','MASTERY CHECKPOINT','GomokuLearningV11',
-    'GomokuCourseChapter','prefers-reduced-motion','TRANSFER CHECK','GomokuCourse2'
+    'GomokuCourseChapter','prefers-reduced-motion','TRANSFER CHECK','GomokuCourse2',
+    'gomoku-course2-transfer-changed','decorateCatalog','is-static','c20-burst'
 ]:
     assert marker in runtime,'Missing Course 2.0 integration: '+marker
 
@@ -32,7 +33,7 @@ for marker in [
     assert marker in core,'Missing Course 2.0 contract: '+marker
 
 css=(ROOT/'course2/course2.css').read_text()
-for marker in ['c20StoneIn','c20Draw','c20Pulse','prefers-reduced-motion']:
+for marker in ['c20StoneIn','c20Draw','c20Pulse','c20CopyIn','c20Wrong','c20Burst','prefers-reduced-motion']:
     assert marker in css,'Missing motion/accessibility contract: '+marker
 
 cache=(ROOT/'client-cache-version.txt').read_text().strip()

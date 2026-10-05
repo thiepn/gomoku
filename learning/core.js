@@ -171,6 +171,15 @@
         else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
+    for(const a of Array.isArray(input.course2)?input.course2:[]){
+      const ids=(Array.isArray(a?.skillIds)?a.skillIds:[]).filter(id=>BY_ID[id]);
+      if(!ids.length||typeof a?.correct!=='boolean')continue;
+      const w=recency(a.at,now),context='course2:'+(Number(a.chapter)||0)+':'+dayBucket(a.at);
+      for(const id of ids){
+        if(a.correct)add(rows[id],{positive:(a.assisted?.48:.92)*w,clean:a.assisted?0:.72*w,events:.62*w,at:a.at,source:'course2-check',context});
+        else add(rows[id],{negative:.78*w,events:.54*w,at:a.at,source:'course2-check',context});
+      }
+    }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;

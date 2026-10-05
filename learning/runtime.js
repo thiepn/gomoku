@@ -5,7 +5,7 @@
   'use strict';
   if(window.GomokuLearningV11)return;
   const Core=window.GomokuLearningCore;if(!Core)return;
-  const ACADEMY_KEY='gomoku.studio.academy.v4';
+  const ACADEMY_KEY='gomoku.studio.academy.v4',COURSE2_KEY='gomoku.course2.v1';
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const titleCase=s=>String(s||'').replaceAll('-',' ').replace(/\b\w/g,m=>m.toUpperCase());
@@ -25,6 +25,13 @@
       const value=JSON.parse(raw);
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch{return {};}
+  }
+  function course2Attempts(){
+    try{
+      const raw=localStorage.getItem(COURSE2_KEY);if(!raw||raw.length>2000000)return [];
+      const state=JSON.parse(raw),rows=Array.isArray(state?.events)?state.events:[];
+      return rows.filter(x=>x&&typeof x.correct==='boolean'&&Array.isArray(x.skillIds)).slice(-500);
+    }catch{return [];}
   }
   function courses(){
     const out=[];
@@ -175,7 +182,7 @@
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
     if(reloadMistakes)mistakes=await readMistakes();
-    const next=Core.analyze({course:courses(),academy:academy(),mistakes,now:Date.now()});
+    const next=Core.analyze({course:courses(),academy:academy(),mistakes,course2:course2Attempts(),now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
     snapshot=next;
     if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
@@ -195,7 +202,8 @@
   function boot(){
     if(document.body)observer.observe(document.body,{childList:true,subtree:true});
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(20,true));
-    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20,false);});
+    window.addEventListener('gomoku-course2-transfer-changed',()=>schedule(20,false));
+    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY||e.key===COURSE2_KEY)schedule(20,false);});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
     setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
     schedule(0,true);

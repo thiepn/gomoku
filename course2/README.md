@@ -8,8 +8,9 @@ v1.2 upgrades the existing 14-chapter Gomoku course without replacing its author
 - Four chapter states: **Learn → Practice → Verify → Mastered**.
 - Checkpoints combine existing course completion with v1.1 Learning Intelligence evidence.
 - **42 animated teaching scenes**: three per chapter, rendered with board choreography, threat/scan lines and highlighted decision points.
-- A short **transfer check** for every chapter. These checks test the principle in different wording but do not pretend to be real-game transfer evidence.
+- A short **transfer check** for every chapter. First-try checks add modest clean near-transfer evidence to v1.1; they deliberately never satisfy the real-game-transfer mastery gate.
 - Existing chapter dialogs receive a compact mastery strip with course %, skill evidence, clean evidence, real-game transfer evidence and direct access to the animated concept.
+- Scene continuity keeps existing stones stable while newly introduced stones, threat lines and highlights animate in sequence. Correct transfer checks use a compact success burst; wrong answers get one retry before explanation.
 - Reduced-motion support disables animation while preserving all teaching content.
 - The original 655-task course remains the authoritative practice corpus and full Library view.
 
