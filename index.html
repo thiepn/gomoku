@@ -14675,6 +14675,9 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     4:['double-threat','four-three'],
     5:['exact-five','overline']
   });
+  const PRACTICE_MOTIFS=Object.freeze(Object.fromEntries(
+    Object.entries(MOTIFS).flatMap(([motif,ids])=>ids.map(id=>[id,Number(motif)]))
+  ));
   const TAGS=Object.freeze({
     'Finishes five':['immediate-win'],
     'Immediate win available':['immediate-win','board-scan'],
@@ -14708,15 +14711,24 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     if(signal.label)ids.push(...idsForLabel(signal.label));
     return [...new Set(ids)].filter(id=>BY_ID[id]);
   }
-  const fresh=skill=>({skill,positive:0,negative:0,events:0,lastAt:0,due:0,course:0,courseSeen:false,sources:new Set()});
+  const fresh=skill=>({
+    skill,positive:0,negative:0,events:0,cleanPositive:0,transferPositive:0,lastAt:0,
+    dueMistakes:0,duePractice:0,course:0,courseSeen:false,sources:new Set(),contexts:new Set(),mistakeIds:new Set()
+  });
   function recency(at,now){
     if(!Number.isFinite(Number(at))||Number(at)<=0)return .82;
     const days=Math.max(0,(now-Number(at))/86400000);
     return .62+.38*Math.exp(-days/90);
   }
-  function add(row,{positive=0,negative=0,events=1,at=0,due=0,source='unknown'}={}){
+  function dayBucket(at){
+    const n=Number(at);return Number.isFinite(n)&&n>0?Math.floor(n/86400000):0;
+  }
+  function add(row,{positive=0,negative=0,events=1,clean=0,transfer=0,at=0,dueMistake=0,duePractice=0,source='unknown',context='',mistakeId=''}={}){
     row.positive+=Math.max(0,positive);row.negative+=Math.max(0,negative);row.events+=Math.max(0,events);
-    row.due+=Math.max(0,due);row.lastAt=Math.max(row.lastAt,Number(at)||0);row.sources.add(source);
+    row.cleanPositive+=Math.max(0,clean);row.transferPositive+=Math.max(0,transfer);
+    row.dueMistakes+=Math.max(0,dueMistake);row.duePractice+=Math.max(0,duePractice);
+    row.lastAt=Math.max(row.lastAt,Number(at)||0);row.sources.add(source);
+    if(context)row.contexts.add(String(context));if(mistakeId)row.mistakeIds.add(String(mistakeId));
   }
   function courseMap(course=[]){
     const rows={};
@@ -14735,77 +14747,110 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
       if(values.length){rows[s.id].course=values.reduce((a,b)=>a+b,0)/values.length;rows[s.id].courseSeen=true;rows[s.id].sources.add('course');}
     }
     const academy=input.academy&&typeof input.academy==='object'?input.academy:{};
-    for(const a of Array.isArray(academy.sessionAttempts)?academy.sessionAttempts:[]){
-      const ids=MOTIFS[Number(a?.motif)]||[];if(!ids.length||typeof a?.correct!=='boolean')continue;
-      const w=recency(a.at,now);
+    const academyAttempts=Array.isArray(academy.sessionAttempts)?academy.sessionAttempts:[],itemMotifs=new Map();
+    for(const a of academyAttempts){
+      const motif=Number(a?.motif),ids=MOTIFS[motif]||[];if(!ids.length||typeof a?.correct!=='boolean')continue;
+      if(typeof a.id==='string'&&a.id)itemMotifs.set(a.id,motif);
+      const w=recency(a.at,now),context='practice:'+(a.session||a.id||dayBucket(a.at));
       for(const id of ids)add(rows[id],a.correct
-        ?{positive:(a.assisted?.62:1.2)*w,events:w,at:a.at,source:'academy'}
-        :{negative:1.28*w,events:w,at:a.at,source:'academy'});
+        ?{positive:(a.assisted?.62:1.2)*w,clean:a.assisted?0:1.2*w,events:w,at:a.at,source:'academy',context}
+        :{negative:1.28*w,events:w,at:a.at,source:'academy',context});
+    }
+    const duePracticeIds=[];
+    for(const [itemId,review] of Object.entries(academy.reviews&&typeof academy.reviews==='object'?academy.reviews:{})){
+      const motif=itemMotifs.get(itemId),ids=MOTIFS[motif]||[];
+      if(!ids.length||!(Number(review?.due)>0&&Number(review.due)<=now))continue;
+      duePracticeIds.push(itemId);
+      for(const id of ids)add(rows[id],{events:0,duePractice:1,at:review.last,source:'academy-review',context:'practice:'+itemId});
     }
     for(const a of Array.isArray(academy.decisionAttempts)?academy.decisionAttempts:[]){
       const ids=signalSkills({label:a?.label||''});if(!ids.length)continue;
-      const w=recency(a.at,now),out=String(a?.outcome||'');
+      const w=recency(a.at,now),out=String(a?.outcome||''),context='game:'+(a.gameId||a.key||dayBucket(a.at));
       for(const id of ids){
-        if(['preferred','win','compared','correct'].includes(out))add(rows[id],{positive:1.05*w,events:w,at:a.at,source:'decision'});
-        else if(['danger','incorrect'].includes(out))add(rows[id],{negative:1.22*w,events:w,at:a.at,source:'decision'});
-        else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision'});
+        if(['preferred','win','compared','correct'].includes(out))add(rows[id],{positive:1.05*w,clean:1.05*w,transfer:.9*w,events:w,at:a.at,source:'decision',context});
+        else if(['danger','incorrect'].includes(out))add(rows[id],{negative:1.22*w,events:w,at:a.at,source:'decision',context});
+        else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;
-      const stats=card.stats||{},created=Number(card.updated||card.created||card.source?.date)||0;
+      const stats=card.stats||{},created=Number(card.updated||card.created||card.source?.date)||0,cardId=String(card.id||'');
       const due=Number(stats.due)>0&&Number(stats.due)<=now;
-      if(due)dueMistakeIds.push(String(card.id||''));
+      if(due&&cardId)dueMistakeIds.push(cardId);
       const successes=Math.max(0,Number(stats.successes)||0),lapses=Math.max(0,Number(stats.lapses)||0),assisted=Math.max(0,Number(stats.assisted)||0);
-      const base=recency(stats.last||created,now);
+      const cleanSuccesses=Math.max(0,successes-assisted),base=recency(stats.last||created,now),context='mistake:'+(cardId||dayBucket(created));
       for(const id of ids){
-        add(rows[id],{negative:.72*base,events:.72*base,at:created,due:due?1:0,source:'review'});
-        if(successes)add(rows[id],{positive:Math.min(8,successes)*.88*base,events:Math.min(8,successes)*.7*base,at:stats.last,source:'recall'});
-        if(lapses)add(rows[id],{negative:Math.min(6,lapses)*1.05*base,events:Math.min(6,lapses)*.8*base,at:stats.last,source:'recall'});
-        if(assisted)add(rows[id],{negative:Math.min(6,assisted)*.18*base,events:Math.min(6,assisted)*.25*base,at:stats.last,source:'recall'});
+        add(rows[id],{negative:.72*base,events:.72*base,at:created,dueMistake:due?1:0,source:'review',context,mistakeId:due?cardId:''});
+        if(successes)add(rows[id],{positive:Math.min(8,successes)*.88*base,clean:Math.min(8,cleanSuccesses)*.72*base,transfer:Math.min(8,cleanSuccesses)*.58*base,events:Math.min(8,successes)*.7*base,at:stats.last,source:'recall',context});
+        if(lapses)add(rows[id],{negative:Math.min(6,lapses)*1.05*base,events:Math.min(6,lapses)*.8*base,at:stats.last,source:'recall',context});
+        if(assisted)add(rows[id],{negative:Math.min(6,assisted)*.18*base,events:Math.min(6,assisted)*.25*base,at:stats.last,source:'recall',context});
       }
     }
     const skills=SKILLS.map(s=>{
       const r=rows[s.id],den=r.positive+r.negative,accuracy=den?r.positive/den:0;
       const confidence=1-Math.exp(-Math.max(0,r.events)/4.5);
-      const score=Math.round(clamp(r.course*35+accuracy*65*confidence,0,100));
-      const state=score>=82&&r.events>=5&&r.course>=.5?'mastered':score>=68?'strong':score>=45?'developing':score>=15?'building':'new';
-      const negativeRate=den?r.negative/den:0;
+      const score=Math.round(clamp(r.course*35+accuracy*65*confidence,0,100)),contexts=r.contexts.size;
+      const masteryReady=score>=82&&r.events>=5&&r.course>=.5&&r.cleanPositive>=2.5&&r.transferPositive>=.75&&contexts>=2;
+      const state=masteryReady?'mastered':score>=68?'strong':score>=45?'developing':score>=15?'building':'new';
+      const negativeRate=den?r.negative/den:0,due=r.dueMistakes+r.duePractice;
       return {
         id:s.id,title:s.title,group:s.group,chapters:[...s.chapters],prerequisites:[...s.prerequisites],
         score,state,course:Math.round(r.course*100),confidence:Math.round(confidence*100),
         evidence:Number(r.events.toFixed(2)),positive:Number(r.positive.toFixed(2)),negative:Number(r.negative.toFixed(2)),
-        negativeRate:Number(negativeRate.toFixed(3)),due:r.due,lastAt:r.lastAt,sources:[...r.sources].sort()
+        cleanEvidence:Number(r.cleanPositive.toFixed(2)),transferEvidence:Number(r.transferPositive.toFixed(2)),contexts,
+        needsTransfer:score>=68&&r.transferPositive<.75,negativeRate:Number(negativeRate.toFixed(3)),
+        due,dueMistakes:r.dueMistakes,duePractice:r.duePractice,mistakeIds:[...r.mistakeIds],lastAt:r.lastAt,sources:[...r.sources].sort(),
+        practiceMotif:Object.hasOwn(PRACTICE_MOTIFS,s.id)?PRACTICE_MOTIFS[s.id]:null
       };
     });
     const skillMap=Object.fromEntries(skills.map(s=>[s.id,s]));
     const nextChapter=Array.from({length:14},(_,i)=>i+1).find(n=>(course[n]??0)<1)||14;
+    function prescriptionFor(s){
+      const chapter=s.chapters.slice().sort((a,b)=>(course[a]??0)-(course[b]??0)||a-b)[0],coverage=course[chapter]??0;
+      let type;
+      if(s.dueMistakes>0)type='mistakes';
+      else if(s.duePractice>0&&s.practiceMotif!==null)type='practice';
+      else if(coverage<.65)type='course';
+      else if(s.needsTransfer)type='review';
+      else if(s.practiceMotif!==null)type='practice';
+      else type='course';
+      const reason=s.dueMistakes>0
+        ?s.dueMistakes+' due mistake position'+(s.dueMistakes===1?'':'s')
+        :s.duePractice>0
+          ?s.duePractice+' Academy review'+(s.duePractice===1?' is':'s are')+' due'
+          :s.negativeRate>.45
+            ?'Recent evidence shows repeated errors'
+            :coverage<.65
+              ?'Course coverage is still incomplete'
+              :s.needsTransfer
+                ?'Strong drill evidence still needs transfer from real-game decisions'
+                :s.practiceMotif!==null
+                  ?'Needs more clean unassisted retrieval'
+                  :'Revisit this chapter in mixed positions';
+      return {
+        skillId:s.id,title:s.title,score:s.score,state:s.state,type,chapter,chapterTitle:CHAPTER_TITLES[chapter]||'Course',
+        practiceMotif:s.practiceMotif,mistakeIds:[...s.mistakeIds],reason
+      };
+    }
     for(const s of skills){
       const prereqGap=s.prerequisites.reduce((sum,id)=>sum+Math.max(0,50-(skillMap[id]?.score||0)),0);
       const reachable=s.due>0||s.course>0||s.chapters.some(n=>n<=nextChapter+1)||s.prerequisites.every(id=>(skillMap[id]?.score||0)>=38);
-      s.priority=reachable?Number((100-s.score+s.due*8+s.negativeRate*18+prereqGap*.14).toFixed(2)):-1;
+      s.priority=reachable?Number((100-s.score+s.dueMistakes*9+s.duePractice*5+s.negativeRate*18+prereqGap*.14).toFixed(2)):-1;
+      s.recommendation=prescriptionFor(s);
     }
     const ranked=skills.filter(s=>s.priority>=0&&s.state!=='mastered').sort((a,b)=>b.priority-a.priority||b.due-a.due||a.score-b.score||a.title.localeCompare(b.title));
     const focus=ranked[0]||skills.slice().sort((a,b)=>a.score-b.score)[0]||null;
-    const prescriptions=[];
-    for(const s of ranked.slice(0,3)){
-      const chapter=s.chapters.slice().sort((a,b)=>(course[a]??0)-(course[b]??0)||a-b)[0];
-      const type=s.due>0?'mistakes':(course[chapter]??0)<.65?'course':'practice';
-      prescriptions.push({
-        skillId:s.id,title:s.title,score:s.score,state:s.state,type,chapter,
-        chapterTitle:CHAPTER_TITLES[chapter]||'Course',
-        reason:s.due>0?(s.due+' due mistake position'+(s.due===1?'':'s')):s.negativeRate>.45?'Recent evidence shows repeated errors':(course[chapter]??0)<.65?'Course coverage is still incomplete':'Needs more clean unassisted retrieval'
-      });
-    }
+    const prescriptions=ranked.slice(0,3).map(s=>({...s.recommendation}));
     const counts={mastered:0,strong:0,developing:0,building:0,new:0};
     for(const s of skills)counts[s.state]=(counts[s.state]||0)+1;
     const evidenced=skills.filter(s=>s.evidence>0||s.course>0);
     const average=evidenced.length?Math.round(evidenced.reduce((a,s)=>a+s.score,0)/evidenced.length):0;
+    const uniqueMistakes=[...new Set(dueMistakeIds.filter(Boolean))],uniquePractice=[...new Set(duePracticeIds.filter(Boolean))];
     return {
       version:VERSION,generatedAt:now,skills,groups:GROUPS.map(g=>({...g})),focus,prescriptions,
-      dueMistakeIds:[...new Set(dueMistakeIds.filter(Boolean))],
-      summary:{...counts,total:skills.length,average,evidenced:evidenced.length,dueMistakes:new Set(dueMistakeIds.filter(Boolean)).size,nextChapter,nextChapterTitle:CHAPTER_TITLES[nextChapter]}
+      dueMistakeIds:uniqueMistakes,duePracticeIds:uniquePractice,
+      summary:{...counts,total:skills.length,average,evidenced:evidenced.length,dueMistakes:uniqueMistakes.length,duePractice:uniquePractice.length,dueReviews:uniqueMistakes.length+uniquePractice.length,nextChapter,nextChapterTitle:CHAPTER_TITLES[nextChapter]}
     };
   }
   function chapterSummary(snapshot,chapter){
@@ -14823,7 +14868,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     }
     return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id,count])=>({id,title:BY_ID[id]?.title||id,count}));
   }
-  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
+  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,practiceMotif:id=>Object.hasOwn(PRACTICE_MOTIFS,id)?PRACTICE_MOTIFS[id]:null,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
 });
 
 </script>
@@ -14836,8 +14881,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 .li11-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.li11-priorities button{text-align:left;min-height:75px;padding:11px 12px;border:1px solid var(--hair);border-radius:6px;background:transparent;color:var(--ink);display:grid;grid-template-columns:1fr auto;gap:3px 8px}.li11-priorities button:hover,.li11-priorities button:focus-visible{background:var(--card2);border-color:var(--hair2)}.li11-priorities span{font-weight:700;font-size:11px}.li11-priorities b{font-size:11px;color:var(--ui-accent,var(--seal))}.li11-priorities small{grid-column:1/-1;color:var(--ink2);font-size:9px;line-height:1.45}.li11-foot{margin:12px 0 0;color:var(--ink2);font-size:9px;line-height:1.55}
 .li11-chapter-mastery{margin-left:auto;padding:2px 5px;border:1px solid var(--hair);border-radius:999px;font-size:8px;white-space:nowrap}.li11-chapter-mastery[data-state="mastered"]{border-color:color-mix(in srgb,var(--ui-accent) 60%,var(--hair));color:var(--ui-accent)}.li11-chapter-mastery[data-state="strong"]{color:var(--ink)}
 .li11-dialog{width:min(860px,calc(100vw - 28px));max-height:calc(100dvh - 32px);padding:0!important;overflow:auto}.li11-dialog-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:20px;padding:24px 26px 18px;background:var(--card);border-bottom:1px solid var(--hair)}.li11-dialog-head h2{font:650 31px/1.15 var(--ui-font,Georgia,serif);margin:5px 0}.li11-dialog-head p:last-child{margin:0;color:var(--ink2);font-size:11px;line-height:1.6}.li11-close{width:42px;height:42px;border:1px solid var(--hair);border-radius:5px;background:transparent;color:var(--ink);font-size:24px}.li11-dialog #li11DialogBody{padding:20px 26px 30px}.li11-dialog-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}.li11-dialog-summary>div{padding:13px;border:1px solid var(--hair);border-radius:6px}.li11-dialog-summary strong{display:block;font-size:20px}.li11-dialog-summary span{font-size:9px;color:var(--ink2)}
-.li11-group{margin-top:24px}.li11-group-head{display:flex;align-items:end;justify-content:space-between;gap:12px;padding-bottom:9px;border-bottom:1px solid var(--hair)}.li11-group-head h3{font-size:19px;margin:0}.li11-group-head span{font-size:9px;color:var(--ink2)}.li11-skill-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.li11-skill{padding:11px 12px;border:1px solid var(--hair);border-radius:6px;background:var(--paper)}.li11-skill-title{display:flex;justify-content:space-between;gap:10px;font-size:11px}.li11-skill-title span{color:var(--ui-accent,var(--seal));font-weight:750}.li11-skill progress{width:100%;height:4px;margin:8px 0;accent-color:var(--ui-accent,var(--seal))}.li11-skill-meta{display:flex;gap:7px;flex-wrap:wrap;color:var(--ink2);font-size:8px}.li11-skill-meta .is-due{color:var(--ui-accent,var(--seal));font-weight:700}
-.li11-review{padding:12px 13px;margin:14px 0;border:1px solid var(--gr-line,var(--hair));border-left:3px solid var(--gr-accent,var(--ui-accent));border-radius:5px;background:var(--gr-surface,var(--card))}.li11-review>span{font-size:8px;letter-spacing:.16em;color:var(--gr-accent,var(--ui-accent));font-weight:750}.li11-review h4{margin:5px 0 4px;font-size:15px}.li11-review p{margin:0;font-size:10px}.li11-review small{display:block;margin-top:6px;color:var(--gr-muted,var(--ink2));line-height:1.5}
+.li11-group{margin-top:24px}.li11-group-head{display:flex;align-items:end;justify-content:space-between;gap:12px;padding-bottom:9px;border-bottom:1px solid var(--hair)}.li11-group-head h3{font-size:19px;margin:0}.li11-group-head span{font-size:9px;color:var(--ink2)}.li11-skill-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.li11-skill{padding:11px 12px;border:1px solid var(--hair);border-radius:6px;background:var(--paper)}.li11-skill-title{display:flex;justify-content:space-between;gap:10px;font-size:11px}.li11-skill-title span{color:var(--ui-accent,var(--seal));font-weight:750}.li11-skill progress{width:100%;height:4px;margin:8px 0;accent-color:var(--ui-accent,var(--seal))}.li11-skill-meta{display:flex;gap:7px;flex-wrap:wrap;color:var(--ink2);font-size:8px}.li11-skill-meta .is-due{color:var(--ui-accent,var(--seal));font-weight:700}.li11-skill-meta .is-transfer{color:var(--ink);font-weight:700}.li11-prereq{display:block;margin-top:7px;color:var(--ink2);font-size:8px;line-height:1.45}.li11-skill-action{width:100%;min-height:34px;margin-top:10px;padding:7px 9px;border:1px solid var(--hair2);border-radius:5px;background:transparent;color:var(--ink);font:700 9px/1.2 var(--ui-font,system-ui,sans-serif);text-align:center}.li11-skill-action:hover,.li11-skill-action:focus-visible{border-color:var(--ui-accent,var(--seal));background:var(--card2)}
+.li11-review{padding:12px 13px;margin:14px 0;border:1px solid var(--gr-line,var(--hair));border-left:3px solid var(--gr-accent,var(--ui-accent));border-radius:5px;background:var(--gr-surface,var(--card))}.li11-review>span{font-size:8px;letter-spacing:.16em;color:var(--gr-accent,var(--ui-accent));font-weight:750}.li11-review h4{margin:5px 0 4px;font-size:15px}.li11-review p{margin:0;font-size:10px}.li11-review small{display:block;margin-top:6px;color:var(--gr-muted,var(--ink2));line-height:1.5}.li11-review-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}.li11-review-actions .gr-btn{min-height:36px}.li11-review-actions .gr-link{min-height:32px}
 @media(max-width:760px){.li11-home{padding:17px;margin-bottom:25px}.li11-head{display:block}.li11-map{margin-top:5px}.li11-metrics{grid-template-columns:repeat(3,1fr)}.li11-metrics>div{padding:11px 8px}.li11-focus{grid-template-columns:auto 1fr}.li11-primary{grid-column:1/-1;width:100%}.li11-priorities{grid-template-columns:1fr}.li11-dialog-head{padding:19px 18px 14px}.li11-dialog #li11DialogBody{padding:15px 18px 24px}.li11-dialog-summary{grid-template-columns:1fr 1fr}.li11-skill-list{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.li11-home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
@@ -14896,16 +14941,22 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     if(!p)return 'Complete a lesson or practice session to build a recommendation.';
     if(p.type==='mistakes')return 'Recall your saved '+p.title.toLowerCase()+' positions before adding new material.';
     if(p.type==='course')return 'Continue '+p.chapterTitle+' and then test the idea in mixed practice.';
+    if(p.type==='review')return 'Review a real game and retry a '+p.title.toLowerCase()+' decision without revealing the answer.';
+    if(p.reason?.includes('Academy review'))return 'Retrieve the due '+p.title.toLowerCase()+' material before adding new examples.';
     return 'Use Weakness Review to retrieve '+p.title.toLowerCase()+' without a hint.';
   }
   function actionLabel(p){
     if(!p)return 'Start practice';
-    return p.type==='mistakes'?'Review due positions':p.type==='course'?'Continue chapter':'Practice weakness';
+    if(p.type==='mistakes')return 'Review due positions';
+    if(p.type==='course')return 'Continue chapter';
+    if(p.type==='review')return 'Review a game';
+    return p.reason?.includes('Academy review')?'Practice due review':'Practice weakness';
   }
   async function runPrescription(p){
     if(!p)return window.GomokuStudio?.startPracticeSession?.('weakness');
-    if(p.type==='mistakes'&&snapshot?.dueMistakeIds?.length&&window.GomokuTraining?.open){
-      return window.GomokuTraining.open({ids:snapshot.dueMistakeIds});
+    if(p.type==='mistakes'&&window.GomokuTraining?.open){
+      const ids=Array.isArray(p.mistakeIds)&&p.mistakeIds.length?p.mistakeIds:(snapshot?.dueMistakeIds||[]);
+      if(ids.length)return window.GomokuTraining.open({ids});
     }
     if(p.type==='course'){
       const button=document.querySelector('[data-open-chapter="'+p.chapter+'"]');
@@ -14914,8 +14965,15 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
       if(api?.open)return api.open();
       if(api?.openSection)return api.openSection(0,0);
     }
-    const motif=motifForSkill(p.skillId);
-    return window.GomokuStudio?.startPracticeSession?.('weakness',motif===undefined?{}:{motif});
+    if(p.type==='review'){
+      if(window.GomokuStudio?.openReviewCenter)return window.GomokuStudio.openReviewCenter();
+      const proxy=document.querySelector('[data-ui-proxy="v92ReviewChoice"]');if(proxy)return proxy.click();
+    }
+    const motif=Number.isInteger(p.practiceMotif)?p.practiceMotif:motifForSkill(p.skillId);
+    return window.GomokuStudio?.startPracticeSession?.('weakness',motif===undefined||motif===null?{}:{motif});
+  }
+  function skillPrescription(id){
+    return snapshot?.skills?.find(s=>s.id===id)?.recommendation||null;
   }
   function homeHost(){
     return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');
@@ -14938,7 +14996,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     section.innerHTML='<div class="li11-head"><div><p class="li11-kicker">LEARNING INTELLIGENCE · 1.1</p><h3>Your next useful work.</h3><p>Course progress, clean practice, reviewed mistakes and recall history now contribute to one skill model.</p></div><button class="li11-map" type="button" id="li11OpenMap">Skill map →</button></div>'+
       '<div class="li11-metrics" aria-label="Learning summary">'+
         '<div><strong>'+s.mastered+'</strong><span>skills mastered</span></div>'+
-        '<div><strong>'+s.dueMistakes+'</strong><span>mistakes due</span></div>'+
+        '<div><strong>'+s.dueReviews+'</strong><span>reviews due</span></div>'+
         '<div><strong>'+s.average+'%</strong><span>evidenced mastery</span></div>'+
       '</div>'+
       '<article class="li11-focus"><div class="li11-focus-score" aria-label="'+esc(strengthText(focus))+'"><strong>'+Number(focus?.score||0)+'</strong><span>/ 100</span></div><div class="li11-focus-copy"><span>FOCUS NOW</span><h4>'+esc(focus?.title||'Build your baseline')+'</h4><p>'+esc(prescriptionCopy(p))+'</p><small>'+esc(p?.reason||'Your first evidence will establish a baseline.')+'</small></div><button class="li11-primary" type="button" id="li11DoNext">'+esc(actionLabel(p))+'</button></article>'+
@@ -14969,15 +15027,22 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     if(!snapshot)return;
     const d=ensureDialog(),body=$('li11DialogBody');body.replaceChildren();
     const summary=document.createElement('div');summary.className='li11-dialog-summary';
-    summary.innerHTML='<div><strong>'+snapshot.summary.mastered+'</strong><span>Mastered</span></div><div><strong>'+snapshot.summary.strong+'</strong><span>Strong</span></div><div><strong>'+snapshot.summary.developing+'</strong><span>Developing</span></div><div><strong>'+snapshot.summary.dueMistakes+'</strong><span>Due</span></div>';
+    summary.innerHTML='<div><strong>'+snapshot.summary.mastered+'</strong><span>Mastered</span></div><div><strong>'+snapshot.summary.strong+'</strong><span>Strong</span></div><div><strong>'+snapshot.summary.developing+'</strong><span>Developing</span></div><div><strong>'+snapshot.summary.dueReviews+'</strong><span>Due reviews</span></div>';
     body.append(summary);
+    const byId=Object.fromEntries(snapshot.skills.map(s=>[s.id,s]));
     for(const group of snapshot.groups){
       const skills=snapshot.skills.filter(s=>s.group===group.id);if(!skills.length)continue;
       const section=document.createElement('section');section.className='li11-group';
       const average=Math.round(skills.reduce((a,s)=>a+s.score,0)/skills.length);
-      section.innerHTML='<div class="li11-group-head"><h3>'+esc(group.title)+'</h3><span>'+average+'% average</span></div><div class="li11-skill-list">'+skills.map(s=>'<article class="li11-skill" data-state="'+esc(s.state)+'"><div class="li11-skill-title"><b>'+esc(s.title)+'</b><span>'+s.score+'%</span></div><progress max="100" value="'+s.score+'" aria-label="'+esc(s.title)+' mastery '+s.score+' percent"></progress><div class="li11-skill-meta"><span>'+esc(titleCase(s.state))+'</span><span>'+s.evidence.toFixed(1)+' evidence</span><span>'+s.confidence+'% confidence</span>'+(s.due?'<span class="is-due">'+s.due+' due</span>':'')+'</div></article>').join('')+'</div>';
+      section.innerHTML='<div class="li11-group-head"><h3>'+esc(group.title)+'</h3><span>'+average+'% average</span></div><div class="li11-skill-list">'+skills.map(s=>{
+        const gaps=s.prerequisites.filter(id=>(byId[id]?.score||0)<38).map(id=>byId[id]?.title||id);
+        const transfer=s.needsTransfer?'<span class="is-transfer">needs game transfer</span>':'';
+        const gap=gaps.length?'<small class="li11-prereq">Build first: '+esc(gaps.slice(0,2).join(' · '))+'</small>':'';
+        return '<article class="li11-skill" data-state="'+esc(s.state)+'"><div class="li11-skill-title"><b>'+esc(s.title)+'</b><span>'+s.score+'%</span></div><progress max="100" value="'+s.score+'" aria-label="'+esc(s.title)+' mastery '+s.score+' percent"></progress><div class="li11-skill-meta"><span>'+esc(titleCase(s.state))+'</span><span>'+s.evidence.toFixed(1)+' evidence</span><span>'+s.contexts+' context'+(s.contexts===1?'':'s')+'</span>'+(s.due?'<span class="is-due">'+s.due+' due</span>':'')+transfer+'</div>'+gap+'<button class="li11-skill-action" type="button" data-li11-skill="'+esc(s.id)+'">'+esc(actionLabel(s.recommendation))+'</button></article>';
+      }).join('')+'</div>';
       body.append(section);
     }
+    body.querySelectorAll('[data-li11-skill]').forEach(button=>button.onclick=()=>{const p=skillPrescription(button.dataset.li11Skill);if(p){d.close();runPrescription(p);}});
     if(!d.open)d.showModal();
     d.querySelector('.li11-close').focus();
   }
@@ -14987,8 +15052,10 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     let focus=[];try{focus=Core.reviewFocus(window.GomokuStudio.reviewReport());}catch{}
     if(!focus.length){row?.remove();return;}
     if(!row){row=document.createElement('div');row.id='li11ReviewPrescription';row.className='li11-review';const practice=overview.querySelector('.rw-practice');if(practice)practice.insertAdjacentElement('beforebegin',row);else overview.append(row);}
-    const sig=focus.map(x=>x.id+':'+x.count).join('|');if(row.dataset.signature===sig)return;row.dataset.signature=sig;
-    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
+    const p=skillPrescription(focus[0].id),sig=focus.map(x=>x.id+':'+x.count).join('|')+'|'+(p?.type||'')+'|'+(p?.score||0)+'|'+(p?.mistakeIds?.length||0);
+    if(row.dataset.signature===sig)return;row.dataset.signature=sig;
+    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Reviewed decisions feed the same mastery model as lessons and practice. Use the next action to close the loop.</small><div class="li11-review-actions"><button type="button" class="gr-btn" id="li11ReviewAction">'+esc(actionLabel(p))+'</button><button type="button" class="gr-link" id="li11ReviewMap">Skill map</button></div>';
+    $('li11ReviewAction').onclick=()=>p&&runPrescription(p);$('li11ReviewMap').onclick=openDashboard;
   }
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
