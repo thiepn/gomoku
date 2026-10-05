@@ -26,8 +26,10 @@ async function axe(page,name){
 }
 async function smallTargets(page){
   return page.evaluate(()=>{
-    return [...document.querySelectorAll('button,a[href],input:not([type="hidden"]),select,textarea,summary,[role="button"],[role="tab"]')]
-      .filter(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return !el.closest('[hidden]')&&s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0;})
+    const openDialogs=[...document.querySelectorAll('dialog[open]')];
+    const root=openDialogs.at(-1)||document;
+    return [...root.querySelectorAll('button,a[href],input:not([type="hidden"]),select,textarea,summary,[role="button"],[role="tab"]')]
+      .filter(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return !el.closest('[hidden]')&&!el.disabled&&s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0;})
       .map(el=>{const r=el.getBoundingClientRect();return {tag:el.tagName,id:el.id||null,label:(el.getAttribute('aria-label')||el.textContent||'').trim().slice(0,80),width:r.width,height:r.height};})
       .filter(x=>x.width<24||x.height<24);
   });
