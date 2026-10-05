@@ -70,6 +70,9 @@
     4:['double-threat','four-three'],
     5:['exact-five','overline']
   });
+  const PRACTICE_MOTIFS=Object.freeze(Object.fromEntries(
+    Object.entries(MOTIFS).flatMap(([motif,ids])=>ids.map(id=>[id,Number(motif)]))
+  ));
   const TAGS=Object.freeze({
     'Finishes five':['immediate-win'],
     'Immediate win available':['immediate-win','board-scan'],
@@ -103,15 +106,24 @@
     if(signal.label)ids.push(...idsForLabel(signal.label));
     return [...new Set(ids)].filter(id=>BY_ID[id]);
   }
-  const fresh=skill=>({skill,positive:0,negative:0,events:0,lastAt:0,due:0,course:0,courseSeen:false,sources:new Set()});
+  const fresh=skill=>({
+    skill,positive:0,negative:0,events:0,cleanPositive:0,transferPositive:0,lastAt:0,
+    dueMistakes:0,duePractice:0,course:0,courseSeen:false,sources:new Set(),contexts:new Set(),mistakeIds:new Set()
+  });
   function recency(at,now){
     if(!Number.isFinite(Number(at))||Number(at)<=0)return .82;
     const days=Math.max(0,(now-Number(at))/86400000);
     return .62+.38*Math.exp(-days/90);
   }
-  function add(row,{positive=0,negative=0,events=1,at=0,due=0,source='unknown'}={}){
+  function dayBucket(at){
+    const n=Number(at);return Number.isFinite(n)&&n>0?Math.floor(n/86400000):0;
+  }
+  function add(row,{positive=0,negative=0,events=1,clean=0,transfer=0,at=0,dueMistake=0,duePractice=0,source='unknown',context='',mistakeId=''}={}){
     row.positive+=Math.max(0,positive);row.negative+=Math.max(0,negative);row.events+=Math.max(0,events);
-    row.due+=Math.max(0,due);row.lastAt=Math.max(row.lastAt,Number(at)||0);row.sources.add(source);
+    row.cleanPositive+=Math.max(0,clean);row.transferPositive+=Math.max(0,transfer);
+    row.dueMistakes+=Math.max(0,dueMistake);row.duePractice+=Math.max(0,duePractice);
+    row.lastAt=Math.max(row.lastAt,Number(at)||0);row.sources.add(source);
+    if(context)row.contexts.add(String(context));if(mistakeId)row.mistakeIds.add(String(mistakeId));
   }
   function courseMap(course=[]){
     const rows={};
@@ -130,77 +142,110 @@
       if(values.length){rows[s.id].course=values.reduce((a,b)=>a+b,0)/values.length;rows[s.id].courseSeen=true;rows[s.id].sources.add('course');}
     }
     const academy=input.academy&&typeof input.academy==='object'?input.academy:{};
-    for(const a of Array.isArray(academy.sessionAttempts)?academy.sessionAttempts:[]){
-      const ids=MOTIFS[Number(a?.motif)]||[];if(!ids.length||typeof a?.correct!=='boolean')continue;
-      const w=recency(a.at,now);
+    const academyAttempts=Array.isArray(academy.sessionAttempts)?academy.sessionAttempts:[],itemMotifs=new Map();
+    for(const a of academyAttempts){
+      const motif=Number(a?.motif),ids=MOTIFS[motif]||[];if(!ids.length||typeof a?.correct!=='boolean')continue;
+      if(typeof a.id==='string'&&a.id)itemMotifs.set(a.id,motif);
+      const w=recency(a.at,now),context='practice:'+(a.session||a.id||dayBucket(a.at));
       for(const id of ids)add(rows[id],a.correct
-        ?{positive:(a.assisted?.62:1.2)*w,events:w,at:a.at,source:'academy'}
-        :{negative:1.28*w,events:w,at:a.at,source:'academy'});
+        ?{positive:(a.assisted?.62:1.2)*w,clean:a.assisted?0:1.2*w,events:w,at:a.at,source:'academy',context}
+        :{negative:1.28*w,events:w,at:a.at,source:'academy',context});
+    }
+    const duePracticeIds=[];
+    for(const [itemId,review] of Object.entries(academy.reviews&&typeof academy.reviews==='object'?academy.reviews:{})){
+      const motif=itemMotifs.get(itemId),ids=MOTIFS[motif]||[];
+      if(!ids.length||!(Number(review?.due)>0&&Number(review.due)<=now))continue;
+      duePracticeIds.push(itemId);
+      for(const id of ids)add(rows[id],{events:0,duePractice:1,at:review.last,source:'academy-review',context:'practice:'+itemId});
     }
     for(const a of Array.isArray(academy.decisionAttempts)?academy.decisionAttempts:[]){
       const ids=signalSkills({label:a?.label||''});if(!ids.length)continue;
-      const w=recency(a.at,now),out=String(a?.outcome||'');
+      const w=recency(a.at,now),out=String(a?.outcome||''),context='game:'+(a.gameId||a.key||dayBucket(a.at));
       for(const id of ids){
-        if(['preferred','win','compared','correct'].includes(out))add(rows[id],{positive:1.05*w,events:w,at:a.at,source:'decision'});
-        else if(['danger','incorrect'].includes(out))add(rows[id],{negative:1.22*w,events:w,at:a.at,source:'decision'});
-        else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision'});
+        if(['preferred','win','compared','correct'].includes(out))add(rows[id],{positive:1.05*w,clean:1.05*w,transfer:.9*w,events:w,at:a.at,source:'decision',context});
+        else if(['danger','incorrect'].includes(out))add(rows[id],{negative:1.22*w,events:w,at:a.at,source:'decision',context});
+        else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;
-      const stats=card.stats||{},created=Number(card.updated||card.created||card.source?.date)||0;
+      const stats=card.stats||{},created=Number(card.updated||card.created||card.source?.date)||0,cardId=String(card.id||'');
       const due=Number(stats.due)>0&&Number(stats.due)<=now;
-      if(due)dueMistakeIds.push(String(card.id||''));
+      if(due&&cardId)dueMistakeIds.push(cardId);
       const successes=Math.max(0,Number(stats.successes)||0),lapses=Math.max(0,Number(stats.lapses)||0),assisted=Math.max(0,Number(stats.assisted)||0);
-      const base=recency(stats.last||created,now);
+      const cleanSuccesses=Math.max(0,successes-assisted),base=recency(stats.last||created,now),context='mistake:'+(cardId||dayBucket(created));
       for(const id of ids){
-        add(rows[id],{negative:.72*base,events:.72*base,at:created,due:due?1:0,source:'review'});
-        if(successes)add(rows[id],{positive:Math.min(8,successes)*.88*base,events:Math.min(8,successes)*.7*base,at:stats.last,source:'recall'});
-        if(lapses)add(rows[id],{negative:Math.min(6,lapses)*1.05*base,events:Math.min(6,lapses)*.8*base,at:stats.last,source:'recall'});
-        if(assisted)add(rows[id],{negative:Math.min(6,assisted)*.18*base,events:Math.min(6,assisted)*.25*base,at:stats.last,source:'recall'});
+        add(rows[id],{negative:.72*base,events:.72*base,at:created,dueMistake:due?1:0,source:'review',context,mistakeId:due?cardId:''});
+        if(successes)add(rows[id],{positive:Math.min(8,successes)*.88*base,clean:Math.min(8,cleanSuccesses)*.72*base,transfer:Math.min(8,cleanSuccesses)*.58*base,events:Math.min(8,successes)*.7*base,at:stats.last,source:'recall',context});
+        if(lapses)add(rows[id],{negative:Math.min(6,lapses)*1.05*base,events:Math.min(6,lapses)*.8*base,at:stats.last,source:'recall',context});
+        if(assisted)add(rows[id],{negative:Math.min(6,assisted)*.18*base,events:Math.min(6,assisted)*.25*base,at:stats.last,source:'recall',context});
       }
     }
     const skills=SKILLS.map(s=>{
       const r=rows[s.id],den=r.positive+r.negative,accuracy=den?r.positive/den:0;
       const confidence=1-Math.exp(-Math.max(0,r.events)/4.5);
-      const score=Math.round(clamp(r.course*35+accuracy*65*confidence,0,100));
-      const state=score>=82&&r.events>=5&&r.course>=.5?'mastered':score>=68?'strong':score>=45?'developing':score>=15?'building':'new';
-      const negativeRate=den?r.negative/den:0;
+      const score=Math.round(clamp(r.course*35+accuracy*65*confidence,0,100)),contexts=r.contexts.size;
+      const masteryReady=score>=82&&r.events>=5&&r.course>=.5&&r.cleanPositive>=2.5&&r.transferPositive>=.75&&contexts>=2;
+      const state=masteryReady?'mastered':score>=68?'strong':score>=45?'developing':score>=15?'building':'new';
+      const negativeRate=den?r.negative/den:0,due=r.dueMistakes+r.duePractice;
       return {
         id:s.id,title:s.title,group:s.group,chapters:[...s.chapters],prerequisites:[...s.prerequisites],
         score,state,course:Math.round(r.course*100),confidence:Math.round(confidence*100),
         evidence:Number(r.events.toFixed(2)),positive:Number(r.positive.toFixed(2)),negative:Number(r.negative.toFixed(2)),
-        negativeRate:Number(negativeRate.toFixed(3)),due:r.due,lastAt:r.lastAt,sources:[...r.sources].sort()
+        cleanEvidence:Number(r.cleanPositive.toFixed(2)),transferEvidence:Number(r.transferPositive.toFixed(2)),contexts,
+        needsTransfer:score>=68&&r.transferPositive<.75,negativeRate:Number(negativeRate.toFixed(3)),
+        due,dueMistakes:r.dueMistakes,duePractice:r.duePractice,mistakeIds:[...r.mistakeIds],lastAt:r.lastAt,sources:[...r.sources].sort(),
+        practiceMotif:Object.hasOwn(PRACTICE_MOTIFS,s.id)?PRACTICE_MOTIFS[s.id]:null
       };
     });
     const skillMap=Object.fromEntries(skills.map(s=>[s.id,s]));
     const nextChapter=Array.from({length:14},(_,i)=>i+1).find(n=>(course[n]??0)<1)||14;
+    function prescriptionFor(s){
+      const chapter=s.chapters.slice().sort((a,b)=>(course[a]??0)-(course[b]??0)||a-b)[0],coverage=course[chapter]??0;
+      let type;
+      if(s.dueMistakes>0)type='mistakes';
+      else if(s.duePractice>0&&s.practiceMotif!==null)type='practice';
+      else if(coverage<.65)type='course';
+      else if(s.needsTransfer)type='review';
+      else if(s.practiceMotif!==null)type='practice';
+      else type='course';
+      const reason=s.dueMistakes>0
+        ?s.dueMistakes+' due mistake position'+(s.dueMistakes===1?'':'s')
+        :s.duePractice>0
+          ?s.duePractice+' Academy review'+(s.duePractice===1?' is':'s are')+' due'
+          :s.negativeRate>.45
+            ?'Recent evidence shows repeated errors'
+            :coverage<.65
+              ?'Course coverage is still incomplete'
+              :s.needsTransfer
+                ?'Strong drill evidence still needs transfer from real-game decisions'
+                :s.practiceMotif!==null
+                  ?'Needs more clean unassisted retrieval'
+                  :'Revisit this chapter in mixed positions';
+      return {
+        skillId:s.id,title:s.title,score:s.score,state:s.state,type,chapter,chapterTitle:CHAPTER_TITLES[chapter]||'Course',
+        practiceMotif:s.practiceMotif,mistakeIds:[...s.mistakeIds],reason
+      };
+    }
     for(const s of skills){
       const prereqGap=s.prerequisites.reduce((sum,id)=>sum+Math.max(0,50-(skillMap[id]?.score||0)),0);
       const reachable=s.due>0||s.course>0||s.chapters.some(n=>n<=nextChapter+1)||s.prerequisites.every(id=>(skillMap[id]?.score||0)>=38);
-      s.priority=reachable?Number((100-s.score+s.due*8+s.negativeRate*18+prereqGap*.14).toFixed(2)):-1;
+      s.priority=reachable?Number((100-s.score+s.dueMistakes*9+s.duePractice*5+s.negativeRate*18+prereqGap*.14).toFixed(2)):-1;
+      s.recommendation=prescriptionFor(s);
     }
     const ranked=skills.filter(s=>s.priority>=0&&s.state!=='mastered').sort((a,b)=>b.priority-a.priority||b.due-a.due||a.score-b.score||a.title.localeCompare(b.title));
     const focus=ranked[0]||skills.slice().sort((a,b)=>a.score-b.score)[0]||null;
-    const prescriptions=[];
-    for(const s of ranked.slice(0,3)){
-      const chapter=s.chapters.slice().sort((a,b)=>(course[a]??0)-(course[b]??0)||a-b)[0];
-      const type=s.due>0?'mistakes':(course[chapter]??0)<.65?'course':'practice';
-      prescriptions.push({
-        skillId:s.id,title:s.title,score:s.score,state:s.state,type,chapter,
-        chapterTitle:CHAPTER_TITLES[chapter]||'Course',
-        reason:s.due>0?(s.due+' due mistake position'+(s.due===1?'':'s')):s.negativeRate>.45?'Recent evidence shows repeated errors':(course[chapter]??0)<.65?'Course coverage is still incomplete':'Needs more clean unassisted retrieval'
-      });
-    }
+    const prescriptions=ranked.slice(0,3).map(s=>({...s.recommendation}));
     const counts={mastered:0,strong:0,developing:0,building:0,new:0};
     for(const s of skills)counts[s.state]=(counts[s.state]||0)+1;
     const evidenced=skills.filter(s=>s.evidence>0||s.course>0);
     const average=evidenced.length?Math.round(evidenced.reduce((a,s)=>a+s.score,0)/evidenced.length):0;
+    const uniqueMistakes=[...new Set(dueMistakeIds.filter(Boolean))],uniquePractice=[...new Set(duePracticeIds.filter(Boolean))];
     return {
       version:VERSION,generatedAt:now,skills,groups:GROUPS.map(g=>({...g})),focus,prescriptions,
-      dueMistakeIds:[...new Set(dueMistakeIds.filter(Boolean))],
-      summary:{...counts,total:skills.length,average,evidenced:evidenced.length,dueMistakes:new Set(dueMistakeIds.filter(Boolean)).size,nextChapter,nextChapterTitle:CHAPTER_TITLES[nextChapter]}
+      dueMistakeIds:uniqueMistakes,duePracticeIds:uniquePractice,
+      summary:{...counts,total:skills.length,average,evidenced:evidenced.length,dueMistakes:uniqueMistakes.length,duePractice:uniquePractice.length,dueReviews:uniqueMistakes.length+uniquePractice.length,nextChapter,nextChapterTitle:CHAPTER_TITLES[nextChapter]}
     };
   }
   function chapterSummary(snapshot,chapter){
@@ -218,5 +263,5 @@
     }
     return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id,count])=>({id,title:BY_ID[id]?.title||id,count}));
   }
-  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
+  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,practiceMotif:id=>Object.hasOwn(PRACTICE_MOTIFS,id)?PRACTICE_MOTIFS[id]:null,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
 });
