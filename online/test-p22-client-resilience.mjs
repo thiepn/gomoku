@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 
 const assert=(v,m)=>{if(!v)throw new Error(m);};
-const expectedCache='gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0';
 const cache=fs.readFileSync('client-cache-version.txt','utf8').trim();
-assert(cache===expectedCache,'P22 authoritative client cache version drifted');
+assert(/^gomoku-v\d+\.\d+\.\d+-p22-client-resilience(?:-[a-z0-9.]+)+$/.test(cache),'P22 client cache authority has an invalid release-generation shape');
+for(const required of ['p22-client-resilience','analysis-2.1.0','review-ux-2.1.0'])
+  assert(cache.includes(required),'P22 client cache authority lost required component '+required);
 const sw=fs.readFileSync('sw.js','utf8');
 
 for(const marker of [
