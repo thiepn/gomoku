@@ -9,7 +9,7 @@
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const titleCase=s=>String(s||'').replaceAll('-',' ').replace(/\b\w/g,m=>m.toUpperCase());
-  let snapshot=null,mistakes=[],refreshTimer=0,dialog=null,lastSignature='',mounted=false;
+  let snapshot=null,mistakes=[],refreshTimer=0,dialog=null,lastSignature='',mounted=false,pendingMistakeReload=false;
   const motifForSkill=id=>({
     'board-scan':0,'immediate-win':0,
     'broken-four':1,'closed-four':1,
@@ -142,33 +142,40 @@
     let focus=[];try{focus=Core.reviewFocus(window.GomokuStudio.reviewReport());}catch{}
     if(!focus.length){row?.remove();return;}
     if(!row){row=document.createElement('div');row.id='li11ReviewPrescription';row.className='li11-review';const practice=overview.querySelector('.rw-practice');if(practice)practice.insertAdjacentElement('beforebegin',row);else overview.append(row);}
-    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
+    const sig=focus.map(x=>x.id+':'+x.count).join('|');if(row.dataset.signature===sig)return;row.dataset.signature=sig;\n    row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Verified mistake positions saved from this review automatically feed your Learn recommendations and recall schedule.</small>';
   }
-  async function refresh(){
+  async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
-    const nextMistakes=await readMistakes();
-    const next=Core.analyze({course:courses(),academy:academy(),mistakes:nextMistakes,now:Date.now()});
+    if(reloadMistakes)mistakes=await readMistakes();
+    const next=Core.analyze({course:courses(),academy:academy(),mistakes,now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
-    snapshot=next;mistakes=nextMistakes;
+    snapshot=next;
     if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
     mountReviewPrescription();
     return snapshot;
   }
-  function schedule(ms=120){
-    clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh().catch(()=>{}),ms);
+  function schedule(ms=120,reloadMistakes=false){
+    pendingMistakeReload=pendingMistakeReload||reloadMistakes;
+    clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{const reload=pendingMistakeReload;pendingMistakeReload=false;refresh(reload).catch(()=>{});},ms);
   }
-  const observer=new MutationObserver(()=>schedule(180));
+  const observer=new MutationObserver(mutations=>{
+    for(const m of mutations)for(const node of m.addedNodes||[]){
+      if(node?.nodeType!==1)continue;
+      if(node.matches?.('#uiLearning,#grDialog,#uiCourseGrid')||node.querySelector?.('#uiLearning,#grDialog,#uiCourseGrid')){schedule(120,false);return;}
+    }
+  });
   function boot(){
     if(document.body)observer.observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('gomoku-mistakes-changed',()=>schedule(20));
-    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20);});
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50);});
-    schedule(0);
+    window.addEventListener('gomoku-mistakes-changed',()=>schedule(20,true));
+    window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20,false);});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
+    setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
+    schedule(0,true);
   }
   window.GomokuLearningV11=Object.freeze({
     version:Core.VERSION,
     snapshot:()=>snapshot?JSON.parse(JSON.stringify(snapshot)):null,
-    refresh,
+    refresh:()=>refresh(true),
     openDashboard,
     prescription:()=>snapshot?.prescriptions?.map(x=>({...x}))||[],
     runNext:()=>runPrescription(snapshot?.prescriptions?.[0])
