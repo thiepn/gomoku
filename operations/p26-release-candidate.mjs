@@ -14,7 +14,7 @@ const allowedStatuses=new Set(['pending_manual','pass','fail','blocked']);
 const candidate=config.candidate_source_sha;
 
 function isAllowedPath(path){
-  return config.allowed_p26_paths.some(rule=>rule.endsWith('/**')?path.startsWith(rule.slice(0,-3)):path===rule);
+  return config.allowed_p26_paths.some(rule=>rule.endsWith('/**')?path.startsWith(rule.slice(0,-2)):path===rule);
 }
 
 function candidateDiff(){
