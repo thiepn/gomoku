@@ -118,6 +118,10 @@
   function dayBucket(at){
     const n=Number(at);return Number.isFinite(n)&&n>0?Math.floor(n/86400000):0;
   }
+  function motifFromItemId(id){
+    const m=/^academy-(\d+)-/.exec(String(id||'')),motif=m?Number(m[1]):NaN;
+    return Number.isInteger(motif)&&MOTIFS[motif]?motif:null;
+  }
   function add(row,{positive=0,negative=0,events=1,clean=0,transfer=0,at=0,dueMistake=0,duePractice=0,source='unknown',context='',mistakeId=''}={}){
     row.positive+=Math.max(0,positive);row.negative+=Math.max(0,negative);row.events+=Math.max(0,events);
     row.cleanPositive+=Math.max(0,clean);row.transferPositive+=Math.max(0,transfer);
@@ -153,7 +157,7 @@
     }
     const duePracticeIds=[];
     for(const [itemId,review] of Object.entries(academy.reviews&&typeof academy.reviews==='object'?academy.reviews:{})){
-      const motif=itemMotifs.get(itemId),ids=MOTIFS[motif]||[];
+      const motif=itemMotifs.has(itemId)?itemMotifs.get(itemId):motifFromItemId(itemId),ids=MOTIFS[motif]||[];
       if(!ids.length||!(Number(review?.due)>0&&Number(review.due)<=now))continue;
       duePracticeIds.push(itemId);
       for(const id of ids)add(rows[id],{events:0,duePractice:1,at:review.last,source:'academy-review',context:'practice:'+itemId});
@@ -263,5 +267,5 @@
     }
     return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id,count])=>({id,title:BY_ID[id]?.title||id,count}));
   }
-  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,practiceMotif:id=>Object.hasOwn(PRACTICE_MOTIFS,id)?PRACTICE_MOTIFS[id]:null,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
+  return Object.freeze({VERSION,GROUPS,SKILLS,CHAPTER_TITLES,practiceMotif:id=>Object.hasOwn(PRACTICE_MOTIFS,id)?PRACTICE_MOTIFS[id]:null,motifFromItemId,skill:id=>BY_ID[id]||null,signalSkills,analyze,chapterSummary,reviewFocus});
 });
