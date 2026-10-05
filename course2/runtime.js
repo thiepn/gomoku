@@ -88,7 +88,7 @@
     dialog.addEventListener('cancel',e=>{e.preventDefault();closeDemo();});
     dialog.addEventListener('click',e=>{if(e.target===dialog)closeDemo();});
     $('c20Back').onclick=()=>{stopAuto();if(sceneIndex>0){sceneIndex--;renderScene();}};
-    $('c20Next').onclick=()=>{stopAuto();const scenes=Core.demo(activeChapter);if(sceneIndex<scenes.length-1){sceneIndex++;renderScene();}else renderTransfer();};
+    $('c20Next').onclick=advanceScene;
     $('c20Auto').onclick=toggleAuto;
     $('c20OpenChapter').onclick=()=>{closeDemo();openChapter(activeChapter);};
     return dialog;
@@ -103,6 +103,10 @@
     renderScene();
     if(!d.open)d.showModal();
     d.querySelector('.c20-close').focus();
+  }
+  function advanceScene(){
+    stopAuto();const scenes=Core.demo(activeChapter);
+    if(sceneIndex<scenes.length-1){sceneIndex++;renderScene();}else renderTransfer();
   }
   function renderScene(){
     const scenes=Core.demo(activeChapter),scene=scenes[sceneIndex];if(!scene)return;
@@ -126,6 +130,7 @@
     $('c20SceneEyebrow').textContent='STEP '+(sceneIndex+1)+' OF '+scenes.length;
     $('c20SceneTitle').textContent=scene.title;$('c20SceneText').textContent=scene.text;
     $('c20Back').disabled=sceneIndex===0;
+    $('c20Next').onclick=advanceScene;$('c20Next').disabled=false;
     $('c20Next').textContent=sceneIndex===scenes.length-1?'Transfer check →':'Next →';
     $('c20SceneProgress').innerHTML=scenes.map((_,i)=>'<i class="'+(i<=sceneIndex?'active':'')+'"></i>').join('');
   }
@@ -143,7 +148,7 @@
     buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';else if(i===choice&&!correct)b.dataset.result='wrong';});
     $('c20TransferFeedback').textContent=(correct?'Correct. ':'Not quite. ')+t.why;
     $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';
-    $('c20Next').onclick=()=>{sceneIndex=0;$('c20Next').onclick=()=>{stopAuto();const scenes=Core.demo(activeChapter);if(sceneIndex<scenes.length-1){sceneIndex++;renderScene();}else renderTransfer();};renderScene();};
+    $('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
     renderJourney();decorateChapterDialogs();
   }
   function stopAuto(){clearInterval(autoTimer);autoTimer=0;if($('c20Auto'))$('c20Auto').textContent='Play animation';}
