@@ -8,7 +8,7 @@ const command=process.argv[2]||'status';
 
 const fail=message=>{throw new Error(message);};
 const sha256=data=>createHash('sha256').update(data).digest('hex');
-const git=(args,opts={})=>execFileSync('git',args,{...opts,stdio:['ignore','pipe','pipe']});
+const git=(args,opts={})=>execFileSync('git',args,{maxBuffer:16*1024*1024,...opts,stdio:['ignore','pipe','pipe']});
 const show=(sha,path)=>git(['show',sha+':'+path]);
 const allowedStatuses=new Set(['pending_manual','pass','fail','blocked']);
 const candidate=config.candidate_source_sha;
