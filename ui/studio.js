@@ -150,8 +150,16 @@
     const description=$('levelDescription');if(description){const wrapper=document.createElement('details');wrapper.className='ui-engine-explanation';wrapper.innerHTML='<summary>About this opponent</summary>';description.before(wrapper);wrapper.append(description);}
     updateMatch();
   }
+  let dialogLabelSequence=0;
   function decorateDialog(dialog) {
     if(dialog.dataset.uiDecorated)return;dialog.dataset.uiDecorated='true';
+    if(!dialog.hasAttribute('aria-label')&&!dialog.hasAttribute('aria-labelledby')){
+      const heading=dialog.querySelector('h1,h2,h3');
+      if(heading){
+        if(!heading.id)heading.id='uiDialogTitle'+(++dialogLabelSequence);
+        dialog.setAttribute('aria-labelledby',heading.id);
+      }else dialog.setAttribute('aria-label','Gomoku dialog');
+    }
     if(/^ch\d+CourseDialog$/.test(dialog.id)){dialog.classList.add('ui-course-dialog');if(Number(dialog.id.match(/\d+/)[0])>=8)dialog.classList.add('ui-linear-course');}
     dialog.addEventListener('close',()=>{if(dialog.classList.contains('ui-course-dialog'))updateCatalog();});
   }
@@ -173,6 +181,37 @@
     const menuTitle=$('v111MenuTitle');if(menuTitle)menuTitle.textContent='Your studio.';
     const menuIntro=$('v111MenuDialog')?.querySelector('.v111-menu-head p:last-child');if(menuIntro)menuIntro.textContent='Appearance, help, and the tools for a deeper game.';
     buildMatch();buildLearning();
+    const modeGroup=$('v92PlayHeader')?.querySelector('.v92-mode-switch');
+    if(modeGroup)modeGroup.setAttribute('role','group');
+
+    /* P25: real keyboard skip target plus non-disruptive SPA route announcements. */
+    const boardGrid=$('boardGrid'),skip=document.querySelector('a.skip');
+    if(boardGrid){
+      boardGrid.tabIndex=-1;
+      skip?.addEventListener('click',event=>{
+        event.preventDefault();
+        const playRoute=document.querySelector('#v92Primary [data-v92-route="play"]');
+        if(document.body.dataset.v92Route!=='play')playRoute?.click();
+        const focusBoardTarget=()=>{
+          const target=boardGrid.querySelector('.board-point[tabindex="0"]')||boardGrid;
+          boardGrid.scrollIntoView({block:'center',inline:'nearest'});
+          target.focus({preventScroll:true});
+        };
+        requestAnimationFrame(()=>requestAnimationFrame(focusBoardTarget));
+      });
+    }
+    const routeStatus=document.createElement('div');
+    routeStatus.id='uiRouteStatus';routeStatus.className='ui-sr-only';
+    routeStatus.setAttribute('role','status');routeStatus.setAttribute('aria-live','polite');routeStatus.setAttribute('aria-atomic','true');
+    document.body.append(routeStatus);
+    let announcedRoute=document.body.dataset.v92Route||'play';
+    const routeNames={play:'Play',improve:'Improve',library:'Library'};
+    const announceRoute=()=>{
+      const next=document.body.dataset.v92Route||'play';
+      if(next!==announcedRoute){announcedRoute=next;routeStatus.textContent=(routeNames[next]||next)+' section';}
+    };
+    new MutationObserver(announceRoute).observe(document.body,{attributes:true,attributeFilter:['data-v92-route']});
+
     $('v92Primary').addEventListener('click',()=>{arrangeCourseSources();updateCatalog();});
     document.querySelectorAll('dialog').forEach(decorateDialog);
     const dialogs=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.tagName==='DIALOG')decorateDialog(node);});dialogs.observe(document.body,{childList:true});
