@@ -1,1 +1,1 @@
-gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0
+gomoku-v12.5.0-p22-client-resilience-analysis-2.1.0-review-ux-2.1.0-learning-1.1.0\n
