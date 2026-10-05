@@ -22,3 +22,29 @@
 @media(max-width:780px){.c20-journey{padding:16px}.c20-hero{grid-template-columns:1fr}.c20-hero-progress{text-align:left}.c20-bands{grid-template-columns:1fr}.c20-next{grid-template-columns:42px 1fr}.c20-next-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.c20-library-link{align-items:flex-start;flex-direction:column}.c20-stage{grid-template-columns:1fr}.c20-visual{padding:16px}.c20-copy{padding:18px}.c20-checkpoint{grid-template-columns:1fr}.c20-checkpoint-actions{display:grid!important;grid-template-columns:1fr 1fr}.c20-dialog-foot{align-items:flex-start;flex-direction:column}.c20-dialog-foot span{text-align:left}}
 @media(max-width:420px){.c20-next{padding:12px}.c20-node-main{grid-template-columns:31px 1fr;padding:7px}.c20-dialog{width:calc(100vw - 12px)}.c20-dialog-head{padding:15px}.c20-copy h3{font-size:21px}.c20-scene-actions{display:grid;grid-template-columns:1fr 1fr}.c20-scene-actions .c20-primary{grid-column:1/-1}.c20-board-wrap{width:min(94vw,420px)}}
 @media(prefers-reduced-motion:reduce){.c20-stone,.c20-line,.c20-cell[data-mark]:after{animation:none!important}.c20-library-link *{scroll-behavior:auto!important}}
+
+
+/* v1.2 final interaction polish */
+.c20-stone.is-static{animation:none}
+.c20-copy.is-entering h3,.c20-copy.is-entering>p{animation:c20CopyIn .22s ease-out both}
+.c20-copy.is-entering>p{animation-delay:.035s}
+.c20-cell[data-mark]:after{animation-delay:var(--c20-delay,0s)}
+.c20-transfer-choices button:not(:disabled):hover,.c20-transfer-choices button:not(:disabled):focus-visible{border-color:var(--ui-accent,var(--seal));transform:translateY(-1px)}
+.c20-transfer-choices button.is-shake{animation:c20Wrong .22s ease}
+.c20-transfer.is-correct{position:relative;border-color:color-mix(in srgb,#4f7e5d 70%,var(--hair));overflow:hidden}
+.c20-burst{position:absolute;right:28px;top:31px;width:8px;height:8px;pointer-events:none}
+.c20-burst i{--a:calc(var(--i) * 45deg);position:absolute;width:5px;height:5px;border-radius:50%;background:var(--ui-accent-bright,#dc9664);animation:c20Burst .52s ease-out both;transform:rotate(var(--a)) translateY(-2px)}
+.c20-tile-demo{align-self:flex-start;margin-top:8px;min-height:38px;padding:7px 10px;border:1px solid var(--hair);border-radius:5px;background:transparent;color:var(--ink);font:inherit;font-size:9px;font-weight:750;cursor:pointer}
+.c20-tile-demo:hover,.c20-tile-demo:focus-visible{border-color:var(--ui-accent,var(--seal));background:var(--card2)}
+@keyframes c20CopyIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes c20Wrong{0%,100%{transform:translateX(0)}35%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+@keyframes c20Burst{0%{opacity:1;transform:rotate(var(--a)) translateY(-2px) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(-34px) scale(.4)}}
+@media(max-width:780px),(pointer:coarse){
+  .c20-node-demo{width:44px;height:44px}
+  .c20-checkpoint button,.c20-tile-demo,.c20-scene-actions button,.c20-transfer-choices button,.c20-dialog-foot button{min-height:44px}
+  .c20-close{width:44px;height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  .c20-copy.is-entering h3,.c20-copy.is-entering>p,.c20-transfer-choices button.is-shake,.c20-burst i{animation:none!important}
+  .c20-transfer-choices button:not(:disabled):hover,.c20-transfer-choices button:not(:disabled):focus-visible{transform:none}
+}

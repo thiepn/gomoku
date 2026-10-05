@@ -24,6 +24,22 @@
     {id:13,title:'Expert Calculation',band:'Advanced',tagline:'Generate candidates and test the best defense.'},
     {id:14,title:'Full-Game Mastery',band:'Advanced',tagline:'Transfer every skill into complete games.'}
   ]);
+  const CHAPTER_SKILLS=Object.freeze({
+    1:Object.freeze(['board-scan','immediate-win','threat-scan']),
+    2:Object.freeze(['closed-four','open-four','broken-four']),
+    3:Object.freeze(['legal-three','straight-three','broken-three']),
+    4:Object.freeze(['double-threat','four-three']),
+    5:Object.freeze(['forced-defense','counter-win','remote-defense']),
+    6:Object.freeze(['forcing-order','vcf-reading','vct-reading']),
+    7:Object.freeze(['shape-efficiency','connection','flexibility']),
+    8:Object.freeze(['initiative','move-priority']),
+    9:Object.freeze(['attack-construction','flexibility']),
+    10:Object.freeze(['candidate-generation','whole-board','plan-comparison']),
+    11:Object.freeze(['opening-shape','opening-flexibility']),
+    12:Object.freeze(['exact-five','overline','double-three-rule','double-four-rule']),
+    13:Object.freeze(['candidate-generation','calculation-depth','best-defense']),
+    14:Object.freeze(['full-game-transfer','whole-board','best-defense'])
+  });
   const q=(prompt,choices,answer,why)=>Object.freeze({prompt,choices:Object.freeze(choices),answer,why});
   const TRANSFER=Object.freeze({
     1:q('You see an attractive attacking move. What should happen first?',['Calculate it immediately','Scan both sides for immediate wins','Count only your longest line'],1,'Urgent wins and losses dominate every slower plan.'),
@@ -157,6 +173,7 @@
   }
   function demo(chapter){return (DEMOS[Number(chapter)]||[]).map(x=>JSON.parse(JSON.stringify(x)));}
   function transfer(chapter){const x=TRANSFER[Number(chapter)];return x?JSON.parse(JSON.stringify(x)):null;}
-  function metadata(chapter){const x=CHAPTERS.find(c=>c.id===Number(chapter));return x?{...x}:null;}
-  return Object.freeze({VERSION,CHAPTERS,metadata,chapterState,journey,demo,transfer});
+  function chapterSkills(chapter){return [...(CHAPTER_SKILLS[Number(chapter)]||[])];}
+  function metadata(chapter){const x=CHAPTERS.find(c=>c.id===Number(chapter));return x?{...x,skills:chapterSkills(chapter)}:null;}
+  return Object.freeze({VERSION,CHAPTERS,metadata,chapterSkills,chapterState,journey,demo,transfer});
 });

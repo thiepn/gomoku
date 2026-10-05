@@ -9,16 +9,23 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const reduceMotion=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',refreshTimer=0;
+  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',refreshTimer=0,transferMisses=0;
 
   function readState(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{};}catch{return {};}
   }
   function writeState(next){try{localStorage.setItem(KEY,JSON.stringify(next));return true;}catch{return false;}}
-  function recordTransfer(chapter,correct){
-    const state=readState(),transfer=state.transfer&&typeof state.transfer==='object'?state.transfer:{},prior=transfer[chapter]||{};
-    transfer[chapter]={attempts:(Number(prior.attempts)||0)+1,correct:correct===true||(prior.correct===true),at:Date.now()};
-    state.transfer=transfer;writeState(state);
+  function transferEvents(){
+    const rows=readState().events;
+    return Array.isArray(rows)?rows.filter(x=>x&&Number.isInteger(Number(x.chapter))&&typeof x.correct==='boolean').slice(-500):[];
+  }
+  function recordTransfer(chapter,correct,assisted=false){
+    const state=readState(),transfer=state.transfer&&typeof state.transfer==='object'?state.transfer:{},prior=transfer[chapter]||{},at=Date.now();
+    transfer[chapter]={attempts:(Number(prior.attempts)||0)+1,correct:correct===true||(prior.correct===true),at};
+    const events=Array.isArray(state.events)?state.events:[];
+    events.push({version:1,chapter:Number(chapter),skillIds:Core.chapterSkills(chapter),correct:correct===true,assisted:assisted===true,at});
+    state.transfer=transfer;state.events=events.slice(-500);writeState(state);
+    window.dispatchEvent(new CustomEvent('gomoku-course2-transfer-changed',{detail:{chapter:Number(chapter),correct:correct===true,assisted:assisted===true}}));
   }
   function reports(){
     const out=[];
@@ -113,43 +120,56 @@
     $('c20Transfer').hidden=true;
     const board=$('c20Board'),svg=$('c20Lines');board.replaceChildren();svg.replaceChildren();
     board.setAttribute('aria-label',scene.title+'. '+scene.text);
-    const marks=new Map((scene.marks||[]).map(x=>[x.x+','+x.y,x.kind]));
+    const previous=sceneIndex>0?scenes[sceneIndex-1]:null;
+    const previousStones=new Set((previous?.stones||[]).map(x=>x.x+','+x.y+':'+x.c));
+    const marks=new Map((scene.marks||[]).map((x,i)=>[x.x+','+x.y,{kind:x.kind,order:i}]));
     const stones=new Map((scene.stones||[]).map(x=>[x.x+','+x.y,x.c]));
     for(let y=0;y<9;y++)for(let x=0;x<9;x++){
       const cell=document.createElement('span');cell.className='c20-cell';
-      const mark=marks.get(x+','+y);if(mark)cell.dataset.mark=mark;
-      const color=stones.get(x+','+y);if(color){const stone=document.createElement('i');stone.className='c20-stone '+(color===1?'black':'white');cell.append(stone);}
+      const mark=marks.get(x+','+y);if(mark){cell.dataset.mark=mark.kind;cell.style.setProperty('--c20-delay',(mark.order*.07)+'s');}
+      const color=stones.get(x+','+y);if(color){const stone=document.createElement('i'),key=x+','+y+':'+color;stone.className='c20-stone '+(color===1?'black':'white')+' '+(previousStones.has(key)?'is-static':'is-new');cell.append(stone);}
       board.append(cell);
     }
-    for(const l of scene.lines||[]){
+    for(const [i,l] of (scene.lines||[]).entries()){
       const path=document.createElementNS('http://www.w3.org/2000/svg','line');
       path.setAttribute('x1',(l.a[0]+.5)*100);path.setAttribute('y1',(l.a[1]+.5)*100);
       path.setAttribute('x2',(l.b[0]+.5)*100);path.setAttribute('y2',(l.b[1]+.5)*100);
-      path.setAttribute('class','c20-line '+(l.kind||'threat'));svg.append(path);
+      path.setAttribute('class','c20-line '+(l.kind||'threat'));path.style.animationDelay=(.12+i*.08)+'s';svg.append(path);
     }
     $('c20SceneEyebrow').textContent='STEP '+(sceneIndex+1)+' OF '+scenes.length;
     $('c20SceneTitle').textContent=scene.title;$('c20SceneText').textContent=scene.text;
+    const copy=document.querySelector('#c20ConceptDialog .c20-copy');if(copy&&!reduceMotion()){copy.classList.remove('is-entering');void copy.offsetWidth;copy.classList.add('is-entering');}
     $('c20Back').disabled=sceneIndex===0;
     $('c20Next').onclick=advanceScene;$('c20Next').disabled=false;
     $('c20Next').textContent=sceneIndex===scenes.length-1?'Transfer check →':'Next →';
     $('c20SceneProgress').innerHTML=scenes.map((_,i)=>'<i class="'+(i<=sceneIndex?'active':'')+'"></i>').join('');
   }
   function renderTransfer(){
-    stopAuto();
+    stopAuto();transferMisses=0;
     const t=Core.transfer(activeChapter),host=$('c20Transfer'),saved=readState().transfer?.[activeChapter];
-    host.hidden=false;
-    host.innerHTML='<p class="c20-transfer-kicker">TRANSFER CHECK</p><h4>'+esc(t.prompt)+'</h4><div class="c20-transfer-choices">'+t.choices.map((x,i)=>'<button type="button" data-c20-choice="'+i+'">'+esc(x)+'</button>').join('')+'</div><p id="c20TransferFeedback" class="c20-transfer-feedback">'+(saved?.correct?'You have already answered this transfer check correctly. Try it again if you want.':'Choose the principle that should survive outside the lesson.')+'</p>';
-    host.querySelectorAll('[data-c20-choice]').forEach(b=>b.onclick=()=>answerTransfer(Number(b.dataset.c20Choice),t));
+    host.hidden=false;host.classList.remove('is-correct');
+    host.innerHTML='<p class="c20-transfer-kicker">TRANSFER CHECK</p><h4>'+esc(t.prompt)+'</h4><div class="c20-transfer-choices">'+t.choices.map((x,i)=>'<button type="button" data-c20-choice="'+i+'">'+esc(x)+'</button>').join('')+'</div><p id="c20TransferFeedback" class="c20-transfer-feedback">'+(saved?.correct?'You have already solved this comprehension check. A clean retry still tests recall.':'Choose the principle that should survive outside the lesson.')+'</p>';
+    host.querySelectorAll('[data-c20-choice]').forEach(b=>b.onclick=()=>answerTransfer(Number(b.dataset.c20Choice),t,b));
     $('c20Next').textContent='Transfer check';$('c20Next').disabled=true;
   }
-  function answerTransfer(choice,t){
-    const correct=choice===t.answer;recordTransfer(activeChapter,correct);
-    const buttons=[...$('c20Transfer').querySelectorAll('[data-c20-choice]')];
-    buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';else if(i===choice&&!correct)b.dataset.result='wrong';});
-    $('c20TransferFeedback').textContent=(correct?'Correct. ':'Not quite. ')+t.why;
-    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';
-    $('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
-    renderJourney();decorateChapterDialogs();
+  function finishTransfer(t,assisted){
+    const host=$('c20Transfer'),burst=document.createElement('div');burst.className='c20-burst';burst.setAttribute('aria-hidden','true');
+    burst.innerHTML=Array.from({length:8},(_,i)=>'<i style="--i:'+i+'"></i>').join('');host.append(burst);host.classList.add('is-correct');
+    recordTransfer(activeChapter,true,assisted);try{navigator.vibrate?.(18);}catch{}
+    $('c20TransferFeedback').textContent='Correct. '+t.why+(assisted?' You found it after a retry; come back later for a clean recall.':' Clean first-try recall recorded.');
+    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';$('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
+    renderJourney();decorateCatalog();decorateChapterDialogs();
+  }
+  function answerTransfer(choice,t,button){
+    const correct=choice===t.answer,host=$('c20Transfer'),buttons=[...host.querySelectorAll('[data-c20-choice]')];
+    if(correct){buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';});finishTransfer(t,transferMisses>0);return;}
+    transferMisses++;if(transferMisses===1)recordTransfer(activeChapter,false,false);
+    button.disabled=true;button.dataset.result='wrong';button.classList.remove('is-shake');void button.offsetWidth;button.classList.add('is-shake');try{navigator.vibrate?.(12);}catch{}
+    if(transferMisses<2){$('c20TransferFeedback').textContent='Not quite. Try one more answer before the explanation is revealed.';return;}
+    buttons.forEach((b,i)=>{b.disabled=true;if(i===t.answer)b.dataset.result='correct';});
+    $('c20TransferFeedback').textContent='The answer is highlighted. '+t.why+' Replay the concept, then try it clean later.';
+    $('c20Next').disabled=false;$('c20Next').textContent='Replay concept';$('c20Next').onclick=()=>{sceneIndex=0;renderScene();};
+    renderJourney();decorateCatalog();decorateChapterDialogs();
   }
   function stopAuto(){clearInterval(autoTimer);autoTimer=0;if($('c20Auto'))$('c20Auto').textContent='Play animation';}
   function toggleAuto(){
@@ -163,6 +183,14 @@
     },1450);
   }
 
+  function decorateCatalog(){
+    document.querySelectorAll('#uiCourseGrid .ui-course-tile[data-chapter]').forEach(tile=>{
+      if(tile.querySelector('.c20-tile-demo'))return;
+      const n=Number(tile.dataset.chapter),copy=tile.querySelector('.ui-course-copy');if(!copy||!n)return;
+      const b=document.createElement('button');b.type='button';b.className='c20-tile-demo';b.textContent='Visual concept';b.setAttribute('aria-label','Watch animated concept for chapter '+n);
+      b.onclick=e=>{e.preventDefault();e.stopPropagation();openDemo(n);};copy.append(b);
+    });
+  }
   function decorateChapterDialogs(){
     const j=model(),byId=Object.fromEntries(j.chapters.map(x=>[x.id,x]));
     for(let n=1;n<=14;n++){
@@ -184,7 +212,7 @@
   function refresh(){
     const sig=signature();
     if(sig!==lastSignature){lastSignature=sig;renderJourney();}
-    decorateChapterDialogs();
+    decorateCatalog();decorateChapterDialogs();
   }
   function schedule(ms=100){clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,ms);}
   const observer=new MutationObserver(muts=>{
@@ -207,7 +235,8 @@
     refresh,
     openDemo,
     openChapter,
-    transferState:()=>JSON.parse(JSON.stringify(readState().transfer||{}))
+    transferState:()=>JSON.parse(JSON.stringify(readState().transfer||{})),
+    attempts:()=>JSON.parse(JSON.stringify(transferEvents()))
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

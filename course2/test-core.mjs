@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict';
 import core from './core.js';
+import learning from '../learning/core.js';
 
 assert.equal(core.VERSION,'1.2.0');
 assert.equal(core.CHAPTERS.length,14);
 assert.equal(new Set(core.CHAPTERS.map(x=>x.id)).size,14);
 for(let n=1;n<=14;n++){
-  assert.equal(core.demo(n).length,3,'chapter '+n+' needs three teaching scenes');
-  const t=core.transfer(n);
-  assert.ok(t&&t.choices.length>=3,'chapter '+n+' transfer question missing');
+  const scenes=core.demo(n);assert.equal(scenes.length,3,'chapter '+n+' needs three teaching scenes');
+  const t=core.transfer(n);assert.ok(t&&t.choices.length>=3,'chapter '+n+' transfer question missing');
   assert.ok(Number.isInteger(t.answer)&&t.answer>=0&&t.answer<t.choices.length,'chapter '+n+' transfer answer invalid');
+  const ids=core.chapterSkills(n);assert.ok(ids.length>=1,'chapter '+n+' needs mapped skills');
+  ids.forEach(id=>assert.ok(learning.skill(id),'chapter '+n+' references unknown skill '+id));
+  for(const scene of scenes){
+    assert.ok(scene.title&&scene.text,'scene copy missing');
+    for(const stone of scene.stones||[]){assert.ok(stone.x>=0&&stone.x<9&&stone.y>=0&&stone.y<9,'stone outside board');assert.ok([1,2].includes(stone.c),'bad stone');}
+    for(const mark of scene.marks||[])assert.ok(mark.x>=0&&mark.x<9&&mark.y>=0&&mark.y<9,'mark outside board');
+    for(const path of scene.lines||[])for(const p of [path.a,path.b])assert.ok(p[0]>=0&&p[0]<9&&p[1]>=0&&p[1]<9,'line outside board');
+  }
 }
 const skills=[
   {id:'board-scan',title:'Board scanning',chapters:[1],score:35,state:'building',cleanEvidence:0,transferEvidence:0,confidence:20,due:0},
