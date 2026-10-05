@@ -41,6 +41,7 @@ assert(css.includes('#settingsDialog input[type="checkbox"]{width:24px;height:24
 assert(css.includes('#settingsDialog a')&&css.includes('display:inline-flex')&&css.includes('min-height:24px'),'P25 settings links must meet the 24px target floor');
 
 assert(css.includes('#newDialog input[type="checkbox"]{width:24px;height:24px;min-width:24px'),'P25 new-game preservation checkbox must meet the 24px target floor');
+assert(css.includes('html body.ui-studio[data-v92-route="play"] #mainContent{padding:16px 3px 28px!important;}'),'P25 mobile Play geometry must preserve a 24px board target floor at the audited 390px viewport');
 const reviewWorkspace=fs.readFileSync('review/ux/workspace.css','utf8');
 assert(reviewWorkspace.includes('#rwScrubber{width:100%;height:24px;min-height:24px'),'P25 guided-review scrubber must meet the 24px target floor');
 assert(reviewWorkspace.includes('input[type=checkbox]{appearance:auto;width:24px;height:24px;min-width:24px'),'P25 guided-review checkboxes must meet the 24px target floor');
