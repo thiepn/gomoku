@@ -17,7 +17,13 @@
     "operations/p26-release-candidate.json",
     "operations/p26-device-matrix.json",
     "operations/p26-release-candidate.mjs",
-    "operations/p26-device-evidence/**"
+    "operations/p26-device-evidence/**",
+    ".github/workflows/p27-stable-release.yml",
+    "online/test-p27-stable-release.mjs",
+    "operations/P27-RUNBOOK.md",
+    "operations/P27-RELEASE-NOTES.md",
+    "operations/p27-stable-release.json",
+    "operations/p27-stable-release.mjs"
   ],
   "required_physical_profiles": [
     "android-chrome-physical",

@@ -1,0 +1,17 @@
+{
+  "version": "p27.stable-release.v1",
+  "release_version": "1.0.0",
+  "release_tag": "v1.0.0",
+  "release_title": "Gomoku 1.0.0",
+  "product_candidate_sha": "d7481e80a5956584ad5956e897f28e3bb04674d2",
+  "p26_control_merge_sha": "a522e2e3a8bab60db231b4d5ea3404b80c83d705",
+  "release_branch": "main",
+  "public_base_url": "https://thiepn.dev/gomoku/",
+  "policy": {
+    "require_p26_release_ready": true,
+    "require_exact_public_candidate": true,
+    "require_current_main_head": true,
+    "allow_automatic_release": false,
+    "maintenance_mode_after_release": true
+  }
+}

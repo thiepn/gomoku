@@ -1,0 +1,111 @@
+name: P27 stable release and maintenance handoff
+
+on:
+  pull_request:
+    paths:
+      - 'operations/P27-RUNBOOK.md'
+      - 'operations/P27-RELEASE-NOTES.md'
+      - 'operations/p27-stable-release.json'
+      - 'operations/p27-stable-release.mjs'
+      - 'online/test-p27-stable-release.mjs'
+      - 'operations/p26-release-candidate.json'
+      - '.github/workflows/p27-stable-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'operations/P27-RUNBOOK.md'
+      - 'operations/P27-RELEASE-NOTES.md'
+      - 'operations/p27-stable-release.json'
+      - 'operations/p27-stable-release.mjs'
+      - 'online/test-p27-stable-release.mjs'
+      - 'operations/p26-release-candidate.json'
+      - '.github/workflows/p27-stable-release.yml'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type release-v1.0.0 to create the stable release after P26 is complete'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p27-stable-release-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  p27-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify P27 source contract
+        run: node online/test-p27-stable-release.mjs
+      - name: Verify P26 product freeze remains intact
+        run: node operations/p26-release-candidate.mjs validate
+      - name: Verify P27 contract
+        run: node operations/p27-stable-release.mjs validate
+      - name: P27 readiness summary
+        run: node operations/p27-stable-release.mjs status >> "$GITHUB_STEP_SUMMARY"
+
+  p27-release:
+    needs: p27-contract
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Require explicit 1.0 confirmation
+        run: test "${{ inputs.confirm }}" = "release-v1.0.0"
+      - name: Verify this workflow still owns current main
+        run: |
+          git fetch origin main --tags --force
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Require completed P26 qualification
+        run: node operations/p26-release-candidate.mjs release-ready
+      - name: Verify exact public candidate
+        run: node operations/p26-release-candidate.mjs deployed
+      - name: Run final P27 preflight
+        env:
+          P27_CHECK_SHA: ${{ github.sha }}
+        run: node operations/p27-stable-release.mjs preflight
+      - name: Refuse duplicate GitHub Release
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            echo "GitHub Release v1.0.0 already exists."
+            exit 1
+          fi
+      - name: Create or recover exact stable tag
+        run: |
+          if git rev-parse -q --verify refs/tags/v1.0.0 >/dev/null; then
+            test "$(git rev-list -n 1 v1.0.0)" = "$GITHUB_SHA"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a v1.0.0 "$GITHUB_SHA" -m "Gomoku 1.0.0"
+            git push origin refs/tags/v1.0.0
+          fi
+      - name: Create Gomoku 1.0.0 GitHub Release
+        run: gh release create v1.0.0 --target "$GITHUB_SHA" --title "Gomoku 1.0.0" --notes-file operations/P27-RELEASE-NOTES.md
+      - name: Maintenance handoff summary
+        run: |
+          echo "### Gomoku 1.0.0 released" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stable tag: v1.0.0" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Product candidate: d7481e80a5956584ad5956e897f28e3bb04674d2" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode after release: maintenance" >> "$GITHUB_STEP_SUMMARY"
