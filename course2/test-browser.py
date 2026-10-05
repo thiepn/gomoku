@@ -15,6 +15,7 @@ def load(browser,viewport,mobile=False,reduced='no-preference'):
 with sync_playwright() as p:
     exe=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium');b=p.chromium.launch(executable_path=exe if Path(exe).exists() else None,args=['--no-sandbox'])
     ctx,pg=load(b,{'width':1360,'height':960});route(pg,'improve')
+    pg.wait_for_function('document.querySelector("#c20Journey")?.offsetParent!==null && document.querySelectorAll("#uiCourseGrid .c20-tile-demo").length===14')
     check('Guided Journey visible',pg.locator('#c20Journey').is_visible());check('14 journey chapters',pg.locator('#c20Journey .c20-node').count()==14)
     check('14 Visual concept buttons',pg.locator('#uiCourseGrid .c20-tile-demo').count()==14)
     check('42 teaching scenes',pg.evaluate('Array.from({length:14},(_,i)=>GomokuCourse2Core.demo(i+1).length).reduce((a,b)=>a+b,0)')==42)
@@ -35,6 +36,7 @@ with sync_playwright() as p:
     pg.screenshot(path=str(OUT/'03-transfer-success.png'));pg.locator('#c20ConceptDialog .c20-close').click();pg.locator('[data-open-chapter="4"]').click();pg.locator('#ch4CourseDialog').wait_for(state='visible')
     check('mastery checkpoint in original chapter',pg.locator('#ch4CourseDialog .c20-checkpoint').is_visible());pg.keyboard.press('Escape');ctx.close()
     mctx,m=load(b,{'width':390,'height':844},True,'reduce');route(m,'improve')
+    m.wait_for_function('document.querySelector("#c20Journey")?.offsetParent!==null')
     check('mobile journey fits',m.evaluate('document.documentElement.scrollWidth<=innerWidth+2'));check('mobile concept target >=44',m.locator('#c20Journey .c20-node-demo').first.evaluate('(e)=>e.getBoundingClientRect().height>=44'))
     m.evaluate('GomokuCourse2.openDemo(1)');m.locator('#c20ConceptDialog').wait_for(state='visible');check('mobile dialog fits',m.locator('#c20ConceptDialog').evaluate('(e)=>e.getBoundingClientRect().right<=innerWidth+1'))
     check('reduced motion honored',m.locator('#c20Board .c20-stone').first.evaluate('(e)=>getComputedStyle(e).animationName==="none"'));check('mobile next target >=44',m.locator('#c20Next').evaluate('(e)=>e.getBoundingClientRect().height>=44'))
