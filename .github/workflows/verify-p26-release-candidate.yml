@@ -1,0 +1,82 @@
+name: P26 release candidate burn-in and real-device qualification
+
+on:
+  pull_request:
+    paths:
+      - 'operations/P26-RUNBOOK.md'
+      - 'operations/p26-release-candidate.json'
+      - 'operations/p26-device-matrix.json'
+      - 'operations/p26-release-candidate.mjs'
+      - 'operations/p26-device-evidence/**'
+      - 'online/test-p26-release-candidate.mjs'
+      - '.github/workflows/verify-p26-release-candidate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'operations/P26-RUNBOOK.md'
+      - 'operations/p26-release-candidate.json'
+      - 'operations/p26-device-matrix.json'
+      - 'operations/p26-release-candidate.mjs'
+      - 'operations/p26-device-evidence/**'
+      - 'online/test-p26-release-candidate.mjs'
+      - '.github/workflows/verify-p26-release-candidate.yml'
+  schedule:
+    - cron: '43 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p26-release-candidate-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p26-contract:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify P26 source contract
+        run: node online/test-p26-release-candidate.mjs
+      - name: Verify release-candidate freeze
+        run: node operations/p26-release-candidate.mjs validate
+      - name: P26 readiness summary
+        run: node operations/p26-release-candidate.mjs status >> "$GITHUB_STEP_SUMMARY"
+
+  p26-deployed-candidate:
+    needs: p26-contract
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify exact production candidate and summarize readiness
+        run: node operations/p26-release-candidate.mjs deployed-status >> "$GITHUB_STEP_SUMMARY"
+
+  p26-burn-in:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify candidate has not drifted
+        run: node operations/p26-release-candidate.mjs validate
+      - name: Verify public candidate and summarize burn-in
+        run: node operations/p26-release-candidate.mjs deployed-status >> "$GITHUB_STEP_SUMMARY"
