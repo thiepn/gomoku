@@ -91,7 +91,10 @@ with sync_playwright() as p:
     steps.append({'step':'02-local-game','screenshot':screenshot(page,profile,'02-local-game'),'axe':axe(page,profile,'02-local-game'),'custom':custom(page,profile,'02-local-game')})
     page.locator('#point-112').focus();page.keyboard.press('ArrowRight')
     if page.evaluate('document.activeElement?.id')!='point-113':add(profile,'keyboard','Board arrow-key navigation failed',None,'03-first-move','high')
-    page.locator('#point-112').click();page.locator('#placeBtn').click();page.wait_for_function('GomokuStudio.diagnostics().moves===1')
+    page.locator('#point-112').click();page.wait_for_timeout(180)
+    if page.evaluate('GomokuStudio.diagnostics().moves')==0 and page.locator('#placeBtn').is_visible() and page.locator('#placeBtn').is_enabled():
+      page.locator('#placeBtn').click()
+    page.wait_for_function('GomokuStudio.diagnostics().moves===1')
     steps.append({'step':'03-first-move','screenshot':screenshot(page,profile,'03-first-move'),'axe':axe(page,profile,'03-first-move'),'custom':custom(page,profile,'03-first-move')})
 
     # Step 4: improve landing.
@@ -103,8 +106,9 @@ with sync_playwright() as p:
     steps.append({'step':'05-library','screenshot':screenshot(page,profile,'05-library'),'axe':axe(page,profile,'05-library'),'custom':custom(page,profile,'05-library')})
 
     # Step 6: settings and dialog close/focus return.
-    page.locator('[data-v92-route="play"]').first.click();page.locator('#settingsBtn').click();page.wait_for_timeout(100)
+    page.locator('[data-v92-route="play"]').first.click();page.locator('#settingsBtn').focus()
     opener_id=page.evaluate('document.activeElement?.id')
+    page.locator('#settingsBtn').click();page.wait_for_timeout(100)
     steps.append({'step':'06-settings','screenshot':screenshot(page,profile,'06-settings'),'axe':axe(page,profile,'06-settings'),'custom':custom(page,profile,'06-settings')})
     if not page.evaluate('!!document.activeElement?.closest("dialog[open]")'): add(profile,'dialog-focus','Settings dialog does not contain focus after open',None,'06-settings','high')
     page.keyboard.press('Escape');page.wait_for_timeout(100)
