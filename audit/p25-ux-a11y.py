@@ -37,11 +37,27 @@ def axe(page,profile,step):
 def custom(page,profile,step):
     data=page.evaluate("""()=>{
       const visible=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0};
-      const name=e=>(e.getAttribute('aria-label')||e.getAttribute('title')||e.innerText||e.value||'').trim();
+      const text=e=>(e?.textContent||'').trim().replace(/\\s+/g,' ');
+      const name=e=>{
+        const direct=(e.getAttribute('aria-label')||e.getAttribute('title')||'').trim();if(direct)return direct;
+        const labelled=e.getAttribute('aria-labelledby');
+        if(labelled){const value=labelled.split(/\\s+/).map(id=>text(document.getElementById(id))).filter(Boolean).join(' ');if(value)return value;}
+        if(e.labels?.length){const value=[...e.labels].map(text).filter(Boolean).join(' ');if(value)return value;}
+        const own=text(e);if(own)return own;
+        return (e.getAttribute('placeholder')||e.getAttribute('value')||'').trim();
+      };
       const interactive=[...document.querySelectorAll('button,a[href],input,select,textarea,[role="button"],[role="tab"]')].filter(visible);
       const unnamed=interactive.filter(e=>!name(e)).map(e=>({tag:e.tagName,id:e.id,role:e.getAttribute('role')}));
       const positiveTab=[...document.querySelectorAll('[tabindex]')].filter(e=>Number(e.getAttribute('tabindex'))>0).map(e=>({tag:e.tagName,id:e.id,tabindex:e.getAttribute('tabindex')}));
-      const small=interactive.filter(e=>!e.closest('#boardGrid')).map(e=>{const r=e.getBoundingClientRect();return {tag:e.tagName,id:e.id,text:name(e).slice(0,80),w:Math.round(r.width),h:Math.round(r.height)}}).filter(x=>x.w<24||x.h<24);
+      const clickableRect=e=>{
+        if((e.matches('input[type="checkbox"],input[type="radio"]'))&&e.labels?.length){
+          const labels=[...e.labels].filter(visible).map(x=>x.getBoundingClientRect()).sort((a,b)=>(b.width*b.height)-(a.width*a.height));
+          if(labels[0])return labels[0];
+        }
+        return e.getBoundingClientRect();
+      };
+      const inlineTextLink=e=>e.matches('a[href]')&&!!e.closest('p,li,dd,dt');
+      const small=interactive.filter(e=>!e.closest('#boardGrid')&&!inlineTextLink(e)).map(e=>{const r=clickableRect(e);return {tag:e.tagName,id:e.id,text:name(e).slice(0,80),w:Math.round(r.width),h:Math.round(r.height)}}).filter(x=>x.w<24||x.h<24);
       const ids=[...document.querySelectorAll('[id]')].map(e=>e.id),dupes=[...new Set(ids.filter((x,i)=>ids.indexOf(x)!==i))];
       const dialogs=[...document.querySelectorAll('dialog')].map(d=>({id:d.id,open:d.open,labelledby:d.getAttribute('aria-labelledby'),label:d.getAttribute('aria-label')}));
       const grid=document.querySelector('#boardGrid');
@@ -133,4 +149,7 @@ with sync_playwright() as p:
     context.close();browser.close()
 
 (OUT/'audit.json').write_text(json.dumps(RESULT,indent=2))
-print(json.dumps({'profiles':list(RESULT['profiles']),'findings':len(RESULT['findings']),'byKind':{k:sum(1 for x in RESULT['findings'] if x['kind']==k) for k in sorted(set(x['kind'] for x in RESULT['findings']))}},indent=2))
+summary={'profiles':list(RESULT['profiles']),'findings':len(RESULT['findings']),'byKind':{k:sum(1 for x in RESULT['findings'] if x['kind']==k) for k in sorted(set(x['kind'] for x in RESULT['findings']))}}
+print(json.dumps(summary,indent=2))
+if RESULT['findings']:
+    raise SystemExit('P25 audited journeys still contain '+str(len(RESULT['findings']))+' accessibility/UX findings')

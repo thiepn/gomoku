@@ -1,4 +1,4 @@
-name: P25 UX accessibility baseline audit
+name: P25 UX accessibility and quality gate
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   p25-ux-audit:
-    name: p25-ux-audit
+    name: p25-ux-quality
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -35,6 +35,11 @@ jobs:
       - run: npm install --no-save axe-core@4.10.3
       - run: pip install playwright==1.62.0
       - run: python -m playwright install --with-deps chromium
+      - name: Rebuild candidate shell from source
+        run: |
+          python ui/build.py
+          python online/build-p8-client.py
+
       - name: Capture P25 journey evidence and WCAG audit
         env:
           P25_URL: http://127.0.0.1:8765/
