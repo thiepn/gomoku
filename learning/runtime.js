@@ -85,6 +85,11 @@
   function skillPrescription(id){
     return snapshot?.skills?.find(s=>s.id===id)?.recommendation||null;
   }
+  function reviewPrescription(id){
+    const p=skillPrescription(id);if(!p||p.type!=='review')return p;
+    if(Number.isInteger(p.practiceMotif))return {...p,type:'practice',reason:'Apply this game finding in targeted Weakness Review'};
+    return {...p,type:'course',reason:'Revisit the linked concept before your next game'};
+  }
   function homeHost(){
     return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');
   }
@@ -162,7 +167,7 @@
     let focus=[];try{focus=Core.reviewFocus(window.GomokuStudio.reviewReport());}catch{}
     if(!focus.length){row?.remove();return;}
     if(!row){row=document.createElement('div');row.id='li11ReviewPrescription';row.className='li11-review';const practice=overview.querySelector('.rw-practice');if(practice)practice.insertAdjacentElement('beforebegin',row);else overview.append(row);}
-    const p=skillPrescription(focus[0].id),sig=focus.map(x=>x.id+':'+x.count).join('|')+'|'+(p?.type||'')+'|'+(p?.score||0)+'|'+(p?.mistakeIds?.length||0);
+    const p=reviewPrescription(focus[0].id),sig=focus.map(x=>x.id+':'+x.count).join('|')+'|'+(p?.type||'')+'|'+(p?.score||0)+'|'+(p?.mistakeIds?.length||0);
     if(row.dataset.signature===sig)return;row.dataset.signature=sig;
     row.innerHTML='<span>LEARNING PRESCRIPTION</span><h4>This game points to '+esc(focus[0].title)+'.</h4><p>'+focus.map(x=>esc(x.title)).join(' · ')+'</p><small>Reviewed decisions feed the same mastery model as lessons and practice. Use the next action to close the loop.</small><div class="li11-review-actions"><button type="button" class="gr-btn" id="li11ReviewAction">'+esc(actionLabel(p))+'</button><button type="button" class="gr-link" id="li11ReviewMap">Skill map</button></div>';
     $('li11ReviewAction').onclick=()=>p&&runPrescription(p);$('li11ReviewMap').onclick=openDashboard;
