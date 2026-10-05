@@ -81,11 +81,18 @@ with sync_playwright() as p:
     if open_dialog.count():
       focused=page.evaluate('document.activeElement && document.activeElement.closest("dialog[open]")?.id || null')
       if not focused:add(profile,'dialog-focus','Open first-run dialog does not own initial focus',None,'01-first-run','high')
-      page.keyboard.press('Escape');page.wait_for_timeout(100)
+      if page.locator('#v112Local').count() and page.locator('#v112Local').is_visible():
+        page.locator('#v112Local').click();page.wait_for_timeout(250)
+      else:
+        page.keyboard.press('Escape');page.wait_for_timeout(100)
 
-    # Step 2: explicit local-game creation.
+    # Step 2: exercise the visible New game proxy after the onboarding quick-start.
     page.locator('[data-v92-route="play"]').first.click()
-    page.locator('#newBtn').click();page.wait_for_timeout(100)
+    if page.locator('#v92New').count() and page.locator('#v92New').is_visible():
+      page.locator('#v92New').click()
+    else:
+      page.evaluate("document.querySelector('#newBtn')?.click()")
+    page.wait_for_timeout(120)
     if page.locator('#modeSelect').count(): page.locator('#modeSelect').select_option('local')
     steps.append({'step':'02-new-game','screenshot':screenshot(page,profile,'02-new-game'),'axe':axe(page,profile,'02-new-game'),'custom':custom(page,profile,'02-new-game')})
     focus_in_dialog=page.evaluate('document.activeElement && document.activeElement.closest("dialog[open]")?.id || null')
