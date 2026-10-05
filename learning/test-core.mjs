@@ -36,13 +36,13 @@ const misses=Array.from({length:8},(_,i)=>({id:'defense-'+i,motif:2,correct:fals
 snap=core.analyze({course:fullCourse,academy:{sessionAttempts:misses},mistakes:[],now:100000000});
 assert.ok(snap.skills.find(x=>x.id==='forced-defense').score<50,'repeated misses must reduce defensive mastery');
 
-const dueReviewAttempt={id:'academy-defense',motif:2,correct:true,assisted:false,at:99000000,session:'older-defense'};
+assert.equal(core.motifFromItemId('academy-2-legacy-0'),2);
 snap=core.analyze({
   course:fullCourse,
-  academy:{sessionAttempts:[dueReviewAttempt],reviews:{'academy-defense':{due:99999999,last:99000000}}},
+  academy:{sessionAttempts:[],reviews:{'academy-2-legacy-0':{due:99999999,last:99000000}}},
   mistakes:[],now:100000000
 });
-assert.equal(snap.summary.duePractice,1);
+assert.equal(snap.summary.duePractice,1,'built-in due reviews remain classifiable after attempt history rolls over');
 assert.equal(snap.skills.find(x=>x.id==='forced-defense').duePractice,1);
 assert.equal(snap.skills.find(x=>x.id==='forced-defense').recommendation.type,'practice');
 
