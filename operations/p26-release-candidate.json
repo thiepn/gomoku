@@ -1,0 +1,36 @@
+{
+  "version": "p26.release-candidate.v1",
+  "candidate_source_sha": "d7481e80a5956584ad5956e897f28e3bb04674d2",
+  "started_at": "2026-10-05T18:36:43Z",
+  "minimum_burn_in_hours": 24,
+  "public_base_url": "https://thiepn.dev/gomoku/",
+  "immutable_artifacts": [
+    "index.html",
+    "sw.js",
+    "manifest.webmanifest"
+  ],
+  "allowed_p26_paths": [
+    ".github/workflows/verify-p26-release-candidate.yml",
+    "online/test-p26-release-candidate.mjs",
+    "operations/P26-RUNBOOK.md",
+    "operations/p26-release-candidate.json",
+    "operations/p26-device-matrix.json",
+    "operations/p26-release-candidate.mjs",
+    "operations/p26-device-evidence/**"
+  ],
+  "required_physical_profiles": [
+    "android-chrome-physical",
+    "samsung-internet-physical",
+    "android-installed-pwa"
+  ],
+  "recommended_physical_profiles": [
+    "ios-safari-physical",
+    "ios-installed-pwa"
+  ],
+  "policy": {
+    "mode": "defect-only",
+    "product_changes_invalidate_candidate": true,
+    "automated_emulation_does_not_satisfy_physical_profiles": true,
+    "stable_release_requires_required_physical_profiles_passed": true
+  }
+}
