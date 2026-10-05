@@ -29,3 +29,6 @@ assert(ch1.includes('id="ch1Board" role="group"'),'P25 chapter-1 script must ren
 assert(!ch1.includes("b.setAttribute('role','gridcell')"),'P25 chapter-1 board must not expose invalid gridcell hierarchy');
 assert(index.includes('color:color-mix(in srgb,var(--ink2) 88%,var(--ink));font-size:7px'),'P25 chapter-1 progress text contrast fix missing');
 assert(workflow.includes('python ui/build.py')&&workflow.includes('python online/build-p8-client.py')&&workflow.includes('git diff --exit-code -- index.html'),'P25 must verify generated shell parity');
+
+assert(css.includes('#settingsDialog input[type="checkbox"]{width:24px;height:24px;min-width:24px'),'P25 settings checkboxes must meet the 24px target floor');
+assert(css.includes('#settingsDialog a{display:inline-flex;align-items:center;min-height:24px}'),'P25 settings links must meet the 24px target floor');
