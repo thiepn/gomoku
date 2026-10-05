@@ -1,5 +1,13 @@
 import fs from 'node:fs';
 const assert=(v,m)=>{if(!v)throw new Error(m);};
+const studio=fs.readFileSync('ui/studio.js','utf8');
+for(const marker of [
+  "document.body.dataset.v92Route!=='play'",
+  "document.querySelector('#v92Primary [data-v92-route=\"play\"]')",
+  "boardGrid.querySelector('.board-point[tabindex=\"0\"]')||boardGrid",
+  "requestAnimationFrame(()=>requestAnimationFrame(focusBoardTarget))"
+]) assert(studio.includes(marker),'P25 skip-link focus repair missing '+marker);
+
 const audit=fs.readFileSync('audit/p25-product-quality.mjs','utf8');
 for(const marker of ['@axe-core/playwright','wcag22aa','first-launch','play-after-move','improve-catalog','learning-dialog','guided-review','high-contrast-large-text','mobile-play','smallTargets','focusWalk','x.width<24||x.height<24','outlineWidth','page.screenshot'])
   assert(audit.includes(marker),'P25 audit missing '+marker);
