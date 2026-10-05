@@ -13199,8 +13199,14 @@ html body.ui-studio dialog b{font-family:var(--ui-font)!important;}
       boardGrid.tabIndex=-1;
       skip?.addEventListener('click',event=>{
         event.preventDefault();
-        boardGrid.focus();
-        boardGrid.scrollIntoView({block:'center',inline:'nearest'});
+        const playRoute=document.querySelector('#v92Primary [data-v92-route="play"]');
+        if(document.body.dataset.v92Route!=='play')playRoute?.click();
+        const focusBoardTarget=()=>{
+          const target=boardGrid.querySelector('.board-point[tabindex="0"]')||boardGrid;
+          boardGrid.scrollIntoView({block:'center',inline:'nearest'});
+          target.focus({preventScroll:true});
+        };
+        requestAnimationFrame(()=>requestAnimationFrame(focusBoardTarget));
       });
     }
     const routeStatus=document.createElement('div');
