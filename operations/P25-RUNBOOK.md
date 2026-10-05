@@ -1,92 +1,85 @@
 # P25 — Product UX, Accessibility & Final Quality Pass
 
-P25 is an evidence-first release-quality pass over the P24-certified Gomoku client. It does not redesign the product. It audits the current simplified journeys, fixes reproduced issues, and turns those fixes into a release-blocking browser quality gate.
+P25 is the final product-facing quality pass before burn-in and stable-release certification. It is evidence-driven rather than a broad redesign.
 
 ## Audited journeys
 
-The Chromium audit runs at desktop (1440×1000) and mobile (390×844) sizes and captures screenshots for:
+1. First launch.
+2. Play home.
+3. Local move commit and post-move guidance.
+4. Improve catalog.
+5. Representative learning dialog.
+6. Library.
+7. Settings.
+8. New game.
+9. Guided Review.
+10. High-contrast + large-text mode.
+11. Narrow mobile Play.
+12. Narrow mobile Improve.
 
-1. **first launch** — the real first-run welcome;
-2. **local game** — the visible onboarding “2 players” path;
-3. **first move** — board keyboard navigation and real streamlined placement;
-4. **Improve** — the learning/course landing;
-5. **Library** — empty/local collection state;
-6. **Settings** — visible Menu → Settings path, including focus containment and return;
-7. **Online** — visible Menu → Specialist tools → Online rooms path.
+Each accepted state is stored as a full-page screenshot in `p25-audit-output/`.
 
-The test deliberately follows the current public UI instead of hidden legacy proxy controls.
+## Accessibility target
 
-## Accessibility checks
+P25 targets the automatable WCAG 2.2 A/AA baseline while preserving explicit evidence limits.
 
-Every step runs Axe with WCAG 2.0/2.1/2.2 A/AA tags and custom checks for:
+The gate uses `@axe-core/playwright` 4.13.0 with WCAG 2.0 A/AA, WCAG 2.1 AA and WCAG 2.2 AA tags. Critical and serious violations block release.
 
-- accessible names;
-- positive tabindex;
-- duplicate IDs;
-- focus containment and focus return for dialogs;
-- board grid semantics;
-- exactly one visible primary aria-current page;
-- horizontal overflow;
-- minimum 24×24 CSS-pixel target sizing outside the board;
-- uncaught page errors.
+Additional checks require:
 
-The custom name check understands `aria-label`, `aria-labelledby`, native/wrapping `<label>` associations, text content, placeholders and values.
+- visible actionable controls in audited states to be at least 24×24 CSS px;
+- a 40-step keyboard focus walk to keep focus visible and inside the viewport;
+- a focus outline at least 2 CSS px wide;
+- keyboard board navigation and commit to remain functional;
+- built-in high-contrast and large-text modes to remain functional;
+- no audited state to emit an uncaught page error.
 
-For WCAG 2.5.8 target size, checkbox/radio controls use the actual clickable associated label rectangle. Inline links inside prose use the WCAG inline-target exception instead of being falsely treated as standalone 24×24 buttons.
+WCAG 2.2 Target Size (Minimum) uses 24×24 CSS px as the baseline unless an exception applies. P25 intentionally uses a simple stronger rule for the audited controls rather than trying to infer every spacing exception automatically.
 
-Any remaining audit finding fails `p25-ux-quality`.
+## UX priority order
 
-## Reproduced production fixes
+P25 does not redesign for novelty. Fixes are prioritized as:
 
-The baseline audit found two real issues after false-positive triage.
+1. blocked or misleading primary action;
+2. unclear recovery/error state;
+3. accessibility blocker;
+4. keyboard/touch reachability;
+5. responsive/reflow problem;
+6. inconsistent hierarchy/copy;
+7. visual polish.
 
-### Learn chapter-number contrast
+P24 already owns browser/device/network compatibility.
 
-On mobile, the large chapter numbers inside `.ui-course-art` measured **2.93:1** against their card background. Axe requires 3:1 for that large text.
+## Evidence
 
-P25 increases the chapter-number opacity to **0.78** in both the base rule and the later mobile override. The first repair changed only the base rule; Axe correctly caught that the mobile media query still reset it to 0.5. The final fix repairs the actual cascade while retaining the intended hierarchy.
+`audit/p25-product-quality.mjs` emits ordered screenshots plus `p25-audit.json` containing axe findings, target-size evidence, keyboard-focus evidence, page errors and limits. GitHub Actions retains the evidence for 14 days.
 
-### Competition Live / Archive targets
+## Deployment qualification
 
-The tournament scope tabs measured only **20px high** on both desktop and mobile. P25 gives `.p9-scope-tabs button` a **28px minimum height**, preserving the compact segmented-control appearance while satisfying WCAG 2.5.8's 24px minimum target size.
-
-## Findings that were not product defects
-
-The first custom audit incorrectly reported several existing controls:
-
-- Library Save title, Export JSON and Import JSON;
-- Online room password and room code;
-- Settings buttons;
-- 18px checkboxes inside large clickable toggle rows;
-- the inline “International Renju rules” link.
-
-Axe did not report accessible-name failures for those controls. Source inspection confirmed native/wrapping labels and visible text were already present. P25 corrects the auditor rather than adding redundant ARIA or visually inflating controls that already have compliant clickable labels.
-
-## Existing strengths preserved
-
-P25 preserves the mature accessibility work already present:
-
-- 15×15 board exposed as an ARIA grid;
-- keyboard arrow navigation;
-- board live announcements;
-- labelled native dialogs;
-- focus-visible styles;
-- reduced-motion support;
-- live status/toast regions;
-- `aria-current` primary navigation;
-- `aria-pressed` mode/filter states;
-- visible mobile Menu routing rather than hidden desktop controls.
-
-## Release boundary
-
-P25 is a static-client/browser quality gate, like P22 and P24. It does not enter P16's Supabase/database admission list.
-
-The candidate shell is rebuilt from `ui/` and `online/` source before the audit so generated HTML cannot hide a source-level regression.
-
-The main-only `p25-deployed-quality` job waits until `https://thiepn.dev/gomoku/index.html` matches the exact generated client hash, then repeats the same desktop/mobile Axe and custom journey audit against production.
+Pull requests run on a local HTTP origin. On `main`, `p25-deployed-quality` waits until the public `index.html` at `https://thiepn.dev/gomoku/` exactly matches the committed hash, then repeats the same audit against the public deployment.
 
 ## Evidence limits
 
-Passing P25 means the audited desktop/mobile Chromium journeys have no Axe WCAG 2.2 AA violations or P25 custom findings.
+Passing P25 is not a claim of complete WCAG conformance. Automated axe cannot fully prove screen-reader speech output, cognitive usability, speech input or physical assistive-technology behavior.
 
-It is **not** a claim of complete accessibility conformance. Manual screen-reader testing (NVDA/JAWS/VoiceOver), cognitive usability testing, physical-device behavior, and broader assistive-technology combinations remain outside automated evidence and should be covered by human testing before any formal WCAG conformance statement.
+Physical-device claims remain governed by P24's explicit deferred matrix.
+
+## Release boundary
+
+P25 stays outside P16's Supabase admission ledger because it is a client/product-quality gate. Final stable-release certification can require both backend/security evidence and deployed P22/P24/P25 client evidence.
+
+
+## Measured fixes
+
+The consolidated P25 pass carries only defects reproduced by the audit:
+
+- the keyboard skip link now moves actual focus to the board and makes that focus visible;
+- SPA Play / Improve / Library route changes are announced through a polite live region without stealing focus;
+- dialogs without an authored accessible name inherit one from their first heading;
+- the Play mode selector is exposed as a semantic group;
+- chapter-1 puzzle intersections use native labelled buttons inside a labelled group instead of an incomplete ARIA grid/gridcell hierarchy;
+- chapter-1 progress text was darkened after axe measured a 4.49:1 contrast ratio against the 4.5:1 AA threshold;
+- compact competitive scope tabs now retain at least a 28px control height;
+- course-number artwork contrast is strengthened in desktop and mobile layouts.
+
+The older parallel P25 branches are superseded by this consolidated branch and should not be merged independently.
