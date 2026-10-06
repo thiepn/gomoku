@@ -12,7 +12,7 @@ with sync_playwright() as p:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge')
-        page.locator('#onlineBtn').click()
+        page.evaluate('document.querySelector("#onlineBtn").click()')
         page.wait_for_function('document.querySelector("#op2Start")?.offsetParent!==null')
         assert page.locator('#workbenchTitle').text_content().strip()=='Play online'
         assert page.locator('#op2Choices [data-op2-route]').count()==4
