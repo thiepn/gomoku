@@ -1,0 +1,15 @@
+const C=require('./core.js');
+const ok=(v,m)=>{if(!v)throw new Error(m)};
+ok(C.VERSION==='1.7.0','version');
+ok(C.roomKind(null)==='none','no room');
+ok(C.roomKind({id:'A',state:{ranked:true}})==='ranked','ranked room');
+ok(C.roomKind({id:'A',state:{tournament:{id:'CUP'}}})==='tournament','tournament room');
+ok(C.roomKind({id:'A',state:{challenge:{id:'CH'}}})==='challenge','challenge room');
+let s=C.summary({connected:false},null);
+ok(s.primary.id==='rooms'&&!s.context.rankedReady,'anonymous room route');
+s=C.summary({connected:true,username:'jon'},null);
+ok(s.primary.id==='ranked'&&s.context.rankedReady,'ranked default');
+s=C.summary({connected:true,username:'jon'},{id:'RANK-1',role:'player',state:{ranked:true}});
+ok(s.primary.id==='active-room'&&s.primary.label.includes('ranked'),'active ranked return');
+ok(s.destinations.length===5,'five consolidated destinations');
+console.log('PASS Gomoku 1.7 Online Competition 2.0 core contracts.');

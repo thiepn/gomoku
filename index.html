@@ -16386,4 +16386,194 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+<script id="online2-core">
+/* Gomoku 1.7 — Online Competition 2.0 pure navigation/context model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuOnline2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.7.0';
+  const clean=v=>String(v??'').trim();
+  function roomKind(room){
+    const s=room?.state||{};
+    if(s.tournament)return 'tournament';
+    if(s.challenge)return 'challenge';
+    if(s.ranked)return 'ranked';
+    return room?.id?'room':'none';
+  }
+  function context(account={},room=null){
+    const connected=account?.connected===true;
+    const username=clean(account?.username);
+    const kind=roomKind(room);
+    const active=kind!=='none';
+    const spectator=active&&room?.role==='spectator';
+    const roomId=clean(room?.id);
+    return {
+      version:VERSION,connected,username,identityReady:connected&&!!username,
+      activeRoom:active,roomKind:kind,roomId,spectator,
+      rankedReady:connected&&!!username
+    };
+  }
+  function primary(account={},room=null){
+    const c=context(account,room);
+    if(c.activeRoom){
+      const label=c.roomKind==='ranked'?'Return to ranked match':
+        c.roomKind==='tournament'?'Return to tournament match':
+        c.roomKind==='challenge'?'Return to challenge':
+        c.spectator?'Return to spectating':'Return to room';
+      return {id:'active-room',label,detail:c.roomId?'Room '+c.roomId:'Your online game is active.'};
+    }
+    if(!c.identityReady)return {id:'rooms',label:'Play online',detail:'Create or join an anonymous room now. Connect THIEPN Account when you want ranked play, seasons, cups, and a public profile.'};
+    return {id:'ranked',label:'Find ranked match',detail:'Your competitive identity is ready. Ranked matchmaking is the fastest route into a rated game.'};
+  }
+  function destinations(account={},room=null){
+    const c=context(account,room);
+    return [
+      {id:'ranked',label:'Ranked',detail:c.rankedReady?'Rating, matchmaking and leaderboard.':'Connect an account + public username to unlock ranked.',enabled:true,locked:!c.rankedReady},
+      {id:'competition',label:'Seasons & cups',detail:'Season standings, Renju cups and tournament assignments.',enabled:true,locked:!c.identityReady},
+      {id:'rooms',label:'Rooms & history',detail:'Create, join or spectate rooms and reopen completed online games.',enabled:true,locked:false},
+      {id:'identity',label:'Competitive identity',detail:c.username?'@'+c.username+' · profile, career and achievements.':'Account, username and player profile.',enabled:true,locked:!c.identityReady},
+      {id:'community',label:'Community',detail:'Players, rivals, favorites and direct challenges.',enabled:true,locked:!c.identityReady}
+    ];
+  }
+  function summary(account={},room=null){
+    const c=context(account,room),p=primary(account,room);
+    return {
+      context:c,primary:p,destinations:destinations(account,room),
+      identity:c.identityReady?'@'+c.username:c.connected?'Account connected · username required':'Anonymous online',
+      room:c.activeRoom?
+        (c.roomKind==='ranked'?'Ranked match':c.roomKind==='tournament'?'Tournament match':c.roomKind==='challenge'?'Direct challenge':c.spectator?'Spectating':'Online room'):
+        'No active room'
+    };
+  }
+  return Object.freeze({VERSION,roomKind,context,primary,destinations,summary});
+});
+</script>
+<style id="online2-style">
+/* Gomoku 1.7 — Online Competition 2.0 */
+#oc2Home{display:grid;gap:11px;margin:0 0 14px;padding:14px;border:1px solid var(--hair);border-radius:11px;background:color-mix(in srgb,var(--card) 94%,var(--seal) 6%)}
+#oc2Home[hidden]{display:none!important}
+.oc2-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.oc2-head h3{margin:2px 0 4px;font:700 20px/1.1 Georgia,serif}
+.oc2-head p{margin:0;color:var(--ink2);font-size:8px;line-height:1.5}
+.oc2-context{display:grid;gap:3px;text-align:right}
+.oc2-context b{font-size:8px}.oc2-context span{font-size:7px;color:var(--ink2)}
+.oc2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--hair);border-radius:9px;background:var(--paper)}
+.oc2-next span{display:block;font-size:6px;font-weight:800;letter-spacing:.14em;color:var(--seal)}
+.oc2-next strong{display:block;margin-top:3px;font-size:11px}
+.oc2-next p{margin:3px 0 0;color:var(--ink2);font-size:7px;line-height:1.45}
+.oc2-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.oc2-destination{display:grid;gap:4px;align-content:start;text-align:left;min-height:74px;padding:9px;border:1px solid var(--hair);border-radius:8px;background:var(--paper);color:var(--ink)}
+.oc2-destination:hover{border-color:var(--hair2)}
+.oc2-destination b{font-size:8px}.oc2-destination span{font-size:6px;line-height:1.4;color:var(--ink2)}
+.oc2-destination[data-locked="true"] b::after{content:' · setup';color:var(--seal);font-size:6px;font-weight:700}
+#workbenchDialog.oc2-online .workbench-body{scroll-behavior:smooth}
+@media(max-width:820px){.oc2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.oc2-grid .oc2-destination:last-child{grid-column:1/-1}}
+@media(max-width:520px){
+  #oc2Home{padding:11px}.oc2-head,.oc2-next{grid-template-columns:1fr}.oc2-context{text-align:left}
+  .oc2-grid{grid-template-columns:1fr}.oc2-grid .oc2-destination:last-child{grid-column:auto}
+  .oc2-destination{min-height:48px}.oc2-next .btn{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){#workbenchDialog.oc2-online .workbench-body{scroll-behavior:auto}}
+</style>
+<script id="online2-runtime">
+/* Gomoku 1.7 — Online Competition 2.0 composition layer. */
+(()=>{
+  'use strict';
+  if(window.GomokuOnline2)return;
+  const Core=window.GomokuOnline2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let observer=null,lastKey='',timer=0;
+  const bridge=()=>window.GomokuCompetitionBridge||null;
+  function snapshot(){
+    const b=bridge();
+    return Core.summary(b?.account?.()||{connected:false,username:null},b?.room?.()||null);
+  }
+  function ensure(){
+    const ranked=$('roomRankedPanel'),account=$('roomAccountPanel'),dialog=$('workbenchDialog');
+    if(!ranked||!account||!dialog?.open)return null;
+    dialog.classList.add('oc2-online');
+    let home=$('oc2Home');
+    if(!home){
+      home=document.createElement('section');home.id='oc2Home';home.setAttribute('aria-labelledby','oc2Title');
+      home.innerHTML='<div class="oc2-head"><div><p class="eyebrow">ONLINE COMPETITION · 2.0</p><h3 id="oc2Title">Play online</h3><p>One starting point for ranked, seasons, cups, rooms, history and player identity.</p></div><div class="oc2-context"><b id="oc2Identity"></b><span id="oc2Room"></span></div></div><div class="oc2-next"><div><span>NEXT ONLINE ACTION</span><strong id="oc2PrimaryTitle"></strong><p id="oc2PrimaryDetail"></p></div><button class="btn" id="oc2Primary"></button></div><div class="oc2-grid" id="oc2Grid"></div>';
+      account.insertAdjacentElement('beforebegin',home);
+      $('oc2Primary').onclick=()=>route($('oc2Primary').dataset.route);
+    }
+    return home;
+  }
+  function scrollToNode(node){
+    if(!node)return false;
+    node.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    const target=node.querySelector('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]');
+    setTimeout(()=>target?.focus?.({preventScroll:true}),180);
+    return true;
+  }
+  function route(id){
+    const s=snapshot(),dialog=$('workbenchDialog');
+    if(id==='active-room'){
+      if(dialog?.open)dialog.close();
+      const board=$('boardGrid')||document.querySelector('.board-grid')||$('board');
+      board?.focus?.({preventScroll:false});
+      document.querySelector('.board-side')?.scrollIntoView({block:'start',behavior:'auto'});
+      return true;
+    }
+    if(id==='ranked'){
+      if(!s.context.rankedReady)return scrollToNode($('roomAccountPanel'));
+      return scrollToNode($('roomRankedPanel'));
+    }
+    if(id==='competition'){
+      if(!s.context.identityReady)return scrollToNode($('roomAccountPanel'));
+      window.GomokuCompetition?.refresh?.();
+      return scrollToNode($('p8CompetitionPanel')||$('roomRankedPanel'));
+    }
+    if(id==='rooms')return scrollToNode($('roomDetails')?.parentElement||$('roomHistoryList')?.closest('section')||$('roomDirectory')?.closest('section'));
+    if(id==='identity'){
+      if(s.context.identityReady&&window.GomokuCompetition?.openPlayerProfile)return window.GomokuCompetition.openPlayerProfile(s.context.username),true;
+      return scrollToNode($('roomAccountPanel'));
+    }
+    if(id==='community'){
+      if(s.context.identityReady&&window.GomokuCompetition?.openCommunity)return window.GomokuCompetition.openCommunity(),true;
+      return scrollToNode($('roomAccountPanel'));
+    }
+    return false;
+  }
+  function render(){
+    const home=ensure();
+    if(!home){lastKey='';return null;}
+    const s=snapshot(),key=JSON.stringify([s.context.connected,s.context.username,s.context.roomKind,s.context.roomId,s.context.spectator]);
+    if(key===lastKey&&$('oc2Grid')?.children.length)return s;
+    lastKey=key;
+    $('oc2Identity').textContent=s.identity;
+    $('oc2Room').textContent=s.room;
+    $('oc2PrimaryTitle').textContent=s.primary.label;
+    $('oc2PrimaryDetail').textContent=s.primary.detail;
+    const primary=$('oc2Primary');primary.textContent=s.primary.label;primary.dataset.route=s.primary.id;
+    const grid=$('oc2Grid');grid.replaceChildren();
+    for(const item of s.destinations){
+      const b=document.createElement('button');b.type='button';b.className='oc2-destination';b.dataset.route=item.id;b.dataset.locked=String(!!item.locked);
+      b.innerHTML='<b></b><span></span>';b.querySelector('b').textContent=item.label;b.querySelector('span').textContent=item.detail;
+      b.onclick=()=>route(item.id);grid.append(b);
+    }
+    return s;
+  }
+  function schedule(delay=0){clearTimeout(timer);timer=setTimeout(render,delay);}
+  function boot(){
+    observer=new MutationObserver(muts=>{
+      if(muts.some(m=>m.target?.id==='oc2Home'||m.target?.closest?.('#oc2Home')))return;
+      schedule(20);
+    });
+    observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
+    document.addEventListener('click',e=>{
+      if(e.target?.closest?.('#onlineBtn,[data-tool="online"]'))schedule(40);
+    },true);
+    for(const ev of ['gomoku:room','gomoku:result'])window.addEventListener(ev,()=>schedule(20));
+    schedule();
+  }
+  window.GomokuOnline2=Object.freeze({version:Core.VERSION,refresh:render,route,snapshot});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
 </body></html>
