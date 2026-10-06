@@ -6,6 +6,7 @@
   if(window.GomokuOnline2)return;
   const Core=window.GomokuOnline2Core;if(!Core)return;
   const $=id=>document.getElementById(id);
+  const setText=(el,value)=>{const next=String(value??'');if(el&&el.textContent!==next)el.textContent=next;};
   let last=null,bodyObserver=null,hudObserver=null,queued=false;
   const bridge=()=>window.GomokuCompetitionBridge||null;
   function room(){try{return bridge()?.room?.()||null;}catch{return null;}}
@@ -24,9 +25,9 @@
   function enhanceOnlineDesk(){
     const ranked=$('roomRankedPanel'),account=$('roomAccountPanel');if(!ranked||!account)return false;
     const content=$('workbenchContent');if(!content)return false;
-    const title=$('workbenchTitle');if(title&&/online renju rooms/i.test(title.textContent||''))title.textContent='Play online';
+    const title=$('workbenchTitle');if(title&&/online renju rooms/i.test(title.textContent||''))setText(title,'Play online');
     const intro=content.querySelector(':scope > p.muted');
-    if(intro&&/ranked matchmaking/i.test(intro.textContent||''))intro.textContent='Choose ranked matchmaking, tournaments and challenges, a private room, or a live room. Every playable online game uses Renju rules.';
+    if(intro&&/ranked matchmaking/i.test(intro.textContent||''))setText(intro,'Choose ranked matchmaking, tournaments and challenges, a private room, or a live room. Every playable online game uses Renju rules.');
     let start=$('op2Start');
     if(!start){
       start=document.createElement('section');start.id='op2Start';
@@ -38,8 +39,8 @@
     const tool=document.querySelector('#v92ToolsDialog [data-tool="online"]');
     if(tool){
       const b=tool.querySelector('b'),span=tool.querySelector('span');
-      if(b)b.textContent='Play online';
-      if(span)span.textContent='Ranked, tournaments, challenges and private rooms.';
+      setText(b,'Play online');
+      setText(span,'Ranked, tournaments, challenges and private rooms.');
     }
     return true;
   }
@@ -73,11 +74,11 @@
     document.body.classList.toggle('op2-online',c.active);
     if(ctx){
       ctx.hidden=!c.active;
-      if(c.active){$('op2RoomKind').textContent=c.eyebrow;$('op2RoomDetail').textContent=c.detail;}
+      if(c.active){setText($('op2RoomKind'),c.eyebrow);setText($('op2RoomDetail'),c.detail);}
     }
     if(meta){
       meta.hidden=!post;
-      if(post)meta.textContent=post.eyebrow+' · '+post.detail;
+      if(post)setText(meta,post.eyebrow+' · '+post.detail);
     }
     last={context:c,post};
     return last;
