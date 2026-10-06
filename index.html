@@ -16386,4 +16386,221 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+<script id="online2-core">
+/* Gomoku 1.7 — Online Play 2.0 pure experience model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuOnline2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.7.0';
+  const clean=(v,fallback='')=>String(v??fallback).trim().slice(0,80);
+  const num=(v,min=0,max=999)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0)));
+  function kind(room={}){
+    const st=room?.state||{};
+    if(st.ranked===true)return 'ranked';
+    if(st.tournament||st.tournamentId||st.competition?.type==='tournament')return 'tournament';
+    if(st.challenge||st.challengeId||st.competition?.type==='challenge')return 'challenge';
+    return 'casual';
+  }
+  function session(room={}){
+    if(!room||!room.id)return {active:false,version:VERSION,kind:'offline',role:'none',phase:'offline'};
+    const st=room.state||{},game=st.game||{},players=Array.isArray(st.players)?st.players:[],role=room.role==='spectator'?'spectator':'player';
+    const finished=!!(game.result||game.terminal),ready=players.length>=2;
+    const phase=finished?'finished':ready?'playing':'waiting';
+    const type=kind(room),round=Math.max(1,num(st.round,1,999));
+    const labels={
+      ranked:'Ranked Renju',
+      tournament:'Tournament',
+      challenge:'Direct challenge',
+      casual:'Private room'
+    };
+    return {
+      active:true,version:VERSION,kind:type,role,phase,finished,ready,
+      roomId:clean(room.id,'ROOM'),round,players:players.length,
+      label:labels[type],
+      spectator:role==='spectator',
+      tournament:st.tournament||null,
+      challenge:st.challenge||null,
+      rankedResult:st.rankedResult||null
+    };
+  }
+  function context(room={}){
+    const s=session(room);if(!s.active)return {active:false,eyebrow:'OFFLINE',title:'Not in an online room',detail:''};
+    const prefix=s.spectator?'SPECTATING':'ONLINE';
+    const state=s.phase==='finished'?'Game complete':s.phase==='playing'?'Game in progress':'Waiting for opponent';
+    return {
+      ...s,
+      eyebrow:prefix+' · '+s.label.toUpperCase(),
+      title:state,
+      detail:'Room '+s.roomId+' · round '+s.round+(s.spectator?' · read-only':'')
+    };
+  }
+  function postGame(room={}){
+    const s=session(room);if(!s.active||!s.finished)return null;
+    let detail='Room '+s.roomId+' · round '+s.round;
+    if(s.kind==='ranked'){
+      const rr=s.rankedResult||{},before=Number(rr.before),after=Number(rr.after),delta=Number(rr.delta);
+      if(Number.isFinite(after)){
+        const change=Number.isFinite(delta)?' ('+(delta>0?'+':'')+delta+')':'';
+        detail='Rating '+(Number.isFinite(before)?before+' → ':'')+after+change;
+      }else detail='Ranked result · rating update pending';
+    }else if(s.kind==='tournament'){
+      const t=s.tournament||{};
+      detail='Tournament'+(t.round?' · round '+t.round:'')+(t.slot?' · match '+t.slot:'');
+    }else if(s.kind==='challenge'){
+      detail='Direct challenge complete';
+    }
+    return {
+      kind:s.kind,eyebrow:s.label.toUpperCase(),detail,
+      primary:s.spectator?'':s.kind==='ranked'?'Find next ranked match':s.kind==='casual'?'Rematch':'',
+      review:s.spectator?'':'Review game'
+    };
+  }
+  function launcher(){
+    return [
+      {id:'ranked',title:'Ranked',detail:'Rating-based matchmaking with verified accounts.'},
+      {id:'competition',title:'Tournaments & players',detail:'Cups, seasons, challenges, profiles and rivalries.'},
+      {id:'private',title:'Private room',detail:'Create or join a room by name.'},
+      {id:'live',title:'Live rooms',detail:'Join a waiting room or spectate a game.'}
+    ];
+  }
+  return Object.freeze({VERSION,kind,session,context,postGame,launcher});
+});
+</script>
+<style id="online2-style">
+/* Gomoku 1.7 — Online Play 2.0 */
+#op2Start{margin:4px 0 16px;padding:14px;border:1px solid var(--hair);border-radius:10px;background:var(--card)}
+#op2Start .op2-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:10px}
+#op2Start .op2-head h3{font-size:18px;margin:2px 0}
+#op2Start .op2-head p{font-size:9px;color:var(--ink2);line-height:1.5}
+#op2Choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#op2Choices button{min-height:64px;border:1px solid var(--hair);border-radius:8px;background:transparent;color:var(--ink);padding:10px 11px;text-align:left}
+#op2Choices button:hover,#op2Choices button:focus-visible{background:var(--card2);border-color:var(--hair2)}
+#op2Choices b,#op2Choices span{display:block}
+#op2Choices b{font-size:11px}
+#op2Choices span{margin-top:3px;color:var(--ink2);font-size:8px;line-height:1.45}
+#roomMatchHud #op2RoomContext{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;margin:7px 0;border:1px solid var(--hair);border-radius:7px;background:color-mix(in srgb,var(--card) 90%,transparent)}
+#op2RoomContext[hidden]{display:none!important}
+#op2RoomContext span{font-size:7px;font-weight:800;letter-spacing:.14em;color:var(--seal)}
+#op2RoomContext b{font-size:9px}
+#roomPostGame #op2PostMeta{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 8px;border:1px solid var(--hair);border-radius:999px;font-size:8px;color:var(--ink2)}
+#roomPostGame #op2PostMeta[hidden]{display:none!important}
+body.op2-online #v92ToolsDialog [data-tool="online"] span{max-width:34ch}
+@media(max-width:560px){
+  #op2Choices{grid-template-columns:1fr}
+  #op2Choices button{min-height:48px}
+  #op2Start .op2-head{display:block}
+  #roomMatchHud #op2RoomContext{align-items:flex-start;flex-direction:column;gap:2px}
+}
+@media(prefers-reduced-motion:reduce){
+  #op2Choices button{transition:none!important}
+}
+</style>
+<script id="online2-runtime">
+/* Gomoku 1.7 — Online Play 2.0 experience orchestration.
+ * Existing room, ranked, tournament and community systems remain authoritative.
+ */
+(()=>{
+  'use strict';
+  if(window.GomokuOnline2)return;
+  const Core=window.GomokuOnline2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let last=null,bodyObserver=null,hudObserver=null,queued=false;
+  const bridge=()=>window.GomokuCompetitionBridge||null;
+  function room(){try{return bridge()?.room?.()||null;}catch{return null;}}
+  function focusTarget(el){
+    if(!el)return;
+    el.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    const f=el.matches?.('input,button,select,textarea')?el:el.querySelector?.('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)');
+    setTimeout(()=>f?.focus?.({preventScroll:true}),0);
+  }
+  function route(id){
+    if(id==='ranked')return focusTarget($('roomRankedPanel'));
+    if(id==='competition')return focusTarget($('p8CompetitionPanel'));
+    if(id==='private')return focusTarget($('roomCode'));
+    if(id==='live')return focusTarget($('roomDirectory'));
+  }
+  function enhanceOnlineDesk(){
+    const ranked=$('roomRankedPanel'),account=$('roomAccountPanel');if(!ranked||!account)return false;
+    const content=$('workbenchContent');if(!content)return false;
+    const title=$('workbenchTitle');if(title&&/online renju rooms/i.test(title.textContent||''))title.textContent='Play online';
+    const intro=content.querySelector(':scope > p.muted');
+    if(intro&&/ranked matchmaking/i.test(intro.textContent||''))intro.textContent='Choose ranked matchmaking, tournaments and challenges, a private room, or a live room. Every playable online game uses Renju rules.';
+    let start=$('op2Start');
+    if(!start){
+      start=document.createElement('section');start.id='op2Start';
+      const choices=Core.launcher();
+      start.innerHTML='<div class="op2-head"><div><p class="eyebrow">ONLINE PLAY · 2.0</p><h3>How do you want to play?</h3></div><p>One doorway into the existing online systems.</p></div><div id="op2Choices">'+choices.map(x=>'<button type="button" data-op2-route="'+x.id+'"><b>'+x.title+'</b><span>'+x.detail+'</span></button>').join('')+'</div>';
+      account.insertAdjacentElement('beforebegin',start);
+      start.querySelectorAll('[data-op2-route]').forEach(b=>b.onclick=()=>route(b.dataset.op2Route));
+    }
+    const tool=document.querySelector('#v92ToolsDialog [data-tool="online"]');
+    if(tool){
+      const b=tool.querySelector('b'),span=tool.querySelector('span');
+      if(b)b.textContent='Play online';
+      if(span)span.textContent='Ranked, tournaments, challenges and private rooms.';
+    }
+    return true;
+  }
+  function ensureRoomContext(){
+    const hud=$('roomMatchHud');if(!hud)return null;
+    let el=$('op2RoomContext');
+    if(!el){
+      el=document.createElement('div');el.id='op2RoomContext';el.hidden=true;
+      el.innerHTML='<span id="op2RoomKind">ONLINE</span><b id="op2RoomDetail"></b>';
+      const anchor=$('roomInlineMeta')||hud.firstElementChild;
+      anchor?.insertAdjacentElement('afterend',el);
+    }
+    if(!hudObserver){
+      hudObserver=new MutationObserver(schedule);
+      hudObserver.observe(hud,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','data-state']});
+    }
+    return el;
+  }
+  function ensurePostMeta(){
+    const post=$('roomPostGame');if(!post)return null;
+    let el=$('op2PostMeta');
+    if(!el){
+      el=document.createElement('div');el.id='op2PostMeta';el.hidden=true;
+      const actions=post.querySelector('.room-postgame-actions');actions?.insertAdjacentElement('beforebegin',el);
+    }
+    return el;
+  }
+  function present(value=room()){
+    enhanceOnlineDesk();
+    const c=Core.context(value),post=Core.postGame(value),ctx=ensureRoomContext(),meta=ensurePostMeta();
+    document.body.classList.toggle('op2-online',c.active);
+    if(ctx){
+      ctx.hidden=!c.active;
+      if(c.active){$('op2RoomKind').textContent=c.eyebrow;$('op2RoomDetail').textContent=c.detail;}
+    }
+    if(meta){
+      meta.hidden=!post;
+      if(post)meta.textContent=post.eyebrow+' · '+post.detail;
+    }
+    last={context:c,post};
+    return last;
+  }
+  function schedule(){
+    if(queued)return;queued=true;
+    queueMicrotask(()=>{queued=false;present();});
+  }
+  function boot(){
+    enhanceOnlineDesk();present();
+    bodyObserver=new MutationObserver(()=>{enhanceOnlineDesk();schedule();});
+    bodyObserver.observe(document.body,{subtree:true,childList:true});
+    for(const ev of ['online','offline','gomoku:move','gomoku:result'])window.addEventListener(ev,schedule);
+    document.addEventListener('click',e=>{
+      if(e.target?.closest?.('#onlineBtn,#roomPostRematch,#roomPostReview,#roomHudLeave,#roomPostLeave'))setTimeout(schedule,60);
+    },true);
+  }
+  window.GomokuOnline2=Object.freeze({
+    version:Core.VERSION,refresh:()=>present(),present,
+    route,snapshot:()=>last?JSON.parse(JSON.stringify(last)):null
+  });
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
 </body></html>
