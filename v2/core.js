@@ -7,7 +7,7 @@
   'use strict';
   const VERSION='2.0.0';
   const text=v=>String(v??'').trim();
-  const n=(v,min=0,max=100000)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0));
+  const n=(v,min=0,max=100000)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0)));
   function safePrimary(journey={}){
     const p=journey?.next;
     if(p&&text(p.id)&&text(p.label))return {id:text(p.id),label:text(p.label),detail:text(p.detail),priority:n(p.priority,0,1000)};
