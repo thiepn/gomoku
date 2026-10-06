@@ -64,6 +64,12 @@ assert.ok(remote.dueMistakes>0);
 assert.deepEqual(remote.mistakeIds,['p1'],'skill-specific recommendation must not open unrelated due cards');
 assert.deepEqual(remote.recommendation.mistakeIds,['p1']);
 
+const transfer=Array.from({length:4},(_,i)=>({skillId:'full-game-transfer',correct:true,assisted:false,at:100000000-i*1000}));
+snap=core.analyze({course:fullCourse,academy:{},mistakes:[],transfer,now:100000000});
+const fullGame=snap.skills.find(x=>x.id==='full-game-transfer');
+assert.ok(fullGame.score>35,'clean transfer should add evidence beyond course exposure');
+assert.ok(fullGame.sources.includes('course2'));
+
 assert.deepEqual(core.signalSkills('Immediate win available'),['immediate-win','board-scan']);
 assert.ok(core.signalSkills({diagnosis:['Four–three pressure']}).includes('four-three'));
 assert.equal(core.practiceMotif('forced-defense'),2);

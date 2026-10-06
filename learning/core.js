@@ -171,6 +171,12 @@
         else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
+    for(const a of Array.isArray(input.transfer)?input.transfer:[]){
+      const id=String(a?.skillId||'');if(!BY_ID[id]||typeof a?.correct!=='boolean')continue;
+      const w=recency(a.at,now);
+      if(a.correct)add(rows[id],{positive:(a.assisted?.72:1.35)*w,events:(a.assisted?.72:1.15)*w,at:a.at,source:'course2'});
+      else add(rows[id],{negative:1.18*w,events:1.05*w,at:a.at,source:'course2'});
+    }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;

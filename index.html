@@ -14776,6 +14776,12 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
         else if(out==='revealed')add(rows[id],{negative:.35*w,events:.45*w,at:a.at,source:'decision',context});
       }
     }
+    for(const a of Array.isArray(input.transfer)?input.transfer:[]){
+      const id=String(a?.skillId||'');if(!BY_ID[id]||typeof a?.correct!=='boolean')continue;
+      const w=recency(a.at,now);
+      if(a.correct)add(rows[id],{positive:(a.assisted?.72:1.35)*w,events:(a.assisted?.72:1.15)*w,at:a.at,source:'course2'});
+      else add(rows[id],{negative:1.18*w,events:1.05*w,at:a.at,source:'course2'});
+    }
     const dueMistakeIds=[];
     for(const card of Array.isArray(input.mistakes)?input.mistakes:[]){
       const ids=signalSkills(card?.reference||{});if(!ids.length)continue;
@@ -15069,7 +15075,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
     if(reloadMistakes)mistakes=await readMistakes();
-    const next=Core.analyze({course:courses(),academy:academy(),mistakes,now:Date.now()});
+    const next=Core.analyze({course:courses(),academy:academy(),mistakes,transfer:window.GomokuCourse2?.evidence?.()||[],now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
     snapshot=next;
     if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
@@ -15089,6 +15095,7 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   function boot(){
     if(document.body)observer.observe(document.body,{childList:true,subtree:true});
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(20,true));
+    window.addEventListener('gomoku:course2-transfer',()=>schedule(20,false));
     window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20,false);});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
     setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
@@ -15101,6 +15108,316 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     openDashboard,
     prescription:()=>snapshot?.prescriptions?.map(x=>({...x}))||[],
     runNext:()=>runPrescription(snapshot?.prescriptions?.[0])
+  });
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+</script>
+<script id="course2-core">
+/* Gomoku 1.2 — Course 2.0 core.
+ * Curated animated walkthroughs and transfer checks shared by all 14 chapters.
+ * Pure data/state logic: no DOM, storage, engine, or network dependency.
+ */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuCourse2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.2.0';
+  const SIZE=9;
+  const COLS='ABCDEFGHI';
+  const c=(chapter,title,skill,summary,frames,transfer)=>Object.freeze({
+    chapter,title,skill,summary,
+    frames:Object.freeze(frames.map(x=>Object.freeze({...x}))),
+    transfer:Object.freeze({...transfer,answers:Object.freeze(transfer.answers)})
+  });
+  const F=(copy,black=[],white=[],marks=[],line=[])=>({copy,black,white,marks,line});
+  const CHAPTERS=Object.freeze([
+    c(1,'Seeing the Board','board-scan','Run the same four-direction scan before every move.',[
+      F('Start from the last move. Do not stare at one line—scan through the intersection.',['E5'],[],['E5']),
+      F('First read the horizontal and vertical axes.',['E5'],[],['A5','I5','E1','E9'],['A5','I5']),
+      F('Then read both diagonals. One intersection participates in four lines.',['E5'],[],['A1','I9','A9','I1'],['A1','I9']),
+      F('Only after the tactical scan should you compare quieter plans.',['E5'],[],['E5'])
+    ],{prompt:'Black to move. Finish the immediate five before considering anything else.',black:['C5','D5','E5','F5'],white:['C4','D4'],side:1,answers:['G5'],explain:'G5 completes five immediately. The board scan should find a direct win before any strategic move.'}),
+    c(2,'Fours','open-four','A four is powerful because it creates an immediate winning endpoint.',[
+      F('Three connected stones are pressure, not yet a forced win.',['D5','E5','F5']),
+      F('Add G5 and the line becomes an open four.',['D5','E5','F5','G5'],[],['C5','H5'],['C5','H5']),
+      F('Both endpoints win. One defender cannot cover both.',['D5','E5','F5','G5'],['C5'],['H5']),
+      F('The remaining endpoint finishes the five.',['D5','E5','F5','G5','H5'],['C5'],['D5','E5','F5','G5','H5'],['D5','H5'])
+    ],{prompt:'Black to move. Create an open four with two winning endpoints.',black:['D5','E5','F5'],white:['D4','F4'],side:1,answers:['G5'],explain:'G5 creates D5–G5 with C5 and H5 both available as winning endpoints.'}),
+    c(3,'Threes','legal-three','A useful three matters because it can grow into a forcing four.',[
+      F('Two stones are only potential.',['D5','E5']),
+      F('F5 creates a straight three with room on both sides.',['D5','E5','F5'],[],['C5','G5'],['C5','G5']),
+      F('A legal extension can turn the three into a four.',['D5','E5','F5','G5'],[],['C5','H5'],['D5','G5']),
+      F('When judging a three, always ask whether its continuation is actually legal.',['D5','E5','F5'],[],['C5','G5'])
+    ],{prompt:'Black to move. Build the clean straight three.',black:['D5','E5'],white:['D4','F4'],side:1,answers:['F5'],explain:'F5 makes three connected stones with space to extend on both sides.'}),
+    c(4,'Forks & Double Threats','double-threat','The strongest forks make one move matter in more than one direction.',[
+      F('White already has useful stones on two axes.',[],['D5','F5','E4','E6']),
+      F('E5 connects both axes at once.',[],['D5','E4','E5','E6','F5'],['E5']),
+      F('Now horizontal and vertical threats must both be considered.',[],['D5','E4','E5','E6','F5'],['C5','G5','E3','E7'],['D5','F5']),
+      F('This is the essence of a fork: one move creates multiple urgent continuations.',[],['D5','E4','E5','E6','F5'],['E5'])
+    ],{prompt:'White to move. Which intersection creates pressure on both axes at once?',black:['C3','G7'],white:['D5','F5','E4','E6'],side:2,answers:['E5'],explain:'E5 connects the horizontal and vertical stones simultaneously, creating a multi-directional fork.'}),
+    c(5,'Defense','forced-defense','Defense starts by locating what the opponent can do immediately.',[
+      F('White has a four with only one open winning endpoint because B5 is occupied.',['B5'],['C5','D5','E5','F5']),
+      F('G5 is not optional. It is the only point that stops the immediate win.',['B5'],['C5','D5','E5','F5'],['G5'],['C5','G5']),
+      F('Urgent defense comes before building your own quiet plan.',['B5','G5'],['C5','D5','E5','F5'],['G5']),
+      F('After surviving, scan again for counter-threats and initiative.',['B5','G5'],['C5','D5','E5','F5'])
+    ],{prompt:'Black to move. White wins next move unless you defend the only endpoint.',black:['B5','E3'],white:['C5','D5','E5','F5'],side:1,answers:['G5'],explain:'G5 is the only immediate defense because B5 already closes the other end.'}),
+    c(6,'Reading Sequences','forcing-order','Calculate forcing moves first because they sharply restrict the reply tree.',[
+      F('Begin with moves that demand a response, not with every legal move.',['D5','E5','F5'],['C5']),
+      F('G5 creates a forcing four.',['D5','E5','F5','G5'],['C5'],['H5'],['D5','G5']),
+      F('The defender has to answer H5 before pursuing another plan.',['D5','E5','F5','G5'],['C5','H5'],['H5']),
+      F('This forcing-first ordering is what makes deeper VCF/VCT calculation manageable.',['D5','E5','F5','G5'],['C5','H5'])
+    ],{prompt:'Black to move. Which candidate should be calculated first because it forces an immediate reply?',black:['D5','E5','F5'],white:['C5','D3'],side:1,answers:['G5'],explain:'G5 creates a four with only H5 remaining, so the defender is forced to answer before anything else.'}),
+    c(7,'Shape & Positional Play','shape-efficiency','Efficient stones stay connected to several future plans.',[
+      F('In sparse positions, flexibility is more valuable than density.',['D5'],['G6']),
+      F('E5 connects naturally to D5 and remains central.',['D5','E5'],['G6'],['E5']),
+      F('The stone can contribute horizontally, vertically, and diagonally.',['D5','E5'],['G6'],['E4','E6','D4','F6']),
+      F('Good shape means future utility without unnecessary commitment.',['D5','E5'],['G6'])
+    ],{prompt:'Black to move. Choose the most efficient central continuation.',black:['D5'],white:['G6'],side:1,answers:['E5'],explain:'E5 stays central, connects immediately, and preserves several future directions.'}),
+    c(8,'Initiative & Move Priority','initiative','Initiative belongs to the player whose threats force the other side to answer.',[
+      F('A quiet move gives the opponent freedom. A forcing move takes it away.',['C5','D5','E5'],['C4']),
+      F('F5 creates a four and demands attention.',['C5','D5','E5','F5'],['C4'],['B5','G5'],['C5','F5']),
+      F('When the opponent must answer your threat, you keep the initiative.',['C5','D5','E5','F5'],['B5','C4'],['G5']),
+      F('Priority is tactical first: win, survive, force—then improve shape.',['C5','D5','E5','F5'],['B5','C4'])
+    ],{prompt:'Black to move. Keep the initiative with the move that creates the most urgent threat.',black:['C5','D5','E5'],white:['C4','G6'],side:1,answers:['F5'],explain:'F5 creates an immediate four, forcing White to react instead of starting a plan elsewhere.'}),
+    c(9,'Attack Construction','attack-construction','Build attacks by making stones cooperate across more than one future line.',[
+      F('One line of pressure is easy to read and often easy to stop.',['D5','E5','E4'],['G6']),
+      F('F5 extends the horizontal structure while keeping E5 connected vertically.',['D5','E4','E5','F5'],['G6'],['F5']),
+      F('The goal is not just more stones—it is overlapping future threats.',['D5','E4','E5','F5'],['G6'],['C5','G5','E3','E6']),
+      F('Strong attacks accumulate useful connections before the forcing sequence begins.',['D5','E4','E5','F5'],['G6'])
+    ],{prompt:'Black to move. Extend the attack while preserving the central connection.',black:['D5','E5','E4'],white:['G6','C3'],side:1,answers:['F5'],explain:'F5 strengthens the horizontal line while E5 still links the attack to the vertical structure.'}),
+    c(10,'Whole-Board Planning','whole-board','The correct move can be far from the area you were planning to attack.',[
+      F('Black has activity near the center, but White has a remote four on row 3.',['E5','F5'],['C3','D3','E3','F3']),
+      F('B3 already closes one endpoint. The danger is G3.',['B3','E5','F5'],['C3','D3','E3','F3'],['G3'],['C3','G3']),
+      F('Whole-board scanning prevents attractive local plans from missing a remote loss.',['B3','E5','F5','G3'],['C3','D3','E3','F3'],['G3']),
+      F('Only after every urgent area is safe should you compare long-term plans.',['B3','E5','F5','G3'],['C3','D3','E3','F3'])
+    ],{prompt:'Black to move. Ignore the local attack for one move and find the remote defensive necessity.',black:['B3','E5','F5'],white:['C3','D3','E3','F3'],side:1,answers:['G3'],explain:'G3 is mandatory. Whole-board planning begins by finding urgent threats outside your current local plan.'}),
+    c(11,'Openings & Early Play','opening-flexibility','Opening moves should preserve options instead of committing too early.',[
+      F('Early stones have the most value when they can join several future lines.',['E5'],['F5']),
+      F('D5 develops centrally and connects without crowding the position.',['D5','E5'],['F5'],['D5']),
+      F('The position still has horizontal, diagonal, and vertical possibilities.',['D5','E5'],['F5'],['D4','E4','C5','D6']),
+      F('Opening principles are priorities, not rigid scripts. Urgent tactics always override them.',['D5','E5'],['F5'])
+    ],{prompt:'Black to move early. Choose the flexible central development.',black:['E5'],white:['F5'],side:1,answers:['D5'],explain:'D5 develops toward the center, connects with E5, and keeps several future plans available.'}),
+    c(12,'Advanced Renju','exact-five','For Black, exact-five and forbidden overline must be distinguished precisely.',[
+      F('Black wins by making exactly five in a row.',['C5','D5','E5','F5'],['C4']),
+      F('G5 completes an exact five from C5 through G5.',['C5','D5','E5','F5','G5'],['C4'],['C5','G5'],['C5','G5']),
+      F('Renju legality is not visual guesswork: count the resulting line exactly.',['C5','D5','E5','F5','G5'],['C4'],['G5']),
+      F('When studying advanced Renju, test every candidate for exact-five, overline, double-four, and double-three consequences.',['C5','D5','E5','F5'],['C4'])
+    ],{prompt:'Black to move in Renju. Complete the exact five.',black:['C5','D5','E5','F5'],white:['C4','H6'],side:1,answers:['G5'],explain:'G5 produces exactly five Black stones from C5 to G5, so it is a legal winning move.'}),
+    c(13,'Expert Calculation','best-defense','Expert calculation asks what the opponent will do best, not what you hope they do.',[
+      F('Start from a small candidate set after checking immediate tactics.',['D5','E5','F5'],['C5']),
+      F('G5 is forcing, so it deserves calculation before quiet candidates.',['D5','E5','F5','G5'],['C5'],['H5']),
+      F('Assume the strongest reply: White blocks H5.',['D5','E5','F5','G5'],['C5','H5'],['H5']),
+      F('Only call a continuation good after it survives the opponent’s best defense.',['D5','E5','F5','G5'],['C5','H5'])
+    ],{prompt:'Black to move. Which candidate deserves first calculation because it forces White’s strongest reply?',black:['D5','E5','F5'],white:['C5','E3'],side:1,answers:['G5'],explain:'G5 creates a forcing four. Expert calculation begins with forcing candidates and then tests the strongest defense.'}),
+    c(14,'Full-Game Mastery','full-game-transfer','Transfer means applying the same scan under realistic whole-game distraction.',[
+      F('A full game contains strategy, history, and tempting plans at once.',['B3','E5','F5'],['C3','D3','E3','F3']),
+      F('The pre-move routine stays simple: win? threat? forcing move? then plan.',['B3','E5','F5'],['C3','D3','E3','F3'],['G3']),
+      F('G3 is urgent even if the center looks more interesting.',['B3','E5','F5','G3'],['C3','D3','E3','F3'],['G3']),
+      F('Mastery is the ability to retrieve the right principle when the position no longer looks like the lesson.',['B3','E5','F5','G3'],['C3','D3','E3','F3'])
+    ],{prompt:'Black to move in a messy position. Apply the full pre-move scan and stop the immediate loss.',black:['B3','E5','F5'],white:['C3','D3','E3','F3'],side:1,answers:['G3'],explain:'G3 is the urgent defense. Full-game transfer means retrieving the correct priority despite unrelated activity elsewhere.'})
+  ]);
+  const BY_CHAPTER=Object.freeze(Object.fromEntries(CHAPTERS.map(x=>[x.chapter,x])));
+  function point(coord){
+    const m=/^([A-I])([1-9])$/.exec(String(coord||'').toUpperCase());
+    if(!m)return null;
+    return {x:COLS.indexOf(m[1]),y:Number(m[2])-1};
+  }
+  function validCoord(coord){return !!point(coord);}
+  function fresh(){return {version:1,events:[],chapters:{}};}
+  function normalize(raw){
+    const base=fresh();
+    if(!raw||raw.version!==1||!Array.isArray(raw.events))return base;
+    base.events=raw.events.filter(e=>e&&Number.isInteger(e.chapter)&&BY_CHAPTER[e.chapter]&&typeof e.correct==='boolean'&&Number.isFinite(Number(e.at))).slice(-400);
+    for(const e of base.events){
+      const row=base.chapters[e.chapter]||={attempts:0,solved:false,clean:false,assisted:false,lastAt:0};
+      row.attempts++;
+      if(e.correct){row.solved=true;if(!e.assisted&&row.attempts===1)row.clean=true;}
+      if(e.assisted)row.assisted=true;
+      row.lastAt=Math.max(row.lastAt,Number(e.at)||0);
+    }
+    return base;
+  }
+  function record(raw,chapter,{correct,assisted=false,at=Date.now()}={}){
+    if(!BY_CHAPTER[chapter]||typeof correct!=='boolean')throw Error('Invalid transfer attempt.');
+    const s=normalize(raw);
+    s.events.push({chapter,skillId:BY_CHAPTER[chapter].skill,correct,assisted:!!assisted,at:Number(at)||Date.now()});
+    return normalize(s);
+  }
+  function evidence(raw){
+    const s=normalize(raw);
+    return s.events.map(e=>({...e,skillId:BY_CHAPTER[e.chapter].skill}));
+  }
+  function summary(raw){
+    const s=normalize(raw),rows=CHAPTERS.map(ch=>({chapter:ch.chapter,...(s.chapters[ch.chapter]||{attempts:0,solved:false,clean:false,assisted:false,lastAt:0})}));
+    return {
+      total:CHAPTERS.length,
+      solved:rows.filter(x=>x.solved).length,
+      clean:rows.filter(x=>x.clean).length,
+      attempted:rows.filter(x=>x.attempts>0).length,
+      rows
+    };
+  }
+  return Object.freeze({VERSION,SIZE,COLS,CHAPTERS,chapter:n=>BY_CHAPTER[Number(n)]||null,point,validCoord,normalize,record,evidence,summary});
+});
+
+</script>
+<style id="course2-style">
+/* Gomoku 1.2 — Course 2.0 */
+.c2-home{margin:0 0 28px;padding:18px 20px;border:1px solid var(--hair);border-radius:8px;background:var(--card);box-shadow:0 8px 24px -22px #0009}
+.c2-home-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.c2-kicker{margin:0;color:var(--ui-accent,var(--seal));font-size:8px;font-weight:800;letter-spacing:.17em}.c2-home h3{margin:5px 0 6px;font-size:22px;line-height:1.15}.c2-home p{margin:0;color:var(--ink2);font-size:11px;line-height:1.6}.c2-home-metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair)}.c2-home-metrics b{font-size:14px}.c2-home-metrics span{display:block;color:var(--ink2);font-size:8px;margin-top:2px}.c2-home-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.c2-home-actions button{min-height:40px}
+.c2-inline-launch{min-height:34px!important;padding:6px 9px!important;margin-left:auto!important;font-size:9px!important;white-space:nowrap}.c2-transfer-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border:1px solid var(--hair);border-radius:999px;font-size:8px;color:var(--ink2)}.c2-transfer-badge.is-done{color:var(--ui-accent,var(--seal));border-color:color-mix(in srgb,var(--ui-accent,var(--seal)) 55%,var(--hair))}
+.c2-dialog{width:min(980px,calc(100vw - 26px));height:min(760px,calc(100dvh - 26px));padding:0!important;border:1px solid var(--hair)!important;border-radius:14px!important;background:var(--card)!important;color:var(--ink)!important;overflow:hidden!important}.c2-dialog::backdrop{background:rgba(13,17,14,.62);backdrop-filter:blur(4px)}.c2-shell{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}.c2-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--hair);background:var(--card)}.c2-head-copy{min-width:0;flex:1}.c2-head-copy h2{margin:3px 0 0;font-size:20px;line-height:1.15}.c2-head-copy p{margin:4px 0 0;color:var(--ink2);font-size:10px}.c2-close{width:42px;height:42px;border:1px solid var(--hair);background:transparent;color:var(--ink);border-radius:5px;font-size:22px}
+.c2-stage{display:grid;grid-template-columns:minmax(360px,1.05fr) minmax(300px,.95fr);min-height:0}.c2-board-pane{display:grid;place-items:center;padding:24px;background:color-mix(in srgb,var(--card2) 88%,var(--ui-chrome) 12%);min-width:0}.c2-board-wrap{width:min(560px,100%);aspect-ratio:1;position:relative}.c2-board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);padding:6.2%;background:linear-gradient(145deg,#e3c184,#cfa565);border:1px solid #735b38;border-radius:8px;box-shadow:inset 0 1px #fff8,0 18px 30px -24px #0009;overflow:hidden}.c2-cell{position:relative;display:grid;place-items:center;min-width:0;min-height:0}.c2-cell:before,.c2-cell:after{content:"";position:absolute;background:#594629;opacity:.72;pointer-events:none}.c2-cell:before{width:110%;height:1px}.c2-cell:after{height:110%;width:1px}.c2-stone{position:relative;z-index:3;width:72%;aspect-ratio:1;border-radius:50%;box-shadow:inset -4px -5px 10px #0004,0 2px 3px #0005}.c2-stone.black{background:radial-gradient(circle at 35% 28%,#575752,#171714 67%)}.c2-stone.white{background:radial-gradient(circle at 35% 28%,#fff,#ded9d0 72%);border:1px solid #9d927f}.c2-stone.is-new{animation:c2StoneIn .34s cubic-bezier(.2,.9,.25,1.18) both}.c2-mark{position:absolute;z-index:4;width:48%;aspect-ratio:1;border:2px solid var(--ui-accent,#b84c32);border-radius:50%;box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-accent,#b84c32) 18%,transparent);animation:c2Pulse 1.15s ease-in-out infinite}.c2-line{position:absolute;inset:6.2%;z-index:2;pointer-events:none;overflow:visible}.c2-line polyline{fill:none;stroke:var(--ui-accent,#b84c32);stroke-width:8;stroke-linecap:round;stroke-linejoin:round;opacity:.76;stroke-dasharray:1600;stroke-dashoffset:1600;animation:c2Trace .62s ease-out forwards}
+.c2-copy{overflow:auto;padding:28px 28px 24px}.c2-step{font-size:8px;font-weight:800;letter-spacing:.16em;color:var(--ui-accent,var(--seal))}.c2-copy h3{font-size:28px;line-height:1.08;margin:7px 0 10px}.c2-teach{font-size:14px;line-height:1.72;margin:0;color:var(--ink)}.c2-coach{margin:20px 0 0;padding:13px 14px;border-left:3px solid var(--ui-accent,var(--seal));background:var(--card2);border-radius:0 6px 6px 0}.c2-coach b{display:block;font-size:9px;letter-spacing:.12em;color:var(--ui-accent,var(--seal));margin-bottom:5px}.c2-coach p{margin:0;color:var(--ink2);font-size:11px;line-height:1.55}.c2-progress{display:flex;gap:5px;margin:18px 0}.c2-progress i{width:26px;height:3px;border-radius:3px;background:var(--hair)}.c2-progress i.on{background:var(--ui-accent,var(--seal))}.c2-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px}.c2-actions button{min-height:42px}.c2-actions .c2-primary{background:var(--ui-chrome,#173326);color:var(--ui-chrome-text,#fff);border-color:var(--ui-chrome,#173326)}
+.c2-transfer-copy{margin:0 0 14px}.c2-transfer-copy h3{font-size:24px;margin:4px 0 8px}.c2-transfer-copy p{font-size:12px;line-height:1.6;color:var(--ink2);margin:0}.c2-transfer-status{min-height:48px;margin:15px 0;padding:10px 12px;border:1px solid var(--hair);border-radius:6px;font-size:11px;line-height:1.55}.c2-transfer-status.good{border-color:color-mix(in srgb,#257a4c 60%,var(--hair));background:color-mix(in srgb,#257a4c 8%,var(--card))}.c2-transfer-status.bad{border-color:color-mix(in srgb,var(--ui-accent,#b84c32) 58%,var(--hair));animation:c2Wrong .22s ease}.c2-cell-button{appearance:none;border:0;background:transparent;padding:0;cursor:pointer}.c2-cell-button:focus-visible{outline:3px solid var(--ui-accent,#b84c32);outline-offset:-3px;z-index:6}.c2-cell-button[disabled]{cursor:default}.c2-clue{position:absolute;z-index:5;width:60%;aspect-ratio:1;border:2px dashed var(--ui-accent,#b84c32);border-radius:50%;animation:c2Pulse .9s ease-in-out infinite}
+.c2-library{overflow:auto;padding:24px}.c2-library-intro{max-width:720px;margin:0 0 18px}.c2-library-intro h3{font-size:27px;margin:5px 0 7px}.c2-library-intro p{color:var(--ink2);font-size:12px;line-height:1.6}.c2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.c2-card{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;text-align:left;padding:13px;border:1px solid var(--hair);border-radius:7px;background:var(--card);color:var(--ink);min-height:76px}.c2-card:hover,.c2-card:focus-visible{background:var(--card2);border-color:var(--hair2)}.c2-card-num{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:50%;font-size:9px}.c2-card b{display:block;font-size:12px}.c2-card small{display:block;margin-top:3px;color:var(--ink2);font-size:9px}.c2-card-state{font-size:9px;color:var(--ui-accent,var(--seal));font-weight:750}
+@keyframes c2StoneIn{0%{opacity:0;transform:scale(.55) translateY(-12%)}70%{opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}@keyframes c2Pulse{0%,100%{transform:scale(.88);opacity:.45}50%{transform:scale(1.08);opacity:1}}@keyframes c2Trace{to{stroke-dashoffset:0}}@keyframes c2Wrong{0%,100%{transform:translateX(0)}35%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+@media(max-width:760px){.c2-dialog{width:100vw;height:100dvh;max-width:none;max-height:none;border-radius:0!important}.c2-stage{grid-template-columns:1fr;grid-template-rows:minmax(300px,48dvh) minmax(0,1fr)}.c2-board-pane{padding:14px}.c2-copy{padding:18px}.c2-copy h3{font-size:23px}.c2-grid{grid-template-columns:1fr}.c2-home-head{display:block}.c2-home-head .c2-inline-launch{margin:8px 0 0!important}.c2-home-actions>*{flex:1}.c2-head-copy p{display:none}}
+@media(prefers-reduced-motion:reduce){.c2-stone.is-new,.c2-mark,.c2-line polyline,.c2-transfer-status.bad{animation:none!important}.c2-line polyline{stroke-dashoffset:0!important}}
+
+</style>
+<script id="course2-runtime">
+/* Gomoku 1.2 — Course 2.0 runtime. */
+(()=>{
+  'use strict';
+  if(window.GomokuCourse2)return;
+  const Core=window.GomokuCourse2Core;if(!Core)return;
+  const STORE='gomoku.course2.transfer.v1';
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let dialog=null,active=null,frameIndex=0,mode='walkthrough',autoTimer=0,lastFrameStones=new Set(),assisted=false,attemptWrong=false,observer=null;
+  function load(){try{return Core.normalize(JSON.parse(localStorage.getItem(STORE)||'null'));}catch{return Core.normalize(null);}}
+  function save(state){try{localStorage.setItem(STORE,JSON.stringify(Core.normalize(state)));return true;}catch{return false;}}
+  function stateSummary(){return Core.summary(load());}
+  function recommendedChapter(){
+    const p=window.GomokuLearningV11?.prescription?.()?.[0];
+    if(Number.isInteger(Number(p?.chapter)))return Math.max(1,Math.min(14,Number(p.chapter)));
+    const summary=stateSummary();return summary.rows.find(x=>!x.solved)?.chapter||1;
+  }
+  function ensureDialog(){
+    if(dialog?.isConnected)return dialog;
+    dialog=document.createElement('dialog');dialog.id='c2Dialog';dialog.className='c2-dialog';dialog.setAttribute('aria-labelledby','c2Title');
+    dialog.innerHTML='<div class="c2-shell"><header class="c2-head"><div class="c2-head-copy"><span class="c2-kicker">COURSE 2.0 · 1.2</span><h2 id="c2Title">Animated concept</h2><p id="c2Subtitle">See the pattern move before you solve it.</p></div><button class="c2-close" type="button" aria-label="Close Course 2.0">×</button></header><div id="c2Body"></div></div>';
+    document.body.append(dialog);dialog.querySelector('.c2-close').onclick=()=>close();
+    dialog.addEventListener('cancel',()=>stopAuto());dialog.addEventListener('close',()=>stopAuto());
+    return dialog;
+  }
+  function close(){stopAuto();dialog?.close();}
+  function stopAuto(){clearInterval(autoTimer);autoTimer=0;}
+  function coordSet(frame){
+    const out=new Set();for(const x of frame.black||[])out.add(x+':1');for(const x of frame.white||[])out.add(x+':2');return out;
+  }
+  function linePoints(line){
+    return (line||[]).map(coord=>{const p=Core.point(coord);if(!p)return '';return (50+p.x*100)+','+(850-p.y*100)}).filter(Boolean).join(' ');
+  }
+  function boardHTML(frame,{interactive=false,answers=[],clue=false}={}){
+    const black=new Set(frame.black||[]),white=new Set(frame.white||[]),marks=new Set(frame.marks||[]),answerSet=new Set(answers||[]);
+    const now=coordSet(frame),cells=[];
+    for(let row=9;row>=1;row--)for(let col=0;col<9;col++){
+      const coord=Core.COLS[col]+row,color=black.has(coord)?1:white.has(coord)?2:0,newStone=color&&!lastFrameStones.has(coord+':'+color);
+      const stone=color?'<i class="c2-stone '+(color===1?'black':'white')+(newStone?' is-new':'')+'" aria-hidden="true"></i>':'';
+      const mark=marks.has(coord)?'<span class="c2-mark" aria-hidden="true"></span>':'';
+      const hint=clue&&answerSet.has(coord)?'<span class="c2-clue" aria-hidden="true"></span>':'';
+      if(interactive){
+        const occupied=!!color;
+        cells.push('<button class="c2-cell c2-cell-button" type="button" data-c2-coord="'+coord+'" '+(occupied?'disabled':'')+' aria-label="'+(occupied?(coord+' occupied'):'Play '+coord)+'">'+stone+mark+hint+'</button>');
+      }else cells.push('<div class="c2-cell" aria-hidden="true">'+stone+mark+hint+'</div>');
+    }
+    lastFrameStones=now;
+    const points=linePoints(frame.line);
+    const line=points?'<svg class="c2-line" viewBox="0 0 900 900" preserveAspectRatio="none" aria-hidden="true"><polyline points="'+points+'"></polyline></svg>':'';
+    return '<div class="c2-board-wrap"><div class="c2-board" role="'+(interactive?'grid':'img')+'" aria-label="'+(interactive?'Transfer challenge board':'Animated Gomoku teaching board')+'">'+cells.join('')+'</div>'+line+'</div>';
+  }
+  function openChapter(chapter){
+    active=Core.chapter(chapter);if(!active)return;
+    mode='walkthrough';frameIndex=0;assisted=false;attemptWrong=false;lastFrameStones=new Set();stopAuto();ensureDialog();
+    renderWalkthrough();if(!dialog.open)dialog.showModal();
+  }
+  function renderWalkthrough(){
+    if(!active)return;const f=active.frames[frameIndex],body=$('c2Body');if(!body)return;
+    $('c2Title').textContent='Chapter '+active.chapter+' · '+active.title;
+    $('c2Subtitle').textContent=active.summary;
+    body.className='c2-stage';
+    body.innerHTML='<section class="c2-board-pane">'+boardHTML(f)+'</section><section class="c2-copy"><span class="c2-step">STEP '+(frameIndex+1)+' / '+active.frames.length+'</span><h3>'+esc(active.title)+'</h3><p class="c2-teach">'+esc(f.copy)+'</p><div class="c2-coach"><b>COACH</b><p>'+esc(frameIndex===active.frames.length-1?'Now transfer the idea to a position that does not look exactly like the demonstration.':'Watch what changes on the board, then say the principle in your own words before moving on.')+'</p></div><div class="c2-progress">'+active.frames.map((_,i)=>'<i class="'+(i<=frameIndex?'on':'')+'"></i>').join('')+'</div><div class="c2-actions"><button type="button" id="c2Prev" class="btn ghost">Previous</button><button type="button" id="c2Replay" class="btn ghost">'+(autoTimer?'Pause':'Play animation')+'</button>'+(frameIndex===active.frames.length-1?'<button type="button" id="c2Next" class="btn c2-primary">Try transfer check</button>':'<button type="button" id="c2Next" class="btn c2-primary">Next</button>')+'</div></section>';
+    $('c2Prev').disabled=frameIndex===0;$('c2Prev').onclick=()=>{stopAuto();frameIndex=Math.max(0,frameIndex-1);renderWalkthrough();};
+    $('c2Replay').onclick=()=>toggleAuto();$('c2Next').onclick=()=>{stopAuto();if(frameIndex<active.frames.length-1){frameIndex++;renderWalkthrough();}else renderTransfer();};
+  }
+  function toggleAuto(){
+    if(autoTimer){stopAuto();renderWalkthrough();return;}
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){frameIndex=(frameIndex+1)%active.frames.length;renderWalkthrough();return;}
+    if(frameIndex>=active.frames.length-1)frameIndex=0;
+    renderWalkthrough();autoTimer=setInterval(()=>{if(!active||mode!=='walkthrough'){stopAuto();return;}if(frameIndex>=active.frames.length-1){stopAuto();renderWalkthrough();return;}frameIndex++;renderWalkthrough();},1250);
+  }
+  function renderTransfer({status='',kind='',clue=false}={}){
+    if(!active)return;mode='transfer';stopAuto();lastFrameStones=new Set();
+    const t=active.transfer,body=$('c2Body'),frame={black:t.black,white:t.white,marks:[],line:[]};
+    $('c2Title').textContent='Transfer check · Chapter '+active.chapter;
+    $('c2Subtitle').textContent='New position, same principle. Nothing is locked if you miss it.';
+    body.className='c2-stage';
+    body.innerHTML='<section class="c2-board-pane">'+boardHTML(frame,{interactive:true,answers:t.answers,clue})+'</section><section class="c2-copy"><div class="c2-transfer-copy"><span class="c2-step">TRANSFER · '+esc(active.title.toUpperCase())+'</span><h3>Can you retrieve it?</h3><p>'+esc(t.prompt)+'</p></div><div id="c2TransferStatus" class="c2-transfer-status '+esc(kind)+'">'+(status?esc(status):'Choose a point. Use the clue only if you need it; assisted solves still count, but carry less mastery evidence.')+'</div><div class="c2-actions"><button type="button" class="btn ghost" id="c2BackWalk">Watch again</button><button type="button" class="btn ghost" id="c2Clue">'+(clue?'Clue shown':'Show clue')+'</button><button type="button" class="btn c2-primary" id="c2Another">Another chapter</button></div></section>';
+    body.querySelectorAll('[data-c2-coord]').forEach(b=>b.onclick=()=>answerTransfer(b.dataset.c2Coord));
+    $('c2BackWalk').onclick=()=>{mode='walkthrough';frameIndex=0;lastFrameStones=new Set();renderWalkthrough();};
+    $('c2Clue').onclick=()=>{assisted=true;renderTransfer({status:'The answer area is highlighted. Explain why that point matters before you tap it.',clue:true});};
+    $('c2Another').onclick=()=>openLibrary();
+  }
+  function answerTransfer(coord){
+    if(!active||mode!=='transfer')return;
+    const t=active.transfer,correct=t.answers.includes(coord),at=Date.now();
+    let s=load();s=Core.record(s,active.chapter,{correct,assisted,at});save(s);
+    if(!correct){
+      attemptWrong=true;renderTransfer({status:'Not quite. Re-run the chapter principle and scan the urgent lines before choosing again.',kind:'bad'});return;
+    }
+    const clean=!assisted&&!attemptWrong;
+    renderTransfer({status:(clean?'Clean transfer. ':'Solved. ')+t.explain,kind:'good'});
+    try{window.dispatchEvent(new CustomEvent('gomoku:course2-transfer',{detail:{chapter:active.chapter,skillId:active.skill,clean,at}}));}catch{}
+    renderHome();decorateCourseSurfaces();
+  }
+  function openTransfer(chapter){active=Core.chapter(chapter);if(!active)return;mode='transfer';assisted=false;attemptWrong=false;ensureDialog();renderTransfer();if(!dialog.open)dialog.showModal();}
+  function openLibrary(){
+    active=null;mode='library';stopAuto();ensureDialog();const s=stateSummary();$('c2Title').textContent='Course 2.0 walkthroughs';$('c2Subtitle').textContent='All chapters remain open. Use the path when you want guidance, or jump directly to any concept.';
+    const body=$('c2Body');body.className='c2-library';body.innerHTML='<div class="c2-library-intro"><span class="c2-kicker">ANIMATED COURSE</span><h3>See → retrieve → transfer.</h3><p>Each chapter adds a short animated explanation and one transfer check. These checks add independent evidence to Learning Intelligence; they do not replace the existing 655 course tasks.</p></div><div class="c2-grid">'+Core.CHAPTERS.map(ch=>{const row=s.rows.find(x=>x.chapter===ch.chapter);return '<button class="c2-card" type="button" data-c2-open="'+ch.chapter+'"><span class="c2-card-num">'+ch.chapter+'</span><span><b>'+esc(ch.title)+'</b><small>'+esc(ch.summary)+'</small></span><span class="c2-card-state">'+(row?.clean?'Clean':row?.solved?'Solved':row?.attempts?'Retry':'Watch')+'</span></button>';}).join('')+'</div>';
+    body.querySelectorAll('[data-c2-open]').forEach(b=>b.onclick=()=>openChapter(Number(b.dataset.c2Open)));if(!dialog.open)dialog.showModal();
+  }
+  function homeHost(){return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');}
+  function renderHome(){
+    const host=homeHost();if(!host)return;let section=$('c2Home');
+    if(!section){section=document.createElement('section');section.id='c2Home';section.className='c2-home';const anchor=$('v11LearningIntelligence');if(anchor)anchor.insertAdjacentElement('afterend',section);else host.prepend(section);}
+    const s=stateSummary(),chapter=recommendedChapter(),ch=Core.chapter(chapter),row=s.rows.find(x=>x.chapter===chapter);
+    section.innerHTML='<div class="c2-home-head"><div><span class="c2-kicker">COURSE 2.0 · V1.2</span><h3>Learn it by watching it move.</h3><p>Animated board explanations and transfer checks now sit on top of the full 14-chapter course.</p></div><button class="btn ghost c2-inline-launch" id="c2Browse">All walkthroughs →</button></div><div class="c2-home-metrics"><div><b>'+s.solved+' / '+s.total+'</b><span>transfer checks solved</span></div><div><b>'+s.clean+'</b><span>clean first-try transfers</span></div><div><b>Chapter '+chapter+'</b><span>recommended now</span></div></div><div class="c2-home-actions"><button class="btn" id="c2Watch">Watch · '+esc(ch.title)+'</button><button class="btn ghost" id="c2Check">'+(row?.solved?'Retry transfer':'Try transfer')+'</button></div>';
+    $('c2Browse').onclick=openLibrary;$('c2Watch').onclick=()=>openChapter(chapter);$('c2Check').onclick=()=>openTransfer(chapter);
+  }
+  function chapterFromDialog(d){const m=/^ch(\d+)CourseDialog$/.exec(d?.id||'');return m?Number(m[1]):0;}
+  function decorateDialog(d){
+    const chapter=chapterFromDialog(d);if(!chapter||d.querySelector('[data-c2-dialog-launch]'))return;
+    const head=d.querySelector('header,[class*="-head"]');if(!head)return;const btn=document.createElement('button');btn.type='button';btn.className='btn ghost c2-inline-launch';btn.dataset.c2DialogLaunch=String(chapter);btn.textContent='Animated concept';btn.onclick=e=>{e.preventDefault();e.stopPropagation();openChapter(chapter);};const close=head.querySelector('button[aria-label*="Close"],button[id*="Close"],.ch1-close,.ch2-close');if(close)head.insertBefore(btn,close);else head.append(btn);
+  }
+  function decorateCard(chapter){
+    const card=$('ch'+chapter+'CourseCard');if(!card||card.querySelector('[data-c2-card-launch]'))return;
+    const actions=card.querySelector('[class*="card-actions"],[class*="actions"]');if(!actions)return;const btn=document.createElement('button');btn.type='button';btn.className='btn ghost c2-inline-launch';btn.dataset.c2CardLaunch=String(chapter);btn.textContent='Watch concept';btn.onclick=e=>{e.preventDefault();e.stopPropagation();openChapter(chapter);};actions.append(btn);
+    const row=stateSummary().rows.find(x=>x.chapter===chapter),badge=document.createElement('span');badge.className='c2-transfer-badge'+(row?.solved?' is-done':'');badge.textContent=row?.clean?'Transfer ✓ clean':row?.solved?'Transfer ✓':row?.attempts?'Transfer retry':'Transfer check';actions.append(badge);
+  }
+  function decorateCourseSurfaces(){
+    for(let n=1;n<=14;n++)decorateCard(n);
+    document.querySelectorAll('dialog[id$="CourseDialog"]').forEach(decorateDialog);
+  }
+  function boot(){
+    renderHome();decorateCourseSurfaces();
+    observer=new MutationObserver(()=>{clearTimeout(boot._t);boot._t=setTimeout(()=>{renderHome();decorateCourseSurfaces();},80);});
+    if(document.body)observer.observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('gomoku:course-progress',()=>setTimeout(()=>{renderHome();decorateCourseSurfaces();},40));
+    window.addEventListener('storage',e=>{if(e.key===STORE){renderHome();decorateCourseSurfaces();}});
+  }
+  window.GomokuCourse2=Object.freeze({
+    version:Core.VERSION,
+    open:openChapter,
+    transfer:openTransfer,
+    library:openLibrary,
+    summary:()=>JSON.parse(JSON.stringify(stateSummary())),
+    evidence:()=>Core.evidence(load()),
+    state:()=>JSON.parse(JSON.stringify(load()))
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

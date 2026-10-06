@@ -1,0 +1,56 @@
+name: v1.2 Course 2.0
+
+on:
+  pull_request:
+    paths:
+      - 'course2/**'
+      - 'learning/core.js'
+      - 'learning/runtime.js'
+      - 'index.html'
+      - 'sw.js'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-v1.2-course2.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'course2/**'
+      - 'learning/core.js'
+      - 'learning/runtime.js'
+      - 'index.html'
+      - 'sw.js'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-v1.2-course2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  course-2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify Learning Intelligence dependency
+        run: node learning/test-core.mjs
+      - name: Verify Course 2.0 core
+        run: node course2/test-core.mjs
+      - name: Rebuild portable Course 2.0 artifact
+        run: python course2/build.py
+      - name: Require committed generated artifact
+        run: git diff --exit-code -- index.html sw.js
+      - name: Verify Course 2.0 integration
+        run: python course2/test-integration.py
+      - name: Preserve approved product modules
+        run: |
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
+      - name: Preserve review and analysis behavior
+        run: |
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-proof-coverage.cjs

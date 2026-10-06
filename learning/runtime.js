@@ -175,7 +175,7 @@
   async function refresh(reloadMistakes=false){
     clearTimeout(refreshTimer);
     if(reloadMistakes)mistakes=await readMistakes();
-    const next=Core.analyze({course:courses(),academy:academy(),mistakes,now:Date.now()});
+    const next=Core.analyze({course:courses(),academy:academy(),mistakes,transfer:window.GomokuCourse2?.evidence?.()||[],now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
     snapshot=next;
     if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
@@ -195,6 +195,7 @@
   function boot(){
     if(document.body)observer.observe(document.body,{childList:true,subtree:true});
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(20,true));
+    window.addEventListener('gomoku:course2-transfer',()=>schedule(20,false));
     window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY)schedule(20,false);});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
     setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
