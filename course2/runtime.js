@@ -60,6 +60,10 @@
     let section=$('c20Journey');
     if(!section){
       section=document.createElement('section');section.id='c20Journey';section.className='c20-journey';
+    }
+    // The modern Improve host can be created after Course 2 boots on slower/mobile
+    // clients. Never strand the journey in the hidden legacy training panel.
+    if(!host.contains(section)){
       const curriculum=host.querySelector('.ui-curriculum');
       if(curriculum)curriculum.insertAdjacentElement('beforebegin',section);else host.append(section);
     }
