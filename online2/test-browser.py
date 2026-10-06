@@ -12,7 +12,7 @@ with sync_playwright() as p:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge')
-        page.locator('#onlineBtn').click()
+        page.locator('#v92OnlineMode').click()
         page.locator('#oc2Home').wait_for(state='visible')
         assert page.locator('#oc2Grid .oc2-destination').count()==5
         assert page.locator('#oc2Primary').is_visible()
