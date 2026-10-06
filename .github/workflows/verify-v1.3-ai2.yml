@@ -32,6 +32,9 @@ jobs:
         run: node ai2/benchmark.cjs
       - name: Preserve learning/course/review analysis contracts
         run: |
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
           python learning/test-integration.py
           python course2/test-integration.py
           node review/test-core.cjs
