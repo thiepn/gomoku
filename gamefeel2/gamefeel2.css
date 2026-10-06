@@ -1,0 +1,34 @@
+/* Gomoku 1.4 — Game Feel 2.0.
+ * Uses only existing palette variables and preserves the established visual system.
+ */
+#shell{isolation:isolate}
+.gf2-layer{position:absolute;inset:0;z-index:3;overflow:hidden;border-radius:inherit;pointer-events:none}
+.gf2-impact,.gf2-impact-core,.gf2-win-point,.gf2-fleck{position:absolute;display:block;pointer-events:none;transform:translate(-50%,-50%)}
+.gf2-impact{width:clamp(26px,7.5%,58px);aspect-ratio:1;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--seal) 58%,transparent);opacity:0;animation:gf2Impact 650ms cubic-bezier(.16,.74,.22,1) both}
+.gf2-impact.is-engine{border-color:color-mix(in srgb,var(--ink2) 48%,transparent);animation-duration:560ms}.gf2-impact-core{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--seal) 62%,transparent);animation:gf2Core 300ms ease-out both}
+#shell.gf2-board-impact{animation:gf2BoardImpact 170ms cubic-bezier(.22,.8,.3,1)}
+.board-point.gf2-press{background:radial-gradient(circle at center,color-mix(in srgb,var(--seal) 13%,transparent) 0 29%,transparent 32%)!important}
+.player-card{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}.player-card.gf2-active-player{transform:translateY(-1px);border-color:color-mix(in srgb,var(--seal) 36%,var(--hair));box-shadow:0 7px 18px -14px color-mix(in srgb,var(--seal) 55%,transparent)}
+.player-card.gf2-thinking-player{background:color-mix(in srgb,var(--card) 91%,var(--soft))}
+#moveBadge.gf2-count-pop{animation:gf2Count .2s ease-out}.game-actions .btn:active,#v92GameBar button:active,.v92-action-row button:active{transform:translateY(1px) scale(.985)}
+.gf2-outcome{position:absolute;left:50%;top:50%;min-width:min(72%,330px);max-width:84%;transform:translate(-50%,-50%);padding:13px 17px 14px;border:1px solid color-mix(in srgb,var(--hair2) 78%,transparent);border-radius:10px;background:color-mix(in srgb,var(--paper) 92%,transparent);box-shadow:0 16px 42px rgba(33,24,14,.22);backdrop-filter:blur(8px);text-align:center;color:var(--ink)}
+.gf2-outcome[hidden]{display:none!important}.gf2-outcome>span{display:block;font-size:8px;font-weight:800;letter-spacing:.16em;color:var(--seal);margin-bottom:4px}.gf2-outcome>strong{display:block;font:600 clamp(20px,4vw,29px)/1.08 Georgia,serif}.gf2-outcome>small{display:block;margin-top:6px;color:var(--ink2);font-size:9px}
+.gf2-outcome[data-kind="loss"]>span,.gf2-outcome[data-kind="draw"]>span{color:var(--ink2)}.gf2-outcome.gf2-outcome-in{animation:gf2Outcome .62s cubic-bezier(.16,.8,.22,1) both}
+.gf2-win-point{width:clamp(24px,6.7%,48px);aspect-ratio:1;border-radius:50%;border:2px solid color-mix(in srgb,var(--seal) 74%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--paper) 36%,transparent);animation:gf2WinPoint 1.25s ease-out var(--gf2-delay,0ms) both}
+.gf2-fleck{width:var(--size);height:var(--size);border-radius:2px;background:color-mix(in srgb,var(--seal) 72%,var(--paper));animation:gf2Fleck .9s cubic-bezier(.1,.65,.2,1) var(--delay) both}
+#shell.gf2-win{box-shadow:0 18px 38px -12px rgba(76,52,16,.42),0 4px 8px #46321825,0 0 0 3px color-mix(in srgb,var(--seal) 20%,transparent)}
+#shell.gf2-loss,#shell.gf2-draw{box-shadow:0 16px 32px -13px rgba(50,45,37,.26),0 4px 8px #4632181c}
+#shell.gf2-rewind{animation:gf2Rewind .22s ease-out}#shell.gf2-forward{animation:gf2Forward .22s ease-out}#shell.gf2-reset{animation:gf2Reset .34s ease-out}
+#resultDialog .result-card{overflow:hidden}#gf2ResultMeta{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:12px 0 4px}#gf2ResultMeta span{padding:5px 8px;border:1px solid var(--hair);border-radius:999px;background:color-mix(in srgb,var(--card) 88%,var(--soft));font-size:9px;color:var(--ink2);font-weight:650}
+#gf2ResultMeta[data-kind="win"] span:first-child{border-color:color-mix(in srgb,var(--seal) 34%,var(--hair));color:var(--seal)}
+#toast.gf2-toast-bump{animation:gf2Toast .26s ease-out}
+@keyframes gf2Impact{0%{opacity:.55;transform:translate(-50%,-50%) scale(.48)}40%{opacity:.34}100%{opacity:0;transform:translate(-50%,-50%) scale(calc(1.28 * var(--gf2-strength,1)))}}
+@keyframes gf2Core{0%{opacity:.55;transform:translate(-50%,-50%) scale(.5)}100%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}}
+@keyframes gf2BoardImpact{0%,100%{transform:none}50%{transform:scale(.9985)}}
+@keyframes gf2Count{0%{transform:translateY(0)}45%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+@keyframes gf2Outcome{0%{opacity:0;transform:translate(-50%,-46%) scale(.975)}20%,72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-52%) scale(.995)}}
+@keyframes gf2WinPoint{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}25%{opacity:.82}100%{opacity:0;transform:translate(-50%,-50%) scale(1.28)}}
+@keyframes gf2Fleck{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0)}18%{opacity:.86}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.9) rotate(var(--turn))}}
+@keyframes gf2Rewind{0%,100%{transform:none}45%{transform:translateX(-3px)}}@keyframes gf2Forward{0%,100%{transform:none}45%{transform:translateX(3px)}}@keyframes gf2Reset{0%{opacity:.72;transform:scale(.992)}100%{opacity:1;transform:none}}@keyframes gf2Toast{0%{transform:translateY(2px);opacity:.72}100%{transform:none;opacity:1}}
+@media(max-width:760px){.gf2-outcome{min-width:min(78%,300px);padding:11px 13px}.player-card.gf2-active-player{transform:none}}
+@media(prefers-reduced-motion:reduce){.gf2-impact,.gf2-impact-core,.gf2-win-point,.gf2-fleck{display:none!important}#shell,.player-card,#moveBadge,#toast,.gf2-outcome{animation:none!important;transition:none!important}.gf2-outcome{backdrop-filter:none}.game-actions .btn:active,#v92GameBar button:active,.v92-action-row button:active{transform:none}}
