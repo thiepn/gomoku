@@ -16386,4 +16386,168 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+<script id="competitionhub2-core">
+/* Gomoku 1.7 — Competition Hub 2.0 pure routing model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuCompetitionHub2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.7.0';
+  function accountState(account={}){
+    const connected=account?.connected===true,username=String(account?.username||'').trim();
+    return {connected,username,rankedReady:connected&&!!username};
+  }
+  function current(local=null,online=null){
+    if(online&&typeof online==='object'&&online.id){
+      const ranked=online.state?.ranked===true;
+      return {kind:'online',label:ranked?'Ranked room':'Online room',detail:String(online.id),action:'return-online'};
+    }
+    if(local&&typeof local==='object'&&local.config){
+      const score=local.score||{},total=Number(local.config.total)||1,game=Number(local.game)||1;
+      return {kind:'local',label:'Competitive match',detail:`Game ${game} / ${total} · ${Number(score.a)||0}–${Number(score.b)||0}`,action:'return-local'};
+    }
+    return {kind:'none',label:'No active competition',detail:'Choose how you want to compete.',action:'none'};
+  }
+  function cards(account={},local=null,online=null){
+    const a=accountState(account),now=current(local,online);
+    return [
+      {id:'local',title:'Local competitive',detail:'Clocks, balanced openings and match series.',enabled:now.kind!=='online',badge:now.kind==='local'?'Active':null},
+      {id:'ranked',title:'Ranked Renju',detail:a.rankedReady?'Rating-based matchmaking with verified identity.':a.connected?'Create a public username to enter ranked matchmaking.':'Connect THIEPN Account to enter ranked matchmaking.',enabled:now.kind!=='local',badge:a.rankedReady?'Ready':'Account'},
+      {id:'tournaments',title:'Seasons & tournaments',detail:'Live cups, brackets, check-in and spectating.',enabled:true,badge:null},
+      {id:'community',title:'Players & challenges',detail:'Verified profiles, rivalries and direct challenges.',enabled:true,badge:a.connected?'Connected':'Account optional'},
+      {id:'rooms',title:'Casual rooms',detail:'Create, join or spectate invite-style Renju rooms.',enabled:now.kind!=='local',badge:now.kind==='online'?'Active':null}
+    ];
+  }
+  function model(account={},local=null,online=null){
+    return {version:VERSION,account:accountState(account),current:current(local,online),cards:cards(account,local,online)};
+  }
+  return Object.freeze({VERSION,accountState,current,cards,model});
+});
+</script>
+<style id="competitionhub2-style">
+/* Gomoku 1.7 — Competition Hub 2.0 */
+#ch2Dialog{width:min(760px,calc(100vw - 24px));max-height:92dvh;padding:0;overflow:hidden}
+.ch2-shell{display:grid;grid-template-rows:auto minmax(0,1fr);max-height:92dvh}
+.ch2-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px 20px 14px;border-bottom:1px solid var(--hair);background:var(--card)}
+.ch2-head h2{margin:2px 0 4px;font:600 23px/1.15 Georgia,serif}.ch2-head p{margin:0;color:var(--ink2);font-size:9px;line-height:1.5}
+.ch2-body{overflow:auto;padding:14px 20px 20px}
+.ch2-current{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;margin-bottom:12px;border:1px solid var(--hair);border-radius:9px;background:var(--card)}
+.ch2-current span{display:block;font-size:7px;letter-spacing:.14em;color:var(--ink2);font-weight:800}.ch2-current b{display:block;margin-top:2px;font-size:11px}.ch2-current small{display:block;margin-top:3px;color:var(--ink2);font-size:8px}
+.ch2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ch2-card{position:relative;min-height:112px;padding:13px 14px;text-align:left;border:1px solid var(--hair);border-radius:9px;background:transparent;color:var(--ink)}
+.ch2-card:hover:not(:disabled),.ch2-card:focus-visible{background:var(--card2);border-color:var(--hair2)}
+.ch2-card b{display:block;font:600 15px/1.2 Georgia,serif}.ch2-card span{display:block;margin-top:6px;color:var(--ink2);font-size:8px;line-height:1.5;padding-right:46px}
+.ch2-card em{position:absolute;right:10px;top:10px;padding:3px 6px;border:1px solid var(--hair);border-radius:999px;font:700 6px/1 system-ui,sans-serif;letter-spacing:.04em;color:var(--ink2);font-style:normal}
+.ch2-card:disabled{opacity:.42;cursor:not-allowed}
+.ch2-card[data-id="rooms"]{grid-column:1/-1;min-height:86px}
+.ch2-note{margin:12px 1px 0;color:var(--ink2);font-size:7px;line-height:1.5}
+@media(max-width:560px){
+  #ch2Dialog{width:min(100vw - 12px,760px);max-height:95dvh}
+  .ch2-head{padding:15px 14px 11px}.ch2-body{padding:11px 14px 16px}
+  .ch2-grid{grid-template-columns:1fr}.ch2-card[data-id="rooms"]{grid-column:auto}.ch2-card{min-height:92px}
+  .ch2-current{grid-template-columns:1fr}.ch2-current .btn{width:100%;min-height:44px}
+  .ch2-card{min-height:88px}
+}
+@media(prefers-reduced-motion:reduce){#ch2Dialog,.ch2-card{animation:none!important;transition:none!important}}
+
+</style>
+<script id="competitionhub2-runtime">
+/* Gomoku 1.7 — Competition Hub 2.0 routing layer. */
+(()=>{
+  'use strict';
+  if(window.GomokuCompetitionHub2)return;
+  const Core=window.GomokuCompetitionHub2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let dialog=null,last=null;
+  function studio(){return window.GomokuStudio||null;}
+  function bridge(){return window.GomokuCompetitionBridge||null;}
+  function local(){try{return studio()?.competitivePlay?.()||null;}catch{return null;}}
+  function online(){try{return bridge()?.room?.()||null;}catch{return null;}}
+  function account(){try{return bridge()?.account?.()||{connected:false,username:null};}catch{return {connected:false,username:null};}}
+  function ensure(){
+    if(dialog)return dialog;
+    dialog=document.createElement('dialog');dialog.id='ch2Dialog';
+    dialog.innerHTML='<div class="ch2-shell"><header class="ch2-head"><div><p class="eyebrow">COMPETITION</p><h2>Choose where to compete</h2><p>Local matches, ranked play, tournaments and rooms use their existing rules and records.</p></div><button class="icon-btn" id="ch2Close" aria-label="Close competition hub">×</button></header><div class="ch2-body"><section class="ch2-current" id="ch2Current"></section><div class="ch2-grid" id="ch2Grid"></div><p class="ch2-note">Ranked, tournaments and verified challenges use the existing online account and server systems. Local competitive matches stay fully local.</p></div></div>';
+    document.body.append(dialog);$('ch2Close').onclick=()=>dialog.close();
+    dialog.addEventListener('cancel',()=>dialog.close());
+    return dialog;
+  }
+  function closeOtherDialogs(){
+    document.querySelectorAll('dialog[open]').forEach(d=>{if(d!==dialog)d.close();});
+  }
+  function openOnline(target='rooms'){
+    dialog?.close();
+    $('onlineBtn')?.click();
+    let tries=0;
+    const focus=()=>{
+      const id=target==='ranked'?'roomRankedPanel':target==='tournaments'?'p8CompetitionPanel':target==='rooms'?'roomCode':null;
+      const el=id&&$(id);
+      if(el){
+        if(el.tabIndex<0&&!['INPUT','BUTTON','SELECT','TEXTAREA'].includes(el.tagName))el.tabIndex=-1;
+        el.scrollIntoView?.({block:'start'});
+        el.focus?.({preventScroll:true});
+        return;
+      }
+      if(++tries<30)setTimeout(focus,80);
+    };
+    if(target==='community'){
+      let n=0;const go=()=>{if(window.GomokuCompetition?.openCommunity){window.GomokuCompetition.openCommunity();return;}if(++n<30)setTimeout(go,80);};go();return;
+    }
+    setTimeout(focus,40);
+  }
+  function openLocal(){
+    dialog?.close();
+    window.dispatchEvent(new Event('gomoku:v97-open'));
+  }
+  function returnCurrent(kind){
+    dialog?.close();
+    if(kind==='online')$('onlineBtn')?.click();
+  }
+  function action(id){
+    if(id==='local')return openLocal();
+    if(id==='ranked'||id==='tournaments'||id==='rooms'||id==='community')return openOnline(id);
+  }
+  function render(){
+    ensure();
+    const m=Core.model(account(),local(),online());last=m;
+    const current=$('ch2Current'),c=m.current;
+    current.innerHTML='<div><span>CURRENT</span><b>'+c.label+'</b><small>'+c.detail+'</small></div>';
+    if(c.kind!=='none'){
+      const b=document.createElement('button');b.className='btn';b.textContent=c.kind==='online'?'Open current room':'Return to match';b.onclick=()=>returnCurrent(c.kind);current.append(b);
+    }
+    const grid=$('ch2Grid');grid.replaceChildren();
+    for(const card of m.cards){
+      const b=document.createElement('button');b.type='button';b.className='ch2-card';b.dataset.id=card.id;b.disabled=!card.enabled;
+      b.innerHTML='<b>'+card.title+'</b><span>'+card.detail+'</span>'+(card.badge?'<em>'+card.badge+'</em>':'');
+      b.onclick=()=>action(card.id);grid.append(b);
+    }
+    return m;
+  }
+  function open(){
+    ensure();closeOtherDialogs();render();dialog.showModal();dialog.querySelector('.ch2-card:not(:disabled)')?.focus({preventScroll:true});return true;
+  }
+  function installEntryPoints(){
+    const legacy=$('competitionBtn');if(legacy){legacy.textContent='Competition';legacy.title='Open competition hub';}
+    const tool=document.querySelector('#v92ToolsDialog [data-tool="competition"]');
+    if(tool){const b=tool.querySelector('b'),s=tool.querySelector('span');if(b)b.textContent='Competition hub';if(s)s.textContent='Local matches, ranked, tournaments and rooms.';}
+    // Capture before older target-level handlers so Competition has one front door.
+    document.addEventListener('click',ev=>{
+      const target=ev.target?.closest?.('#competitionBtn,#v92ToolsDialog [data-tool="competition"]');
+      if(!target)return;
+      ev.preventDefault();ev.stopImmediatePropagation();
+      $('v92ToolsDialog')?.close();open();
+    },true);
+  }
+  function boot(){
+    if(!studio()||!bridge()){setTimeout(boot,80);return;}
+    ensure();installEntryPoints();render();
+    for(const ev of ['gomoku:v97-status','gomoku:move','gomoku:result'])window.addEventListener(ev,()=>{if(dialog?.open)render();});
+    new MutationObserver(()=>{if(dialog?.open)render();}).observe(document.body,{attributes:true,attributeFilter:['data-v92-route']});
+  }
+  window.GomokuCompetitionHub2=Object.freeze({version:Core.VERSION,open,refresh:render,snapshot:()=>last?JSON.parse(JSON.stringify(last)):null});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
 </body></html>
