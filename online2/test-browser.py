@@ -9,10 +9,10 @@ with sync_playwright() as p:
     for name,viewport,mobile in [('desktop',{'width':1360,'height':960},False),('mobile',{'width':390,'height':844},True)]:
         ctx=b.new_context(viewport=viewport,is_mobile=mobile,has_touch=mobile,reduced_motion='reduce')
         page=ctx.new_page();page.set_default_timeout(22000);errors=[]
+        page.add_init_script("localStorage.setItem('gomoku.v112.onboarding.seen','1')")
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge && !!document.querySelector("#v111MenuBtn")')
-        page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
         page.locator('#v111MenuBtn').click()
         page.wait_for_function('!!document.querySelector("#v12PrivateRoomMenu")')
         page.locator('#v12PrivateRoomMenu').click()
