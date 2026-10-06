@@ -1,0 +1,27 @@
+/* Gomoku 1.7 — Online Play 2.0 */
+#op2Start{margin:4px 0 16px;padding:14px;border:1px solid var(--hair);border-radius:10px;background:var(--card)}
+#op2Start .op2-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:10px}
+#op2Start .op2-head h3{font-size:18px;margin:2px 0}
+#op2Start .op2-head p{font-size:9px;color:var(--ink2);line-height:1.5}
+#op2Choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#op2Choices button{min-height:64px;border:1px solid var(--hair);border-radius:8px;background:transparent;color:var(--ink);padding:10px 11px;text-align:left}
+#op2Choices button:hover,#op2Choices button:focus-visible{background:var(--card2);border-color:var(--hair2)}
+#op2Choices b,#op2Choices span{display:block}
+#op2Choices b{font-size:11px}
+#op2Choices span{margin-top:3px;color:var(--ink2);font-size:8px;line-height:1.45}
+#roomMatchHud #op2RoomContext{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;margin:7px 0;border:1px solid var(--hair);border-radius:7px;background:color-mix(in srgb,var(--card) 90%,transparent)}
+#op2RoomContext[hidden]{display:none!important}
+#op2RoomContext span{font-size:7px;font-weight:800;letter-spacing:.14em;color:var(--seal)}
+#op2RoomContext b{font-size:9px}
+#roomPostGame #op2PostMeta{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 8px;border:1px solid var(--hair);border-radius:999px;font-size:8px;color:var(--ink2)}
+#roomPostGame #op2PostMeta[hidden]{display:none!important}
+body.op2-online #v92ToolsDialog [data-tool="online"] span{max-width:34ch}
+@media(max-width:560px){
+  #op2Choices{grid-template-columns:1fr}
+  #op2Choices button{min-height:48px}
+  #op2Start .op2-head{display:block}
+  #roomMatchHud #op2RoomContext{align-items:flex-start;flex-direction:column;gap:2px}
+}
+@media(prefers-reduced-motion:reduce){
+  #op2Choices button{transition:none!important}
+}
