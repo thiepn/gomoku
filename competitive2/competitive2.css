@@ -1,0 +1,17 @@
+/* Gomoku 1.6 — Competitive Play 2.0 */
+#cp2Series{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin-top:7px}
+#cp2Series[hidden]{display:none!important}
+#cp2Series progress{grid-column:1/-1;width:100%;height:4px;accent-color:var(--seal)}
+#cp2Series strong{font-size:9px;color:var(--ink)}
+#cp2Series span{font-size:8px;color:var(--ink2);text-align:right}
+#v97MatchStrip.cp2-ready{align-items:center}
+#resultDialog.cp2-series #pg2Summary{border-left:3px solid var(--seal)}
+#resultDialog.cp2-series #rematchBtn.cp2-primary{background:var(--ink)!important;border-color:var(--ink)!important;color:var(--paper)!important}
+#resultDialog.cp2-series #resultReviewBtn.cp2-secondary{background:transparent!important;border-color:var(--hair2)!important;color:var(--ink)!important}
+@media(max-width:620px){
+  #cp2Series{grid-template-columns:1fr}
+  #cp2Series span{text-align:left}
+}
+@media(prefers-reduced-motion:reduce){
+  #cp2Series progress,#resultDialog.cp2-series .btn{transition:none!important;animation:none!important}
+}
