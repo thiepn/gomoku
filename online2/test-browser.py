@@ -13,8 +13,9 @@ with sync_playwright() as p:
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge && !!document.querySelector("#v92Primary")')
         page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
-        page.locator('#v92Primary [data-v92-route="play"]').click()
-        page.locator('#v92OnlineMode').click()
+        page.locator('#v92More').click()
+        page.locator('#v93ToolSearch').fill('online')
+        page.locator('#v92ToolsDialog [data-tool="online"]').click()
         page.locator('#oc2Home').wait_for(state='visible')
         assert page.locator('#oc2Grid .oc2-destination').count()==5
         assert page.locator('#oc2Primary').is_visible()
