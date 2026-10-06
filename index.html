@@ -17025,4 +17025,294 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
 })();
 
 </script>
+<script id="gomoku-v2-core">
+/* Gomoku 2.0 — Unified Player Journey pure composition model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuV2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='2.0.0';
+  const text=v=>String(v??'').trim();
+  const n=(v,min=0,max=100000)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0));
+  function safePrimary(journey={}){
+    const p=journey?.next;
+    if(p&&text(p.id)&&text(p.label))return {id:text(p.id),label:text(p.label),detail:text(p.detail),priority:n(p.priority,0,1000)};
+    return {id:'new-game',label:'Play a game',detail:'Start a game and create material for the improvement loop.',priority:0};
+  }
+  function learning(raw={}){
+    const summary=raw?.summary||{},skills=Array.isArray(raw?.skills)?raw.skills:[],p=Array.isArray(raw?.prescriptions)?raw.prescriptions[0]:null;
+    return {
+      total:skills.length,
+      mastered:n(summary.mastered),strong:n(summary.strong),developing:n(summary.developing),
+      due:n(summary.dueReviews),
+      focus:text(raw?.focus?.title||raw?.focus?.skill?.title||p?.title||'Build learning evidence'),
+      next:p?{type:text(p.type),title:text(p.title)||'Next learning task',reason:text(p.reason)}:null
+    };
+  }
+  function course(raw={}){
+    const chapters=Array.isArray(raw?.chapters)?raw.chapters:[],next=raw?.next||null;
+    return {
+      total:chapters.length||14,mastered:n(raw?.mastered),completed:n(raw?.completed),
+      next:next?{id:n(next.id,1,99),title:text(next.title)||'Next chapter',state:text(next.state)||'learn',reason:text(next.reason),completion:n(next.completion,0,100),skillScore:n(next.skillScore,0,100)}:null
+    };
+  }
+  function archive(raw={}){
+    const c=raw?.counts||{},p=raw?.primary||null;
+    return {
+      total:n(c.total),studies:n(c.studies),needsReview:n(c.needsReview),flagged:n(c.flagged),
+      primary:p?{id:text(p.id),label:text(p.label),detail:text(p.detail),entryId:text(p.entryId)}:null
+    };
+  }
+  function opening(raw={}){
+    const skills=raw?.skills||{},p=raw?.primary||null;
+    return {
+      position:text(raw?.position)||'Opening study ready',
+      average:n(skills.average,0,100),evidenced:n(skills.evidenced),due:n(skills.due),
+      primary:p?{id:text(p.id),label:text(p.label),detail:text(p.detail)}:null
+    };
+  }
+  function competition(raw={}){
+    const phase=raw?.phase||{},next=raw?.next||{},progress=raw?.progress||null;
+    return {
+      active:phase.active===true,
+      state:text(phase.state)||'inactive',
+      action:text(next.action),
+      label:text(next.label),
+      detail:text(next.detail),
+      progress:progress?{label:text(progress.label),score:text(progress.score),value:n(progress.value),max:Math.max(1,n(progress.max,1))}:null
+    };
+  }
+  function online(raw={}){
+    return {
+      identity:text(raw?.identity)||'Local player',
+      room:text(raw?.room)||'No active online room',
+      primary:raw?.primary?{id:text(raw.primary.id),label:text(raw.primary.label),detail:text(raw.primary.detail)}:null
+    };
+  }
+  function model(raw={}){
+    const j=raw.journey||{},ctx=j.context||{},primary=safePrimary(j),learn=learning(raw.learning),curriculum=course(raw.course),
+      lib=archive(raw.library),open=opening(raw.opening),comp=competition(raw.competitive),net=online(raw.online);
+    const game=ctx.game||{};
+    const plan=Array.isArray(j?.plan?.tasks)?j.plan.tasks.slice(0,5).map(x=>({
+      id:text(x.id),label:text(x.label)||'Study task',detail:text(x.detail),minutes:n(x.minutes,0,180)
+    })):[];
+    const status={
+      game:n(game.moves)>0?(game.result?'Finished game':n(game.moves)+' moves · '+(text(game.mode)||'game')):'Fresh board',
+      learning:learn.total?learn.mastered+' mastered · '+learn.strong+' strong · '+learn.due+' due':'Learning evidence begins with lessons, practice and reviewed games',
+      course:curriculum.next?'Chapter '+curriculum.next.id+' · '+curriculum.next.title:'Course ready',
+      archive:lib.total?lib.total+' saved · '+lib.needsReview+' need review':'Library ready',
+      opening:open.evidenced?open.average+'% opening skill evidence':'Opening evidence not established yet'
+    };
+    return {
+      version:VERSION,primary,plan,learning:learn,course:curriculum,library:lib,opening:open,competitive:comp,online:net,status,
+      game:{moves:n(game.moves),result:!!game.result,inProgress:!!game.inProgress,mode:text(game.mode),title:text(game.title)||'Current game'}
+    };
+  }
+  return Object.freeze({VERSION,model});
+});
+
+</script>
+<style id="gomoku-v2-style">
+/* Gomoku 2.0 — Unified Player Journey */
+.v2-home{max-width:1120px;margin:0 auto;padding:34px 32px 48px;color:var(--ink)}
+body[data-v2-route="home"] main{display:none!important}
+.v2-mast{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:42px;align-items:center;padding:16px 0 30px;border-bottom:1px solid var(--hair)}
+.v2-kicker,.v2-section-head span,.v2-next-copy>span,.v2-development-next>span,.v2-around-rows>button>span{font-size:8px;font-weight:800;letter-spacing:.17em;color:var(--seal);text-transform:uppercase}
+.v2-mast h2{font:600 clamp(34px,5vw,58px)/.98 Georgia,serif;letter-spacing:-.035em;margin:8px 0 13px}
+.v2-mast p{max-width:560px;margin:0;color:var(--ink2);font-size:12px;line-height:1.65}
+.v2-board-mark{position:relative;width:220px;height:160px;justify-self:end;opacity:.92;background:repeating-linear-gradient(0deg,transparent 0 31px,var(--hair2) 31px 32px),repeating-linear-gradient(90deg,transparent 0 43px,var(--hair2) 43px 44px)}
+.v2-board-mark span,.v2-board-mark b,.v2-board-mark em{position:absolute;width:28px;height:28px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 2px 7px #0002}.v2-board-mark span{left:44px;top:128px;background:var(--ink)}.v2-board-mark b{left:132px;top:64px;background:var(--paper);border:1px solid var(--ink)}.v2-board-mark em{left:176px;top:32px;background:var(--seal)}
+.v2-next{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:18px;align-items:center;padding:22px 0;border-bottom:1px solid var(--hair)}
+.v2-next-index{font:500 31px Georgia,serif;color:var(--hair2)}
+.v2-next-copy h3{font:600 24px/1.1 Georgia,serif;margin:5px 0}.v2-next-copy p{margin:0;color:var(--ink2);font-size:10px;line-height:1.55}
+.v2-primary{min-height:46px;padding:10px 16px;border:1px solid var(--ink);border-radius:7px;background:var(--ink);color:var(--paper);font-weight:750;font-size:10px;cursor:pointer}
+.v2-layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr);gap:34px;padding:30px 0;border-bottom:1px solid var(--hair)}
+.v2-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:17px}.v2-section-head h3{font:600 22px Georgia,serif;margin:5px 0 0}.v2-section-head small{color:var(--ink2);font-size:8px}
+.v2-link{min-height:34px;border:0;background:transparent;color:var(--seal);font-size:9px;font-weight:750;padding:5px;cursor:pointer}
+.v2-plan-row{width:100%;display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:13px;align-items:center;padding:13px 0;border:0;border-top:1px solid var(--hair);background:transparent;color:var(--ink);text-align:left;cursor:pointer}.v2-plan-row:last-child{border-bottom:1px solid var(--hair)}.v2-plan-row:hover{background:color-mix(in srgb,var(--card2) 55%,transparent)}.v2-plan-row>strong{font:600 16px Georgia,serif;color:var(--seal)}.v2-plan-row b{font-size:11px}.v2-plan-row p{margin:3px 0 0;color:var(--ink2);font-size:8px;line-height:1.45}.v2-plan-row>span{font-size:8px;color:var(--ink2)}
+.v2-development{padding-left:28px;border-left:1px solid var(--hair)}
+.v2-skill-line{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:12px 0 17px}.v2-skill-line>strong{font:600 31px Georgia,serif}.v2-skill-line b{font-size:10px}.v2-skill-line p{margin:3px 0 0;color:var(--ink2);font-size:8px;line-height:1.45}
+.v2-development-next{padding:14px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}.v2-development-next>b{display:block;margin-top:6px;font:600 15px Georgia,serif}.v2-development-next p{margin:5px 0 4px;color:var(--ink2);font-size:8px;line-height:1.5}
+.v2-course-line{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:11px;align-items:center;padding:14px 0}.v2-course-line>span{font:600 19px Georgia,serif;color:var(--seal)}.v2-course-line b{font-size:10px}.v2-course-line p{margin:3px 0 0;color:var(--ink2);font-size:8px;line-height:1.45}
+.v2-around{padding:30px 0 0}.v2-around-rows{display:grid;grid-template-columns:1fr 1fr}.v2-around-rows>button{min-height:112px;padding:16px;text-align:left;border:0;border-top:1px solid var(--hair);background:transparent;color:var(--ink);cursor:pointer}.v2-around-rows>button:nth-child(odd){border-right:1px solid var(--hair)}.v2-around-rows>button:nth-last-child(-n+2){border-bottom:1px solid var(--hair)}.v2-around-rows>button:hover{background:var(--card2)}.v2-around-rows b{display:block;margin-top:8px;font:600 16px Georgia,serif}.v2-around-rows small{display:block;margin-top:6px;color:var(--ink2);font-size:8px;line-height:1.5}
+.v2-footnote{margin:15px 0 0;color:var(--ink2);font-size:7px;line-height:1.55}
+@media(max-width:760px){
+  #v92Primary .v92-nav-main{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  #v92Primary .v92-nav-btn,#v92Primary .v92-more-btn{font-size:9px;padding-inline:3px}
+  .v2-home{padding:22px 14px 32px}.v2-mast{grid-template-columns:1fr;gap:18px;padding-top:5px}.v2-board-mark{display:none}.v2-mast h2{font-size:36px}
+  .v2-next{grid-template-columns:38px minmax(0,1fr);gap:12px}.v2-primary{grid-column:1/-1;width:100%}
+  .v2-layout{grid-template-columns:1fr;gap:26px}.v2-development{padding-left:0;border-left:0;border-top:1px solid var(--hair);padding-top:24px}
+  .v2-around-rows{grid-template-columns:1fr}.v2-around-rows>button:nth-child(odd){border-right:0}.v2-around-rows>button:nth-last-child(-n+2){border-bottom:0}.v2-around-rows>button:last-child{border-bottom:1px solid var(--hair)}
+  .v2-primary,.v2-plan-row,.v2-link,.v2-around-rows>button{min-height:44px}
+}
+@media(max-width:390px){.v2-mast h2{font-size:33px}.v2-next-copy h3{font-size:21px}.v2-course-line{grid-template-columns:34px 1fr}.v2-course-line .v2-link{grid-column:1/-1;text-align:left}.v2-around-rows>button{min-height:100px}}
+@media(prefers-reduced-motion:reduce){.v2-home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+</style>
+<script id="gomoku-v2-runtime">
+/* Gomoku 2.0 — Unified Player Journey composition layer. */
+(()=>{
+  'use strict';
+  if(window.GomokuV2)return;
+  const Core=window.GomokuV2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let snapshot=null,timer=0,lastKey='',home=null,homeButton=null;
+  const studio=()=>window.GomokuStudio||null;
+  const clone=x=>x==null?x:JSON.parse(JSON.stringify(x));
+  function safe(fn,fallback=null){try{const v=fn?.();return v==null?fallback:v;}catch{return fallback;}}
+  function inputs(){
+    const api=studio();
+    return {
+      journey:safe(()=>api?.journey?.(),{}),
+      learning:safe(()=>window.GomokuLearningV11?.snapshot?.(),{}),
+      course:safe(()=>window.GomokuCourse2?.model?.(),{}),
+      library:safe(()=>window.GomokuLibrary2?.snapshot?.(),{}),
+      opening:safe(()=>window.GomokuOpening2?.snapshot?.(),{}),
+      competitive:safe(()=>window.GomokuCompetitive2?.snapshot?.(),{}),
+      online:safe(()=>window.GomokuOnline2?.snapshot?.(),{})
+    };
+  }
+  function navClick(route){
+    const b=document.querySelector('#v92Primary [data-v92-route="'+route+'"]');
+    if(!b)return false;b.click();return true;
+  }
+  function leaveHome(){
+    if(document.body.dataset.v2Route!=='home')return;
+    delete document.body.dataset.v2Route;
+    if(home)home.hidden=true;
+    homeButton?.setAttribute('aria-current','false');
+  }
+  function showHome(scroll=true){
+    ensure();
+    document.body.dataset.v2Route='home';
+    home.hidden=false;
+    for(const b of document.querySelectorAll('#v92Primary [data-v92-route]'))b.setAttribute('aria-current','false');
+    homeButton?.setAttribute('aria-current','page');
+    refresh();
+    if(scroll)window.scrollTo({top:0,behavior:'auto'});
+    homeButton?.focus?.({preventScroll:true});
+    return true;
+  }
+  function routeJourney(id){
+    const api=studio();
+    if(id==='continue-game'){leaveHome();return navClick('play');}
+    if(id==='new-game'){leaveHome();navClick('play');setTimeout(()=>$('newBtn')?.click(),0);return true;}
+    if(id==='resume-practice'){leaveHome();api?.resumePracticeSession?.();return true;}
+    if(id==='online'){leaveHome();$('onlineBtn')?.click();return true;}
+    if(id==='resume-review'){leaveHome();api?.resumeReview?.();return true;}
+    if(id==='analyze-game'){leaveHome();api?.reviewGame?.();return true;}
+    if(id==='review-critical'){leaveHome();api?.openReviewCoach?.();return true;}
+    if(id==='train-due'){leaveHome();api?.startPracticeSession?.('weakness');return true;}
+    if(id==='train-opening'){leaveHome();api?.openRepertoire?.();return true;}
+    if(id==='train-new'){leaveHome();api?.openAcademy?.();return true;}
+    leaveHome();return navClick('play');
+  }
+  function route(id){
+    const api=studio();
+    if(id==='home')return showHome();
+    if(id==='play'||id==='improve'||id==='library'){leaveHome();return navClick(id);}
+    if(id==='learning'){leaveHome();window.GomokuLearningV11?.runNext?.();return true;}
+    if(id==='skills'){leaveHome();window.GomokuLearningV11?.openDashboard?.();return true;}
+    if(id==='course'){
+      const chapter=snapshot?.course?.next?.id;leaveHome();
+      if(chapter)window.GomokuCourse2?.openChapter?.(chapter);else navClick('improve');return true;
+    }
+    if(id==='archive'){
+      const p=snapshot?.library?.primary;leaveHome();
+      if(p?.id&&window.GomokuLibrary2?.route)return window.GomokuLibrary2.route(p.id),true;
+      return navClick('library');
+    }
+    if(id==='opening'){leaveHome();api?.openOpening?.();return true;}
+    if(id==='online'){leaveHome();$('onlineBtn')?.click();return true;}
+    if(id==='competition'){
+      const c=snapshot?.competitive;leaveHome();
+      if(c?.action==='next-game')return api?.nextCompetitiveGame?.(),true;
+      if(c?.action==='resume-clock')return api?.resumeCompetitiveClock?.(),true;
+      if(c?.action==='play')return navClick('play');
+      api?.openCompetition?.();return true;
+    }
+    if(id==='stats'){leaveHome();api?.openStatistics?.();return true;}
+    if(id?.startsWith('journey:'))return routeJourney(id.slice(8));
+    return false;
+  }
+  function ensure(){
+    const nav=$('v92Primary'),main=document.querySelector('main');
+    if(!nav||!main)return null;
+    const navMain=nav.querySelector('.v92-nav-main');
+    if(navMain&&!$('v2HomeNav')){
+      homeButton=document.createElement('button');homeButton.id='v2HomeNav';homeButton.type='button';homeButton.className='v92-nav-btn v2-home-nav';homeButton.dataset.v2Route='home';homeButton.textContent='Home';homeButton.setAttribute('aria-current','false');
+      navMain.prepend(homeButton);homeButton.onclick=()=>showHome(true);
+      nav.querySelectorAll('[data-v92-route]').forEach(b=>b.addEventListener('click',leaveHome,true));
+    }else homeButton=$('v2HomeNav');
+    if(!home){
+      home=document.createElement('section');home.id='v2Home';home.className='v2-home';home.hidden=true;home.setAttribute('aria-labelledby','v2HomeTitle');
+      home.innerHTML='<div class="v2-mast"><div><p class="v2-kicker">GOMOKU 2.0 · PLAYER JOURNEY</p><h2 id="v2HomeTitle">Your next move,<br>across the whole game.</h2><p>Play creates evidence. Review finds the lesson. Practice and study make it reusable.</p></div><div class="v2-board-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><span></span><b></b><em></em></div></div><article class="v2-next"><div class="v2-next-index">01</div><div class="v2-next-copy"><span>CONTINUE</span><h3 id="v2PrimaryTitle">Loading…</h3><p id="v2PrimaryDetail"></p></div><button type="button" class="v2-primary" id="v2Primary">Continue</button></article><div class="v2-layout"><section class="v2-session"><div class="v2-section-head"><div><span>02 · FOCUSED SESSION</span><h3>Thirty useful minutes.</h3></div><small>Uses the existing Journey planner</small></div><div id="v2Plan"></div></section><section class="v2-development"><div class="v2-section-head"><div><span>03 · DEVELOPMENT</span><h3>What your evidence says.</h3></div><button type="button" class="v2-link" data-v2-route="skills">Skill map</button></div><div class="v2-skill-line"><strong id="v2Mastered">0</strong><div><b>skills mastered</b><p id="v2LearningStatus"></p></div></div><div class="v2-development-next"><span>NEXT LEARNING TASK</span><b id="v2LearningTitle"></b><p id="v2LearningDetail"></p><button type="button" class="v2-link" data-v2-route="learning">Do this next →</button></div><div class="v2-course-line"><span id="v2CourseIndex">01</span><div><b id="v2CourseTitle">Course</b><p id="v2CourseDetail"></p></div><button type="button" class="v2-link" data-v2-route="course">Open chapter</button></div></section></div><section class="v2-around"><div class="v2-section-head"><div><span>04 · AROUND THE BOARD</span><h3>The rest of your game.</h3></div><button type="button" class="v2-link" data-v2-route="stats">Statistics</button></div><div class="v2-around-rows"><button type="button" data-v2-route="archive"><span>ARCHIVE</span><b id="v2ArchiveTitle"></b><small id="v2ArchiveDetail"></small></button><button type="button" data-v2-route="opening"><span>OPENINGS</span><b id="v2OpeningTitle"></b><small id="v2OpeningDetail"></small></button><button type="button" id="v2CompetitionRow" data-v2-route="competition"><span>COMPETITION</span><b id="v2CompetitionTitle"></b><small id="v2CompetitionDetail"></small></button><button type="button" data-v2-route="online"><span>ONLINE</span><b id="v2OnlineTitle"></b><small id="v2OnlineDetail"></small></button></div></section><p class="v2-footnote">2.0 composes existing evidence only. No new rating, mastery score, cloud account or hidden recommendation model is introduced.</p>';
+      main.insertAdjacentElement('beforebegin',home);
+      home.addEventListener('click',e=>{const b=e.target.closest('[data-v2-route]');if(b)route(b.dataset.v2Route);});
+      $('v2Primary').onclick=()=>route($('v2Primary').dataset.v2Route);
+    }
+    return home;
+  }
+  function renderPlan(rows){
+    const host=$('v2Plan');if(!host)return;host.replaceChildren();
+    const tasks=Array.isArray(rows)&&rows.length?rows:[{id:'new-game',label:'Play',detail:'Start a game and review it afterward.',minutes:30}];
+    tasks.forEach((task,i)=>{
+      const b=document.createElement('button');b.type='button';b.className='v2-plan-row';b.dataset.v2Route='journey:'+task.id;
+      b.innerHTML='<strong></strong><div><b></b><p></p></div><span>Open →</span>';
+      b.querySelector('strong').textContent=String(task.minutes).padStart(2,'0')+'m';
+      b.querySelector('b').textContent=task.label;b.querySelector('p').textContent=task.detail||'';host.append(b);
+    });
+  }
+  function render(){
+    if(!ensure())return null;
+    snapshot=Core.model(inputs());
+    const key=JSON.stringify(snapshot);
+    if(key===lastKey)return snapshot;lastKey=key;
+    $('v2PrimaryTitle').textContent=snapshot.primary.label;
+    $('v2PrimaryDetail').textContent=snapshot.primary.detail;
+    $('v2Primary').textContent=snapshot.primary.label;$('v2Primary').dataset.v2Route='journey:'+snapshot.primary.id;
+    renderPlan(snapshot.plan);
+    $('v2Mastered').textContent=snapshot.learning.mastered+' / '+(snapshot.learning.total||35);
+    $('v2LearningStatus').textContent=snapshot.status.learning;
+    $('v2LearningTitle').textContent=snapshot.learning.next?.title||snapshot.learning.focus;
+    $('v2LearningDetail').textContent=snapshot.learning.next?.reason||'Complete lessons, clean practice and reviewed games to strengthen the model.';
+    const course=snapshot.course.next;
+    $('v2CourseIndex').textContent=course?String(course.id).padStart(2,'0'):'—';
+    $('v2CourseTitle').textContent=course?.title||'Course ready';
+    $('v2CourseDetail').textContent=course?(course.completion+'% chapter · '+course.skillScore+'% skill evidence · '+course.state):'Open Improve to begin the course.';
+    $('v2ArchiveTitle').textContent=snapshot.library.primary?.label||'Open Library';
+    $('v2ArchiveDetail').textContent=snapshot.status.archive+(snapshot.library.flagged?' · '+snapshot.library.flagged+' with key moments':'');
+    $('v2OpeningTitle').textContent=snapshot.opening.primary?.label||'Opening study';
+    $('v2OpeningDetail').textContent=snapshot.status.opening+' · '+snapshot.opening.position;
+    const comp=snapshot.competitive;
+    $('v2CompetitionTitle').textContent=comp.active?(comp.label||comp.progress?.label||'Continue match'):'Competitive play';
+    $('v2CompetitionDetail').textContent=comp.active?(comp.detail||comp.progress?.score||'Competitive match in progress'):'Series, clocks and opening procedures.';
+    $('v2OnlineTitle').textContent=snapshot.online.primary?.label||'Online competition';
+    $('v2OnlineDetail').textContent=snapshot.online.identity+' · '+snapshot.online.room;
+    return snapshot;
+  }
+  function refresh(){lastKey='';return render();}
+  function schedule(ms=40){clearTimeout(timer);timer=setTimeout(refresh,ms);}
+  function boot(){
+    let tries=0;
+    const mount=()=>{
+      if(!window.GomokuStudio||!$('v92Primary')||document.body.dataset.uiReady!=='true'){
+        if(++tries<400)setTimeout(mount,30);return;
+      }
+      ensure();refresh();
+      for(const ev of ['gomoku:move','gomoku:result','gomoku:v97-status','gomoku:room','gomoku-mistakes-changed','gomoku-course2-transfer-changed'])window.addEventListener(ev,()=>schedule(30));
+      window.addEventListener('storage',()=>schedule(80));
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(40);});
+      const watch=new MutationObserver(()=>{if(document.body.dataset.v2Route==='home')schedule(60);});
+      ['moveBadge','statusText','libraryCount'].forEach(id=>{const el=$(id);if(el)watch.observe(el,{childList:true,subtree:true,characterData:true});});
+    };
+    mount();
+  }
+  window.GomokuV2=Object.freeze({version:Core.VERSION,refresh,openHome:showHome,route,snapshot:()=>clone(snapshot)});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+</script>
 </body></html>

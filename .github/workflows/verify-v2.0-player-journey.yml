@@ -1,0 +1,72 @@
+name: v2.0 Unified Player Journey
+on:
+  pull_request:
+    paths: ['v2/**','index.html','sw.js','client-cache-version.txt','.github/workflows/verify-v2.0-player-journey.yml']
+  push:
+    branches: [main]
+    paths: ['v2/**','index.html','sw.js','client-cache-version.txt','.github/workflows/verify-v2.0-player-journey.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gomoku-2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Verify 2.0 composition model
+        run: node v2/test-core.cjs
+      - name: Rebuild portable artifact
+        run: python v2/build.py
+      - name: Require committed generated artifact
+        run: git diff --exit-code -- index.html sw.js
+      - name: Verify 2.0 integration
+        run: python v2/test-integration.py
+      - name: Preserve V1 release contracts
+        run: |
+          python library2/test-integration.py
+          python opening2/test-integration.py
+          python online2/test-integration.py
+          python competitive2/test-integration.py
+          python postgame2/test-integration.py
+          python gamefeel2/test-integration.py
+          python ai2/test-integration.py
+          python course2/test-integration.py
+          python learning/test-integration.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+      - name: Install Chromium
+        run: |
+          pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          npm install --no-save playwright@1.62.0 @axe-core/playwright@4.13.0
+          npx playwright install chromium
+      - name: Run 2.0 desktop and mobile acceptance
+        env:
+          GOMOKU_V2_URL: http://127.0.0.1:8775/
+        run: |
+          python -m http.server 8775 --bind 127.0.0.1 >/tmp/v2-http.log 2>&1 &
+          python v2/test-browser.py
+      - name: Run product-quality audit
+        env:
+          P25_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/v2-p25-http.log 2>&1 &
+          node audit/p25-product-quality.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gomoku-v2.0-unified-player-journey
+          path: |
+            v2-test-output/
+            p25-audit-output/
+          retention-days: 14
