@@ -12,6 +12,7 @@ with sync_playwright() as p:
         errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('document.body.dataset.uiReady==="true" && window.GomokuPostGame2 && window.GomokuReview')
+        page.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
         page.evaluate('GomokuPostGame2.present({winner:1,reason:"five",moves:9,winLines:[[112,113,114,115,116]]})')
         page.locator('#resultDialog').evaluate('(d)=>{if(!d.open)d.showModal()}')
         page.locator('#pg2Summary').wait_for(state='visible')
