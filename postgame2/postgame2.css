@@ -1,0 +1,18 @@
+/* Gomoku 1.5 — Post-Game Experience 2.0 */
+#pg2Summary{margin:13px 0 14px;padding:11px 12px;border:1px solid var(--hair);border-radius:8px;background:color-mix(in srgb,var(--card) 90%,var(--soft));text-align:left}
+#pg2Summary[hidden]{display:none!important}
+#pg2Summary .pg2-eyebrow{display:block;margin:0 0 4px;color:var(--seal);font-size:7px;font-weight:800;letter-spacing:.16em}
+#pg2Summary strong{display:block;color:var(--ink);font-size:11px;line-height:1.35}
+#pg2Summary p{margin:4px 0 0;color:var(--ink2);font-size:9px;line-height:1.5}
+#pg2Summary small{display:block;margin-top:7px;color:var(--ink2);font-size:8px}
+#resultDialog #resultAnalyzeBtn,#resultDialog #resultCoachBtn{display:none!important}
+#resultDialog .dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#resultDialog .dialog-actions .pg2-recommended{background:var(--ink)!important;border-color:var(--ink)!important;color:var(--paper)!important}
+#resultDialog .dialog-actions .btn{min-height:42px}
+@media(max-width:520px){
+  #resultDialog .dialog-actions{grid-template-columns:1fr}
+  #resultDialog .dialog-actions .btn{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){
+  #pg2Summary,#resultDialog .dialog-actions .btn{animation:none!important;transition:none!important}
+}
