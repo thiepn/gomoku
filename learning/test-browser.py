@@ -13,6 +13,7 @@ def check(name,ok=True):
     PASSED.append(name);print('PASS '+name,flush=True)
 
 def route(page,name):
+    close_dialogs(page)
     page.locator('#v92Primary button[data-v92-route="'+name+'"]').click()
     page.wait_for_timeout(120)
 
@@ -36,6 +37,7 @@ with sync_playwright() as p:
 
     ctx,pg=load(browser,{'width':1360,'height':960})
     route(pg,'improve')
+    pg.wait_for_function('document.querySelector("#v11LearningIntelligence")?.offsetParent!==null')
     check('Learning Intelligence mounts in Learn',pg.locator('#v11LearningIntelligence').is_visible())
     check('skill graph exposes exactly 35 skills',pg.evaluate('GomokuLearningV11.snapshot().skills.length')==35)
     check('fresh learner is not falsely mastered',pg.evaluate('GomokuLearningV11.snapshot().summary.mastered')==0)
