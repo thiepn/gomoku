@@ -36,6 +36,7 @@
     home.hidden=false;
     for(const b of document.querySelectorAll('#v92Primary [data-v92-route]'))b.setAttribute('aria-current','false');
     homeButton?.setAttribute('aria-current','page');
+    const routeStatus=$('uiRouteStatus');if(routeStatus)routeStatus.textContent='Home section';
     refresh();
     if(scroll)window.scrollTo({top:0,behavior:'auto'});
     homeButton?.focus?.({preventScroll:true});
@@ -151,6 +152,7 @@
       for(const ev of ['gomoku:move','gomoku:result','gomoku:v97-status','gomoku:room','gomoku-mistakes-changed','gomoku-course2-transfer-changed'])window.addEventListener(ev,()=>schedule(30));
       window.addEventListener('storage',()=>schedule(80));
       document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(40);});
+      setInterval(()=>{if(document.body.dataset.v2Route==='home')render();},2000);
       const watch=new MutationObserver(()=>{if(document.body.dataset.v2Route==='home')schedule(60);});
       ['moveBadge','statusText','libraryCount'].forEach(id=>{const el=$(id);if(el)watch.observe(el,{childList:true,subtree:true,characterData:true});});
     };
