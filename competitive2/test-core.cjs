@@ -1,0 +1,16 @@
+const C=require('./core.js');
+const ok=(v,m)=>{if(!v)throw new Error(m)};
+const base={config:{total:3,opening:'free',minutes:10,increment:5},score:{a:1,b:0,games:1},game:2,done:false,names:{p1:'You',p2:'Computer'},clock:{enabled:true,running:true,side:1,remaining:[0,500000,490000]}};
+ok(C.VERSION==='1.6.0','version');
+ok(C.phase(null,{}).state==='inactive','inactive');
+ok(C.phase(base,{}).state==='in-game','in game');
+ok(C.phase({...base,clock:{...base.clock,running:false}},{}).state==='clock-paused','clock paused');
+ok(C.phase(base,{terminal:true}).state==='between-games','between games');
+ok(C.next(base,{terminal:true}).action==='next-game','next game action');
+ok(C.next(base,{terminal:true}).label.includes('swap colors'),'free opening next label');
+const done={...base,score:{a:2,b:0,games:2},done:true,game:2};
+ok(C.phase(done,{terminal:true}).state==='match-complete','match complete');
+ok(C.next(done,{terminal:true}).action==='new-match','new match action');
+const progress=C.progress(base,{});
+ok(progress.max===3&&progress.value===1&&progress.label.includes('Game 2 of 3'),'progress');
+console.log('PASS Gomoku 1.6 Competitive Play 2.0 core contracts.');

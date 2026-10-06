@@ -15004,7 +15004,9 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     return {...p,type:'course',reason:'Revisit the linked concept before your next game'};
   }
   function homeHost(){
-    return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');
+    // V9.2+ owns the visible Improve surface. Prefer it whenever it exists;
+    // #uiLearning is a compatibility host and may remain mounted but hidden.
+    return $('v92ImproveHome')||$('uiLearning')||document.querySelector('#panel-train');
   }
   function mountHome(){
     const host=homeHost();if(!host)return false;
@@ -16199,6 +16201,188 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     refresh();
   }
   window.GomokuPostGame2=Object.freeze({version:Core.VERSION,present,refresh,snapshot:()=>last?JSON.parse(JSON.stringify(last)):null});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
+<script id="competitive2-core">
+/* Gomoku 1.6 — Competitive Play 2.0 pure orchestration model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuCompetitive2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.6.0';
+  const n=(v,min=0,max=999)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0)));
+  function normalize(status={},game={}){
+    if(!status||typeof status!=='object'||!status.config)return null;
+    const total=Math.max(1,n(status.config.total||1,1,9));
+    const a=n(status.score?.a,0,total),b=n(status.score?.b,0,total),games=n(status.score?.games,a+b,total);
+    const terminal=!!(game.terminal||game.result);
+    const done=!!status.done;
+    const current=Math.max(1,Math.min(total,n(status.game||games+1,1,total)));
+    const clock={
+      enabled:!!status.clock?.enabled,
+      running:!!status.clock?.running,
+      side:n(status.clock?.side,0,2),
+      remaining:Array.isArray(status.clock?.remaining)?status.clock.remaining.slice(0,3):[]
+    };
+    return {
+      version:VERSION,total,a,b,games,current,terminal,done,clock,
+      names:{
+        p1:String(status.names?.p1||'Player 1').slice(0,60),
+        p2:String(status.names?.p2||'Player 2').slice(0,60)
+      },
+      opening:String(status.config.opening||'free'),
+      minutes:n(status.config.minutes,0,180),
+      increment:n(status.config.increment,0,180)
+    };
+  }
+  function phase(status={},game={}){
+    const s=normalize(status,game);if(!s)return {state:'inactive',active:false};
+    if(s.terminal&&s.done)return {...s,state:'match-complete',active:true};
+    if(s.terminal)return {...s,state:'between-games',active:true};
+    if(s.clock.enabled&&!s.clock.running)return {...s,state:'clock-paused',active:true};
+    return {...s,state:'in-game',active:true};
+  }
+  function next(status={},game={}){
+    const s=phase(status,game);
+    if(!s.active)return {action:'none',label:'',eyebrow:'',detail:''};
+    if(s.state==='between-games')return {
+      action:'next-game',
+      label:s.opening==='free'?'Next game · swap colors':'Next game · opening procedure',
+      eyebrow:'MATCH CONTINUES',
+      detail:`Game ${s.games} complete · ${s.names.p1} ${s.a}–${s.b} ${s.names.p2}. Continue with game ${Math.min(s.total,s.games+1)} of ${s.total}.`
+    };
+    if(s.state==='match-complete')return {
+      action:'new-match',
+      label:'New competitive match',
+      eyebrow:'MATCH COMPLETE',
+      detail:`${s.names.p1} ${s.a}–${s.b} ${s.names.p2} · ${s.games} game${s.games===1?'':'s'} played.`
+    };
+    if(s.state==='clock-paused')return {
+      action:'resume-clock',
+      label:'Resume clock',
+      eyebrow:'COMPETITIVE MATCH',
+      detail:`Game ${s.current} of ${s.total} · ${s.names.p1} ${s.a}–${s.b} ${s.names.p2}.`
+    };
+    return {
+      action:'play',
+      label:'Continue game',
+      eyebrow:'COMPETITIVE MATCH',
+      detail:`Game ${s.current} of ${s.total} · ${s.names.p1} ${s.a}–${s.b} ${s.names.p2}.`
+    };
+  }
+  function progress(status={},game={}){
+    const s=phase(status,game);if(!s.active)return null;
+    const decided=Math.min(s.total,s.games);
+    return {
+      state:s.state,value:decided,max:s.total,
+      label:s.done?`Match complete · ${s.a}–${s.b}`:`Game ${s.current} of ${s.total} · match ${s.a}–${s.b}`,
+      score:`${s.names.p1} ${s.a}–${s.b} ${s.names.p2}`
+    };
+  }
+  return Object.freeze({VERSION,normalize,phase,next,progress});
+});
+</script>
+<style id="competitive2-style">
+/* Gomoku 1.6 — Competitive Play 2.0 */
+#cp2Series{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin-top:7px}
+#cp2Series[hidden]{display:none!important}
+#cp2Series progress{grid-column:1/-1;width:100%;height:4px;accent-color:var(--seal)}
+#cp2Series strong{font-size:9px;color:var(--ink)}
+#cp2Series span{font-size:8px;color:var(--ink2);text-align:right}
+#v97MatchStrip.cp2-ready{align-items:center}
+#resultDialog.cp2-series #pg2Summary{border-left:3px solid var(--seal)}
+#resultDialog.cp2-series #rematchBtn.cp2-primary{background:var(--ink)!important;border-color:var(--ink)!important;color:var(--paper)!important}
+#resultDialog.cp2-series #resultReviewBtn.cp2-secondary{background:transparent!important;border-color:var(--hair2)!important;color:var(--ink)!important}
+@media(max-width:620px){
+  #cp2Series{grid-template-columns:1fr}
+  #cp2Series span{text-align:left}
+}
+@media(prefers-reduced-motion:reduce){
+  #cp2Series progress,#resultDialog.cp2-series .btn{transition:none!important;animation:none!important}
+}
+</style>
+<script id="competitive2-runtime">
+/* Gomoku 1.6 — Competitive Play 2.0 orchestration.
+ * Existing V9.7 competitive mechanics remain authoritative.
+ */
+(()=>{
+  'use strict';
+  if(window.GomokuCompetitive2)return;
+  const Core=window.GomokuCompetitive2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let last=null,timer=0,dialogObserver=null;
+  function api(){return window.GomokuStudio||null;}
+  function status(){try{return api()?.competitivePlay?.()||null;}catch{return null;}}
+  function game(){try{return api()?.exportGame?.()||{};}catch{return {};}}
+  function ensure(){
+    const strip=$('v97MatchStrip');
+    if(strip&&!$('cp2Series')){
+      strip.classList.add('cp2-ready');
+      const host=document.createElement('div');host.id='cp2Series';
+      host.innerHTML='<strong id="cp2SeriesLabel"></strong><span id="cp2SeriesScore"></span><progress id="cp2SeriesProgress" max="1" value="0" aria-label="Competitive match progress"></progress>';
+      strip.querySelector('.v97-match-copy')?.append(host);
+    }
+    const dialog=$('resultDialog');
+    if(dialog&&!dialogObserver){
+      dialogObserver=new MutationObserver(()=>{if(dialog.open)schedule(0);});
+      dialogObserver.observe(dialog,{attributes:true,attributeFilter:['open']});
+    }
+  }
+  function applyMatchStrip(model){
+    const host=$('cp2Series');if(!host)return;
+    host.hidden=!model;
+    if(!model)return;
+    $('cp2SeriesLabel').textContent=model.label;
+    $('cp2SeriesScore').textContent=model.score;
+    const p=$('cp2SeriesProgress');p.max=model.max;p.value=model.value;
+    p.setAttribute('aria-label',model.label+' · '+model.score);
+  }
+  function applyResult(next,phase){
+    const dialog=$('resultDialog'),rematch=$('rematchBtn'),review=$('resultReviewBtn'),box=$('pg2Summary');
+    if(!dialog)return;
+    const relevant=phase?.active&&phase.terminal;
+    dialog.classList.toggle('cp2-series',!!relevant);
+    rematch?.classList.toggle('cp2-primary',!!relevant);
+    review?.classList.toggle('cp2-secondary',!!relevant);
+    if(!relevant)return;
+    // v1.5 owns the generic learning handoff. During a competitive series,
+    // series continuity wins; review stays available as the secondary action.
+    if(box){
+      const eyebrow=$('pg2Eyebrow'),heading=$('pg2Heading'),detail=$('pg2Detail'),summary=$('pg2Status');
+      if(eyebrow)eyebrow.textContent=next.eyebrow;
+      if(heading)heading.textContent=next.action==='next-game'?'Continue the match':'Competitive match complete';
+      if(detail)detail.textContent=next.detail;
+      if(summary)summary.textContent=phase.done?'Series finished':'Series in progress';
+    }
+    if(rematch)rematch.textContent=next.label;
+    if(review)review.textContent='Review this game';
+    rematch?.classList.add('pg2-recommended');
+    review?.classList.remove('pg2-recommended');
+  }
+  function render(){
+    ensure();
+    const s=status(),g=game(),phase=Core.phase(s,g),next=Core.next(s,g),progress=Core.progress(s,g);
+    applyMatchStrip(progress);
+    if(window.GomokuPostGame2&&g.terminal)window.GomokuPostGame2.refresh();
+    applyResult(next,phase);
+    last={phase,next,progress};
+    return last;
+  }
+  function schedule(ms=30){clearTimeout(timer);timer=setTimeout(render,ms);}
+  function boot(){
+    ensure();render();
+    for(const ev of ['gomoku:v97-status','gomoku:move','gomoku:result'])window.addEventListener(ev,()=>schedule(ev==='gomoku:result'?40:0));
+    document.addEventListener('click',e=>{
+      if(e.target?.closest?.('#rematchBtn,#resultReviewBtn'))schedule(80);
+    },true);
+  }
+  window.GomokuCompetitive2=Object.freeze({
+    version:Core.VERSION,refresh:render,
+    snapshot:()=>last?JSON.parse(JSON.stringify(last)):null
+  });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
