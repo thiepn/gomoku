@@ -16576,4 +16576,202 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+<script id="opening2-core">
+/* Gomoku 1.8 — Opening Study & Repertoire 2.0 pure composition model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuOpening2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.8.0';
+  const OPENING_SKILLS=Object.freeze(['opening-shape','opening-flexibility']);
+  const clean=v=>String(v??'').trim();
+  const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,Math.round(Number(v)||0)));
+  const RULES=Object.freeze({
+    'renju-practice':'Renju',
+    'exact-five':'Exact-five',
+    'freestyle':'Freestyle'
+  });
+  function openingSkills(learning={}){
+    const rows=(Array.isArray(learning?.skills)?learning.skills:[]).filter(s=>OPENING_SKILLS.includes(s?.id));
+    if(!rows.length)return {available:false,evidenced:false,average:0,state:'new',due:0,weakest:null,skills:[]};
+    const average=Math.round(rows.reduce((n,s)=>n+clamp(s.score),0)/rows.length);
+    const due=rows.reduce((n,s)=>n+Math.max(0,Number(s.due)||0),0);
+    const evidenced=rows.some(s=>(Number(s.evidence)||0)>0||(Number(s.course)||0)>0);
+    const weakest=rows.slice().sort((a,b)=>clamp(a.score)-clamp(b.score)||clean(a.title).localeCompare(clean(b.title)))[0]||null;
+    const state=average>=82?'mastered':average>=68?'strong':average>=45?'developing':average>=15?'building':'new';
+    return {
+      available:true,evidenced,average,state,due,
+      weakest:weakest?{id:weakest.id,title:clean(weakest.title)||weakest.id,score:clamp(weakest.score)}:null,
+      skills:rows.map(s=>({id:s.id,title:clean(s.title)||s.id,score:clamp(s.score),state:clean(s.state),due:Math.max(0,Number(s.due)||0)}))
+    };
+  }
+  function gameContext(game={}){
+    const records=Array.isArray(game.records)?game.records:Array.isArray(game.moves)?game.moves:[];
+    const moves=records.length;
+    const setup=Array.isArray(game.initial)?game.initial.length:0;
+    const variant=clean(game.variant)||'renju-practice';
+    return {
+      variant,rule:RULES[variant]||variant,moves,setup,
+      early:moves>0&&moves<=20&&setup===0,
+      title:clean(game.title)
+    };
+  }
+  function primary(game={},learning={}){
+    const g=gameContext(game),skills=openingSkills(learning);
+    if(g.early)return {
+      id:'explorer',label:'Explore this position',
+      detail:'Compare continuations from matching games in your local Library before leaving the current opening.'
+    };
+    if(!skills.evidenced)return {
+      id:'concepts',label:'Build opening fundamentals',
+      detail:'Start with Chapter 11 before trying to memorize branches without a conceptual base.'
+    };
+    if(skills.average<68)return {
+      id:'concepts',label:'Strengthen opening concepts',
+      detail:(skills.weakest?.title||'Opening fundamentals')+' is the weakest current opening skill. Revisit the authored concept work first.'
+    };
+    return {
+      id:'repertoire',label:'Rehearse repertoire',
+      detail:'Your opening evidence is established. Test recall of continuations you explicitly stored in this study.'
+    };
+  }
+  function destinations(game={},learning={}){
+    const g=gameContext(game),skills=openingSkills(learning);
+    return [
+      {id:'lab',label:'Opening Lab',detail:'Protocols, opening procedure and the current-board local explorer.'},
+      {id:'database',label:'Source database',detail:'Query imported or Library records. Frequencies and results describe the corpus only.'},
+      {id:'repertoire',label:'Repertoire',detail:'Recall continuations explicitly stored in the current study.'},
+      {id:'concepts',label:'Opening concepts',detail:skills.evidenced?'Revisit Chapter 11 and transfer opening shape into play.':'Build Chapter 11 fundamentals before memorizing lines.'}
+    ];
+  }
+  function summary(game={},learning={}){
+    const g=gameContext(game),skills=openingSkills(learning),next=primary(game,learning);
+    return {
+      version:VERSION,game:g,skills,primary:next,destinations:destinations(game,learning),
+      position:g.moves?g.rule+' · move '+g.moves:g.rule+' · empty board',
+      skillLabel:skills.evidenced?'Opening skills '+skills.average+'% · '+skills.state+(skills.due?' · '+skills.due+' due':''):'Opening skills · baseline not established'
+    };
+  }
+  return Object.freeze({VERSION,OPENING_SKILLS,openingSkills,gameContext,primary,destinations,summary});
+});
+
+</script>
+<style id="opening2-style">
+/* Gomoku 1.8 — Opening Study & Repertoire 2.0 */
+#os2Home{display:grid;gap:11px;margin:0 0 16px;padding:14px;border:1px solid var(--hair);border-radius:11px;background:color-mix(in srgb,var(--card) 94%,var(--seal) 6%)}
+#os2Home[hidden]{display:none!important}
+.os2-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.os2-head h3{margin:2px 0 4px;font:700 20px/1.1 Georgia,serif}
+.os2-head p{margin:0;color:var(--ink2);font-size:8px;line-height:1.5}
+.os2-skill{border:0;background:transparent;color:var(--seal);font-size:8px;font-weight:750;min-height:32px;padding:5px;text-align:right}
+.os2-context{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 1px}
+.os2-context b{font-size:8px}.os2-context span{font-size:7px;color:var(--ink2);text-align:right}
+.os2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--hair);border-radius:9px;background:var(--paper)}
+.os2-next span{display:block;font-size:6px;font-weight:800;letter-spacing:.14em;color:var(--seal)}
+.os2-next strong{display:block;margin-top:3px;font-size:11px}
+.os2-next p{margin:3px 0 0;color:var(--ink2);font-size:7px;line-height:1.45}
+.os2-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.os2-destination{display:grid;gap:4px;align-content:start;text-align:left;min-height:72px;padding:9px;border:1px solid var(--hair);border-radius:8px;background:var(--paper);color:var(--ink)}
+.os2-destination:hover{border-color:var(--hair2)}
+.os2-destination b{font-size:8px}.os2-destination span{font-size:6px;line-height:1.4;color:var(--ink2)}
+.os2-evidence{margin:0!important;padding-top:2px;color:var(--ink2);font-size:6px!important;line-height:1.45!important}
+@media(max-width:760px){.os2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){
+  #os2Home{padding:11px}.os2-head,.os2-next{grid-template-columns:1fr}.os2-skill{text-align:left;justify-self:start}
+  .os2-context{display:grid;gap:3px}.os2-context span{text-align:left}
+  .os2-grid{grid-template-columns:1fr}.os2-destination{min-height:48px}.os2-next .btn{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){#os2Home *{scroll-behavior:auto!important}}
+
+</style>
+<script id="opening2-runtime">
+/* Gomoku 1.8 — Opening Study & Repertoire 2.0 composition layer. */
+(()=>{
+  'use strict';
+  if(window.GomokuOpening2)return;
+  const Core=window.GomokuOpening2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let observer=null,timer=0,lastKey='';
+  function api(){return window.GomokuStudio||null;}
+  function game(){try{return api()?.exportGame?.()||{};}catch{return {};}}
+  function learning(){try{return window.GomokuLearningV11?.snapshot?.()||{};}catch{return {};}}
+  function snapshot(){return Core.summary(game(),learning());}
+  function scroll(node){
+    if(!node)return false;
+    node.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    const focus=node.matches?.('button,input,select,a[href]')?node:node.querySelector?.('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]');
+    setTimeout(()=>focus?.focus?.({preventScroll:true}),180);
+    return true;
+  }
+  function ensure(){
+    const explorer=$('openingExplorer'),content=$('workbenchContent'),dialog=$('workbenchDialog');
+    if(!explorer||!content||!dialog?.open)return null;
+    let home=$('os2Home');
+    if(!home){
+      home=document.createElement('section');home.id='os2Home';home.setAttribute('aria-labelledby','os2Title');
+      home.innerHTML='<div class="os2-head"><div><p class="eyebrow">OPENING STUDY · 2.0</p><h3 id="os2Title">Study the opening with evidence.</h3><p>Concepts, source records and your own repertoire stay distinct—but start from one place.</p></div><button type="button" class="os2-skill" id="os2SkillMap">Opening skill map →</button></div><div class="os2-context"><b id="os2Position"></b><span id="os2Skills"></span></div><div class="os2-next"><div><span>NEXT OPENING ACTION</span><strong id="os2PrimaryTitle"></strong><p id="os2PrimaryDetail"></p></div><button type="button" class="btn" id="os2Primary"></button></div><div class="os2-grid" id="os2Grid"></div><p class="os2-evidence">Source frequencies and observed results are evidence about matching records, not theoretical move evaluations. Repertoire practice tests your saved branches only.</p>';
+      content.prepend(home);
+      $('os2Primary').onclick=()=>route($('os2Primary').dataset.route);
+      $('os2SkillMap').onclick=()=>route('skills');
+    }
+    return home;
+  }
+  function route(id){
+    if(id==='explorer')return scroll($('openingExplorer'));
+    if(id==='lab')return scroll($('protocolSelect')?.closest('label')||$('openingBoard')||$('openingExplorer'));
+    if(id==='database'){api()?.openDatabase?.();return true;}
+    if(id==='repertoire'){api()?.openRepertoire?.();return true;}
+    if(id==='concepts'){
+      const d=$('workbenchDialog');if(d?.open)d.close();
+      const direct=document.querySelector('[data-open-chapter="11"]');
+      if(direct){direct.click();return true;}
+      const chapter=window.GomokuCourseChapter11;
+      if(chapter?.open){chapter.open();return true;}
+      if(chapter?.openSection){chapter.openSection(0,0);return true;}
+      return false;
+    }
+    if(id==='skills'){
+      const d=$('workbenchDialog');if(d?.open)d.close();
+      window.GomokuLearningV11?.openDashboard?.();return true;
+    }
+    return false;
+  }
+  function render(){
+    const home=ensure();
+    if(!home){lastKey='';return null;}
+    const s=snapshot(),key=JSON.stringify([s.game.variant,s.game.moves,s.game.setup,s.skills.average,s.skills.evidenced,s.skills.due,s.primary.id]);
+    if(key===lastKey&&$('os2Grid')?.children.length)return s;
+    lastKey=key;
+    $('os2Position').textContent=s.position;
+    $('os2Skills').textContent=s.skillLabel;
+    $('os2PrimaryTitle').textContent=s.primary.label;
+    $('os2PrimaryDetail').textContent=s.primary.detail;
+    const primary=$('os2Primary');primary.textContent=s.primary.label;primary.dataset.route=s.primary.id;
+    const grid=$('os2Grid');grid.replaceChildren();
+    for(const item of s.destinations){
+      const b=document.createElement('button');b.type='button';b.className='os2-destination';b.dataset.route=item.id;
+      b.innerHTML='<b></b><span></span>';b.querySelector('b').textContent=item.label;b.querySelector('span').textContent=item.detail;
+      b.onclick=()=>route(item.id);grid.append(b);
+    }
+    return s;
+  }
+  function schedule(delay=0){clearTimeout(timer);timer=setTimeout(render,delay);}
+  function boot(){
+    observer=new MutationObserver(muts=>{
+      if(muts.every(m=>m.target?.id==='os2Home'||m.target?.closest?.('#os2Home')))return;
+      schedule(20);
+    });
+    observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
+    window.addEventListener('gomoku:move',()=>schedule(20));
+    window.addEventListener('gomoku-mistakes-changed',()=>schedule(40));
+    document.addEventListener('click',e=>{if(e.target?.closest?.('#openingLabBtn,[data-tool="opening"]'))schedule(50);},true);
+    schedule();
+  }
+  window.GomokuOpening2=Object.freeze({version:Core.VERSION,refresh:render,route,snapshot});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+</script>
 </body></html>
