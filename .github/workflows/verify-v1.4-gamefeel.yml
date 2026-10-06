@@ -41,8 +41,8 @@ jobs:
       - name: Install Chromium
         run: |
           pip install playwright==1.55.0
+          npm install --no-save playwright@1.55.0
           python -m playwright install --with-deps chromium
-          npx playwright install chromium
       - name: Run Game Feel browser acceptance
         env:
           GAMEFEEL2_URL: http://127.0.0.1:8768/
