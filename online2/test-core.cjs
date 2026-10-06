@@ -1,0 +1,14 @@
+const C=require('./core.js');
+const ok=(v,m)=>{if(!v)throw new Error(m)};
+ok(C.VERSION==='1.7.0','version');
+ok(C.kind({state:{ranked:true}})==='ranked','ranked kind');
+ok(C.kind({state:{tournament:{id:'CUP'}}})==='tournament','tournament kind');
+ok(C.kind({state:{challenge:{id:'CH'}}})==='challenge','challenge kind');
+ok(C.kind({state:{}})==='casual','casual kind');
+const ranked={id:'RANK-1',role:'player',state:{ranked:true,round:2,players:[{},{}],game:{result:{winner:1}},rankedResult:{before:1500,after:1512,delta:12}}};
+const s=C.session(ranked);ok(s.active&&s.phase==='finished'&&s.kind==='ranked','ranked finished session');
+const c=C.context(ranked);ok(c.eyebrow.includes('RANKED')&&c.detail.includes('round 2'),'context');
+const p=C.postGame(ranked);ok(p.primary==='Find next ranked match'&&p.detail.includes('+12'),'ranked postgame');
+const spectator=C.context({id:'WATCH',role:'spectator',state:{players:[{},{}],game:{moves:[]}}});ok(spectator.eyebrow.startsWith('SPECTATING'),'spectator label');
+ok(C.launcher().length===4,'launcher count');
+console.log('PASS Gomoku 1.7 Online Play 2.0 core contracts.');
