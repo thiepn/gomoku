@@ -16054,4 +16054,152 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+<script id="postgame2-core">
+/* Gomoku 1.5 — Post-Game Experience 2.0 pure orchestration model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuPostGame2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.5.0';
+  const clampInt=(v,min=0,max=100000)=>Math.max(min,Math.min(max,Math.trunc(Number(v)||0)));
+  function outcome(game={},result={}){
+    const winner=Number(result.winner)||0;
+    if(!winner)return 'draw';
+    const human=Number(game.humanColor)||0;
+    if(game.mode==='ai'&&(human===1||human===2))return winner===human?'win':'loss';
+    return 'neutral';
+  }
+  function reviewState(review={}){
+    const total=clampInt(review.total);
+    const analyzed=clampInt(review.analyzed,0,total||100000);
+    const critical=Array.isArray(review.critical)?review.critical.length:clampInt(review.critical);
+    const complete=total>0&&analyzed>=total;
+    const state=critical>0?'key-moments':complete?'reviewed-clear':analyzed>0?'partial':'unreviewed';
+    return {total,analyzed,critical,complete,state};
+  }
+  function recommendation(review={}){
+    const r=reviewState(review);
+    if(r.state==='reviewed-clear')return {
+      action:'rematch',
+      label:'Play another',
+      eyebrow:'REVIEW COMPLETE',
+      detail:'No actionable mistake was established in the completed review. You can still inspect any move.'
+    };
+    if(r.state==='key-moments')return {
+      action:'review',
+      label:'Review key moments',
+      eyebrow:'NEXT USEFUL STEP',
+      detail:r.critical+' decision'+(r.critical===1?'':'s')+' '+(r.critical===1?'is':'are')+' ready to explore.'
+    };
+    if(r.state==='partial')return {
+      action:'review',
+      label:'Continue review',
+      eyebrow:'REVIEW IN PROGRESS',
+      detail:r.analyzed+' of '+r.total+' decisions checked. Continue while the remaining moves are analyzed.'
+    };
+    return {
+      action:'review',
+      label:'Review key moments',
+      eyebrow:'NEXT USEFUL STEP',
+      detail:'Let Guided Review scan this game, surface the moves that mattered, and let you retry them.'
+    };
+  }
+  function viewModel(game={},result={},review={}){
+    const r=reviewState(review),next=recommendation(review),kind=outcome(game,result);
+    const moves=clampInt(result.moves??game.records?.length??game.moves?.length);
+    return {
+      version:VERSION,kind,moves,review:r,next,
+      status:r.state==='unreviewed'?'Not reviewed yet':
+        r.state==='partial'?r.analyzed+' / '+r.total+' decisions checked':
+        r.state==='key-moments'?r.critical+' key moment'+(r.critical===1?'':'s')+' ready':
+        'Review complete'
+    };
+  }
+  return Object.freeze({VERSION,outcome,reviewState,recommendation,viewModel});
+});
+</script>
+<style id="postgame2-style">
+/* Gomoku 1.5 — Post-Game Experience 2.0 */
+#pg2Summary{margin:13px 0 14px;padding:11px 12px;border:1px solid var(--hair);border-radius:8px;background:color-mix(in srgb,var(--card) 90%,var(--soft));text-align:left}
+#pg2Summary[hidden]{display:none!important}
+#pg2Summary .pg2-eyebrow{display:block;margin:0 0 4px;color:var(--seal);font-size:7px;font-weight:800;letter-spacing:.16em}
+#pg2Summary strong{display:block;color:var(--ink);font-size:11px;line-height:1.35}
+#pg2Summary p{margin:4px 0 0;color:var(--ink2);font-size:9px;line-height:1.5}
+#pg2Summary small{display:block;margin-top:7px;color:var(--ink2);font-size:8px}
+#resultDialog #resultAnalyzeBtn,#resultDialog #resultCoachBtn{display:none!important}
+#resultDialog .dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#resultDialog .dialog-actions .pg2-recommended{background:var(--ink)!important;border-color:var(--ink)!important;color:var(--paper)!important}
+#resultDialog .dialog-actions .btn{min-height:42px}
+@media(max-width:520px){
+  #resultDialog .dialog-actions{grid-template-columns:1fr}
+  #resultDialog .dialog-actions .btn{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){
+  #pg2Summary,#resultDialog .dialog-actions .btn{animation:none!important;transition:none!important}
+}
+</style>
+<script id="postgame2-runtime">
+/* Gomoku 1.5 — Post-Game Experience 2.0 browser orchestration. */
+(()=>{
+  'use strict';
+  if(window.GomokuPostGame2)return;
+  const Core=window.GomokuPostGame2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let last=null,lastResult=null,observer=null;
+  const game=()=>{try{return window.GomokuStudio?.exportGame?.()||{};}catch{return {};}};
+  const review=()=>{try{return window.GomokuStudio?.reviewReport?.()||{};}catch{return {};}};
+  function ensure(){
+    const dialog=$('resultDialog'),card=dialog?.querySelector('.result-card'),actions=card?.querySelector('.dialog-actions');
+    if(!card||!actions)return null;
+    let box=$('pg2Summary');
+    if(!box){
+      box=document.createElement('section');box.id='pg2Summary';box.setAttribute('aria-label','Post-game next step');
+      box.innerHTML='<span class="pg2-eyebrow" id="pg2Eyebrow">NEXT USEFUL STEP</span><strong id="pg2Heading"></strong><p id="pg2Detail"></p><small id="pg2Status"></small>';
+      actions.insertAdjacentElement('beforebegin',box);
+    }
+    if(!observer&&dialog){
+      observer=new MutationObserver(()=>{if(dialog.open)refresh();});
+      observer.observe(dialog,{attributes:true,attributeFilter:['open']});
+    }
+    return box;
+  }
+  function apply(view){
+    const box=ensure();if(!box)return view;
+    const reviewBtn=$('resultReviewBtn'),rematch=$('rematchBtn');
+    $('pg2Eyebrow').textContent=view.next.eyebrow;
+    $('pg2Heading').textContent=view.next.label;
+    $('pg2Detail').textContent=view.next.detail;
+    $('pg2Status').textContent=view.status+(view.moves?' · '+view.moves+' moves':'');
+    box.dataset.state=view.review.state;box.hidden=false;
+    reviewBtn?.classList.toggle('pg2-recommended',view.next.action==='review');
+    rematch?.classList.toggle('pg2-recommended',view.next.action==='rematch');
+    if(reviewBtn)reviewBtn.textContent=view.next.action==='review'?view.next.label:'Review anyway';
+    if(rematch)rematch.textContent=view.next.action==='rematch'?'Play another · swap colors':'Rematch · swap colors';
+    return view;
+  }
+  function present(result){
+    lastResult=result||game().result||{};
+    last=apply(Core.viewModel(game(),lastResult,review()));
+    return last;
+  }
+  function refresh(){
+    const g=game(),result=lastResult||g.result||{};
+    last=apply(Core.viewModel(g,result,review()));
+    return last;
+  }
+  function boot(){
+    ensure();
+    window.addEventListener('gomoku:result',e=>{lastResult=e.detail||{};setTimeout(()=>present(lastResult),0);});
+    document.addEventListener('click',e=>{
+      const b=e.target?.closest?.('#resultReviewBtn,#resultAnalyzeBtn,#resultCoachBtn');
+      if(b)setTimeout(refresh,120);
+    },true);
+    refresh();
+  }
+  window.GomokuPostGame2=Object.freeze({version:Core.VERSION,present,refresh,snapshot:()=>last?JSON.parse(JSON.stringify(last)):null});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
 </body></html>
