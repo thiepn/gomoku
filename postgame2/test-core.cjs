@@ -1,0 +1,15 @@
+const C=require('./core.js');
+const assert=(v,m)=>{if(!v)throw new Error(m);};
+assert(C.VERSION==='1.5.0','version');
+assert(C.outcome({mode:'ai',humanColor:1},{winner:1})==='win','human win');
+assert(C.outcome({mode:'ai',humanColor:2},{winner:1})==='loss','human loss');
+assert(C.outcome({mode:'local'},{winner:1})==='neutral','local neutral');
+assert(C.reviewState({total:20,analyzed:0,critical:[]}).state==='unreviewed','unreviewed');
+assert(C.reviewState({total:20,analyzed:8,critical:[]}).state==='partial','partial');
+assert(C.reviewState({total:20,analyzed:20,critical:[{ply:7}]}).state==='key-moments','key moments');
+assert(C.reviewState({total:20,analyzed:20,critical:[]}).state==='reviewed-clear','clear complete');
+assert(C.recommendation({total:20,analyzed:20,critical:[]}).action==='rematch','clear recommends rematch');
+assert(C.recommendation({total:20,analyzed:20,critical:[{}]}).action==='review','issues recommend review');
+const v=C.viewModel({mode:'ai',humanColor:1,records:Array(17).fill({})},{winner:2},{total:17,analyzed:4,critical:[]});
+assert(v.kind==='loss'&&v.moves===17&&v.next.label==='Continue review','view model');
+console.log('PASS Gomoku 1.5 Post-Game Experience 2.0 core contracts.');
