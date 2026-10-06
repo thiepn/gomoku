@@ -11,17 +11,18 @@ with sync_playwright() as p:
         page=ctx.new_page();page.set_default_timeout(22000);errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
-        page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge && !!document.querySelector("#v92Primary")')
+        page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge && !!document.querySelector("#v111MenuBtn")')
         page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
-        page.locator('#v92More').click()
-        page.locator('#v93ToolSearch').fill('online')
-        page.locator('#v92ToolsDialog [data-tool="online"]').click()
+        page.locator('#v111MenuBtn').click()
+        page.wait_for_function('!!document.querySelector("#v12PrivateRoomMenu")')
+        page.locator('#v12PrivateRoomMenu').click()
         page.locator('#oc2Home').wait_for(state='visible')
         assert page.locator('#oc2Grid .oc2-destination').count()==5
         assert page.locator('#oc2Primary').is_visible()
         assert page.locator('#roomRankedPanel').count()==1
         assert page.locator('#roomAccountPanel').count()==1
         # Anonymous online remains usable; ranked setup routes to identity rather than disabling the whole online surface.
+        page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
         page.locator('#oc2Grid [data-route="ranked"]').click()
         assert page.locator('#roomAccountPanel').is_visible()
         if mobile:
