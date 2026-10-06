@@ -16767,6 +16767,10 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     window.addEventListener('gomoku:move',()=>schedule(20));
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(40));
     document.addEventListener('click',e=>{if(e.target?.closest?.('#openingLabBtn,[data-tool="opening"]'))schedule(50);},true);
+    // Opening Lab can also be invoked through the public API/command palette, which
+    // does not necessarily produce a click mutation we own. Keep the composition
+    // layer self-healing while that workbench is actually open.
+    setInterval(()=>{if($('workbenchDialog')?.open&&$('openingExplorer'))render();},400);
     schedule();
   }
   window.GomokuOpening2=Object.freeze({version:Core.VERSION,refresh:render,route,snapshot});
