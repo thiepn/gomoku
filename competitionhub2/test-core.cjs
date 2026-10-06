@@ -1,0 +1,18 @@
+const C=require('./core.js');
+const ok=(v,m)=>{if(!v)throw new Error(m)};
+ok(C.VERSION==='1.7.0','version');
+let m=C.model({},null,null);
+ok(m.current.kind==='none','no active competition');
+ok(m.account.rankedReady===false,'ranked requires account');
+m=C.model({connected:true,username:'player'},null,null);
+ok(m.account.rankedReady===true,'ranked ready');
+ok(m.cards.find(x=>x.id==='ranked').badge==='Ready','ranked card ready');
+const local={config:{total:3},score:{a:1,b:0},game:2};
+m=C.model({connected:true,username:'player'},local,null);
+ok(m.current.kind==='local','local current');
+ok(m.cards.find(x=>x.id==='rooms').enabled===false,'rooms blocked by local match');
+const online={id:'ROOM-7',state:{ranked:true}};
+m=C.model({connected:true,username:'player'},null,online);
+ok(m.current.kind==='online'&&m.current.label==='Ranked room','ranked room current');
+ok(m.cards.find(x=>x.id==='local').enabled===false,'local blocked by online room');
+console.log('PASS Gomoku 1.7 Competition Hub 2.0 core contracts.');
