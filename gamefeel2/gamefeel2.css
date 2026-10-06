@@ -31,4 +31,5 @@
 @keyframes gf2Fleck{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0)}18%{opacity:.86}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.9) rotate(var(--turn))}}
 @keyframes gf2Rewind{0%,100%{transform:none}45%{transform:translateX(-3px)}}@keyframes gf2Forward{0%,100%{transform:none}45%{transform:translateX(3px)}}@keyframes gf2Reset{0%{opacity:.72;transform:scale(.992)}100%{opacity:1;transform:none}}@keyframes gf2Toast{0%{transform:translateY(2px);opacity:.72}100%{transform:none;opacity:1}}
 @media(max-width:760px){.gf2-outcome{min-width:min(78%,300px);padding:11px 13px}.player-card.gf2-active-player{transform:none}}
+@media(max-width:760px),(pointer:coarse){.li11-primary{min-height:46px}}
 @media(prefers-reduced-motion:reduce){.gf2-impact,.gf2-impact-core,.gf2-win-point,.gf2-fleck{display:none!important}#shell,.player-card,#moveBadge,#toast,.gf2-outcome{animation:none!important;transition:none!important}.gf2-outcome{backdrop-filter:none}.game-actions .btn:active,#v92GameBar button:active,.v92-action-row button:active{transform:none}}
