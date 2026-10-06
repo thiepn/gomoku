@@ -15004,7 +15004,9 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     return {...p,type:'course',reason:'Revisit the linked concept before your next game'};
   }
   function homeHost(){
-    return $('uiLearning')||$('v92ImproveHome')||document.querySelector('#panel-train');
+    // V9.2+ owns the visible Improve surface. Prefer it whenever it exists;
+    // #uiLearning is a compatibility host and may remain mounted but hidden.
+    return $('v92ImproveHome')||$('uiLearning')||document.querySelector('#panel-train');
   }
   function mountHome(){
     const host=homeHost();if(!host)return false;
