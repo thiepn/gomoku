@@ -15011,6 +15011,10 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     let section=$('v11LearningIntelligence');
     if(!section){
       section=document.createElement('section');section.id='v11LearningIntelligence';section.className='li11-home';
+    }
+    // The modern Improve surface may appear after Learning Intelligence boots on
+    // slower/mobile clients. Keep the learning home in the currently preferred host.
+    if(!host.contains(section)){
       const curriculum=host.querySelector('.ui-curriculum');
       if(curriculum)curriculum.insertAdjacentElement('beforebegin',section);else host.append(section);
     }
@@ -15424,6 +15428,10 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
     let section=$('c20Journey');
     if(!section){
       section=document.createElement('section');section.id='c20Journey';section.className='c20-journey';
+    }
+    // The modern Improve host can be created after Course 2 boots on slower/mobile
+    // clients. Never strand the journey in the hidden legacy training panel.
+    if(!host.contains(section)){
       const curriculum=host.querySelector('.ui-curriculum');
       if(curriculum)curriculum.insertAdjacentElement('beforebegin',section);else host.append(section);
     }
@@ -15819,6 +15827,230 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   }
   window.GomokuAI2=Object.freeze({version:Core.VERSION,effectiveLevel,searchConfig,noteSearch,setAdaptive,snapshot,openDetails,
     calibration:()=>Core.calibrationAudit({})});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
+<script id="gamefeel2-core">
+/* Gomoku 1.4 — Game Feel 2.0 pure choreography model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuGameFeel2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.4.0';
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const outcome=(game={},result={})=>{
+    const winner=Number(result.winner)||0;
+    if(!winner)return 'draw';
+    if(game.mode==='ai'&&[1,2].includes(Number(game.humanColor)))return winner===Number(game.humanColor)?'win':'loss';
+    return 'neutral';
+  };
+  function reasonLabel(reason='',line=[]){
+    if(reason==='timeout')return 'Time expired';
+    if(reason==='agreement')return 'Agreed draw';
+    if(reason==='resign')return 'Resignation';
+    if(reason==='passes')return 'Two consecutive passes';
+    if(reason==='full')return 'Full board';
+    if(reason==='five')return (Array.isArray(line)&&line.length?Math.max(5,line.length):5)+' in a row';
+    return 'Game complete';
+  }
+  function resultCopy(game={},result={},names={}){
+    const kind=outcome(game,result),winner=Number(result.winner)||0,moves=Math.max(0,Number(result.moves)||0);
+    const human=Number(game.humanColor)||1,black=String(names.black||'Black'),white=String(names.white||'White');
+    let title;
+    if(kind==='win')title='You win';
+    else if(kind==='loss')title=(winner===1?black:white)+' wins';
+    else if(kind==='draw')title='Game drawn';
+    else title=winner?(winner===1?black:white)+' wins':'Game drawn';
+    const side=game.mode==='ai'?(human===1?'Black':'White'):null;
+    const reason=reasonLabel(result.reason,Array.isArray(result.winLines)?result.winLines[0]:[]);
+    return {kind,title,reason,moves,side,stamp:kind==='win'?'勝':kind==='loss'?'終':kind==='draw'?'和':'終'};
+  }
+  function movePlan(detail={},reduced=false){
+    const i=Number(detail.i),origin=String(detail.origin||'human'),pass=i<0;
+    return {version:VERSION,point:Number.isInteger(i)&&i>=0&&i<225?i:null,origin,pass,
+      impact:!reduced&&!pass,boardPulse:!reduced&&!pass,handoff:true,
+      strength:origin==='engine'?.78:1};
+  }
+  function particles(seed=1,count=14){
+    let x=(Number(seed)||1)>>>0;const rand=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};
+    const n=Math.round(clamp(Number(count)||14,0,24)),rows=[];
+    for(let i=0;i<n;i++){
+      const angle=(-Math.PI*.95)+rand()*Math.PI*1.9,dist=28+rand()*70;
+      rows.push({dx:Number((Math.cos(angle)*dist).toFixed(2)),dy:Number((Math.sin(angle)*dist).toFixed(2)),
+        delay:Math.round(rand()*90),size:Number((3.5+rand()*4.5).toFixed(2)),turn:Number((-80+rand()*160).toFixed(1))});
+    }
+    return rows;
+  }
+  function resultPlan(game={},result={},reduced=false){
+    const copy=resultCopy(game,result),celebrate=copy.kind==='win'&&!reduced;
+    return {copy,showBanner:true,winLine:Array.isArray(result.winLines?.[0])?result.winLines[0].filter(i=>Number.isInteger(i)&&i>=0&&i<225).slice(0,15):[],
+      particles:celebrate?particles((copy.moves+1)*2654435761,14):[],celebrate};
+  }
+  return Object.freeze({VERSION,outcome,reasonLabel,resultCopy,movePlan,particles,resultPlan});
+});
+</script>
+<style id="gamefeel2-style">
+/* Gomoku 1.4 — Game Feel 2.0.
+ * Uses only existing palette variables and preserves the established visual system.
+ */
+#shell{isolation:isolate}
+.gf2-layer{position:absolute;inset:0;z-index:3;overflow:hidden;border-radius:inherit;pointer-events:none}
+.gf2-impact,.gf2-impact-core,.gf2-win-point,.gf2-fleck{position:absolute;display:block;pointer-events:none;transform:translate(-50%,-50%)}
+.gf2-impact{width:clamp(26px,7.5%,58px);aspect-ratio:1;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--seal) 58%,transparent);opacity:0;animation:gf2Impact 650ms cubic-bezier(.16,.74,.22,1) both}
+.gf2-impact.is-engine{border-color:color-mix(in srgb,var(--ink2) 48%,transparent);animation-duration:560ms}.gf2-impact-core{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--seal) 62%,transparent);animation:gf2Core 300ms ease-out both}
+#shell.gf2-board-impact{animation:gf2BoardImpact 170ms cubic-bezier(.22,.8,.3,1)}
+.board-point.gf2-press{background:radial-gradient(circle at center,color-mix(in srgb,var(--seal) 13%,transparent) 0 29%,transparent 32%)!important}
+.player-card{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}.player-card.gf2-active-player{transform:translateY(-1px);border-color:color-mix(in srgb,var(--seal) 36%,var(--hair));box-shadow:0 7px 18px -14px color-mix(in srgb,var(--seal) 55%,transparent)}
+.player-card.gf2-thinking-player{background:color-mix(in srgb,var(--card) 91%,var(--soft))}
+#moveBadge.gf2-count-pop{animation:gf2Count .2s ease-out}.game-actions .btn:active,#v92GameBar button:active,.v92-action-row button:active{transform:translateY(1px) scale(.985)}
+.gf2-outcome{position:absolute;left:50%;top:50%;min-width:min(72%,330px);max-width:84%;transform:translate(-50%,-50%);padding:13px 17px 14px;border:1px solid color-mix(in srgb,var(--hair2) 78%,transparent);border-radius:10px;background:color-mix(in srgb,var(--paper) 92%,transparent);box-shadow:0 16px 42px rgba(33,24,14,.22);backdrop-filter:blur(8px);text-align:center;color:var(--ink)}
+.gf2-outcome[hidden]{display:none!important}.gf2-outcome>span{display:block;font-size:8px;font-weight:800;letter-spacing:.16em;color:var(--seal);margin-bottom:4px}.gf2-outcome>strong{display:block;font:600 clamp(20px,4vw,29px)/1.08 Georgia,serif}.gf2-outcome>small{display:block;margin-top:6px;color:var(--ink2);font-size:9px}
+.gf2-outcome[data-kind="loss"]>span,.gf2-outcome[data-kind="draw"]>span{color:var(--ink2)}.gf2-outcome.gf2-outcome-in{animation:gf2Outcome .62s cubic-bezier(.16,.8,.22,1) both}
+.gf2-win-point{width:clamp(24px,6.7%,48px);aspect-ratio:1;border-radius:50%;border:2px solid color-mix(in srgb,var(--seal) 74%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--paper) 36%,transparent);animation:gf2WinPoint 1.25s ease-out var(--gf2-delay,0ms) both}
+.gf2-fleck{width:var(--size);height:var(--size);border-radius:2px;background:color-mix(in srgb,var(--seal) 72%,var(--paper));animation:gf2Fleck .9s cubic-bezier(.1,.65,.2,1) var(--delay) both}
+#shell.gf2-win{box-shadow:0 18px 38px -12px rgba(76,52,16,.42),0 4px 8px #46321825,0 0 0 3px color-mix(in srgb,var(--seal) 20%,transparent)}
+#shell.gf2-loss,#shell.gf2-draw{box-shadow:0 16px 32px -13px rgba(50,45,37,.26),0 4px 8px #4632181c}
+#shell.gf2-rewind{animation:gf2Rewind .22s ease-out}#shell.gf2-forward{animation:gf2Forward .22s ease-out}#shell.gf2-reset{animation:gf2Reset .34s ease-out}
+#resultDialog .result-card{overflow:hidden}#gf2ResultMeta{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:12px 0 4px}#gf2ResultMeta span{padding:5px 8px;border:1px solid var(--hair);border-radius:999px;background:color-mix(in srgb,var(--card) 88%,var(--soft));font-size:9px;color:var(--ink2);font-weight:650}
+#gf2ResultMeta[data-kind="win"] span:first-child{border-color:color-mix(in srgb,var(--seal) 34%,var(--hair));color:var(--seal)}
+#toast.gf2-toast-bump{animation:gf2Toast .26s ease-out}
+@keyframes gf2Impact{0%{opacity:.55;transform:translate(-50%,-50%) scale(.48)}40%{opacity:.34}100%{opacity:0;transform:translate(-50%,-50%) scale(calc(1.28 * var(--gf2-strength,1)))}}
+@keyframes gf2Core{0%{opacity:.55;transform:translate(-50%,-50%) scale(.5)}100%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}}
+@keyframes gf2BoardImpact{0%,100%{transform:none}50%{transform:scale(.9985)}}
+@keyframes gf2Count{0%{transform:translateY(0)}45%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+@keyframes gf2Outcome{0%{opacity:0;transform:translate(-50%,-46%) scale(.975)}20%,72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-52%) scale(.995)}}
+@keyframes gf2WinPoint{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}25%{opacity:.82}100%{opacity:0;transform:translate(-50%,-50%) scale(1.28)}}
+@keyframes gf2Fleck{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0)}18%{opacity:.86}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.9) rotate(var(--turn))}}
+@keyframes gf2Rewind{0%,100%{transform:none}45%{transform:translateX(-3px)}}@keyframes gf2Forward{0%,100%{transform:none}45%{transform:translateX(3px)}}@keyframes gf2Reset{0%{opacity:.72;transform:scale(.992)}100%{opacity:1;transform:none}}@keyframes gf2Toast{0%{transform:translateY(2px);opacity:.72}100%{transform:none;opacity:1}}
+@media(max-width:760px){.gf2-outcome{min-width:min(78%,300px);padding:11px 13px}.player-card.gf2-active-player{transform:none}}
+@media(max-width:760px),(pointer:coarse){.li11-primary{min-height:46px}}
+@media(prefers-reduced-motion:reduce){.gf2-impact,.gf2-impact-core,.gf2-win-point,.gf2-fleck{display:none!important}#shell,.player-card,#moveBadge,#toast,.gf2-outcome{animation:none!important;transition:none!important}.gf2-outcome{backdrop-filter:none}.game-actions .btn:active,#v92GameBar button:active,.v92-action-row button:active{transform:none}}
+
+</style>
+<script id="gamefeel2-runtime">
+/* Gomoku 1.4 — Game Feel 2.0 browser runtime.
+ * Additive interaction choreography. Existing v9.4 feedback remains the low-level layer.
+ */
+(()=>{
+  'use strict';
+  if(window.GomokuGameFeel2)return;
+  const Core=window.GomokuGameFeel2Core;if(!Core)return;
+  const $=id=>document.getElementById(id),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const shell=$('shell'),grid=$('boardGrid');if(!shell||!grid)return;
+  let layer=null,outcomeBox=null,lastMove=null,lastResult=null,lastAction='',audio=null,toastTimer=0,moveBadgeValue='';
+  const snap=()=>{try{return window.GomokuStudio?.exportGame?.()||{};}catch{return {};}};
+  function ensure(){
+    if(layer)return;
+    layer=document.createElement('div');layer.id='gf2Layer';layer.className='gf2-layer';layer.setAttribute('aria-hidden','true');
+    outcomeBox=document.createElement('div');outcomeBox.id='gf2Outcome';outcomeBox.className='gf2-outcome';outcomeBox.hidden=true;
+    outcomeBox.innerHTML='<span id="gf2OutcomeKicker">GAME</span><strong id="gf2OutcomeTitle"></strong><small id="gf2OutcomeSub"></small>';
+    layer.append(outcomeBox);shell.append(layer);
+    decorateResult();
+  }
+  function center(i){
+    const el=grid.querySelector('[data-i="'+i+'"]');if(!el)return null;
+    const r=el.getBoundingClientRect(),s=shell.getBoundingClientRect();
+    return {x:r.left-s.left+r.width/2,y:r.top-s.top+r.height/2};
+  }
+  function nodeAt(cls,i,extra=''){
+    const p=center(i);if(!p)return null;const n=document.createElement('i');n.className=cls+(extra?' '+extra:'');
+    n.style.left=p.x+'px';n.style.top=p.y+'px';layer.append(n);return n;
+  }
+  function recycle(n,ms){if(!n)return;setTimeout(()=>n.remove(),ms);}
+  function bump(el,cls,ms=260){
+    if(!el||reduced.matches)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),ms);
+  }
+  function impact(detail){
+    ensure();const plan=Core.movePlan(detail,reduced.matches);lastMove={...plan,at:Date.now()};layer.dataset.lastMove=String(plan.point??'pass');
+    if(plan.impact){
+      const n=nodeAt('gf2-impact',plan.point,plan.origin==='engine'?'is-engine':'is-human');
+      if(n){n.style.setProperty('--gf2-strength',String(plan.strength));recycle(n,720);}
+      const core=nodeAt('gf2-impact-core',plan.point);recycle(core,360);
+      bump(shell,'gf2-board-impact',180);
+    }
+    bump($('moveBadge'),'gf2-count-pop',220);
+    requestAnimationFrame(syncTurn);
+  }
+  function syncTurn(){
+    const black=$('blackPlayer'),white=$('whitePlayer'),bsub=$('blackSub')?.textContent||'',wsub=$('whiteSub')?.textContent||'';
+    black?.classList.toggle('gf2-active-player',/to play/i.test(bsub));white?.classList.toggle('gf2-active-player',/to play/i.test(wsub));
+    const thinking=!$('spinner')?.hidden;black?.classList.toggle('gf2-thinking-player',thinking&&/to play/i.test(bsub));white?.classList.toggle('gf2-thinking-player',thinking&&/to play/i.test(wsub));
+  }
+  function clearCelebration(){
+    if(!layer)return;for(const el of layer.querySelectorAll('.gf2-win-point,.gf2-fleck'))el.remove();
+    if(outcomeBox){outcomeBox.hidden=true;outcomeBox.dataset.kind='';}
+    shell.classList.remove('gf2-win','gf2-loss','gf2-draw');
+  }
+  function result(detail={}){
+    ensure();clearCelebration();const game=snap(),names={black:$('blackName')?.textContent||'Black',white:$('whiteName')?.textContent||'White'};
+    const plan=Core.resultPlan(game,detail,reduced.matches),copy=Core.resultCopy(game,detail,names);plan.copy=copy;lastResult={...plan,at:Date.now()};
+    layer.dataset.lastResult=copy.kind;outcomeBox.dataset.kind=copy.kind;outcomeBox.hidden=false;
+    $('gf2OutcomeKicker').textContent=copy.kind==='win'?'VICTORY':copy.kind==='loss'?'GAME COMPLETE':copy.kind==='draw'?'DRAW':'RESULT';
+    $('gf2OutcomeTitle').textContent=copy.title;$('gf2OutcomeSub').textContent=copy.reason+' · '+copy.moves+' moves';
+    shell.classList.add(copy.kind==='win'?'gf2-win':copy.kind==='loss'?'gf2-loss':'gf2-draw');
+    bump(outcomeBox,'gf2-outcome-in',680);
+    if(!reduced.matches){
+      plan.winLine.forEach((i,n)=>{const x=nodeAt('gf2-win-point',i);if(x){x.style.setProperty('--gf2-delay',(n*55)+'ms');recycle(x,1550);}});
+      if(plan.celebrate){
+        const anchor=plan.winLine[Math.floor(plan.winLine.length/2)]??lastMove?.point??112,p=center(anchor)||{x:shell.clientWidth/2,y:shell.clientHeight/2};
+        for(const row of plan.particles){const f=document.createElement('i');f.className='gf2-fleck';f.style.left=p.x+'px';f.style.top=p.y+'px';f.style.setProperty('--dx',row.dx+'px');f.style.setProperty('--dy',row.dy+'px');f.style.setProperty('--delay',row.delay+'ms');f.style.setProperty('--size',row.size+'px');f.style.setProperty('--turn',row.turn+'deg');layer.append(f);recycle(f,1200+row.delay);}
+      }
+    }
+    setTimeout(()=>{if(lastResult?.at&&Date.now()-lastResult.at>=560)outcomeBox.hidden=true;},820);
+    setTimeout(()=>enrichResult(copy),0);
+  }
+  function decorateResult(){
+    const card=$('resultDialog')?.querySelector('.result-card');if(!card||$('gf2ResultMeta'))return;
+    const meta=document.createElement('div');meta.id='gf2ResultMeta';meta.className='gf2-result-meta';meta.setAttribute('aria-label','Game result summary');
+    const actions=card.querySelector('.dialog-actions');actions?.insertAdjacentElement('beforebegin',meta);
+  }
+  function enrichResult(copy){
+    decorateResult();if(!copy)return;
+    if($('resTitle'))$('resTitle').textContent=copy.title;if($('resStamp'))$('resStamp').textContent=copy.stamp;
+    const meta=$('gf2ResultMeta');if(meta){
+      const chips=[copy.reason,copy.moves+' moves'];if(copy.side)chips.push('You played '+copy.side);
+      meta.innerHTML=chips.map(x=>'<span>'+String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</span>').join('');
+      meta.dataset.kind=copy.kind;
+    }
+  }
+  function soundEnabled(){return !!$('soundChk')?.checked;}
+  function microTone(kind){
+    if(!soundEnabled())return;try{
+      const A=window.AudioContext||window.webkitAudioContext;if(!A)return;audio=audio||new A();if(audio.state==='suspended')audio.resume().catch(()=>{});
+      const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';
+      const f=kind==='undo'?[190,145]:kind==='redo'?[145,190]:[165,215];o.frequency.setValueAtTime(f[0],t);o.frequency.exponentialRampToValueAtTime(f[1],t+.065);
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.018,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+.085);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.09);
+      o.onended=()=>{try{o.disconnect();g.disconnect();}catch{}};
+    }catch{}
+  }
+  function smallHaptic(ms=6){if(!soundEnabled()||!navigator.vibrate)return;try{navigator.vibrate(ms);}catch{}}
+  function action(kind){
+    ensure();lastAction=kind;layer.dataset.lastAction=kind;
+    if(kind==='undo'){bump(shell,'gf2-rewind',240);microTone('undo');smallHaptic(5);}
+    else if(kind==='redo'){bump(shell,'gf2-forward',240);microTone('redo');smallHaptic(5);}
+    else if(kind==='reset'){clearCelebration();bump(shell,'gf2-reset',360);microTone('reset');smallHaptic(6);}
+  }
+  function toastPulse(){
+    const t=$('toast'),msg=$('toastMsg')?.textContent?.trim();if(!t||!msg)return;
+    clearTimeout(toastTimer);t.classList.remove('gf2-toast-bump');void t.offsetWidth;t.classList.add('gf2-toast-bump');toastTimer=setTimeout(()=>t.classList.remove('gf2-toast-bump'),280);
+  }
+  function boot(){
+    ensure();syncTurn();
+    window.addEventListener('gomoku:move',e=>impact(e.detail||{}));
+    window.addEventListener('gomoku:result',e=>result(e.detail||{}));
+    $('undoBtn')?.addEventListener('click',()=>setTimeout(()=>action('undo'),0));
+    $('redoBtn')?.addEventListener('click',()=>setTimeout(()=>action('redo'),0));
+    $('rematchBtn')?.addEventListener('click',()=>setTimeout(()=>action('reset'),0));
+    $('newForm')?.addEventListener('submit',()=>setTimeout(()=>action('reset'),60));
+    grid.addEventListener('pointerdown',e=>{const p=e.target?.closest?.('[data-i]');if(p&&!reduced.matches){p.classList.add('gf2-press');setTimeout(()=>p.classList.remove('gf2-press'),150);}},{passive:true});
+    const turnObs=new MutationObserver(()=>requestAnimationFrame(syncTurn));for(const el of [$('blackSub'),$('whiteSub'),$('spinner'),$('statusText')])if(el)turnObs.observe(el,{attributes:true,childList:true,characterData:true,subtree:true});
+    const toast=$('toastMsg');if(toast)new MutationObserver(toastPulse).observe(toast,{childList:true,characterData:true,subtree:true});
+    const badge=$('moveBadge');if(badge){moveBadgeValue=badge.textContent;new MutationObserver(()=>{const next=badge.textContent;if(next!==moveBadgeValue){const before=moveBadgeValue;moveBadgeValue=next;bump(badge,'gf2-count-pop',220);if(/^0*0\D/.test(next)&&!/^0*0\D/.test(before))action('reset');}}).observe(badge,{childList:true,characterData:true,subtree:true});}
+    reduced.addEventListener?.('change',()=>{if(reduced.matches)clearCelebration();});
+  }
+  window.GomokuGameFeel2=Object.freeze({version:Core.VERSION,snapshot:()=>({lastMove,lastResult,lastAction,reduced:reduced.matches}),clear:clearCelebration});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>

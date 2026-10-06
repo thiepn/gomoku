@@ -105,6 +105,10 @@
     let section=$('v11LearningIntelligence');
     if(!section){
       section=document.createElement('section');section.id='v11LearningIntelligence';section.className='li11-home';
+    }
+    // The modern Improve surface may appear after Learning Intelligence boots on
+    // slower/mobile clients. Keep the learning home in the currently preferred host.
+    if(!host.contains(section)){
       const curriculum=host.querySelector('.ui-curriculum');
       if(curriculum)curriculum.insertAdjacentElement('beforebegin',section);else host.append(section);
     }
