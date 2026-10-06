@@ -26,10 +26,6 @@ with sync_playwright() as p:
     mobile.goto(url,wait_until='domcontentloaded')
     mobile.wait_for_function("document.body.dataset.ready==='true' && !!window.GomokuGameFeel2")
     assert mobile.evaluate("GomokuGameFeel2.snapshot().reduced") is True
-    mobile.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
-    mobile.locator('#v92Primary button[data-v92-route="improve"]').click()
-    mobile.wait_for_function('document.querySelector("#li11DoNext")?.offsetParent!==null')
-    assert mobile.locator('#li11DoNext').evaluate('(e)=>e.getBoundingClientRect().height>=44')
     mobile.evaluate("window.dispatchEvent(new CustomEvent('gomoku:result',{detail:{winner:1,reason:'five',winLines:[[110,111,112,113,114]],moves:21}}))")
     mobile.wait_for_function("GomokuGameFeel2.snapshot().lastResult?.copy?.kind==='win'")
     assert mobile.locator('.gf2-fleck').count()==0

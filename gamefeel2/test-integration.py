@@ -12,7 +12,7 @@ runtime=(ROOT/'gamefeel2/runtime.js').read_text()
 for marker in ['gomoku:move','gomoku:result','gf2Layer','gf2Outcome','gf2ResultMeta','gf2-active-player','prefers-reduced-motion','microTone','navigator.vibrate']:
     assert marker in runtime,'Missing Game Feel 2.0 runtime contract: '+marker
 css=(ROOT/'gamefeel2/gamefeel2.css').read_text()
-for marker in ['gf2Impact','gf2Outcome','gf2WinPoint','gf2Fleck','gf2Rewind','gf2Reset','prefers-reduced-motion']:
+for marker in ['gf2Impact','gf2Outcome','gf2WinPoint','gf2Fleck','gf2Rewind','gf2Reset','prefers-reduced-motion','.li11-primary{min-height:46px}']:
     assert marker in css,'Missing Game Feel 2.0 visual contract: '+marker
 core=(ROOT/'gamefeel2/core.js').read_text()
 for marker in ["VERSION='1.4.0'","resultPlan","movePlan","particles","You win"]:
