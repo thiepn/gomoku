@@ -191,7 +191,11 @@
     const next=Core.analyze({course:courses(),academy:academy(),mistakes,course2:course2Attempts(),now:Date.now()});
     const signature=JSON.stringify({skills:next.skills.map(s=>[s.id,s.score,s.due,s.state]),summary:next.summary});
     snapshot=next;
-    if(signature!==lastSignature){lastSignature=signature;renderHome();annotateChapters();}
+    const host=homeHost(),section=$('v11LearningIntelligence');
+    // Re-render when the preferred host changes even if learning evidence did not.
+    // Otherwise a stable snapshot can leave the card stranded in a hidden legacy host.
+    const needsRemount=!!host&&(!section||!host.contains(section));
+    if(signature!==lastSignature||needsRemount){lastSignature=signature;renderHome();annotateChapters();}
     mountReviewPrescription();
     return snapshot;
   }
@@ -202,7 +206,7 @@
   const observer=new MutationObserver(mutations=>{
     for(const m of mutations)for(const node of m.addedNodes||[]){
       if(node?.nodeType!==1)continue;
-      if(node.matches?.('#uiLearning,#grDialog,#uiCourseGrid')||node.querySelector?.('#uiLearning,#grDialog,#uiCourseGrid')){schedule(120,false);return;}
+      if(node.matches?.('#v92ImproveHome,#uiLearning,#grDialog,#uiCourseGrid')||node.querySelector?.('#v92ImproveHome,#uiLearning,#grDialog,#uiCourseGrid')){schedule(120,false);return;}
     }
   });
   function boot(){
