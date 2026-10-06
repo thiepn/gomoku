@@ -1,0 +1,25 @@
+/* Gomoku 1.8 — Opening Study & Repertoire 2.0 */
+#os2Home{display:grid;gap:11px;margin:0 0 16px;padding:14px;border:1px solid var(--hair);border-radius:11px;background:color-mix(in srgb,var(--card) 94%,var(--seal) 6%)}
+#os2Home[hidden]{display:none!important}
+.os2-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.os2-head h3{margin:2px 0 4px;font:700 20px/1.1 Georgia,serif}
+.os2-head p{margin:0;color:var(--ink2);font-size:8px;line-height:1.5}
+.os2-skill{border:0;background:transparent;color:var(--seal);font-size:8px;font-weight:750;min-height:32px;padding:5px;text-align:right}
+.os2-context{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 1px}
+.os2-context b{font-size:8px}.os2-context span{font-size:7px;color:var(--ink2);text-align:right}
+.os2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid var(--hair);border-radius:9px;background:var(--paper)}
+.os2-next span{display:block;font-size:6px;font-weight:800;letter-spacing:.14em;color:var(--seal)}
+.os2-next strong{display:block;margin-top:3px;font-size:11px}
+.os2-next p{margin:3px 0 0;color:var(--ink2);font-size:7px;line-height:1.45}
+.os2-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.os2-destination{display:grid;gap:4px;align-content:start;text-align:left;min-height:72px;padding:9px;border:1px solid var(--hair);border-radius:8px;background:var(--paper);color:var(--ink)}
+.os2-destination:hover{border-color:var(--hair2)}
+.os2-destination b{font-size:8px}.os2-destination span{font-size:6px;line-height:1.4;color:var(--ink2)}
+.os2-evidence{margin:0!important;padding-top:2px;color:var(--ink2);font-size:6px!important;line-height:1.45!important}
+@media(max-width:760px){.os2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){
+  #os2Home{padding:11px}.os2-head,.os2-next{grid-template-columns:1fr}.os2-skill{text-align:left;justify-self:start}
+  .os2-context{display:grid;gap:3px}.os2-context span{text-align:left}
+  .os2-grid{grid-template-columns:1fr}.os2-destination{min-height:48px}.os2-next .btn{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){#os2Home *{scroll-behavior:auto!important}}
