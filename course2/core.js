@@ -132,6 +132,29 @@
       {title:'Review closes the loop',text:'A mistake becomes useful when it changes what you notice in the next unfamiliar game.',stones:[s(3,4,1),s(4,4,1),s(5,4,2),s(4,3,2)],marks:[m(4,5,'answer')]}
     ]
   });
+  const a=(prompt,stones,options,answers,why)=>Object.freeze({
+    prompt,
+    stones:Object.freeze(stones.map(x=>Object.freeze(x))),
+    options:Object.freeze(options.map(x=>Object.freeze(x))),
+    answers:Object.freeze(answers.map(x=>Object.freeze(x))),
+    why
+  });
+  const APPLY=Object.freeze({
+    1:a('Black to move. Which point must be handled before any slower plan?',[s(1,5,1),s(2,5,2),s(3,5,2),s(4,5,2),s(5,5,2),s(3,2,1)],[[6,5],[4,2],[5,3]],[[6,5]],'White has one immediate winning endpoint. Scan wins and losses before planning.'),
+    2:a('Black to move. Complete the broken four.',[s(2,4,1),s(3,4,1),s(5,4,1),s(6,4,1),s(2,2,2)],[[4,4],[4,3],[7,4]],[[4,4]],'The internal gap completes five immediately; broken lines can be just as urgent as straight ones.'),
+    3:a('Black to move. Which point turns this three into a forcing four?',[s(3,4,1),s(4,4,1),s(5,4,1),s(6,4,2),s(4,2,2)],[[2,4],[3,3],[5,5]],[[2,4]],'The left extension creates a four with one remaining winning endpoint.'),
+    4:a('Black to move. Find the crossing point that creates two independent threats.',[s(3,4,1),s(5,4,1),s(4,3,1),s(4,5,1),s(2,2,2)],[[4,4],[2,4],[6,5]],[[4,4]],'The center strengthens horizontal and vertical lines at the same time, creating separate obligations.'),
+    5:a('Black to move. White threatens to win, but Black can finish first. Where?',[s(1,6,1),s(2,6,2),s(3,6,2),s(4,6,2),s(5,6,2),s(2,2,1),s(3,2,1),s(4,2,1),s(5,2,1)],[[6,6],[6,2],[4,3]],[[6,2]],'A counter-win ends the game immediately, so it outranks passive defense.'),
+    6:a('Black to move. Which move should be calculated first because it forces a reply?',[s(2,4,1),s(3,4,1),s(4,4,1),s(6,4,2),s(5,2,2)],[[5,4],[4,5],[2,3]],[[5,4]],'Creating the closed four sharply narrows the defender’s reply tree.'),
+    7:a('Black to move. Which candidate best connects several useful future directions?',[s(3,4,1),s(4,3,1),s(5,5,1),s(7,7,2)],[[4,4],[1,4],[7,1]],[[4,4]],'The central connection participates in several live directions instead of committing to one rigid line.'),
+    8:a('Black to move. Which candidate keeps the initiative?',[s(2,4,1),s(3,4,1),s(4,4,1),s(6,6,2)],[[5,4],[5,5],[1,2]],[[5,4]],'The forcing continuation creates an immediate obligation; the quiet alternatives give White freedom.'),
+    9:a('Black to move. Which point makes the attacking lines cooperate?',[s(3,4,1),s(5,4,1),s(4,3,1),s(4,5,1),s(6,6,2)],[[4,4],[2,3],[6,4]],[[4,4]],'The crossing point links future threats across two directions instead of creating an isolated idea.'),
+    10:a('Black to move. A local attack is tempting, but what does the whole-board scan demand?',[s(2,2,1),s(3,2,1),s(6,2,1),s(6,3,2),s(6,4,2),s(6,5,2),s(6,6,2)],[[4,2],[6,7],[3,3]],[[6,7]],'White has an immediate vertical winning point. Global danger outranks local development.'),
+    11:a('Black to move in an early position. Which marked point preserves the most central flexibility?',[s(4,4,1),s(4,5,2)],[[5,4],[0,0],[8,8]],[[5,4]],'The adjacent central move keeps several directions available while the corner choices commit too early.'),
+    12:a('Black to move. The center would create two open threes and is forbidden. Which marked candidate extends the horizontal line instead?',[s(3,4,1),s(5,4,1),s(4,3,1),s(4,5,1),s(2,2,2)],[[4,4],[6,4],[7,7]],[[6,4]],'Renju calculation includes legality. The center is a double-three; extending the horizontal line avoids that forbidden crossing.'),
+    13:a('Black to move. Which candidate deserves first calculation because it creates the strongest constrained reply?',[s(2,4,1),s(3,4,1),s(4,4,1),s(6,4,2),s(5,2,2)],[[5,4],[4,5],[1,1]],[[5,4]],'Candidate generation comes first, then the forcing move should be tested against the strongest defense.'),
+    14:a('Black to move. Run the full decision loop: wins, threats, candidates, defense. What is urgent?',[s(1,6,1),s(2,6,2),s(3,6,2),s(4,6,2),s(5,6,2),s(2,2,1),s(3,2,1),s(6,3,2)],[[6,6],[4,2],[5,3]],[[6,6]],'There is no immediate Black win, so the opponent’s direct win must be stopped before pursuing a plan.')
+  });
   const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,Number(n)||0));
   function reportMap(reports=[]){
     const out={};
@@ -173,7 +196,8 @@
   }
   function demo(chapter){return (DEMOS[Number(chapter)]||[]).map(x=>JSON.parse(JSON.stringify(x)));}
   function transfer(chapter){const x=TRANSFER[Number(chapter)];return x?JSON.parse(JSON.stringify(x)):null;}
+  function apply(chapter){const x=APPLY[Number(chapter)];return x?JSON.parse(JSON.stringify(x)):null;}
   function chapterSkills(chapter){return [...(CHAPTER_SKILLS[Number(chapter)]||[])];}
   function metadata(chapter){const x=CHAPTERS.find(c=>c.id===Number(chapter));return x?{...x,skills:chapterSkills(chapter)}:null;}
-  return Object.freeze({VERSION,CHAPTERS,metadata,chapterSkills,chapterState,journey,demo,transfer});
+  return Object.freeze({VERSION,CHAPTERS,metadata,chapterSkills,chapterState,journey,demo,apply,transfer});
 });
