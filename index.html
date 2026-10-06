@@ -2250,9 +2250,11 @@ function search(purpose='hint'){
   if(purpose==='hint'&&(terminalView()||(!S.reviewing&&!humanTurn())))return;
   const board=displayed().slice(),color=viewedColor(),count=S.initial.length+(S.reviewing?S.reviewPos:S.records.length);
   const puzzle=purpose==='hint'&&S.mode==='puzzle'&&!S.reviewing?currentPuzzle():null;
-  const level=S.mode==='arena'&&color===2?S.opponentLevel:S.level;
-  const config=purpose==='move'?{...CFG[level],style:S.style,seed:S.seed^S.records.length,multiPV:5,randomPool:1}:
-    {...CFG.advanced,timeMs:1000,maxDepth:4,width:14,style:'balanced',seed:S.seed};
+  const selectedLevel=S.mode==='arena'&&color===2?S.opponentLevel:S.level;/* AI2_SEARCH_HOOK */
+  const level=purpose==='move'&&window.GomokuAI2?.effectiveLevel?window.GomokuAI2.effectiveLevel({selected:selectedLevel,mode:S.mode,rule:S.variant,moveCount:S.records.length,gameId:S.gameId}):selectedLevel;
+  const baseConfig=purpose==='move'?{...CFG[level],style:S.style,seed:S.seed^S.records.length,multiPV:5,randomPool:1}:
+    {...CFG.advanced,timeMs:1000,maxDepth:4,width:14,style:'balanced',seed:S.seed};/* AI2_CONFIG_HOOK */
+  const config=purpose==='move'&&window.GomokuAI2?.searchConfig?window.GomokuAI2.searchConfig(level,baseConfig,{mode:S.mode,rule:S.variant,moveCount:S.records.length,gameId:S.gameId}):baseConfig;
   cancelSearch();const token=++generation;
   S.busy=purpose==='move';S.hintBusy=purpose==='hint';S.engineError=false;
   S.metrics=(purpose==='move'?'Thinking':'Analyzing')+' · '+(config.timeMs/1000).toFixed(2)+' s search target';
@@ -2264,6 +2266,7 @@ function search(purpose='hint'){
   function accept(result,compat=false){
     if(!active())return;
     if(purpose==='move'&&!compat)result=v113Humanize(result,board,color,count,level,S.style,S.seed^S.records.length);
+    if(purpose==='move'&&!compat)try{window.dispatchEvent(new CustomEvent('gomoku-ai2-search',{detail:{gameId:S.gameId,selectedLevel,effectiveLevel:level,reason:result?.reason||'',depth:result?.depth||0,nodes:result?.nodes||0,elapsedMs:result?.elapsedMs||0,backend:result?.backend||'',confidence:result?.confidence?.band||'',humanized:result?.humanization?.deliberate===true}}));}catch{}/* AI2_TELEMETRY_HOOK */
     const a=result&&Number.isInteger(result.move)?E.legalMove(board,result.move,color,count):null;
     if(!a?.legal){if(!compat){fallback();return;}fail();return;}
     cleanJob(true);S.busy=false;S.hintBusy=false;
@@ -15602,5 +15605,221 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 
+</script>
+<script id="ai2-core">
+/* Gomoku 1.3 — AI 2.0 pure calibration/adaptation model.
+ * No DOM, storage, network or engine dependency. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuAI2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='1.3.0';
+  const LEVELS=Object.freeze(['first','beg','club','mid','advanced','high','expert','maximum']);
+  const LABELS=Object.freeze({first:'Beginner',beg:'Casual',club:'Club',mid:'Tactical',advanced:'Advanced',high:'Challenging',expert:'Expert',maximum:'Master'});
+  const TUNING=Object.freeze({
+    first:{multiPV:5,time:1,depth:0,width:0},
+    beg:{multiPV:5,time:1,depth:0,width:0},
+    club:{multiPV:4,time:1,depth:0,width:0},
+    mid:{multiPV:4,time:1,depth:0,width:0},
+    advanced:{multiPV:3,time:1.05,depth:0,width:1},
+    high:{multiPV:3,time:1.10,depth:0,width:1},
+    expert:{multiPV:2,time:1.15,depth:1,width:2},
+    maximum:{multiPV:1,time:1.25,depth:1,width:2}
+  });
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const levelIndex=x=>Math.max(0,LEVELS.indexOf(x));
+  const validLevel=x=>LEVELS.includes(x);
+  function tuneSearch(level,base={}){
+    level=validLevel(level)?level:'mid';const t=TUNING[level];
+    const out={...base};
+    out.timeMs=Math.round(clamp((Number(base.timeMs)||540)*t.time,20,15000));
+    out.maxDepth=Math.round(clamp((Number(base.maxDepth)||5)+t.depth,1,20));
+    out.width=Math.round(clamp((Number(base.width)||12)+t.width,2,36));
+    out.multiPV=t.multiPV;out.randomPool=1;
+    out.ai2={version:VERSION,policy:'strong-level-compute',level};
+    return out;
+  }
+  function normalizeGame(g){
+    if(!g||typeof g!=='object'||!validLevel(g.effectiveLevel))return null;
+    const outcome=['win','draw','loss'].includes(g.outcome)?g.outcome:null;
+    if(!outcome)return null;
+    return {id:String(g.id||''),at:Number(g.at)||0,outcome,effectiveLevel:g.effectiveLevel,
+      selectedLevel:validLevel(g.selectedLevel)?g.selectedLevel:g.effectiveLevel,
+      assisted:g.assisted===true,rule:String(g.rule||'')};
+  }
+  function eligible(history,current){
+    return (Array.isArray(history)?history:[]).map(normalizeGame).filter(Boolean)
+      .filter(g=>!g.assisted&&g.effectiveLevel===current).sort((a,b)=>a.at-b.at).slice(-8);
+  }
+  function performance(rows){
+    if(!rows.length)return {games:0,wins:0,draws:0,losses:0,score:.5};
+    let wins=0,draws=0,losses=0,total=0,weight=0;
+    rows.forEach((g,i)=>{const w=.78+.22*(i+1)/rows.length;weight+=w;if(g.outcome==='win'){wins++;total+=w;}else if(g.outcome==='draw'){draws++;total+=.5*w;}else losses++;});
+    return {games:rows.length,wins,draws,losses,score:Number((total/weight).toFixed(3))};
+  }
+  function freshAdaptive(selected,games=0){
+    selected=validLevel(selected)?selected:'mid';
+    return {version:1,selected,current:selected,lastChangeGameCount:Math.max(0,Number(games)||0),changes:0};
+  }
+  function resolveAdaptive(selected,history=[],prior=null){
+    selected=validLevel(selected)?selected:'mid';
+    const all=(Array.isArray(history)?history:[]).map(normalizeGame).filter(Boolean);
+    let state=prior&&prior.version===1&&validLevel(prior.current)&&validLevel(prior.selected)
+      ?{version:1,selected:prior.selected,current:prior.current,lastChangeGameCount:Math.max(0,Number(prior.lastChangeGameCount)||0),changes:Math.max(0,Number(prior.changes)||0)}
+      :freshAdaptive(selected,0);
+    if(state.selected!==selected)state=freshAdaptive(selected,all.length);
+    const rows=eligible(all,state.current),perf=performance(rows);
+    const sinceChange=Math.max(0,all.length-state.lastChangeGameCount);
+    if(rows.length<4)return {level:state.current,state,performance:perf,changed:false,reason:'need-more-games'};
+    if(sinceChange<2)return {level:state.current,state,performance:perf,changed:false,reason:'cooldown'};
+    let delta=0;
+    if(perf.score>=.72)delta=1; else if(perf.score<=.28)delta=-1;
+    const next=LEVELS[clamp(levelIndex(state.current)+delta,0,LEVELS.length-1)];
+    if(!delta||next===state.current)return {level:state.current,state,performance:perf,changed:false,reason:'well-matched'};
+    state={...state,current:next,lastChangeGameCount:all.length,changes:state.changes+1};
+    return {level:next,state,performance:perf,changed:true,reason:delta>0?'promoted':'eased'};
+  }
+  function calibrationAudit(levelConfigs={}){
+    const rows=LEVELS.map((level,i)=>{
+      const cfg=levelConfigs[level]||{},tuned=tuneSearch(level,cfg);
+      return {level,label:LABELS[level],index:i,timeMs:tuned.timeMs,maxDepth:tuned.maxDepth,width:tuned.width,multiPV:tuned.multiPV};
+    });
+    const monotonicTime=rows.every((r,i)=>!i||r.timeMs>=rows[i-1].timeMs);
+    const monotonicDepth=rows.every((r,i)=>!i||r.maxDepth>=rows[i-1].maxDepth);
+    const monotonicWidth=rows.every((r,i)=>!i||r.width>=rows[i-1].width);
+    const focusedStrongSearch=rows.every((r,i)=>!i||r.multiPV<=rows[i-1].multiPV);
+    return {version:VERSION,rows,checks:{monotonicTime,monotonicDepth,monotonicWidth,focusedStrongSearch},
+      pass:monotonicTime&&monotonicDepth&&monotonicWidth&&focusedStrongSearch};
+  }
+  function benchmarkSummary(rows=[]){
+    const xs=Array.isArray(rows)?rows.filter(Boolean):[];
+    const tactics=xs.filter(x=>x.kind==='tactical'),quiet=xs.filter(x=>x.kind==='quiet');
+    const tacticalPass=tactics.length?tactics.every(x=>x.pass===true):false;
+    const agreements=quiet.filter(x=>typeof x.agree==='boolean');
+    const agreement=agreements.length?agreements.filter(x=>x.agree).length/agreements.length:null;
+    return {positions:xs.length,tactical:tactics.length,tacticalPass,quiet:quiet.length,
+      referenceAgreement:agreement===null?null:Number(agreement.toFixed(3)),
+      scope:'Deterministic fixture benchmark; reference agreement is not Elo, win probability, or proof of optimal play.'};
+  }
+  return Object.freeze({VERSION,LEVELS,LABELS,TUNING,tuneSearch,normalizeGame,eligible,performance,freshAdaptive,resolveAdaptive,calibrationAudit,benchmarkSummary});
+});
+</script>
+<style id="ai2-style">
+.ai2-card{margin-top:12px;padding:12px;border:1px solid var(--hair);border-radius:9px;background:color-mix(in srgb,var(--card) 94%,var(--soft));display:grid;gap:8px}
+.ai2-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.ai2-card-head>div{display:grid;gap:2px}.ai2-card-head>div>span{font-size:8px;letter-spacing:.14em;color:var(--ink2);font-weight:800}.ai2-card-head b{font-size:12px}
+.ai2-switch{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;min-height:32px}.ai2-switch input{width:18px;height:18px}.ai2-card p{margin:0;color:var(--ink2);font-size:10px;line-height:1.45}.ai2-card>button{justify-self:start;border:0;background:transparent;color:var(--seal);font:700 10px system-ui;cursor:pointer;padding:4px 0;min-height:32px}
+.ai2-dialog{width:min(620px,calc(100vw - 24px));border:1px solid var(--hair);border-radius:12px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 22px 70px rgba(0,0,0,.25)}.ai2-dialog::backdrop{background:rgba(20,18,14,.48)}
+.ai2-dialog-shell{padding:18px}.ai2-dialog header{display:flex;justify-content:space-between;gap:16px;align-items:start;border-bottom:1px solid var(--hair);padding-bottom:12px}.ai2-dialog header span{font-size:8px;letter-spacing:.14em;font-weight:800;color:var(--seal)}.ai2-dialog h2{font:600 24px Georgia,serif;margin:3px 0 0}.ai2-dialog header button{border:0;background:transparent;color:var(--ink);font-size:24px;min-width:44px;min-height:44px;cursor:pointer}.ai2-dialog section{padding:14px 0 0}.ai2-dialog h3{margin:0 0 6px;font-size:13px}.ai2-dialog p{margin:0;color:var(--ink2);line-height:1.55;font-size:11px}
+.ai2-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.ai2-metrics>div{border:1px solid var(--hair);border-radius:8px;padding:10px}.ai2-metrics strong{display:block;font-size:20px}.ai2-metrics span{font-size:9px;color:var(--ink2)}.ai2-last{margin-top:8px!important}.ai2-note{margin-top:16px!important;padding-top:12px;border-top:1px solid var(--hair)}
+@media(max-width:520px){.ai2-metrics{grid-template-columns:1fr}.ai2-dialog-shell{padding:14px}}
+@media(prefers-reduced-motion:reduce){.ai2-dialog,.ai2-card{scroll-behavior:auto}}
+</style>
+<script id="ai2-runtime">
+/* Gomoku 1.3 — AI 2.0 browser runtime.
+ * Transparent between-game adaptation + search telemetry. */
+(()=>{
+  'use strict';
+  if(window.GomokuAI2)return;
+  const Core=window.GomokuAI2Core;if(!Core)return;
+  const KEY='gomoku.ai2.v1',MAX_GAMES=80,MAX_SEARCHES=80;
+  const $=id=>document.getElementById(id);
+  let refreshTimer=0,dialog=null;
+  function read(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{};}catch{return {};}}
+  function clean(raw){
+    const games=(Array.isArray(raw.games)?raw.games:[]).map(Core.normalizeGame).filter(Boolean).slice(-MAX_GAMES);
+    const searches=(Array.isArray(raw.searches)?raw.searches:[]).filter(x=>x&&typeof x==='object').slice(-MAX_SEARCHES);
+    return {version:1,adaptive:raw.adaptive===true,games,searches,adaptation:raw.adaptation||null,frozen:raw.frozen||null};
+  }
+  let state=clean(read());
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch{return false;}}
+  function selected(){try{return window.GomokuStudio?.aiDifficulty?.().current||'mid';}catch{return 'mid';}}
+  function effectiveLevel(input={}){
+    const sel=Core.LEVELS.includes(input.selected)?input.selected:'mid';
+    if(input.mode!=='ai'||!state.adaptive)return sel;
+    const gameId=String(input.gameId||'');
+    if(state.frozen&&state.frozen.gameId===gameId&&state.frozen.selected===sel&&Core.LEVELS.includes(state.frozen.level))return state.frozen.level;
+    const resolved=Core.resolveAdaptive(sel,state.games,state.adaptation);
+    state.adaptation=resolved.state;state.frozen={gameId,selected:sel,level:resolved.level,at:Date.now()};save();schedule();return resolved.level;
+  }
+  function searchConfig(level,base,context={}){
+    const tuned=Core.tuneSearch(level,base);
+    return {...tuned,ai2Context:{mode:String(context.mode||''),rule:String(context.rule||''),moveCount:Number(context.moveCount)||0}};
+  }
+  function noteSearch(d={}){
+    if(!d||!Core.LEVELS.includes(d.effectiveLevel))return;
+    state.searches.push({at:Date.now(),gameId:String(d.gameId||''),selectedLevel:d.selectedLevel,effectiveLevel:d.effectiveLevel,
+      reason:String(d.reason||''),depth:Number(d.depth)||0,nodes:Number(d.nodes)||0,elapsedMs:Number(d.elapsedMs)||0,
+      backend:String(d.backend||''),confidence:String(d.confidence||''),humanized:d.humanized===true});
+    state.searches=state.searches.slice(-MAX_SEARCHES);save();schedule(50);
+  }
+  function finishGame(detail){
+    try{
+      if(!detail?.result)return;
+      const game=window.GomokuStudio?.exportGame?.();if(!game||game.mode!=='ai')return;
+      const id=String(game.gameId||'');if(!id||state.games.some(g=>g.id===id))return;
+      const human=Number(game.humanColor)||1,winner=Number(detail.result.winner),outcome=winner===0?'draw':winner===human?'win':'loss';
+      const frozen=state.frozen&&state.frozen.gameId===id?state.frozen:null;
+      state.games.push({id,at:Date.now(),outcome,effectiveLevel:frozen?.level||game.level||selected(),
+        selectedLevel:frozen?.selected||game.level||selected(),assisted:game.assisted===true,rule:game.variant||''});
+      state.games=state.games.slice(-MAX_GAMES);if(frozen)state.frozen=null;save();schedule(20);
+    }catch{}
+  }
+  function setAdaptive(value){
+    state.adaptive=value===true;state.frozen=null;
+    if(state.adaptive)state.adaptation=Core.freshAdaptive(selected(),state.games.length);
+    save();render();window.dispatchEvent(new CustomEvent('gomoku-ai2-changed',{detail:{adaptive:state.adaptive}}));return state.adaptive;
+  }
+  function recordSummary(){
+    const sel=selected(),res=Core.resolveAdaptive(sel,state.games,state.adaptation),rows=Core.eligible(state.games,res.level),p=Core.performance(rows);
+    return {selected:sel,effective:state.adaptive?(state.frozen?.level||res.level):sel,adaptive:state.adaptive,performance:p,reason:res.reason,games:state.games.length,searches:state.searches.length};
+  }
+  function ensureUI(){
+    const host=$('levelSection');if(!host)return false;
+    if(!$('ai2OpponentCard')){
+      const card=document.createElement('div');card.id='ai2OpponentCard';card.className='ai2-card';
+      card.innerHTML='<div class="ai2-card-head"><div><span>AI 2.0</span><b>Adaptive opponent</b></div><label class="ai2-switch"><input id="ai2AdaptiveToggle" type="checkbox"><span>Adaptive</span></label></div><p id="ai2Status"></p><button type="button" id="ai2Details">How difficulty works</button>';
+      host.append(card);$('ai2AdaptiveToggle').onchange=e=>setAdaptive(e.target.checked);$('ai2Details').onclick=openDetails;
+    }
+    return true;
+  }
+  function render(){
+    if(!ensureUI())return;
+    const x=recordSummary(),cfg=window.GomokuStudio?.aiDifficulty?.().levels||{};
+    $('ai2AdaptiveToggle').checked=state.adaptive;
+    const selLabel=cfg[x.selected]?.label||Core.LABELS[x.selected]||x.selected,effLabel=cfg[x.effective]?.label||Core.LABELS[x.effective]||x.effective;
+    $('ai2Status').textContent=!state.adaptive
+      ?'Fixed at '+selLabel+'. Enable Adaptive to adjust only between completed games.'
+      :'Playing at '+effLabel+(x.effective!==x.selected?' · starting choice '+selLabel:'')+' · '+x.performance.games+' eligible recent game'+(x.performance.games===1?'':'s')+' at this strength.';
+    if(dialog?.open)renderDetails();
+  }
+  function ensureDialog(){
+    if(dialog)return dialog;
+    dialog=document.createElement('dialog');dialog.id='ai2Dialog';dialog.className='ai2-dialog';dialog.setAttribute('aria-labelledby','ai2DialogTitle');
+    dialog.innerHTML='<div class="ai2-dialog-shell"><header><div><span>AI 2.0</span><h2 id="ai2DialogTitle">Opponent calibration</h2></div><button type="button" id="ai2Close" aria-label="Close">×</button></header><div id="ai2DialogBody"></div></div>';
+    document.body.append(dialog);$('ai2Close').onclick=()=>dialog.close();dialog.addEventListener('cancel',()=>dialog.close());return dialog;
+  }
+  function renderDetails(){
+    const body=$('ai2DialogBody');if(!body)return;const x=recordSummary(),p=x.performance,last=state.searches.at(-1);
+    body.innerHTML='<section><h3>'+(x.adaptive?'Adaptive is on':'Adaptive is off')+'</h3><p>Difficulty is frozen for the whole game. After at least four unassisted games at the current strength, a sustained result above 72% can raise it one step; below 28% can lower it one step. A change has a cooldown and never reacts to the current game.</p></section>'+
+      '<div class="ai2-metrics"><div><strong>'+p.games+'</strong><span>eligible games</span></div><div><strong>'+Math.round(p.score*100)+'%</strong><span>weighted result</span></div><div><strong>'+state.games.length+'</strong><span>stored AI games</span></div></div>'+
+      '<section><h3>Search policy</h3><p>Weak levels keep several plausible candidates so their mistakes remain human-like. Strong levels spend more of the same local-engine budget on the principal line by reducing MultiPV breadth; Expert and Master also receive modestly deeper/wider search.</p>'+
+      (last?'<p class="ai2-last">Last search: '+last.effectiveLevel+' · depth '+last.depth+' · '+last.nodes.toLocaleString()+' nodes · '+last.elapsedMs+' ms'+(last.backend?' · '+last.backend:'')+'.</p>':'<p class="ai2-last">No AI 2.0 search telemetry recorded yet.</p>')+'</section>'+
+      '<p class="ai2-note">This calibration is not an Elo rating and does not claim optimal play. Analysis/Review remains deterministic and separate from live-opponent humanization.</p>';
+  }
+  function openDetails(){ensureDialog();renderDetails();if(!dialog.open)dialog.showModal();}
+  function schedule(ms=100){clearTimeout(refreshTimer);refreshTimer=setTimeout(render,ms);}
+  function snapshot(){return JSON.parse(JSON.stringify({...recordSummary(),history:state.games,adaptation:state.adaptation,lastSearch:state.searches.at(-1)||null}));}
+  function boot(){
+    window.addEventListener('gomoku:move',e=>{if(e.detail?.result)finishGame(e.detail);else schedule(100);});
+    window.addEventListener('storage',e=>{if(e.key===KEY){state=clean(read());schedule(20);}});
+    window.addEventListener('gomoku-ai2-search',e=>noteSearch(e.detail));
+    schedule(0);setInterval(()=>{if(!$('ai2OpponentCard'))render();},1500);
+  }
+  window.GomokuAI2=Object.freeze({version:Core.VERSION,effectiveLevel,searchConfig,noteSearch,setAdaptive,snapshot,openDetails,
+    calibration:()=>Core.calibrationAudit({})});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
 </script>
 </body></html>
