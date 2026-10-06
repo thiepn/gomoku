@@ -89,6 +89,10 @@
       if(e.target?.closest?.('#onlineBtn,[data-tool="online"]'))schedule(40);
     },true);
     for(const ev of ['gomoku:room','gomoku:result'])window.addEventListener(ev,()=>schedule(20));
+    // Online can be opened through several mature launchers that do not all
+    // originate from #onlineBtn. While its workbench is open, keep the
+    // composition layer self-healing instead of relying on a particular click.
+    setInterval(()=>{if($('workbenchDialog')?.open&&$('roomRankedPanel')&&$('roomAccountPanel'))render();},400);
     schedule();
   }
   window.GomokuOnline2=Object.freeze({version:Core.VERSION,refresh:render,route,snapshot});
