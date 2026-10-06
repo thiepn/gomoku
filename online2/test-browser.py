@@ -19,7 +19,7 @@ with sync_playwright() as p:
         assert page.locator('#op2Choices').get_by_text('Ranked',exact=True).is_visible()
         assert page.locator('#op2Choices').get_by_text('Tournaments & players',exact=True).is_visible()
         page.locator('[data-op2-route="private"]').click()
-        assert page.evaluate('document.activeElement?.id==="roomCode"')
+        page.wait_for_function('document.activeElement?.id==="roomCode"')
         if mobile:
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+2')
             for sel in ['[data-op2-route="ranked"]','[data-op2-route="competition"]','[data-op2-route="private"]','[data-op2-route="live"]']:
