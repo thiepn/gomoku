@@ -11,10 +11,11 @@ with sync_playwright() as p:
         page=ctx.new_page();page.set_default_timeout(22000);errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
-        page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge')
+        page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuOnline2 && !!window.GomokuCompetitionBridge && !!document.querySelector("#v92Primary")')
+        page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
+        page.locator('#v92Primary [data-v92-route="play"]').click()
         page.locator('#v92OnlineMode').click()
         page.locator('#oc2Home').wait_for(state='visible')
-        page.evaluate('document.querySelector("#v112WelcomeDialog")?.open && document.querySelector("#v112WelcomeDialog").close()')
         assert page.locator('#oc2Grid .oc2-destination').count()==5
         assert page.locator('#oc2Primary').is_visible()
         assert page.locator('#roomRankedPanel').count()==1
