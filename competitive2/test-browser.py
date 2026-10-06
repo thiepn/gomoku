@@ -11,7 +11,7 @@ with sync_playwright() as p:
         page=ctx.new_page();page.set_default_timeout(22000);errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(URL,wait_until='domcontentloaded')
-        page.wait_for_function('document.body.dataset.uiReady==="true" && window.GomokuCompetitive2 && window.GomokuPostGame2 && window.GomokuStudio?.startCompetitivePlay')
+        page.wait_for_function('document.body.dataset.uiReady==="true" && !!window.GomokuCompetitive2 && !!window.GomokuPostGame2 && typeof window.GomokuStudio?.startCompetitivePlay==="function"')
         page.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
         page.evaluate('()=>GomokuStudio.startCompetitivePlay({mode:"ai",rule:"renju-practice",opening:"free",minutes:10,increment:5,total:3,level:"mid",color:1,names:{p1:"You",p2:"Computer"},label:"Acceptance"})')
         page.wait_for_function('GomokuStudio.competitivePlay()?.config?.total===3')
