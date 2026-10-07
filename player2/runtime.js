@@ -45,7 +45,7 @@
     if(active)for(const b of document.querySelectorAll('#v92Primary [data-v92-route]'))b.setAttribute('aria-current','false');
   }
   function showHome(scroll=false){
-    ensureNav();ensureHome();markHome(true);refresh();if(scroll)window.scrollTo({top:0,behavior:'auto'});
+    ensureNav();ensureHome();markHome(true);refresh(true);if(scroll)window.scrollTo({top:0,behavior:'auto'});
   }
   function leaveHome(){if(document.body.dataset.pj2Route==='home')markHome(false);}
   function clickRoute(name){
@@ -106,10 +106,11 @@
     const threads=$('pj2Threads');threads.replaceChildren(...summary.threads.map(x=>card(x,'thread')));
     return summary;
   }
-  function refresh(){
+  function specialistOpen(){return !!document.querySelector('dialog[open]');}
+  function refresh(force=false){
+    if(!force&&document.body.dataset.pj2Route==='home'&&specialistOpen())return last;
     const input=collect(),summary=Core.summary(input);render(summary);return summary;
   }
-  function schedule(ms=40){clearTimeout(timer);timer=setTimeout(refresh,ms);}
   function boot(){
     if(!studio()||!$('v92Primary')||document.body.dataset.uiReady!=='true'){setTimeout(boot,40);return;}
     if(ready)return;ready=true;ensureNav();ensureHome();
@@ -117,7 +118,7 @@
     for(const ev of ['gomoku:move','gomoku:result','gomoku:room','gomoku-course2-transfer-changed','gomoku-mistakes-changed'])window.addEventListener(ev,()=>schedule(60));
     window.addEventListener('storage',()=>schedule(80));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
-    setInterval(()=>{if(document.body.dataset.pj2Route==='home')refresh();},1800);
+    setInterval(()=>{if(document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},1800);
     showHome(false);
   }
   window.GomokuPlayer2=Object.freeze({version:Core.VERSION,refresh,route,showHome,snapshot:()=>last?copy(last):null});

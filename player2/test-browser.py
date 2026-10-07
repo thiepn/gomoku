@@ -3,7 +3,7 @@ from pathlib import Path
 import json,os
 from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'player2-test-output';OUT.mkdir(exist_ok=True)
-URL=os.environ.get('PLAYER2_URL')
+URL=os.environ.get('PLAYER2_URL');fixture=json.loads((ROOT/'review/fixture.json').read_text())
 with sync_playwright() as p:
     b=p.chromium.launch(args=['--no-sandbox'])
     for name,viewport,mobile in [('desktop',{'width':1360,'height':960},False),('mobile',{'width':390,'height':844},True)]:
@@ -26,6 +26,14 @@ with sync_playwright() as p:
         page.locator('#pj2HomeNav').click()
         page.locator('#pj2Home').wait_for(state='visible')
         assert page.locator('#v92Primary [data-v92-route="play"]').get_attribute('aria-current')=='false'
+        if not mobile:
+            page.evaluate('(g)=>{document.querySelectorAll("dialog[open]").forEach(d=>d.close());GomokuStudio.importGame(g);}',fixture)
+            page.evaluate('document.getElementById("resultReviewBtn").click()')
+            page.locator('#grDialog').wait_for(state='visible')
+            page.wait_for_timeout(2300)
+            assert not errors,errors
+            page.keyboard.press('Escape')
+            page.locator('#grDialog').wait_for(state='hidden')
         if mobile:
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+2')
             assert page.locator('#pj2Primary').evaluate('(e)=>e.getBoundingClientRect().height>=44')
