@@ -111,6 +111,7 @@
     if(!force&&document.body.dataset.pj2Route==='home'&&specialistOpen())return last;
     const input=collect(),summary=Core.summary(input);render(summary);return summary;
   }
+  function schedule(ms=40){clearTimeout(timer);timer=setTimeout(()=>refresh(),ms);}
   function boot(){
     if(!studio()||!$('v92Primary')||document.body.dataset.uiReady!=='true'){setTimeout(boot,40);return;}
     if(ready)return;ready=true;ensureNav();ensureHome();
