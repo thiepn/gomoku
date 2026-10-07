@@ -27,7 +27,7 @@
   }
   function ensureHome(){
     if($('pj2Home'))return $('pj2Home');
-    const main=document.querySelector('main');if(!main)return null;
+    const main=$('mainContent')||document.querySelector('main[aria-label="Gomoku Studio workspace"]');if(!main)return null;
     const home=document.createElement('section');home.id='pj2Home';home.setAttribute('aria-labelledby','pj2Title');
     home.innerHTML=`<div class="pj2-hero"><div><p class="eyebrow">GOMOKU 2.0 · YOUR JOURNEY</p><h1 id="pj2Title">Play. Review. Learn. Practice. Repeat.</h1><p>One next action across the full training system. Every recommendation comes from your existing local evidence.</p></div><div class="pj2-version">PLAYER JOURNEY 2.0</div></div>
       <section class="pj2-next" aria-labelledby="pj2NextTitle"><div><span>YOUR NEXT MOVE</span><h2 id="pj2NextTitle">Continue</h2><p id="pj2NextDetail"></p><small id="pj2NextSource"></small></div><button class="pj2-primary" id="pj2Primary" type="button">Continue</button></section>

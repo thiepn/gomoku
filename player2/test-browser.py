@@ -21,7 +21,7 @@ with sync_playwright() as p:
         assert page.locator('#pj2Stages .pj2-stage').count()==4
         assert page.locator('#pj2Threads .pj2-thread').count()==4
         page.locator('#v92Primary [data-v92-route="play"]').click()
-        page.locator('main').wait_for(state='visible')
+        page.locator('#mainContent').wait_for(state='visible')
         assert page.locator('#pj2Home').is_hidden()
         page.locator('#pj2HomeNav').click()
         page.locator('#pj2Home').wait_for(state='visible')
