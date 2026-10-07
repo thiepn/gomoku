@@ -17293,17 +17293,20 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
     title.textContent=row.label;value.textContent=row.value;detail.textContent=row.detail;head.append(title,value);b.append(head,detail);b.onclick=()=>route(row.id);return b;
   }
   function render(summary){
-    ensureNav();ensureHome();last=summary;
-    $('pj2NextTitle').textContent=summary.primary.label;
-    $('pj2NextDetail').textContent=summary.primary.detail;
-    $('pj2NextSource').textContent='Based on '+summary.primary.source+' evidence';
-    $('pj2Primary').textContent=summary.primary.label;
-    $('pj2Skill').textContent=summary.metrics.learning===null?'Baseline':summary.metrics.learning+'%';
-    $('pj2Review').textContent=String(summary.metrics.reviews);
-    $('pj2Practice').textContent=String(summary.metrics.practice);
-    $('pj2Saved').textContent=String(summary.metrics.saved);
-    const stages=$('pj2Stages');stages.replaceChildren(...summary.stages.map(x=>card(x,'stage')));
-    const threads=$('pj2Threads');threads.replaceChildren(...summary.threads.map(x=>card(x,'thread')));
+    ensureNav();let home=ensureHome();last=summary;if(!home)return summary;
+    const required=['pj2NextTitle','pj2NextDetail','pj2NextSource','pj2Primary','pj2Skill','pj2Review','pj2Practice','pj2Saved','pj2Stages','pj2Threads'];
+    if(required.some(id=>!$(id))){home.remove();home=ensureHome();if(!home)return summary;}
+    const put=(id,value)=>{const el=$(id);if(el)el.textContent=String(value??'');return el;};
+    put('pj2NextTitle',summary.primary.label);
+    put('pj2NextDetail',summary.primary.detail);
+    put('pj2NextSource','Based on '+summary.primary.source+' evidence');
+    put('pj2Primary',summary.primary.label);
+    put('pj2Skill',summary.metrics.learning===null?'Baseline':summary.metrics.learning+'%');
+    put('pj2Review',summary.metrics.reviews);
+    put('pj2Practice',summary.metrics.practice);
+    put('pj2Saved',summary.metrics.saved);
+    const stages=$('pj2Stages');if(stages)stages.replaceChildren(...summary.stages.map(x=>card(x,'stage')));
+    const threads=$('pj2Threads');if(threads)threads.replaceChildren(...summary.threads.map(x=>card(x,'thread')));
     return summary;
   }
   function specialistOpen(){return !!document.querySelector('dialog[open]');}
