@@ -32,3 +32,15 @@ s=C.summary({
 });
 ok(s.primary.id==='learning-next'&&s.metrics.learning===70,'learning prescription and evidence average');
 console.log('PASS Gomoku 2.0 Player Journey & Home core contracts.');
+
+s=C.summary({
+  journey:{context:{online:{connected:true}}},
+  online:null,library:{counts:{}}
+});
+ok(s.primary.id==='online','Journey network fallback keeps active online play visible');
+s=C.summary({
+  journey:{context:{training:{due:2,customDue:1},review:{}},next:{id:'new-game'}},
+  library:{counts:{}},
+  learning:{summary:{total:35,evidenced:4,average:61,dueReviews:3},skills:[{score:99,evidence:99,due:99}],prescriptions:[]}
+});
+ok(s.metrics.learning===61&&s.metrics.evidencedSkills===4&&s.metrics.practice===3,'authoritative learning summary without duplicate due counting');

@@ -17037,12 +17037,14 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
   const n=(v,a=0,b=9999)=>Math.max(a,Math.min(b,Math.round(Number(v)||0)));
   const clean=v=>String(v??'').trim();
   function learning(snapshot={}){
-    const skills=Array.isArray(snapshot?.skills)?snapshot.skills:[];
-    const evidenced=skills.filter(s=>Number(s?.evidence)>0||Number(s?.course)>0||Number(s?.score)>0);
-    const average=evidenced.length?Math.round(evidenced.reduce((sum,s)=>sum+n(s.score,0,100),0)/evidenced.length):0;
-    const due=skills.reduce((sum,s)=>sum+n(s?.due),0);
+    const skills=Array.isArray(snapshot?.skills)?snapshot.skills:[],summary=snapshot?.summary||{};
+    const fallback=skills.filter(s=>Number(s?.evidence)>0||Number(s?.course)>0||Number(s?.score)>0);
+    const evidenced=Number.isFinite(Number(summary.evidenced))?n(summary.evidenced):fallback.length;
+    const average=Number.isFinite(Number(summary.average))?n(summary.average,0,100):(fallback.length?Math.round(fallback.reduce((sum,s)=>sum+n(s.score,0,100),0)/fallback.length):0);
+    const due=Number.isFinite(Number(summary.dueReviews))?n(summary.dueReviews):skills.reduce((sum,s)=>sum+n(s?.due),0);
+    const total=Number.isFinite(Number(summary.total))?n(summary.total):skills.length;
     const prescription=(Array.isArray(snapshot?.prescriptions)?snapshot.prescriptions:[])[0]||null;
-    return {skills:skills.length,evidenced:evidenced.length,average,due,prescription};
+    return {skills:total,evidenced,average,due,prescription};
   }
   function context(input={}){
     const j=input.journey?.context||{};
@@ -17068,7 +17070,7 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
         evidenced:open.skills?.evidenced===true
       },
       online:{
-        active:online.context?.activeRoom===true,
+        active:online.context?.activeRoom===true||j.online?.connected===true,
         primary:online.primary||null,
         label:clean(online.room)||'No active room'
       },
@@ -17108,7 +17110,7 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
       const p=c.learning.prescription;
       return {id:'learning-next',label:clean(p.title)||clean(p.label)||'Continue learning',detail:clean(p.reason)||clean(p.detail)||'Follow your current Learning Intelligence prescription.',source:'learning'};
     }
-    const practiceDue=n(c.journey.training?.due)+n(c.journey.training?.customDue)+n(c.learning.due);
+    const practiceDue=Math.max(n(c.journey.training?.due)+n(c.journey.training?.customDue),n(c.learning.due));
     if(practiceDue>0){
       return {id:'training',label:'Practice due material',detail:practiceDue+' due learning or training item'+(practiceDue===1?'':'s')+' are ready.',source:'training'};
     }
@@ -17149,7 +17151,7 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
         evidencedSkills:c.learning.evidenced,
         totalSkills:c.learning.skills,
         reviews:n(c.journey.review?.pending)+n(c.journey.review?.critical)+c.library.needsReview,
-        practice:n(c.journey.training?.due)+n(c.journey.training?.customDue)+n(c.learning.due),
+        practice:Math.max(n(c.journey.training?.due)+n(c.journey.training?.customDue),n(c.learning.due)),
         saved:c.library.total
       },
       context:c
