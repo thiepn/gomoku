@@ -565,6 +565,54 @@ if(typeof window !== 'undefined') (()=>{
     }
     return r;
   }
+  // Read-only PV navigation; never changes the recorded game or saved test branches.
+  function selectA3Preview(i){
+    const s=session,r=result();if(!s||s.panel!=='analysis'||s.mode!=='game'||!r?.candidates.some(c=>c.i===i))return;
+    s.a3.preview={move:i,step:0};s.a3.mode='line';s.view='before';render();
+  }
+  function stepA3(amount){
+    const s=session;if(!s||s.panel!=='analysis'||s.mode!=='game')return;
+    if(!s.a3.preview&&amount>0&&Number.isInteger(result()?.best))s.a3.preview={move:result().best,step:0};
+    const q=window.GomokuAnalysisWorkspace3?.previewState(core,entry(),s.game.variant,result(),s.a3.preview);
+    if(!q)return;
+    s.a3.preview.step=Math.max(0,Math.min(q.total,q.step+amount));
+    s.a3.mode='line';s.view='before';render();
+  }
+  function renderA3(r,p){
+    const s=session,active=s?.panel==='analysis'&&s.mode==='game';
+    const svg=$('a3BoardSvg');if(svg)svg.replaceChildren();
+    if(!active)return;
+    const a3=window.GomokuAnalysisWorkspace3;
+    if(!a3){$('a3BoardStatus').textContent='Analysis workspace unavailable; normal review remains usable.';return;}
+    for(const b of dialog.querySelectorAll('[data-a3-mode]'))b.setAttribute('aria-pressed',String(b.dataset.a3Mode===s.a3.mode));
+    $('a3Depth').textContent=r?.search?.completedDepth??'—';
+    $('a3Lines').textContent=r?`${r.search?.returned??r.candidates?.length??0} / ${r.multiPV??s.lines}`:'—';
+    $('a3Evidence').textContent=r?.bestProof?'Proven win':r?.refutation?'Threat found':r?.defense?.rootThreat?'Defense':r?.search?.compared?'Estimated':'Unknown';
+    const preview=a3.previewState(core,p,s.game.variant,r,s.a3.preview);
+    const viewingBoard=preview?.state?.board||p.board;
+    const model=a3.overlays(p,r,viewingBoard,{mode:s.a3.mode,preview:s.a3.preview,pinned:s.a3.pinned});
+    const lines=model.arrows.map(a=>`<line class="a3-arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}" marker-end="url(#a3-arrowhead)"/>`).join('');
+    const dots=model.dots.map(d=>`<circle class="a3-dot" data-kind="${d.type}" cx="${d.x}" cy="${d.y}" r="3.5"/>`).join('');
+    if(svg)svg.innerHTML='<defs><marker id="a3-arrowhead" markerWidth="5" markerHeight="5" refX="3.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5Z" fill="#318a7d"/></marker></defs>'+lines+dots;
+    $('a3BoardStatus').textContent=model.legend;
+    $('a3CommandMeta').textContent=r?(`${r.search?.backend||'Engine'} · ${r.search?.completedDepth||0} ply`):'Analysis pending';
+    $('a3LineTitle').textContent=preview?`${a3.coord(preview.moves[0])} · variation ${preview.step} / ${preview.total}`:'Variation explorer';
+    $('a3LineMeta').textContent=preview?(`Move ${preview.step} of ${preview.total}; read-only searched continuation`):'Select Preview next to a candidate';
+    $('a3LinePrev').disabled=!preview||preview.step===0;
+    $('a3LineNext').disabled=!!s.interacting||(!preview&&!Number.isInteger(r?.best))||(!!preview&&preview.step>=preview.total);
+    $('a3LineReset').disabled=!preview;
+    const selected=s.a3.preview?.move??r?.best;
+    const comparison=a3.compare(r,s.a3.pinned,selected);
+    const area=$('a3Compare');
+    area.hidden=!comparison;
+    if(comparison){
+      const summary=c=>`<div class="a3-compare-card"><span>${c.move===s.a3.pinned?'PINNED':'SELECTED'}</span><strong>${c.coord}</strong><small>${esc(c.label)} · depth ${c.depth}</small><small>${c.proof?esc(c.proof):c.comparable?'Comparable engine estimate':'Score not comparable'}</small></div>`;
+      const markup=summary(comparison.left)+summary(comparison.right)+`<p class="a3-compare-note">${comparison.numericComparison?'Both search values are same-depth estimates, not win probabilities.':'No numerical move difference is asserted without comparable exact-depth scores.'}</p>`;
+      if(area.innerHTML!==markup)area.innerHTML=markup;
+    }
+    if(preview){$('grBoardTitle').textContent=`Read-only line · ${preview.step} of ${preview.total} moves`;
+      $('grBoardHelp').textContent='Previewing a searched continuation. Reset restores the exact position before this recorded move.';}
+  }
   function renderWorkspace(){
     if(!session||!dialog.open)return;
     const s=session,p=entry(),r=result(),active=s.mode!=='game',concealed=s.mode==='retry'&&!s.attempt?.result;
@@ -595,7 +643,13 @@ if(typeof window !== 'undefined') (()=>{
     $('rwAlternatives').hidden=panel!=='analysis';
     $('rwAlternativesTitle').textContent=`Alternatives to move ${p.ply}`;
     $('rwAlternativesContext').textContent=`${side(p.color)} to move · each option replaces ${core.coord(p.played)}, not the latest test move.`;
-    $('grCandidates').innerHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    const candidateHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    if($('grCandidates').innerHTML!==candidateHTML){
+      const focused=document.activeElement?.getAttribute('data-a3-preview')||document.activeElement?.getAttribute('data-a3-pin');
+      const type=document.activeElement?.hasAttribute('data-a3-preview')?'preview':document.activeElement?.hasAttribute('data-a3-pin')?'pin':null;
+      $('grCandidates').innerHTML=candidateHTML;
+      if(type&&focused!==null)$('grCandidates').querySelector('[data-a3-'+type+'="'+focused+'"]')?.focus({preventScroll:true});
+    }
     $('rwMoreCandidates').hidden=!r||r.candidates.length<=3;
     $('rwMoreCandidates').textContent=s.moreCandidates?'Show fewer alternatives':`Show up to ${Math.min(s.lines||5,r?.candidates.length||0)} candidates`;
     $('rwMoreCandidates').setAttribute('aria-expanded',String(!!s.moreCandidates));
@@ -649,10 +703,11 @@ if(typeof window !== 'undefined') (()=>{
     for(const cell of $('grBoard').querySelectorAll('[data-point]')){
       const i=Number(cell.dataset.point),idx=numbered.findIndex(c=>c.i===i);cell.classList.toggle('rw-pending',s.pending===i);cell.classList.toggle('rw-candidate-point',idx>=0&&!board[i]);
       cell.dataset.candidateTone=idx>=0?tone(numbered[idx].label):'';if(idx>=0&&!board[i]){cell.querySelector('.gr-point-mark').textContent=String(idx+1);cell.setAttribute('aria-label',`${core.coord(i)}, candidate ${idx+1}, ${numbered[idx].label}`);}
-      if(numbers.has(i)&&board[i])cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
+      if(numbers.has(i)&&board[i]&&!s.a3?.preview)cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
     }
     $('grFooterNote').textContent=storageNotice?'Storage unavailable: export to keep this review.':'Recorded game unchanged';
     $('rwGlobalNotice').hidden=!$('grFeedback').textContent||panel!=='overview';$('rwGlobalNotice').textContent=$('grFeedback').textContent;
+    renderA3(r,p);
   }
   async function redoBranch(){
     const b=session?.branch;if(!b?.redo?.length)return;
