@@ -29,7 +29,7 @@
     if($('pj2Home'))return $('pj2Home');
     const main=$('mainContent')||document.querySelector('main[aria-label="Gomoku Studio workspace"]');if(!main)return null;
     const home=document.createElement('section');home.id='pj2Home';home.setAttribute('aria-labelledby','pj2Title');
-    home.innerHTML=`<div class="pj2-hero"><div><p class="eyebrow">GOMOKU 2.0 · YOUR JOURNEY</p><h1 id="pj2Title">Play. Review. Learn. Practice. Repeat.</h1><p>One next action across the full training system. Every recommendation comes from your existing local evidence.</p></div><div class="pj2-version">PLAYER JOURNEY 2.0</div></div>
+    home.innerHTML=`<div class="pj2-hero"><div><p class="eyebrow">GOMOKU 2.0 · YOUR JOURNEY</p><h1 id="pj2Title">Player desk</h1><p>Continue your game or pick up the next useful training task.</p></div><div class="pj2-version">PLAYER JOURNEY 2.0</div></div>
       <section class="pj2-next" aria-labelledby="pj2NextTitle"><div><span>YOUR NEXT MOVE</span><h2 id="pj2NextTitle">Continue</h2><p id="pj2NextDetail"></p><small id="pj2NextSource"></small></div><button class="pj2-primary" id="pj2Primary" type="button">Continue</button></section>
       <div class="pj2-metrics" aria-label="Player evidence summary"><div><strong id="pj2Skill">—</strong><span>learning evidence</span></div><div><strong id="pj2Review">0</strong><span>review waiting</span></div><div><strong id="pj2Practice">0</strong><span>practice due</span></div><div><strong id="pj2Saved">0</strong><span>saved</span></div></div>
       <section class="pj2-section"><div class="pj2-section-head"><div><p class="eyebrow">IMPROVEMENT LOOP</p><h2>One cycle, four jobs.</h2></div><p>Specialist tools stay available, but the loop decides what deserves attention next.</p></div><div class="pj2-stage-grid" id="pj2Stages"></div></section>
@@ -123,7 +123,9 @@
     window.addEventListener('storage',()=>schedule(80));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
     setInterval(()=>{if(document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},1800);
-    showHome(false);
+    // Do not override an Improve/Library route selected while modules were booting.
+    if(document.body.dataset.v92Route==='play')showHome(false);
+    else {markHome(false);refresh(true);}
   }
   window.GomokuPlayer2=Object.freeze({version:Core.VERSION,refresh,route,showHome,snapshot:()=>last?copy(last):null});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -17167,7 +17167,7 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
 body[data-pj2-route="home"] #pj2Home{display:block}
 body[data-pj2-route="home"] #mainContent{display:none!important}
 .pj2-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:start;padding:4px 0 24px;border-bottom:1px solid var(--hair)}
-.pj2-hero h1{max-width:760px;margin:5px 0 8px;font:700 clamp(29px,4vw,47px)/1.03 Georgia,serif;letter-spacing:-.025em}
+.pj2-hero h1{max-width:760px;margin:5px 0 8px;font:700 clamp(22px,2.5vw,29px)/1.12 Georgia,serif;letter-spacing:-.02em}
 .pj2-hero>div>p:last-child{max-width:660px;margin:0;color:var(--ink2);font-size:11px;line-height:1.65}
 .pj2-version{padding:7px 9px;border:1px solid var(--hair);border-radius:999px;color:var(--ink2);font-size:7px;font-weight:750;letter-spacing:.12em;white-space:nowrap}
 .pj2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin:20px 0 12px;padding:19px 20px;border:1px solid var(--hair);border-left:4px solid var(--seal);border-radius:11px;background:var(--card)}
@@ -17191,10 +17191,25 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 @media(max-width:620px){
   #pj2Home{padding:20px 14px 92px}.pj2-next{grid-template-columns:1fr}.pj2-primary{width:100%}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-stage-grid,.pj2-thread-grid{grid-template-columns:1fr}
   .pj2-stage{min-height:112px}.pj2-stage p{margin-top:12px}
-  #v92Primary{overflow-x:auto;scrollbar-width:none}#v92Primary::-webkit-scrollbar{display:none}.v92-nav-main{min-width:max-content}
+  #v92Primary{overflow-x:auto;scrollbar-width:none}#v92Primary::-webkit-scrollbar{display:none}.v92-nav-main{min-width:0}
 }
 @media(max-width:400px){.pj2-hero h1{font-size:31px}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-metrics strong{font-size:21px}}
 @media(prefers-reduced-motion:reduce){#pj2Home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Four first-class destinations must fit without making the board or body scroll sideways. */
+@media (min-width:761px) and (max-width:1050px){
+ html body.ui-studio header.top{gap:12px;padding-left:14px;padding-right:14px}
+ html body.ui-studio #v92Primary{margin:0!important;min-width:0;flex:1 1 auto}
+ html body.ui-studio .v92-nav-main{gap:2px;justify-content:center}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:10px 9px;font-size:12px}
+ html body.ui-studio .header-tools{gap:4px}
+ html body.ui-studio #focusBtn,html body.ui-studio #soundBtn{display:none!important}
+}
+@media (max-width:760px){
+ html body.ui-studio #v92Primary{overflow-x:hidden}
+ html body.ui-studio .v92-nav-main{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;min-width:0}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:9px 3px;font-size:12px}
+}
 
 </style>
 <script id="player2-runtime">
@@ -17229,7 +17244,7 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
     if($('pj2Home'))return $('pj2Home');
     const main=$('mainContent')||document.querySelector('main[aria-label="Gomoku Studio workspace"]');if(!main)return null;
     const home=document.createElement('section');home.id='pj2Home';home.setAttribute('aria-labelledby','pj2Title');
-    home.innerHTML=`<div class="pj2-hero"><div><p class="eyebrow">GOMOKU 2.0 · YOUR JOURNEY</p><h1 id="pj2Title">Play. Review. Learn. Practice. Repeat.</h1><p>One next action across the full training system. Every recommendation comes from your existing local evidence.</p></div><div class="pj2-version">PLAYER JOURNEY 2.0</div></div>
+    home.innerHTML=`<div class="pj2-hero"><div><p class="eyebrow">GOMOKU 2.0 · YOUR JOURNEY</p><h1 id="pj2Title">Player desk</h1><p>Continue your game or pick up the next useful training task.</p></div><div class="pj2-version">PLAYER JOURNEY 2.0</div></div>
       <section class="pj2-next" aria-labelledby="pj2NextTitle"><div><span>YOUR NEXT MOVE</span><h2 id="pj2NextTitle">Continue</h2><p id="pj2NextDetail"></p><small id="pj2NextSource"></small></div><button class="pj2-primary" id="pj2Primary" type="button">Continue</button></section>
       <div class="pj2-metrics" aria-label="Player evidence summary"><div><strong id="pj2Skill">—</strong><span>learning evidence</span></div><div><strong id="pj2Review">0</strong><span>review waiting</span></div><div><strong id="pj2Practice">0</strong><span>practice due</span></div><div><strong id="pj2Saved">0</strong><span>saved</span></div></div>
       <section class="pj2-section"><div class="pj2-section-head"><div><p class="eyebrow">IMPROVEMENT LOOP</p><h2>One cycle, four jobs.</h2></div><p>Specialist tools stay available, but the loop decides what deserves attention next.</p></div><div class="pj2-stage-grid" id="pj2Stages"></div></section>
@@ -17323,7 +17338,9 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
     window.addEventListener('storage',()=>schedule(80));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
     setInterval(()=>{if(document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},1800);
-    showHome(false);
+    // Do not override an Improve/Library route selected while modules were booting.
+    if(document.body.dataset.v92Route==='play')showHome(false);
+    else {markHome(false);refresh(true);}
   }
   window.GomokuPlayer2=Object.freeze({version:Core.VERSION,refresh,route,showHome,snapshot:()=>last?copy(last):null});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -54,6 +54,12 @@ with sync_playwright() as p:
     page.goto(root+'?p24='+PROFILE,wait_until='domcontentloaded',timeout=45000)
     page.wait_for_function('document.body.dataset.ready==="true" && document.body.dataset.uiReady==="true" && window.GomokuStudio')
     page.wait_for_timeout(200);close_dialogs(page)
+    if page.evaluate('Boolean(window.GomokuPlayer2)'):
+        page.wait_for_function('document.body.dataset.pj2Route === "home" || document.body.dataset.pj2Route === "app"',timeout=10000)
+        if page.locator('#pj2Home').is_visible():
+            check(PROFILE+' Player Journey home opens',True)
+            page.locator('#v92Primary button[data-v92-route="play"]').click()
+            page.locator('#boardGrid').wait_for(state='visible')
     page.evaluate("""()=>{
       const game=GomokuStudio.exportGame();
       game.mode='local';game.moves=[];game.initial=[];game.startColor=1;game.terminal=null;

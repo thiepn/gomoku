@@ -3,7 +3,7 @@
 body[data-pj2-route="home"] #pj2Home{display:block}
 body[data-pj2-route="home"] #mainContent{display:none!important}
 .pj2-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:start;padding:4px 0 24px;border-bottom:1px solid var(--hair)}
-.pj2-hero h1{max-width:760px;margin:5px 0 8px;font:700 clamp(29px,4vw,47px)/1.03 Georgia,serif;letter-spacing:-.025em}
+.pj2-hero h1{max-width:760px;margin:5px 0 8px;font:700 clamp(22px,2.5vw,29px)/1.12 Georgia,serif;letter-spacing:-.02em}
 .pj2-hero>div>p:last-child{max-width:660px;margin:0;color:var(--ink2);font-size:11px;line-height:1.65}
 .pj2-version{padding:7px 9px;border:1px solid var(--hair);border-radius:999px;color:var(--ink2);font-size:7px;font-weight:750;letter-spacing:.12em;white-space:nowrap}
 .pj2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin:20px 0 12px;padding:19px 20px;border:1px solid var(--hair);border-left:4px solid var(--seal);border-radius:11px;background:var(--card)}
@@ -27,7 +27,22 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 @media(max-width:620px){
   #pj2Home{padding:20px 14px 92px}.pj2-next{grid-template-columns:1fr}.pj2-primary{width:100%}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-stage-grid,.pj2-thread-grid{grid-template-columns:1fr}
   .pj2-stage{min-height:112px}.pj2-stage p{margin-top:12px}
-  #v92Primary{overflow-x:auto;scrollbar-width:none}#v92Primary::-webkit-scrollbar{display:none}.v92-nav-main{min-width:max-content}
+  #v92Primary{overflow-x:auto;scrollbar-width:none}#v92Primary::-webkit-scrollbar{display:none}.v92-nav-main{min-width:0}
 }
 @media(max-width:400px){.pj2-hero h1{font-size:31px}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-metrics strong{font-size:21px}}
 @media(prefers-reduced-motion:reduce){#pj2Home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Four first-class destinations must fit without making the board or body scroll sideways. */
+@media (min-width:761px) and (max-width:1050px){
+ html body.ui-studio header.top{gap:12px;padding-left:14px;padding-right:14px}
+ html body.ui-studio #v92Primary{margin:0!important;min-width:0;flex:1 1 auto}
+ html body.ui-studio .v92-nav-main{gap:2px;justify-content:center}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:10px 9px;font-size:12px}
+ html body.ui-studio .header-tools{gap:4px}
+ html body.ui-studio #focusBtn,html body.ui-studio #soundBtn{display:none!important}
+}
+@media (max-width:760px){
+ html body.ui-studio #v92Primary{overflow-x:hidden}
+ html body.ui-studio .v92-nav-main{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;min-width:0}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:9px 3px;font-size:12px}
+}
