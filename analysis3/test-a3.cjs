@@ -56,7 +56,7 @@ test('threat overlay uses reported positions and no heuristic fabricated heatmap
  assert.ok(m.legend.includes('unknown attacks'));
 });
 test('line overlay generates real consecutive PV arrows',()=>{
- const m=A.overlays(position,result,board,{mode:'line',preview:{move:126,step:0}});
+ const m=A.overlays(position,result,board,{mode:'line',preview:{move:126,step:0},validMoves:A.legalVariation(core,position,'freestyle',result.candidates[0])});
  assert.equal(m.arrows.length,2);assert.equal(m.arrows[0].from,126);assert.equal(m.arrows[0].to,127);
 });
 test('pin compares two distinct candidates but never invents score confidence',()=>{
