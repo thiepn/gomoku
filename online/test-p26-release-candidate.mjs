@@ -72,4 +72,12 @@ for(const file of [
     'R0 product freeze must explicitly permit release-only workflow '+file);
 }
 
+// The real-device-adjacent P24 PWA test must complete the delayed first-use
+// dialog before touching the board. This is a test-only release correction.
+const p24Pwa=fs.readFileSync('audit/p24-pwa-network.py','utf8');
+assert(config.allowed_p26_paths.includes('audit/p24-pwa-network.py'),
+  'P26 should permit only this targeted PWA-test race fix');
+for(const marker of ["classList.contains('v112-ready')",'#v112WelcomeDialog[open]','#v112UseBoard'])
+  assert(p24Pwa.includes(marker),'P24 PWA test must settle first-use flow: '+marker);
+
 console.log('PASS P26 release-candidate, burn-in and physical-device contracts.');

@@ -170,6 +170,19 @@ open release-blocking defects, before manually dispatching P27 from current
 `main` with the exact confirmation `release-v1.0.0`. Never infer a physical
 pass from these workflows.
 
+### P24 first-use test race repair
+
+The exact public P24 PWA/network suite intermittently failed when the
+first-use dialog opened 350 ms after the general UI-ready signal. The test
+closed dialogs too early and the delayed modal then intercepted the board tap.
+This is an automated-test sequencing defect, not evidence of a game/PWA
+persistence defect. R0 permits a narrowly scoped edit to
+`audit/p24-pwa-network.py`: wait until first-use mounting is complete,
+allow the delayed dialog to settle and choose the actual **Use the current
+board** action before exercising touch, offline/reconnect and recovery.
+This file is the only new P24 test exception in the frozen candidate.
+No `index.html`, service worker, rules, AI, or backend changes are allowed.
+
 ## 8. P26 completion
 
 P26 is complete only when:
