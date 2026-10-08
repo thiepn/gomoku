@@ -2,7 +2,7 @@
  * Pure services shared by the UI, isolated worker, exports, and regression tests. */
 function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   'use strict';
-  const VERSION = '3.0.0-a1', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
+  const VERSION = '3.0.0-a2', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
   const PRESETS = Object.freeze({
     quick: {label:'Quick', timeMs:350, depth:9, width:20, threatDepth:9},
     standard: {label:'Standard', timeMs:1000, depth:12, width:26, threatDepth:11},
@@ -211,7 +211,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         c.estimate=c.score;c.score=null;c.bound='verified-loss';c.pv=[c.i,...C.proofLine(proof.proof)];
       }
     }
-    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?3:c.defenseStatus==='neutralizes-known-threat'?1:2;
+    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?5:c.defenseStatus==='neutralizes-known-threat'?1:c.bound==='exact'&&Number.isFinite(c.score)?2:3;
     raw.candidates.sort((a,b)=>tier(a)-tier(b)||(b.score??-Infinity)-(a.score??-Infinity)||a.i-b.i);
     // A selective positional score cannot override a verified opponent win.
     const previous=raw.move,picked=raw.candidates.find(c=>c.defenseStatus!=='proven-loss'&&c.defenseStatus!=='illegal');
@@ -224,7 +224,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   function explainDefense(out,raw,screen,board,color,rule,ctx) {
     const them=color===1?'White':'Black',summary=screen.report(),root=screen.rootThreat;
     const rootShape=root?engineFactory(rule).classify(Int8Array.from(board),root.move,3-color):null;
-    const attackName=root.kind==='vct'?'continuous-three attack':rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'continuous-four attack';
+    const attackName=root?.kind==='vct'?'continuous-three attack':rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'continuous-four attack';
     const knownCount=summary.rootThreats?.length||0;
     function decorate(target,i) {
       const row=screen.inspect(i);target.defenseStatus=row.status;
@@ -257,30 +257,67 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     out.diagnosis=diagnosis(out,out.playedShape,out.bestShape);
     if(out.basis==='verified-defense')out.diagnosis.unshift('Prevents a forcing attack');
   }
+
+  // Native WASM/JS owns game search. A2 controls time, root coverage and evidence.
+  function searchPlan(preset,budget,lines=5){
+    const requested=Number.isInteger(lines)?Math.max(1,Math.min(8,lines)):5;
+    const threatMs=Math.min(900,Math.round(budget*.25));
+    const refineReserve=Math.min(420,Math.round(budget*.14));
+    return {requested,threatMs,refineReserve,mainMs:Math.max(50,budget-threatMs-refineReserve),allowSecondPass:budget>=2400};
+  }
+  function rootComparability(raw,c){
+    const depth=Number.isInteger(c?.depth)?c.depth:(raw.depth||0);
+    if(c?.bound==='verified-loss')return {kind:'verified-loss',depth,scoreComparable:false,reason:'Verified loss, not heuristic score'};
+    if(c?.bound==='rule-forced')return {kind:'rules',depth,scoreComparable:false,reason:'Forced by opening rule'};
+    const ok=c?.bound==='exact'&&Number.isFinite(c.score)&&raw.depth>=2&&depth===raw.depth&&!raw.timedOut;
+    return {kind:ok?'same-root-estimate':'incomplete',depth,scoreComparable:ok,
+      reason:ok?'Same completed search root and depth; not a proof':'Incomplete, unequal-depth, or non-exact search bounds'};
+  }
   function analyze(board,color,rule,played,options={}) {
     validate(board,color,rule);const ctx=context(options.context),started=now();
     if(ctx.passes>=2||terminal(board,rule)!==null)throw Error('This position is terminal; there is no next move to analyze.');
     const preset=PRESETS[options.preset]||PRESETS.deep;
     const budget=Math.max(100,Math.min(15000,Number(options.timeMs)||preset.timeMs));
+    const plan=searchPlan(preset,budget,options.multiPV),passes=[];
     // Only historical replay inherits a legacy opening policy; the live engine
     // and new Renju games retain their center-first rule.
     const scopedFactory=r=>{const e=engineFactory(r);return {...e,legalMove:(b,i,c,n,opt={})=>e.legalMove(b,i,c,n,{...opt,allowOffCenterOpening:ctx.allowLegacyOffCenterOpening})};};
     const R=reviewFactory(scopedFactory,studioFactory),e=engineFactory(rule);
     const centerOnly=rule==='renju-practice'&&color===1&&!board.some(Boolean)&&!ctx.allowLegacyOffCenterOpening;
-    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:Math.min(1200,budget*.34),depth:Math.min(preset.threatDepth,budget<700?7:19)});
+    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:plan.threatMs,depth:Math.min(preset.threatDepth,budget<700?7:19)});
     let raw;
     if(centerOnly) {
       raw={rule,color,move:112,pv:[112],candidates:[{i:112,score:0,bound:'rule-forced',pv:[112]}],depth:0,nodes:0,elapsedMs:0,
         tactical:{status:'skipped'},parameters:{budget,engine:'6.0-hybrid'},analysisQuality:'opening-rule',confidence:{band:'rule-forced'}};
     } else {
-      raw=C.analyze(board,color,rule,{timeMs:Math.max(50,budget-(now()-started)-Math.min(500,budget*.26)),depth:preset.depth,width:preset.width,
-        multiPV:5,includeMoves:[...new Set([...(point(played)?[played]:[]),...screen.defenses()])],threatDepth:preset.threatDepth,
-        threatNodeLimit:options.preset==='maximum'?180000:60000,backend:options.backend||'auto',seed:17});
-      raw.parameters.budget=budget;
+      const engineOptions={timeMs:Math.max(50,Math.min(plan.mainMs,budget-(now()-started)-plan.refineReserve)),
+        depth:preset.depth,width:preset.width,multiPV:plan.requested,
+        includeMoves:[...new Set([...(point(played)?[played]:[]),...screen.defenses()])],
+        threatDepth:preset.threatDepth,threatNodeLimit:options.preset==='maximum'?180000:60000,
+        backend:options.backend||'auto',seed:17};
+      raw=C.analyze(board,color,rule,engineOptions);
+      if(!raw||!Array.isArray(raw.candidates))throw Error('Search returned no candidate array.');
       raw.candidates=raw.candidates.filter(c=>legal(board,color,rule,c.i,ctx).legal);
+      passes.push({phase:'primary',depth:raw.depth||0,nodes:raw.nodes||0,ttHits:raw.ttHits||0,backend:raw.backend||'unknown',lines:raw.candidates.length});
+      const leftover=budget-(now()-started)-plan.refineReserve;
+      if(plan.allowSecondPass&&leftover>=600){
+        const focus=[...new Set([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,plan.requested).map(c=>c.i)])]
+          .filter(i=>point(i)&&legal(board,color,rule,i,ctx).legal);
+        const again=C.analyze(board,color,rule,{...engineOptions,
+          timeMs:Math.max(50,Math.min(leftover,Math.round(plan.mainMs*.65))),
+          depth:Math.min(22,preset.depth+2),width:Math.min(48,preset.width+2),includeMoves:focus});
+        if(again&&Array.isArray(again.candidates)){
+          again.candidates=again.candidates.filter(c=>legal(board,color,rule,c.i,ctx).legal);
+          passes.push({phase:'focused',depth:again.depth||0,nodes:again.nodes||0,ttHits:again.ttHits||0,
+            backend:again.backend||'unknown',lines:again.candidates.length});
+          if((again.depth||0)>=(raw.depth||0)&&(!raw.tactical?.verified||again.tactical?.verified))raw=again;
+        }
+      }
+      raw.parameters=raw.parameters||{};raw.parameters.budget=budget;
     }
     if(!centerOnly){
-      screen.refine([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,5).map(c=>c.i)],Math.max(0,budget-(now()-started)-15));
+      screen.refine([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,plan.requested).map(c=>c.i)],
+        Math.max(0,Math.min(plan.refineReserve,budget-(now()-started)-15)));
       applyDefense(raw,screen,played);
     }
     const out=R.pack(raw,board,color,played);
@@ -291,23 +328,34 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     out.refutation=screen.evidence(played);
     out.opponentThreat=screen.rootThreat?certificate(board,3-color,rule,screen.rootThreat,ctx):null;
      out.opponentThreats=screen.rootThreats.map(t=>({kind:t.kind,move:t.move,verified:true}));
-    out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';
+    out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';out.multiPV=plan.requested;
     out.timeMs=Math.round(now()-started);out.budget=budget;
     out.search={backend:raw.backend||'rules',engine:raw.parameters.engine,completedDepth:raw.depth||0,selectiveDepth:raw.selDepth||raw.depth||0,
       nodes:raw.nodes||0,ttHits:raw.ttHits||0,stableDepth:raw.stableDepth||0,rootChanges:raw.rootChanges||0,
       confidence:raw.confidence?.band||'low',timedOut:!!raw.timedOut,selective:true,
-      compared:out.candidates.filter(c=>c.bound==='exact').length,returned:out.candidates.length,requestedLines:5,
-      proofStatus:raw.tactical?.status||'skipped',proofNodes:raw.tactical?.nodes||0};
+      compared:0,returned:out.candidates.length,requestedLines:plan.requested,
+      proofStatus:raw.tactical?.status||'skipped',proofNodes:raw.tactical?.nodes||0,searchPasses:passes,refinementBudgetMs:plan.refineReserve};
     out.playedShape=shape(board,color,rule,played,ctx);out.bestShape=point(out.best)?shape(board,color,rule,out.best,ctx):null;
     out.diagnosis=diagnosis(out,out.playedShape,out.bestShape);
     if(out.refutation&&!out.facts.alreadyLost&&!out.facts.replies.length) {
       out.explanation.why+=` A separate rule-verified search shows ${color===1?'White':'Black'} can force a win after this move within ${out.refutation.upperBoundPlies} plies (an upper bound). Open the threat proof to inspect every required defense. This alone does not establish that a different move saves the game.`;
     }
     for(const c of out.candidates) {
-      c.depth=raw.candidates.find(x=>x.i===c.i)?.depth??raw.depth??0;
+      const source=raw.candidates.find(x=>x.i===c.i)||null;
+      c.depth=source?.depth??raw.depth??0;
       c.shape=shape(board,color,rule,c.i,ctx);
       c.pv=R.line(board,color,rule,c.pv,{...ctx}).moves;
-      c.delta=c.bound==='exact'&&raw.depth>=2?c.loss:null;
+      c.comparison=rootComparability(raw,source||c);
+      c.delta=c.comparison.scoreComparable?c.loss:null;
+    }
+    out.search.compared=out.candidates.filter(c=>c.comparison?.scoreComparable).length;
+    out.search.totalRootNodes=passes.reduce((n,p)=>n+p.nodes,0);
+    out.search.totalRootTTHits=passes.reduce((n,p)=>n+p.ttHits,0);
+    const playedRow=out.candidates.find(c=>c.i===played),bestRow=out.candidates.find(c=>c.i===out.best);
+    out.search.sameRootComparison=!!(playedRow?.comparison?.scoreComparable&&bestRow?.comparison?.scoreComparable);
+    if(out.basis==='selective-estimate'&&!out.search.sameRootComparison){
+      out.loss=null;out.score=null;out.label='Unscored';out.basis='insufficient-search';
+      out.explanation.why+=' The played and recommended moves lack equal completed-depth evidence; no mistake grade or numeric score loss is established.';
     }
     // Explain preventative defense using a checked counterfactual, not a
     // generic strategic label inferred from a score. Only the displayed lines
@@ -391,13 +439,13 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!card||card.version!==2)throw Error('Unsupported mistake card.');validate(card.board,card.color,card.rule);
     if(!point(card.played)||!legal(card.board,card.color,card.rule,card.played,card.context).legal)throw Error('Invalid saved decision.');
     if(card.id!==positionKey(card.board,card.color,card.rule,card.context)||JSON.stringify(card).length>240000)throw Error('Invalid or oversized mistake card.');
-    if(!trainable(['2.0.0','2.1.0'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
+    if(!trainable(['2.0.0','2.1.0','3.0.0-a1'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
     const clean=clone(card);clean.context=context(card.context);clean.source={gameId:String(card.source?.gameId||'').slice(0,100),title:String(card.source?.title||'Reviewed game').slice(0,120),ply:Math.max(1,Math.min(450,Number(card.source?.ply)||1)),date:Math.max(0,Number(card.source?.date)||0)};
     const stats=card.stats||{};clean.stats={};for(const k of ['attempts','successes','lapses','assisted','streak','due','last']){const v=stats[k];if(v!==null&&v!==undefined&&(!Number.isSafeInteger(v)||v<0||v>8640000000000000))throw Error('Invalid practice statistics.');clean.stats[k]=v??0;}
     clean.events=Array.isArray(card.events)?card.events.slice(-40).filter(e=>e&&typeof e.id==='string'&&['correct','incorrect'].includes(e.status)&&Number.isFinite(e.at)):[];
     // Imported analysis is historical, not a newly verified engine result.
     clean.reference.imported=true;clean.reference.stale=clean.reference.analysisVersion!==VERSION;return clean;
   }
-  return {VERSION,PRESETS,defenseScreen,positionKey,validate,context,terminal,legal,analyze,verify,proofSteps,shape,trainable,attemptVerdict,schedule,makeCard,validateCard};
+  return {VERSION,PRESETS,searchPlan,rootComparability,defenseScreen,positionKey,validate,context,terminal,legal,analyze,verify,proofSteps,shape,trainable,attemptVerdict,schedule,makeCard,validateCard};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={createAnalysis2};

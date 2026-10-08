@@ -3,7 +3,7 @@ if(typeof window!=='undefined') (()=>{
  'use strict';
  let worker=null,url=null,pending=null,serial=0,timer=null,created=0,completed=0,cacheHits=0;
  const cache=new Map(),clone=x=>JSON.parse(JSON.stringify(x));
- const runtime={version:'3.0.0-a1',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
+ const runtime={version:'3.0.0-a2',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
  function cancel(){
    if(!pending)return;
    const job=pending;pending=null;clearTimeout(timer);worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;
@@ -29,7 +29,7 @@ if(typeof window!=='undefined') (()=>{
    };
  }
  function request(board,color,rule,played,options={}){
-   cancel();const key=JSON.stringify([runtime.version,rule,color,played,board,options.preset,options.timeMs,options.context,options.backend,options.verifyOnly,options.certificate]);
+   cancel();const key=JSON.stringify([runtime.version,rule,color,played,board,options.preset,options.timeMs,options.multiPV,options.context,options.backend,options.verifyOnly,options.certificate]);
    if(cache.has(key)&&!options.force){const value=cache.get(key);cache.delete(key);cache.set(key,value);cacheHits++;return Promise.resolve({...clone(value),cacheHit:true});}
    return new Promise((resolve,reject)=>{
      try{
