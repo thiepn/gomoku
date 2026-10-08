@@ -591,7 +591,10 @@ if(typeof window !== 'undefined') (()=>{
     $('a3Evidence').textContent=r?.bestProof?'Proven win':r?.refutation?'Threat found':r?.defense?.rootThreat?'Defense':r?.search?.compared?'Estimated':'Unknown';
     const preview=a3.previewState(core,p,s.game.variant,r,s.a3.preview);
     const viewingBoard=preview?.state?.board||p.board;
-    const model=a3.overlays(p,r,viewingBoard,{mode:s.a3.mode,preview:s.a3.preview,pinned:s.a3.pinned});
+    const focusedMove=s.a3.preview?.move??r?.best;
+    const focusedCandidate=r?.candidates?.find(c=>c.i===focusedMove);
+    const validMoves=a3.legalVariation(core,p,s.game.variant,focusedCandidate);
+    const model=a3.overlays(p,r,viewingBoard,{mode:s.a3.mode,preview:s.a3.preview,pinned:s.a3.pinned,validMoves});
     const lines=model.arrows.map(a=>`<line class="a3-arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}" marker-end="url(#a3-arrowhead)"/>`).join('');
     const dots=model.dots.map(d=>`<circle class="a3-dot" data-kind="${d.type}" cx="${d.x}" cy="${d.y}" r="3.5"/>`).join('');
     if(svg)svg.innerHTML='<defs><marker id="a3-arrowhead" markerWidth="5" markerHeight="5" refX="3.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5Z" fill="#318a7d"/></marker></defs>'+lines+dots;
