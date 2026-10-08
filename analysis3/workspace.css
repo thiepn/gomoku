@@ -1,0 +1,119 @@
+/* A3 — dedicated analysis studio. Scoped to Free analysis only.
+   Keeps the real board and review actions; no decorative fake heatmap. */
+html body #grDialog.gr-workspace[data-panel="analysis"]{
+ --gr-bg:#101c20;--gr-surface:#17272c;--gr-ink:#e8eeea;--gr-muted:#a5b9b7;
+ --gr-line:#354a4d;--gr-accent:#77cbb5;--rw-soft:#24383d;--gr-good:#9bd1b1;
+ --gr-warn:#e7bb77;--gr-bad:#ef9a88;color:var(--gr-ink);background:var(--gr-bg)
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:minmax(0,1.12fr) minmax(385px,.88fr);background:var(--gr-bg)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{
+ background:radial-gradient(circle at 50% 28%,#25373a 0,#101c20 70%);border-right:1px solid var(--gr-line);
+ padding:12px 24px 10px
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{background:#152328;border-left:0;padding:17px 22px}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-heading{margin-bottom:6px}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-heading h3{color:#eef4ee}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{
+ width:min(100%,max(270px,calc(100dvh - 500px)));border:1px solid #6d654c;background:#d5be8c;box-shadow:0 0 0 1px #ffffff13,0 18px 40px #0005
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-cell:after{background:#d8c392}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap .gr-point-mark{z-index:3}
+html body #grDialog.gr-workspace[data-panel="analysis"] #rwDecision{scroll-padding:14px}
+html body #grDialog.gr-workspace[data-panel="analysis"] :is(.gr-section-head h4,#rwAlternativesTitle){color:var(--gr-ink)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate{background:#1c3034;color:var(--gr-ink);border-color:#365156}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate:hover{background:#284145;border-color:#79c9b3}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate .rw-pv{color:#b1c7c4}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate b{color:#ebf4ee}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-btn{background:#203439;border-color:#3b565a;color:#e9f0ea}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-primary{background:#7bc9b5;color:#142b2d;border:0}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-details{color:var(--gr-muted)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .rw-compare-move{border-color:#3b5155;background:#1d3034;color:#eaf0ec}
+html body #grDialog.gr-workspace[data-panel="analysis"] .rw-compare-move[aria-pressed=true]{border-color:#7bc9b5}
+html body #grDialog.gr-workspace[data-panel="analysis"] #grBoard{position:relative}
+html body #grDialog.gr-workspace .a3-board-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot{fill:#0c3236aa;stroke:#a5edce;stroke-width:1.1}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="best"]{fill:#1c685dcc;stroke:#f1ffcd;stroke-width:1.7}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="threat"]{fill:#8e3625cc;stroke:#ffd8a1;stroke-width:1.8}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="pinned"]{fill:#75554acc;stroke:#ffe19e;stroke-width:1.4}
+html body #grDialog.gr-workspace .a3-board-svg .a3-arrow{fill:none;stroke:#318a7d;stroke-width:1.5;stroke-linecap:round;opacity:.88}
+html body #grDialog.gr-workspace .a3-commandbar{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-commandbar{
+ display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;
+ margin:4px 0 11px;padding:8px 11px;border:1px solid #365156;
+ background:#1a2c31;border-radius:7px
+}
+html body #grDialog.gr-workspace .a3-mode-group{display:flex;gap:3px;padding:3px;background:#0f2025;border:1px solid #385156;border-radius:6px}
+html body #grDialog.gr-workspace .a3-mode-group button{
+ border:0;background:transparent;color:#b7c9c5;border-radius:4px;min-height:35px;
+ padding:6px 11px;font:650 12px/1.2 var(--ui-font,system-ui);cursor:pointer
+}
+html body #grDialog.gr-workspace .a3-mode-group button[aria-pressed="true"]{background:#3f6864;color:#f3fff8}
+html body #grDialog.gr-workspace .a3-command-meta{font:500 11px/1.4 var(--ui-font,system-ui);color:#a1bcb7}
+html body #grDialog.gr-workspace .a3-variation-dock{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-variation-dock{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;
+ background:#1a2d32;border:1px solid #375155;border-radius:6px;margin:8px 0 3px;padding:8px 10px
+}
+html body #grDialog.gr-workspace .a3-dock-info{min-width:0;display:flex;flex-direction:column;gap:3px}
+html body #grDialog.gr-workspace .a3-dock-info strong{font-size:12px;color:#eaf2ec}
+html body #grDialog.gr-workspace .a3-dock-info small{font-size:10px;color:#a0bab7;line-height:1.45}
+html body #grDialog.gr-workspace .a3-dock-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+html body #grDialog.gr-workspace .a3-dock-actions .gr-btn{padding:5px 8px;min-height:34px;min-width:34px}
+html body #grDialog.gr-workspace .a3-dock-actions button:disabled{opacity:.35}
+html body #grDialog.gr-workspace .a3-insight-bar{
+ display:none;margin:0 0 14px;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-insight-bar{display:grid}
+html body #grDialog.gr-workspace .a3-insight{border:1px solid #3b5558;background:#1d3034;padding:11px 10px;min-width:0;border-radius:6px}
+html body #grDialog.gr-workspace .a3-insight span{display:block;font-size:10px;color:#a9bfbb;text-transform:uppercase;letter-spacing:.075em}
+html body #grDialog.gr-workspace .a3-insight strong{display:block;font:650 16px/1.3 var(--ui-font,system-ui);color:#f0f4ee;margin-top:4px;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a3-compare{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-compare:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 16px}
+html body #grDialog.gr-workspace .a3-compare-card{border:1px solid #405c61;padding:9px 10px;border-radius:5px;background:#20373b}
+html body #grDialog.gr-workspace .a3-compare-card span{font-size:10px;color:#acc7c2}
+html body #grDialog.gr-workspace .a3-compare-card strong{display:block;color:#f1f6ef;font-size:15px;margin:3px 0}
+html body #grDialog.gr-workspace .a3-compare-card small{display:block;line-height:1.4;color:#bad0cb;font-size:11px}
+html body #grDialog.gr-workspace .a3-compare-note{grid-column:1/-1;font-size:11px;color:#a6c5ba}
+html body #grDialog.gr-workspace .a3-candidate-row{border:1px solid #38545a;border-radius:6px;margin:7px 0;overflow:hidden;background:#1b3034}
+html body #grDialog.gr-workspace .a3-candidate-row .gr-candidate{margin:0;border:0;border-radius:0;width:100%;min-height:63px}
+html body #grDialog.gr-workspace .a3-candidate-tools{display:flex;gap:5px;padding:0 10px 8px 54px}
+html body #grDialog.gr-workspace .a3-candidate-tools button{min-height:29px;border:1px solid #425e63;background:#273d42;color:#c8ded8;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer}
+html body #grDialog.gr-workspace .a3-candidate-tools button[aria-pressed="true"]{border-color:#a9cfae;color:#fff;background:#315c58}
+html body #grDialog.gr-workspace .a3-candidate-row[data-loss="true"]{opacity:.72;border-color:#8e655c}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-balance{border-color:#3a5558}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-balance #rwGraphValue{color:#a8c0b9}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-footer{background:#16262a;border-color:#3a5559}
+html body #grDialog.gr-workspace .a3-board-status{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-board-status{display:block;font-size:10px;line-height:1.5;color:#a0bbb5;margin:1px 0}
+html body #grDialog.gr-workspace .a3-board-status:empty{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] :is(.a3-mode-group button,.a3-candidate-tools button):focus-visible{outline:2px solid #c7f4c7;outline-offset:2px}
+@media(max-width:1100px) and (min-width:721px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:minmax(0,1fr) minmax(330px,.9fr)}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{padding:10px 12px}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{padding:13px}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:1fr}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{padding:8px 12px 4px;border-right:0}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{padding:12px 14px 22px;border-top:1px solid #3c5357}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{width:min(100%,max(218px,calc(100dvh - 575px)))}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .a3-commandbar{margin:3px 0 5px;padding:5px;gap:4px}
+ html body #grDialog.gr-workspace .a3-mode-group button{font-size:10px;min-height:32px;padding:5px 7px}
+ html body #grDialog.gr-workspace .a3-command-meta{font-size:10px}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .a3-variation-dock{padding:6px;min-height:42px;margin:4px 0}
+ html body #grDialog.gr-workspace .a3-dock-info small{font-size:9px}
+ html body #grDialog.gr-workspace .a3-dock-actions .gr-btn{min-height:32px;min-width:32px;padding:4px 5px}
+ html body #grDialog.gr-workspace .a3-insight-bar{gap:5px;margin-bottom:9px}
+ html body #grDialog.gr-workspace .a3-insight{padding:8px 7px}
+ html body #grDialog.gr-workspace .a3-insight strong{font-size:13px}
+ html body #grDialog.gr-workspace .a3-candidate-tools{padding-left:12px}
+}
+@media(max-width:720px) and (max-height:740px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{display:block;overflow-y:auto}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{overflow:visible}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{width:min(100%,300px)}
+}
+@media(prefers-reduced-motion:reduce){
+ html body #grDialog.gr-workspace .a3-board-svg *,
+ html body #grDialog.gr-workspace .a3-commandbar *{animation:none!important;transition:none!important}
+}
