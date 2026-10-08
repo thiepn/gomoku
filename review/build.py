@@ -51,7 +51,7 @@ else:
     s=s.replace('</body>',block+'\n</body>')
 # A3 styles are isolated from Guided Review and keep portable/offline parity.
 a3_css=(root/'analysis3/workspace.css').read_text()
-a3_style='<style id="analysis3-workspace-style">\\n'+a3_css+'\n</style>'
+a3_style='<style id="analysis3-workspace-style">\n'+a3_css+'\n</style>'
 if '<style id="analysis3-workspace-style">' in s:
     s=re.sub(r'<style id="analysis3-workspace-style">.*?</style>',lambda _:a3_style,s,count=1,flags=re.S)
 else:
