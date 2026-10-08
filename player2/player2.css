@@ -1,11 +1,11 @@
 /* Gomoku 2.0 — Player Journey & Home 2.0 */
-#pj2Home{display:none;max-width:1120px;margin:0 auto;padding:28px 32px 56px}
+#pj2Home{display:none;max-width:1040px;margin:0 auto;padding:22px 32px 56px}
 body[data-pj2-route="home"] #pj2Home{display:block}
 body[data-pj2-route="home"] #mainContent{display:none!important}
-.pj2-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:start;padding:4px 0 24px;border-bottom:1px solid var(--hair)}
-.pj2-hero h1{max-width:760px;margin:5px 0 8px;font:700 clamp(22px,2.5vw,29px)/1.12 Georgia,serif;letter-spacing:-.02em}
-.pj2-hero>div>p:last-child{max-width:660px;margin:0;color:var(--ink2);font-size:11px;line-height:1.65}
-.pj2-version{padding:7px 9px;border:1px solid var(--hair);border-radius:999px;color:var(--ink2);font-size:7px;font-weight:750;letter-spacing:.12em;white-space:nowrap}
+.pj2-hero{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:4px 0 17px;border-bottom:1px solid var(--hair)}
+.pj2-hero h1{margin:4px 0 0;font:650 clamp(19px,2.2vw,24px)/1.18 Georgia,serif;letter-spacing:-.01em}
+.pj2-intro{max-width:340px;margin:0;color:var(--ink2);font-size:11px;line-height:1.6}
+#pj2Title:focus{outline:2px solid var(--seal);outline-offset:5px}
 .pj2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin:20px 0 12px;padding:19px 20px;border:1px solid var(--hair);border-left:4px solid var(--seal);border-radius:11px;background:var(--card)}
 .pj2-next span{display:block;color:var(--seal);font-size:7px;font-weight:800;letter-spacing:.16em}
 .pj2-next h2{margin:5px 0 4px;font-size:23px}.pj2-next p{max-width:680px;margin:0;color:var(--ink2);font-size:10px;line-height:1.55}.pj2-next small{display:block;margin-top:7px;color:var(--ink2);font-size:7px}
@@ -20,9 +20,10 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 .pj2-stage p,.pj2-thread p{margin:18px 0 0;color:var(--ink2);font-size:9px;line-height:1.55}
 .pj2-thread-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pj2-thread{min-height:100px;padding:14px;text-align:left;border:1px solid var(--hair);border-radius:9px;background:transparent;color:var(--ink)}
 .pj2-thread p{margin-top:11px}.pj2-footnote{margin:24px 0 0;padding-top:14px;border-top:1px solid var(--hair);color:var(--ink2);font-size:8px;line-height:1.55}
-#pj2HomeNav{order:-1}
+#pj2JourneyTool{min-height:58px}
+#pj2Home .pj2-primary:focus-visible,#pj2Home .pj2-stage:focus-visible,#pj2Home .pj2-thread:focus-visible{outline:3px solid var(--seal);outline-offset:3px}
 @media(max-width:820px){
-  #pj2Home{padding-inline:22px}.pj2-stage-grid{grid-template-columns:1fr 1fr}.pj2-section-head{grid-template-columns:1fr}.pj2-section-head>p{text-align:left}.pj2-hero{grid-template-columns:1fr}.pj2-version{justify-self:start}
+  #pj2Home{padding-inline:22px}.pj2-stage-grid{grid-template-columns:1fr 1fr}.pj2-section-head{grid-template-columns:1fr}.pj2-section-head>p{text-align:left}.pj2-hero{align-items:start;flex-direction:column;gap:8px}
 }
 @media(max-width:620px){
   #pj2Home{padding:20px 14px 92px}.pj2-next{grid-template-columns:1fr}.pj2-primary{width:100%}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-stage-grid,.pj2-thread-grid{grid-template-columns:1fr}
@@ -32,7 +33,7 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 @media(max-width:400px){.pj2-hero h1{font-size:31px}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-metrics strong{font-size:21px}}
 @media(prefers-reduced-motion:reduce){#pj2Home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
-/* Four first-class destinations must fit without making the board or body scroll sideways. */
+/* Three game-first destinations; journal is in More. */
 @media (min-width:761px) and (max-width:1050px){
  html body.ui-studio header.top{gap:12px;padding-left:14px;padding-right:14px}
  html body.ui-studio #v92Primary{margin:0!important;min-width:0;flex:1 1 auto}
@@ -43,6 +44,6 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 }
 @media (max-width:760px){
  html body.ui-studio #v92Primary{overflow-x:hidden}
- html body.ui-studio .v92-nav-main{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;min-width:0}
+ html body.ui-studio .v92-nav-main{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;min-width:0}
  html body.ui-studio .v92-nav-btn{min-width:0;padding:9px 3px;font-size:12px}
 }
