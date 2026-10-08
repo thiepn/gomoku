@@ -638,6 +638,52 @@ if(typeof window !== 'undefined') (()=>{
     if(preview){$('grBoardTitle').textContent=`Read-only line · ${preview.step} of ${preview.total} moves`;
       $('grBoardHelp').textContent='Previewing a searched continuation. Reset restores the exact position before this recorded move.';}
   }
+  function renderA4(){
+    const s=session, D=window.GomokuGameDiagnosis4;
+    if(!s||!D||!$('a4GameDiagnosis'))return;
+    const game=D.summarize(s.positions,s.results,{mode:s.a4.side==='mine'?'mine':'all',humanColor:s.game.humanColor});
+    const rows=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:s.a4.limit});
+    const all=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:500});
+    const verified=game.events.filter(e=>e.bucket==='verified'&&e.needsReview).length;
+    const estimates=game.events.filter(e=>e.kind==='provisional-mistake').length;
+    const unknown=game.events.filter(e=>e.bucket==='unresolved').length+game.summary.pending;
+    $('a4Coverage').textContent=`${game.analyzed} of ${game.total} moves reviewed · ${game.total?Math.round(game.coverage*100):0}% scan coverage`;
+    const metrics=[
+      ['Confirmed tactical issues',verified,'Rule fact / verified continuation'],
+      ['Estimated mistakes',estimates,'Comparable selective search only'],
+      ['Still unresolved',unknown,'Unscored, incomplete, or pending']
+    ];
+    const metricsHTML=metrics.map(([title,n,meaning])=>`<div class="a4-metric"><span>${esc(title)}</span><b>${n}</b><small>${esc(meaning)}</small></div>`).join('');
+    if($('a4Metrics').innerHTML!==metricsHTML)$('a4Metrics').innerHTML=metricsHTML;
+    $('a4Side').value=s.a4.side;$('a4Category').value=s.a4.category;
+    $('a4Scope').textContent='This report separates confirmed rule/tactical events from provisional engine judgments. Counts are evidence categories, not game accuracy or winning percentages. Events may update after deeper search.';
+    const html=rows.length?rows.map(ev=>{
+      const tone=ev.bucket==='verified'?'verified':ev.bucket==='provisional'?'estimated':'unknown';
+      const p=s.positions[ev.index],r=s.results[ev.index];
+      return `<article class="a4-event" data-a4-evidence="${tone}" data-a4-kind="${esc(ev.kind)}"><div class="a4-event-main"><span class="a4-number">${ev.ply}</span><span class="a4-event-copy"><b>${ev.color===1?'Black':'White'} · ${esc(ev.coord)} · ${esc(ev.label)}</b><small>${esc(ev.note)}</small><em>${esc(ev.certainty)}${ev.searchDepth!==null?' · depth '+ev.searchDepth:''}</em></span></div><div class="a4-actions"><button type="button" class="gr-btn" data-a4-ply="${ev.index}" aria-label="Review move ${ev.ply}">Review</button>${r&&ev.hasBest?'<button type="button" class="gr-btn" data-a4-ply="'+ev.index+'" data-a4-compare="true" aria-label="Compare alternatives for move '+ev.ply+'">Compare</button>':''}</div></article>`;
+    }).join(''):'<p class="gr-muted">No moves match this evidence filter. Select Every move to inspect all available positions.</p>';
+    if($('a4Events').innerHTML!==html){
+      const focused=document.activeElement?.getAttribute('data-a4-ply'),compare=document.activeElement?.hasAttribute('data-a4-compare');
+      const y=$('a4Events').scrollTop;$('a4Events').innerHTML=html;$('a4Events').scrollTop=y;
+      if(focused!==null&&focused!==undefined){
+        const selector='[data-a4-ply="'+focused+'"]'+(compare?'[data-a4-compare]':':not([data-a4-compare])');
+        $('a4Events').querySelector(selector)?.focus({preventScroll:true});
+      }
+    }
+    $('a4More').hidden=all.length<=rows.length;
+    $('a4More').textContent=`Show next ${Math.min(24,all.length-rows.length)} of ${all.length} matching moves`;
+    $('a4GameDiagnosis').dataset.complete=String(game.analyzed===game.total);
+  }
+  function renderA4Contrast(r,p,concealed,active,panel){
+    const area=$('a4DecisionContrast'),D=window.GomokuGameDiagnosis4;
+    if(!area)return;
+    if(!D||!r||!p||concealed||active||panel==='overview'){area.hidden=true;return;}
+    const diff=D.contrast(r,p,core,session.game.variant),cls=D.classification(r,p);
+    if(!diff){area.hidden=true;return;}
+    const line=a=>a.length?a.map(core.coord).join(' → '):'No legal searched continuation';
+    const body=`<div class="a4-contrast-heading"><h4>Played vs best found</h4><span>${esc(cls.certainty)}</span></div><div class="a4-contrast-grid"><div><small>RECORDED MOVE</small><b>${esc(core.coord(diff.played))}</b><p>${esc(line(diff.playedLine))}</p></div><div><small>SEARCHED ALTERNATIVE</small><b>${diff.best===null?'—':esc(core.coord(diff.best))}</b><p>${esc(line(diff.bestLine))}</p></div></div><p class="a4-contrast-why">${esc(diff.verdict)}</p>${diff.comparable?'<p class="a4-contrast-note">Estimated score gap: '+Math.round(diff.scoreGap)+' engine units at completed depth '+diff.depth+'. These are not probabilities or proof of a saved game.</p>':'<p class="a4-contrast-note">No valid equal-depth numerical comparison is available.</p>'}`;
+    area.hidden=false;if(area.innerHTML!==body)area.innerHTML=body;
+  }
   function renderWorkspace(){
     if(!session||!dialog.open)return;
     const s=session,p=entry(),r=result(),active=s.mode!=='game',concealed=s.mode==='retry'&&!s.attempt?.result;
@@ -732,6 +778,7 @@ if(typeof window !== 'undefined') (()=>{
     }
     $('grFooterNote').textContent=storageNotice?'Storage unavailable: export to keep this review.':'Recorded game unchanged';
     $('rwGlobalNotice').hidden=!$('grFeedback').textContent||panel!=='overview';$('rwGlobalNotice').textContent=$('grFeedback').textContent;
+    renderA4();renderA4Contrast(r,p,concealed,active,panel);
     renderA3(r,p);
   }
   async function redoBranch(){
