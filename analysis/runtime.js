@@ -3,7 +3,7 @@ if(typeof window!=='undefined') (()=>{
  'use strict';
  let worker=null,url=null,pending=null,serial=0,timer=null,created=0,completed=0,cacheHits=0;
  const cache=new Map(),clone=x=>JSON.parse(JSON.stringify(x));
- const runtime={version:'2.1.0',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
+ const runtime={version:'3.0.0-a1',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
  function cancel(){
    if(!pending)return;
    const job=pending;pending=null;clearTimeout(timer);worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;
