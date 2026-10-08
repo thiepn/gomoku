@@ -8,7 +8,10 @@ def check(name,ok=True): assert ok,name;PASSED.append(name);print('PASS '+name,f
 def route(p,n): close(p);p.locator('#v92Primary button[data-v92-route="'+n+'"]').click();p.wait_for_timeout(120)
 def close(p): p.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
 def load(browser,viewport,mobile=False,reduced='no-preference'):
-    ctx=browser.new_context(viewport=viewport,is_mobile=mobile,has_touch=mobile,reduced_motion=reduced);page=ctx.new_page();page.set_default_timeout(18000)
+    ctx=browser.new_context(viewport=viewport,is_mobile=mobile,has_touch=mobile,reduced_motion=reduced)
+    # Course acceptance starts after first-run onboarding; avoid the late modal race.
+    ctx.add_init_script("localStorage.setItem('gomoku.v112.onboarding.seen','1')")
+    page=ctx.new_page();page.set_default_timeout(18000)
     page.on('pageerror',lambda e:ERRORS.append(str(e)))
     if not URL: raise RuntimeError('COURSE2_URL is required.')
     page.goto(URL,wait_until='domcontentloaded');page.wait_for_function('document.body.dataset.uiReady==="true"&&GomokuCourse2&&GomokuLearningV11&&GomokuCourse2.model().chapters.length===14');page.wait_for_timeout(500);close(page);return ctx,page
