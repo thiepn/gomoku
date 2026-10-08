@@ -36,13 +36,16 @@
     if(!g||typeof g!=='object'||!validLevel(g.effectiveLevel))return null;
     const outcome=['win','draw','loss'].includes(g.outcome)?g.outcome:null;
     if(!outcome)return null;
-    return {id:String(g.id||''),at:Number(g.at)||0,outcome,effectiveLevel:g.effectiveLevel,
+    return {id:String(g.id||''),at:Number(g.at)||0,seq:Number.isSafeInteger(Number(g.seq))&&Number(g.seq)>0?Number(g.seq):0,outcome,effectiveLevel:g.effectiveLevel,
       selectedLevel:validLevel(g.selectedLevel)?g.selectedLevel:g.effectiveLevel,
       assisted:g.assisted===true,rule:String(g.rule||'')};
   }
-  function eligible(history,current){
+  function eligible(history,current,afterSeq=0){
+    const marker=Math.max(0,Number(afterSeq)||0);
     return (Array.isArray(history)?history:[]).map(normalizeGame).filter(Boolean)
-      .filter(g=>!g.assisted&&g.effectiveLevel===current).sort((a,b)=>a.at-b.at).slice(-8);
+      .map((g,i)=>({...g,seq:g.seq||i+1}))
+      .filter(g=>!g.assisted&&g.effectiveLevel===current&&g.seq>marker)
+      .sort((a,b)=>a.seq-b.seq||a.at-b.at).slice(-8);
   }
   function performance(rows){
     if(!rows.length)return {games:0,wins:0,draws:0,losses:0,score:.5};
@@ -54,22 +57,25 @@
     selected=validLevel(selected)?selected:'mid';
     return {version:1,selected,current:selected,lastChangeGameCount:Math.max(0,Number(games)||0),changes:0};
   }
-  function resolveAdaptive(selected,history=[],prior=null){
+  function resolveAdaptive(selected,history=[],prior=null,totalGames=null){
     selected=validLevel(selected)?selected:'mid';
-    const all=(Array.isArray(history)?history:[]).map(normalizeGame).filter(Boolean);
+    const all=(Array.isArray(history)?history:[]).map(normalizeGame).filter(Boolean)
+      .map((g,i)=>({...g,seq:g.seq||i+1}));
+    // This count is monotonic even when local history keeps only 80 records.
+    const total=Math.max(all.length,...all.map(g=>g.seq),Math.max(0,Number(totalGames)||0));
     let state=prior&&prior.version===1&&validLevel(prior.current)&&validLevel(prior.selected)
       ?{version:1,selected:prior.selected,current:prior.current,lastChangeGameCount:Math.max(0,Number(prior.lastChangeGameCount)||0),changes:Math.max(0,Number(prior.changes)||0)}
       :freshAdaptive(selected,0);
-    if(state.selected!==selected)state=freshAdaptive(selected,all.length);
-    const rows=eligible(all,state.current),perf=performance(rows);
-    const sinceChange=Math.max(0,all.length-state.lastChangeGameCount);
+    if(state.selected!==selected)state=freshAdaptive(selected,total);
+    const rows=eligible(all,state.current,state.lastChangeGameCount),perf=performance(rows);
+    const sinceChange=Math.max(0,total-state.lastChangeGameCount);
     if(rows.length<4)return {level:state.current,state,performance:perf,changed:false,reason:'need-more-games'};
     if(sinceChange<2)return {level:state.current,state,performance:perf,changed:false,reason:'cooldown'};
     let delta=0;
     if(perf.score>=.72)delta=1; else if(perf.score<=.28)delta=-1;
     const next=LEVELS[clamp(levelIndex(state.current)+delta,0,LEVELS.length-1)];
     if(!delta||next===state.current)return {level:state.current,state,performance:perf,changed:false,reason:'well-matched'};
-    state={...state,current:next,lastChangeGameCount:all.length,changes:state.changes+1};
+    state={...state,current:next,lastChangeGameCount:total,changes:state.changes+1};
     return {level:next,state,performance:perf,changed:true,reason:delta>0?'promoted':'eased'};
   }
   function calibrationAudit(levelConfigs={}){

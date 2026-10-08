@@ -22,6 +22,8 @@ def controlled(page):
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
     context=browser.new_context(service_workers='allow',viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
+    # This suite exercises network continuity, not the first-run welcome flow.
+    context.add_init_script("localStorage.setItem('gomoku.v112.onboarding.seen','1')")
     page=context.new_page();page.set_default_timeout(30000);page.on('pageerror',lambda e:ERRORS.append(str(e)))
     root=URL if URL.endswith('/') else URL+'/'
 
@@ -96,6 +98,7 @@ with sync_playwright() as p:
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
     context=browser.new_context(service_workers='block',viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
+    context.add_init_script("localStorage.setItem('gomoku.v112.onboarding.seen','1')")
     def delayed(route):
         time.sleep(0.12)
         route.continue_()
