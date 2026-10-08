@@ -78,21 +78,37 @@
     }
     return s;
   }
-  function schedule(delay=0){clearTimeout(timer);timer=setTimeout(render,delay);}
+  function schedule(delay=0){
+    clearTimeout(timer);
+    if(document.hidden)return;
+    timer=setTimeout(render,delay);
+  }
   function boot(){
     observer=new MutationObserver(muts=>{
-      if(muts.some(m=>m.target?.id==='oc2Home'||m.target?.closest?.('#oc2Home')))return;
-      schedule(20);
+      // Only react to the online workbench; changes in other workspaces
+      // previously caused unnecessary snapshots and repaints on every tick.
+      const relevant=muts.some(m=>{
+        const node=m.target;
+        if(node?.id==='oc2Home'||node?.closest?.('#oc2Home'))return false;
+        if(m.type==='attributes')return node?.id==='workbenchDialog';
+        if(node?.id==='workbenchDialog'||node?.closest?.('#workbenchDialog'))return true;
+        return [...m.addedNodes].some(n=>n?.id==='workbenchDialog'||n?.querySelector?.('#workbenchDialog'));
+      });
+      if(relevant)schedule(40);
     });
-    observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
+    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
     document.addEventListener('click',e=>{
       if(e.target?.closest?.('#onlineBtn,[data-tool="online"]'))schedule(40);
     },true);
     for(const ev of ['gomoku:room','gomoku:result'])window.addEventListener(ev,()=>schedule(20));
+    window.addEventListener('storage',()=>schedule(80));
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(40);});
     // Online can be opened through several mature launchers that do not all
     // originate from #onlineBtn. While its workbench is open, keep the
     // composition layer self-healing instead of relying on a particular click.
-    setInterval(()=>{if($('workbenchDialog')?.open&&$('roomRankedPanel')&&$('roomAccountPanel'))render();},400);
+    setInterval(()=>{
+      if(!document.hidden&&$('workbenchDialog')?.open&&$('roomRankedPanel')&&$('roomAccountPanel'))render();
+    },4000);
     schedule();
   }
   window.GomokuOnline2=Object.freeze({version:Core.VERSION,refresh:render,route,snapshot});

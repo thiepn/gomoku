@@ -211,7 +211,9 @@
     window.addEventListener('gomoku-course2-transfer-changed',()=>schedule(20,false));
     window.addEventListener('storage',e=>{if(e.key===ACADEMY_KEY||e.key===COURSE2_KEY)schedule(20,false);});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50,true);});
-    setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open)schedule(0,false);},2500);
+    setInterval(()=>{
+      if(!document.hidden&&(document.body?.dataset?.v92Route==='improve'||$('grDialog')?.open))schedule(0,false);
+    },8000);
     schedule(0,true);
   }
   window.GomokuLearningV11=Object.freeze({
