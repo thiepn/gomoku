@@ -52,6 +52,7 @@ jobs:
           node analysis/test-core.cjs
           node analysis/test-forcing-defense.cjs
           node analysis/test-proof-coverage.cjs
+          node analysis3/benchmark.cjs
       - name: Rebuild idempotence and generated change boundary
         run: |
           python - <<'PY'
