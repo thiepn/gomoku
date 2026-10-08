@@ -154,6 +154,22 @@ P16's check-run waiter had a release-control-only defect: GitHub can return more
 
 This exception changes release admission logic, not game/application binaries. Qualification must rerun before merging the repair; physical-device evidence and P27 gates are unchanged.
 
+### Exact-final-SHA CI requalification
+
+P27 requires successful P16, P24, P25, and P26 workflow runs **on the final
+release-control commit**, not just on the frozen product candidate. Committing
+genuine physical-device evidence changes `main` even when the game build is
+unchanged. R0 adds `operations/p26-device-matrix.json` as a **push trigger** for
+P24/P25 so the required browser/PWA and product-quality workflows run
+automatically on that final SHA. P16 and P26 already trigger on the matrix.
+The two changed workflow files are narrow P26 release-control-only exceptions;
+all product artifacts remain immutable.
+
+Wait until all four final-SHA workflows are green, and make sure there are no
+open release-blocking defects, before manually dispatching P27 from current
+`main` with the exact confirmation `release-v1.0.0`. Never infer a physical
+pass from these workflows.
+
 ## 8. P26 completion
 
 P26 is complete only when:
