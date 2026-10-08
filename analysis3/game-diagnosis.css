@@ -1,3 +1,8 @@
+html body #grDialog.gr-workspace .a4-evidence-dot{cursor:pointer;stroke:var(--gr-surface);stroke-width:1}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="verified"]{fill:#397e62}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="unknown"]{fill:#a48a63}
+html body #grDialog.gr-workspace .a4-evidence-dot:hover{stroke:var(--gr-ink);stroke-width:2}
+
 /* A4 evidence-driven entire-game diagnosis. Scoped to existing review dialog;
  * no generated score bars, win probabilities or fabricated graphs. */
 html body #grDialog.gr-workspace .a4-diagnosis{margin:21px 0 22px;padding:19px 0 6px;border-top:1px solid var(--gr-line);border-bottom:1px solid var(--gr-line)}
