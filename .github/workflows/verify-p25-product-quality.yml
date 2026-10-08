@@ -16,6 +16,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'operations/p26-device-matrix.json' # rerun on final physical evidence SHA
       - 'index.html'
       - 'ui/**'
       - 'review/**'

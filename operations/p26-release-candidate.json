@@ -24,7 +24,9 @@
     "operations/P27-RUNBOOK.md",
     "operations/P27-RELEASE-NOTES.md",
     "operations/p27-stable-release.json",
-    "operations/p27-stable-release.mjs"
+    "operations/p27-stable-release.mjs",
+    ".github/workflows/verify-p24-browser-device-network.yml",
+    ".github/workflows/verify-p25-product-quality.yml"
   ],
   "required_physical_profiles": [
     "android-chrome-physical",

@@ -57,4 +57,19 @@ const p16Probe=spawnSync(process.execPath,['--input-type=module','--eval',p16Pag
 assert(p16Probe.status===0,'P16 check-run pagination must preserve governance on page two: '+String(p16Probe.stderr||p16Probe.error||''));
 assert(config.allowed_p26_paths.includes('operations/p16-await-checks.mjs'),'P16 release-control exception must be explicit and narrowly scoped');
 
+// Final physical-device evidence changes the release-control SHA. The final
+// commit must automatically receive fresh P24/P25 verification for P27's
+// strict same-SHA check policy, without manual workflow dispatch.
+for(const file of [
+  '.github/workflows/verify-p24-browser-device-network.yml',
+  '.github/workflows/verify-p25-product-quality.yml'
+]){
+  const workflowText=fs.readFileSync(file,'utf8');
+  const pushBlock=workflowText.split('  push:\n')[1]?.split('  workflow_dispatch:\n')[0];
+  assert(pushBlock?.includes("'operations/p26-device-matrix.json'"),
+    'R0 physical-evidence commits must trigger '+file);
+  assert(config.allowed_p26_paths.includes(file),
+    'R0 product freeze must explicitly permit release-only workflow '+file);
+}
+
 console.log('PASS P26 release-candidate, burn-in and physical-device contracts.');
