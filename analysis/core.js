@@ -349,11 +349,13 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
       c.delta=c.comparison.scoreComparable?c.loss:null;
     }
     out.search.compared=out.candidates.filter(c=>c.comparison?.scoreComparable).length;
+    out.search.totalRootNodes=passes.reduce((n,p)=>n+p.nodes,0);
+    out.search.totalRootTTHits=passes.reduce((n,p)=>n+p.ttHits,0);
     const playedRow=out.candidates.find(c=>c.i===played),bestRow=out.candidates.find(c=>c.i===out.best);
     out.search.sameRootComparison=!!(playedRow?.comparison?.scoreComparable&&bestRow?.comparison?.scoreComparable);
     if(out.basis==='selective-estimate'&&!out.search.sameRootComparison){
-      out.loss=null;out.score=null;
-      out.explanation.why+=' The played and recommended moves lack equal completed-depth evidence; no numeric score loss is reported.';
+      out.loss=null;out.score=null;out.label='Unscored';out.basis='insufficient-search';
+      out.explanation.why+=' The played and recommended moves lack equal completed-depth evidence; no mistake grade or numeric score loss is established.';
     }
     // Explain preventative defense using a checked counterfactual, not a
     // generic strategic label inferred from a score. Only the displayed lines
@@ -437,7 +439,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!card||card.version!==2)throw Error('Unsupported mistake card.');validate(card.board,card.color,card.rule);
     if(!point(card.played)||!legal(card.board,card.color,card.rule,card.played,card.context).legal)throw Error('Invalid saved decision.');
     if(card.id!==positionKey(card.board,card.color,card.rule,card.context)||JSON.stringify(card).length>240000)throw Error('Invalid or oversized mistake card.');
-    if(!trainable(['2.0.0','2.1.0'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
+    if(!trainable(['2.0.0','2.1.0','3.0.0-a1'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
     const clean=clone(card);clean.context=context(card.context);clean.source={gameId:String(card.source?.gameId||'').slice(0,100),title:String(card.source?.title||'Reviewed game').slice(0,120),ply:Math.max(1,Math.min(450,Number(card.source?.ply)||1)),date:Math.max(0,Number(card.source?.date)||0)};
     const stats=card.stats||{};clean.stats={};for(const k of ['attempts','successes','lapses','assisted','streak','due','last']){const v=stats[k];if(v!==null&&v!==undefined&&(!Number.isSafeInteger(v)||v<0||v>8640000000000000))throw Error('Invalid practice statistics.');clean.stats[k]=v??0;}
     clean.events=Array.isArray(card.events)?card.events.slice(-40).filter(e=>e&&typeof e.id==='string'&&['correct','incorrect'].includes(e.status)&&Number.isFinite(e.at)):[];
