@@ -30,7 +30,7 @@ with sync_playwright() as p:
         page.keyboard.press('Escape')
         page.locator('#v92Primary [data-v92-route="improve"]').click()
         page.wait_for_function('document.querySelectorAll("#uiCourseGrid .c20-tile-demo").length===14',timeout=20000)
-        chapter=page.locator('#ch1CourseDialog .c20-checkpoint').first()
+        chapter=page.locator('#ch1CourseDialog .c20-checkpoint').first
         assert chapter.count()==1,label+' course checkpoint missing'
         baseline=page.evaluate('''()=>{const bar=document.querySelector('#ch1CourseDialog .c20-checkpoint');
           GomokuCourse2.refresh();return document.querySelector('#ch1CourseDialog .c20-checkpoint')===bar;}''')
