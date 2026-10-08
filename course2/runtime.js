@@ -9,7 +9,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const reduceMotion=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',refreshTimer=0,transferMisses=0;
+  let dialog=null,activeChapter=1,sceneIndex=0,autoTimer=0,lastSignature='',lastStructure='',refreshTimer=0,transferMisses=0;
 
   function readState(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{};}catch{return {};}
@@ -213,10 +213,22 @@
     const j=model(),s=readState();
     return JSON.stringify({c:j.chapters.map(x=>[x.id,x.state,x.completion,x.skillScore,x.due]),t:s.transfer||{}});
   }
+  function structure(){
+    const tiles=document.querySelectorAll('#uiCourseGrid .ui-course-tile[data-chapter]').length;
+    const demos=document.querySelectorAll('#uiCourseGrid .c20-tile-demo').length;
+    const dialogs=document.querySelectorAll('[id$="CourseDialog"]').length;
+    const bars=document.querySelectorAll('[id$="CourseDialog"] .c20-checkpoint').length;
+    return [tiles,demos,dialogs,bars].join(':');
+  }
   function refresh(){
-    const sig=signature();
-    if(sig!==lastSignature){lastSignature=sig;renderJourney();}
-    decorateCatalog();decorateChapterDialogs();
+    const sig=signature(),changed=sig!==lastSignature;
+    const altered=structure()!==lastStructure;
+    if(changed){lastSignature=sig;renderJourney();}
+    // Replacing 14 dialog innerHTML trees on a timer destroyed focus and
+    // did expensive layout work even when progress and DOM were unchanged.
+    if(changed||altered){
+      decorateCatalog();decorateChapterDialogs();lastStructure=structure();
+    }
   }
   function schedule(ms=100){clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,ms);}
   const observer=new MutationObserver(muts=>{
@@ -229,8 +241,12 @@
     observer.observe(document.body,{childList:true,subtree:true});
     window.addEventListener('storage',e=>{if(e.key===KEY||e.key==='gomoku.studio.academy.v4')schedule(20);});
     window.addEventListener('gomoku-mistakes-changed',()=>schedule(20));
+    window.addEventListener('gomoku-course2-transfer-changed',()=>schedule(20));
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
     document.addEventListener('close',e=>{if(e.target?.id?.endsWith('CourseDialog'))schedule(20);},true);
-    setInterval(()=>{if(document.body?.dataset?.v92Route==='improve'||document.querySelector('[id$="CourseDialog"][open]'))schedule(0);},2500);
+    setInterval(()=>{
+      if(!document.hidden&&(document.body?.dataset?.v92Route==='improve'||document.querySelector('[id$="CourseDialog"][open]')))schedule(0);
+    },10000);
     schedule(0);
   }
   window.GomokuCourse2=Object.freeze({

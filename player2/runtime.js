@@ -140,7 +140,12 @@
     if(!force&&document.body.dataset.pj2Route==='home'&&specialistOpen())return last;
     const input=collect(),summary=Core.summary(input);render(summary);return summary;
   }
-  function schedule(ms=40){clearTimeout(timer);timer=setTimeout(()=>refresh(),ms);}
+  function schedule(ms=40){
+    // While playing, keep board interactions free from full journal summaries.
+    // Showing the journal always forces fresh authoritative evidence.
+    if(document.body.dataset.pj2Route!=='home')return;
+    clearTimeout(timer);timer=setTimeout(()=>refresh(),ms);
+  }
   function boot(){
     if(!studio()||!$('v92Primary')||document.body.dataset.uiReady!=='true'){setTimeout(boot,40);return;}
     if(ready)return;ready=true;ensureJourneyEntry();ensureHome();
@@ -148,7 +153,7 @@
     for(const ev of ['gomoku:move','gomoku:result','gomoku:room','gomoku-course2-transfer-changed','gomoku-mistakes-changed'])window.addEventListener(ev,()=>schedule(60));
     window.addEventListener('storage',()=>schedule(80));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
-    setInterval(()=>{if(!document.hidden&&document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},5000);
+    setInterval(()=>{if(!document.hidden&&document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},8000);
     // Preserve whichever normal route the user already selected.
     markHome(false);refresh(true);
   }
