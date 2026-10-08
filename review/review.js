@@ -125,6 +125,13 @@ if(typeof window !== 'undefined') (()=>{
   let storageNotice='';
   const abort=()=>window.GomokuAnalysisRuntime?.cancel();
   const A=()=>createAnalysis2(createEngine,createStudioCore,createGuidedReviewCore);
+  const a4VerifiedCertificates=new WeakMap();
+  function verifyA4Certificate(cert){
+    if(!cert||typeof cert!=='object')return false;
+    if(a4VerifiedCertificates.has(cert))return a4VerifiedCertificates.get(cert);
+    let valid=false;try{valid=A().verify(cert)===true;}catch{}
+    a4VerifiedCertificates.set(cert,valid);return valid;
+  }
   function evaluate(board,color,rule,played,budget=350,context=entry()?.context||{},extra={}) {
     const preset=budget<=350?'quick':budget<=1100?'standard':budget<=2400?'deep':'maximum';
     return window.GomokuAnalysisRuntime.request(board,color,rule,played,{timeMs:budget,preset,context,multiPV:extra.multiPV??session?.lines??5});
@@ -641,7 +648,7 @@ if(typeof window !== 'undefined') (()=>{
   function renderA4(){
     const s=session, D=window.GomokuGameDiagnosis4;
     if(!s||!D||!$('a4GameDiagnosis'))return;
-    const game=D.summarize(s.positions,s.results,{mode:s.a4.side==='mine'?'mine':'all',humanColor:s.game.humanColor});
+    const game=D.summarize(s.positions,s.results,{mode:s.a4.side==='mine'?'mine':'all',humanColor:s.game.humanColor,rule:s.game.variant,verifyProof:verifyA4Certificate});
     const rows=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:s.a4.limit});
     const all=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:500});
     const verified=game.events.filter(e=>e.bucket==='verified'&&e.needsReview).length;
@@ -678,7 +685,7 @@ if(typeof window !== 'undefined') (()=>{
     const area=$('a4DecisionContrast'),D=window.GomokuGameDiagnosis4;
     if(!area)return;
     if(!D||!r||!p||concealed||active||panel==='overview'){area.hidden=true;return;}
-    const diff=D.contrast(r,p,core,session.game.variant),cls=D.classification(r,p);
+    const diff=D.contrast(r,p,core,session.game.variant,{verifyProof:verifyA4Certificate}),cls=D.classification(r,p,{rule:session.game.variant,verifyProof:verifyA4Certificate});
     if(!diff){area.hidden=true;return;}
     const line=a=>a.length?a.map(core.coord).join(' → '):'No legal searched continuation';
     const body=`<div class="a4-contrast-heading"><h4>Played vs best found</h4><span>${esc(cls.certainty)}</span></div><div class="a4-contrast-grid"><div><small>RECORDED MOVE</small><b>${esc(core.coord(diff.played))}</b><p>${esc(line(diff.playedLine))}</p></div><div><small>SEARCHED ALTERNATIVE</small><b>${diff.best===null?'—':esc(core.coord(diff.best))}</b><p>${esc(line(diff.bestLine))}</p></div></div><p class="a4-contrast-why">${esc(diff.verdict)}</p>${diff.comparable?'<p class="a4-contrast-note">Estimated score gap: '+Math.round(diff.scoreGap)+' engine units at completed depth '+diff.depth+'. These are not probabilities or proof of a saved game.</p>':'<p class="a4-contrast-note">No valid equal-depth numerical comparison is available.</p>'}`;
@@ -804,7 +811,7 @@ if(typeof window !== 'undefined') (()=>{
       $('grFilter').value='all';$('rwSettings').hidden=true;$('rwOptions').setAttribute('aria-expanded','false');dialog.showModal();feedback('');render();(session.panel==='overview'?$('rwStart'):$('grRetry')).focus({preventScroll:true});scan();return true;
     }catch(e){console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
   }
-  function exportReview(){const s=session;if(!s)return;const D=window.GomokuGameDiagnosis4;const diagnosis=D?D.summarize(s.positions,s.results,{mode:s.game.mode==='ai'?'mine':'all',humanColor:s.game.humanColor}):null;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations,diagnosis};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function exportReview(){const s=session;if(!s)return;const D=window.GomokuGameDiagnosis4;const diagnosis=D?D.summarize(s.positions,s.results,{mode:s.game.mode==='ai'?'mine':'all',humanColor:s.game.humanColor,rule:s.game.variant,verifyProof:verifyA4Certificate}):null;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations,diagnosis};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function boot(){
     if(!window.GomokuStudio){setTimeout(boot,80);return;}
     core=createGuidedReviewCore(createEngine,createStudioCore);
