@@ -116,7 +116,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='3.0.0-a3', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='3.0.0-a3', ANALYSIS_VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -134,15 +134,16 @@ if(typeof window !== 'undefined') (()=>{
   function loadCache(s) {
     try {
       const raw=localStorage.getItem(STORE);if(!raw || raw.length>2800000)return;
-      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1',VERSION].includes(data.version)||!Array.isArray(data.items))return;
+      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1','3.0.0-a2',VERSION].includes(data.version)||!Array.isArray(data.items))return;
       const legacyFingerprint=JSON.stringify(['2.0.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const previousFingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const previousFingerprint=JSON.stringify(['3.0.0-a2',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a1Fingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
       const olderFingerprint=JSON.stringify(['2.1.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
+      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===a1Fingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
-        if(r?.analysisVersion===VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
+        if(r?.analysisVersion===ANALYSIS_VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
       }
       s.index=Math.max(0,Math.min(s.positions.length-1,Number(saved.index)||0));
       if(saved.variations&&typeof saved.variations==='object')for(const [k,rows]of Object.entries(saved.variations)){const p=s.positions[k];if(!p||!Array.isArray(rows))continue;s.variations[k]=rows.slice(0,12).filter(b=>b&&Array.isArray(b.moves)&&b.moves.length<=60).map(b=>({id:String(++s.branchSerial),moves:core.line(p.board,p.color,s.game.variant,b.moves,p.context).moves,pv:core.line(p.board,p.color,s.game.variant,Array.isArray(b.pv)?b.pv:[],p.context).moves}));}
@@ -581,7 +582,7 @@ if(typeof window !== 'undefined') (()=>{
   function renderA3(r,p){
     const s=session,active=s?.panel==='analysis'&&s.mode==='game';
     const svg=$('a3BoardSvg');if(svg)svg.replaceChildren();
-    if(!active)return;
+    if(!active){$('a3BoardStatus').textContent='';$('a3Compare').hidden=true;return;}
     const a3=window.GomokuAnalysisWorkspace3;
     if(!a3){$('a3BoardStatus').textContent='Analysis workspace unavailable; normal review remains usable.';return;}
     for(const b of dialog.querySelectorAll('[data-a3-mode]'))b.setAttribute('aria-pressed',String(b.dataset.a3Mode===s.a3.mode));
