@@ -1,0 +1,82 @@
+name: Analysis 3.0 A1 dual tactical verification
+
+on:
+  push:
+    branches:
+      - phase/a1-threat-verification
+    paths:
+      - analysis/core.js
+      - analysis/runtime.js
+      - analysis3/**
+      - review/review.js
+      - client-cache-version.txt
+      - .github/workflows/verify-analysis3-a1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-verify-and-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild current portable application
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+      - name: Check portable build is reproducible
+        run: |
+          python - <<'PY'
+          import hashlib,subprocess
+          from pathlib import Path
+          files=[Path('index.html'),Path('sw.js')]
+          before={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+          for file in ['review/build.py','ui/build.py','analysis/build.py']:
+              subprocess.run(['python',file],check=True)
+          after={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+          assert before==after,(before,after)
+          print('PASS deterministic portable generation')
+          PY
+      - name: Evidence and tactical regression
+        run: |
+          node analysis3/test-evidence.cjs
+          node analysis3/test-a1.cjs
+          node analysis/test-core.cjs
+          node analysis/test-forcing-defense.cjs
+          node analysis/test-proof-coverage.cjs
+          python analysis/test-integrity.py
+      - name: Inspect what generation modified
+        run: |
+          python - <<'PY'
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert changed <= {'index.html','sw.js'},f'Unexpected generated changes: {changed}'
+          print('PASS guarded generated change paths:',sorted(changed))
+          PY
+      - name: Commit guarded portable output to A1 branch
+        run: |
+          if ! git diff --quiet -- index.html sw.js; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- index.html sw.js
+            git commit -m "A1: synchronize portable analysis 3.0 A1 build"
+            git push origin HEAD:phase/a1-threat-verification
+          fi
+      - name: Upload tactical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis3-a1-results
+          path: |
+            analysis-test-output/
+          if-no-files-found: ignore
+          retention-days: 14
