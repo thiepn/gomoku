@@ -19,7 +19,7 @@ def load(ctx):
     pg=ctx.new_page();pg.set_default_timeout(15000)
     if URL: pg.goto(URL,wait_until='domcontentloaded',timeout=45000)
     else: pg.set_content(MOCK+HTML,wait_until='domcontentloaded')
-    pg.wait_for_function("window.GomokuReview?.workspaceVersion==='3.0.0-a3' && !!window.GomokuAnalysisWorkspace3",timeout=25000)
+    pg.wait_for_function("window.GomokuReview?.workspaceVersion==='3.0.0-a4' && !!window.GomokuAnalysisWorkspace3",timeout=25000)
     pg.wait_for_timeout(800)
     pg.evaluate("""game=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());GomokuStudio.importGame(game);GomokuReview.open();}""",GAME)
     pg.wait_for_function("GomokuReview.state()?.results.every(Boolean) && !GomokuReview.state().scanning",timeout=55000)
