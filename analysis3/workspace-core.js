@@ -27,7 +27,7 @@
     if(!trace?.states?.length)return null;
     return {state:trace.states.at(-1),step,total:moves.length,moves,candidate};
   }
-  function overlays(position,result,board,{mode='candidates',preview=null,pinned=null}={}){
+  function overlays(position,result,board,{mode='candidates',preview=null,pinned=null,validMoves=[]}={}){
     if(!Array.isArray(position?.board)||position.board.length!==225)return {dots:[],arrows:[],legend:'Position unavailable'};
     if(!result)return {dots:[],arrows:[],legend:'Analysis pending'};
     const dots=[],arrows=[];
@@ -45,9 +45,7 @@
       if(point(pinned))add(pinned,'pinned','Pinned alternative');
       return {dots,arrows,legend:'Measured candidates only; not a heatmap of all 225 points'};
     }
-    const candidate=pick(result,focus),line=Array.isArray(candidate?.pv)?candidate.pv:[];
-    const moves=line[0]===focus?line:[focus,...line];
-    const legal=moves.filter(point).slice(0,12);
+    const legal=(Array.isArray(validMoves)?validMoves:[]).filter(point).slice(0,12);
     for(let k=0;k<legal.length;k++){
       const i=legal[k],p=xy(i);
       dots.push({i,...p,type:k===0?'best':'variation',label:'Variation move '+(k+1)});
