@@ -148,6 +148,12 @@ node operations/p26-release-candidate.mjs release-ready
 
 The strict gate exits non-zero until the 24-hour minimum has elapsed and all required physical profiles are explicitly marked pass.
 
+### Release-control pagination repair (R0)
+
+P16's check-run waiter had a release-control-only defect: GitHub can return more than 100 check runs for the unchanged 1.0 SHA, while the waiter used to inspect only the first page. The immutable product candidate is unchanged. A narrowly scoped exception allows only `operations/p16-await-checks.mjs` to correct pagination; `online/test-p26-release-candidate.mjs` now exercises a 101-check fixture with the required governance check on page two. The release freeze still rejects all other non-control file changes.
+
+This exception changes release admission logic, not game/application binaries. Qualification must rerun before merging the repair; physical-device evidence and P27 gates are unchanged.
+
 ## 8. P26 completion
 
 P26 is complete only when:

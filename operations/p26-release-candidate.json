@@ -17,6 +17,7 @@
     "operations/p26-release-candidate.json",
     "operations/p26-device-matrix.json",
     "operations/p26-release-candidate.mjs",
+    "operations/p16-await-checks.mjs",
     "operations/p26-device-evidence/**",
     ".github/workflows/p27-stable-release.yml",
     "online/test-p27-stable-release.mjs",
