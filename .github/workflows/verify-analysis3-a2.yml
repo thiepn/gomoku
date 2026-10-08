@@ -1,0 +1,89 @@
+name: Analysis 3.0 A2 MultiPV and search quality
+
+on:
+  push:
+    branches:
+      - phase/a2-multipv-search-quality
+    paths:
+      - 'analysis/**'
+      - 'analysis3/**'
+      - 'review/**'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-analysis3-a2.yml'
+      - 'index.html'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check edited source syntax
+        run: |
+          node --check analysis/core.js
+          node --check analysis/runtime.js
+          node --check review/review.js
+          node --check analysis3/test-a2.cjs
+      - name: Rebuild single-file offline application
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+      - name: Source and release-integrity invariants
+        run: |
+          python analysis/test-integrity.py
+          python ui/test-integrity.py
+      - name: Evidence, threat and MultiPV regression
+        run: |
+          node analysis3/test-evidence.cjs
+          node analysis3/test-a1.cjs
+          node analysis3/test-a2.cjs
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-forcing-defense.cjs
+          node analysis/test-proof-coverage.cjs
+      - name: Rebuild idempotence and generated change boundary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, subprocess
+          paths=[Path('index.html'),Path('sw.js')]
+          first={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+          for path in ['review/build.py','ui/build.py','analysis/build.py']:
+              subprocess.run(['python',path],check=True)
+          second={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+          assert first==second,(first,second)
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert changed <= {'index.html','sw.js'},changed
+          print('PASS deterministic portable artifact and guarded changed paths')
+          PY
+      - name: Upload portable build and tactical evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis3-a2-portable-and-evidence
+          path: |
+            index.html
+            sw.js
+            analysis-test-output/
+          retention-days: 14
+      - name: Synchronize guarded offline build on A2 branch
+        if: success()
+        run: |
+          if ! git diff --quiet -- index.html sw.js; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- index.html sw.js
+            git commit -m 'A2: synchronize tested portable MultiPV build'
+            git push origin HEAD:phase/a2-multipv-search-quality
+          fi
