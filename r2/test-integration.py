@@ -7,7 +7,7 @@ assert (ROOT/'index.html').stat().st_size <= 3_500_000,'Portable HTML exceeded r
 modules={'online2':'online2/runtime.js','course2':'course2/runtime.js','learning-intelligence':'learning/runtime.js','player2':'player2/runtime.js'}
 for tag,path in modules.items():
     source=(ROOT/path).read_text()
-    assert '<script id="'+tag+'-runtime">\\n'+source+'\\n</script>' in html,tag+' source and bundled runtime must match'
+    assert '<script id="'+tag+'-runtime">\n'+source+'\n</script>' in html,tag+' source and bundled runtime must match'
     assert 'if(!document.hidden' in source,tag+' must suppress hidden-tab polling'
 online=(ROOT/'online2/runtime.js').read_text()
 assert '},4000);' in online and '},400);' not in online,'Online 400ms hot-loop must be eliminated'
