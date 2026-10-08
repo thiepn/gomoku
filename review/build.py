@@ -22,6 +22,16 @@ else:
     needle='<script id="guided-review-script">'
     if s.count(needle)!=1:raise SystemExit('Missing review script anchor for A3')
     s=s.replace(needle,model_block+'\n'+needle,1)
+# A4 independent diagnosis model loads before the review controls.
+a4_model=(root/'analysis3/game-diagnosis.js').read_text()
+if '</script' in a4_model.lower():raise SystemExit('Unexpected script close in A4 diagnosis')
+a4_block='<script id="analysis4-game-diagnosis-core">\n'+a4_model+'\n</script>'
+if '<script id="analysis4-game-diagnosis-core">' in s:
+    s=re.sub(r'<script id="analysis4-game-diagnosis-core">.*?</script>',lambda _:a4_block,s,count=1,flags=re.S)
+else:
+    needle='<script id="guided-review-script">'
+    if s.count(needle)!=1:raise SystemExit('Missing guided review for A4 model')
+    s=s.replace(needle,a4_block+'\n'+needle,1)
 if 'prepareGuidedReview:' not in s:
     marker="window.GomokuStudio=Object.freeze({version:'12.1.0',"
     if s.count(marker)!=1:raise SystemExit('Core API anchor changed.')
@@ -57,6 +67,14 @@ if '<style id="analysis3-workspace-style">' in s:
 else:
     if s.count('</body>')!=1:raise SystemExit('Missing body terminator for A3')
     s=s.replace('</body>',a3_style+'\n</body>',1)
+# A4 styles are independent of the scoring engine and cannot leak into gameplay.
+a4_css=(root/'analysis3/game-diagnosis.css').read_text()
+a4_style='<style id="analysis4-game-diagnosis-style">\n'+a4_css+'\n</style>'
+if '<style id="analysis4-game-diagnosis-style">' in s:
+    s=re.sub(r'<style id="analysis4-game-diagnosis-style">.*?</style>',lambda _:a4_style,s,count=1,flags=re.S)
+else:
+    if s.count('</body>')!=1:raise SystemExit('Missing body terminator for A4')
+    s=s.replace('</body>',a4_style+'\n</body>',1)
 path.write_text(s)
 sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",t,count=1);sw.write_text(t)
-print('Embedded Guided Review / Analysis 3.0 A3 with offline board workspace.')
+print('Embedded Analysis 3.0 A4 complete-game diagnosis and A3 board studio.')

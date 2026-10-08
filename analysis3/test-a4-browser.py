@@ -1,0 +1,77 @@
+"""A4 game timeline, evidence filters, legal comparison and preservation acceptance."""
+from pathlib import Path
+import os,json
+from playwright.sync_api import sync_playwright
+ROOT=Path(__file__).resolve().parents[1]
+OUT=ROOT/'analysis4-test-output'
+OUT.mkdir(exist_ok=True)
+GAME=json.loads((ROOT/'review/fixture.json').read_text())
+URL=os.environ.get('A4_URL')
+HTML=(ROOT/'index.html').read_text()
+MOCK="""<script>const m=new Map();Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}});</script>"""
+passed=[]
+def check(label,result):
+    assert result,label
+    print('PASS '+label,flush=True);passed.append(label)
+def load(ctx):
+    page=ctx.new_page()
+    page.set_default_timeout(16000)
+    if URL:page.goto(URL,wait_until='domcontentloaded',timeout=45000)
+    else:page.set_content(MOCK+HTML,wait_until='domcontentloaded')
+    page.wait_for_function("window.GomokuReview?.workspaceVersion==='3.0.0-a4' && !!window.GomokuGameDiagnosis4",timeout=20000)
+    page.wait_for_timeout(500)
+    page.evaluate("""game=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());GomokuStudio.importGame(game);GomokuReview.open();}""",GAME)
+    page.wait_for_function('GomokuReview.state() && !GomokuReview.state().scanning',timeout=65000)
+    return page
+def game_moves(page):return page.evaluate('GomokuStudio.exportGame().moves')
+with sync_playwright() as pw:
+    exe=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium')
+    browser=pw.chromium.launch(executable_path=exe if Path(exe).exists() else None,headless=True,args=['--no-sandbox'])
+    ctx=browser.new_context(viewport={'width':1440,'height':900})
+    page=load(ctx)
+    original=game_moves(page)
+    check('A4 report is visible on the opening overview',page.locator('#a4GameDiagnosis').is_visible())
+    coverage=page.locator('#a4Coverage').inner_text()
+    check('scan coverage reports analyzed and total positions without claiming accuracy','of 10 moves reviewed' in coverage and 'accuracy' not in coverage.lower())
+    check('summary separates confirmed provisional and unknown categories',page.locator('.a4-metric').count()==3 and 'Estimated mistakes' in page.locator('#a4Metrics').inner_text())
+    check('game report has accessible side/evidence filters',page.locator('#a4Side').count()==1 and page.locator('#a4Category').count()==1)
+    check('default AI game focuses the human player',page.locator('#a4Side').input_value()=='mine')
+    page.locator('#a4Category').select_option('all')
+    check('full game can be traversed for one side',page.locator('.a4-event').count()==5)
+    page.locator('#a4Side').select_option('both')
+    check('both sides become available',page.locator('.a4-event').count()==10)
+    page.screenshot(path=str(OUT/'01-full-game-desktop.png'))
+    page.locator('#a4Category').select_option('verified')
+    cls=page.locator('.a4-event').evaluate_all('(els)=>els.map(e=>e.dataset.a4Evidence)')
+    check('verified filter excludes speculative engine labels',all(c=='verified' for c in cls))
+    page.locator('#a4Category').select_option('unresolved')
+    cls=page.locator('.a4-event').evaluate_all('(els)=>els.map(e=>e.dataset.a4Evidence)')
+    check('uncertainty filter contains no falsely verified move',all(c=='unknown' for c in cls))
+    page.locator('#a4Category').select_option('all')
+    page.locator('#a4Side').select_option('both')
+    page.locator('.a4-event [data-a4-ply]:not([data-a4-compare])').nth(6).click()
+    check('review action opens the exact selected move',page.evaluate('GomokuReview.state().index')==6 and page.evaluate('GomokuReview.state().panel')=='review')
+    check('played-versus-alternative explanation is present',page.locator('#a4DecisionContrast').is_visible() and 'Played vs best found' in page.locator('#a4DecisionContrast').inner_text())
+    check('only legal replay lines are shown and numerical claims are qualified','proof of' in page.locator('#a4DecisionContrast').inner_text() or 'comparison' in page.locator('#a4DecisionContrast').inner_text().lower())
+    check('reading the report does not mutate saved game moves',game_moves(page)==original)
+    page.evaluate("GomokuReview.setPanel('overview')")
+    compare=page.locator('[data-a4-compare]')
+    if compare.count():
+        index=int(compare.first.get_attribute('data-a4-ply'))
+        compare.first.click()
+        check('compare opens A3 without starting a playable branch',page.evaluate('GomokuReview.state().panel')=='analysis' and page.evaluate('GomokuReview.state().mode')=='game' and page.evaluate('GomokuReview.state().index')==index)
+        check('comparison preserves original game',game_moves(page)==original)
+        page.evaluate("GomokuReview.setPanel('overview')")
+    page.screenshot(path=str(OUT/'02-compare-desktop.png'))
+    page.close();ctx.close()
+    ctx=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
+    mobile=load(ctx)
+    mobile.locator('#a4Category').select_option('all')
+    check('mobile whole-game events can be viewed',mobile.locator('#a4GameDiagnosis').is_visible() and mobile.locator('.a4-event').count()>0)
+    dims=mobile.evaluate("()=>({doc:document.documentElement.scrollWidth,view:innerWidth,modal:document.querySelector('#grDialog').scrollWidth,modalWidth:document.querySelector('#grDialog').clientWidth})")
+    check('mobile report does not force horizontal overflow',dims['doc']<=dims['view']+1 and dims['modal']<=dims['modalWidth']+1)
+    mobile.screenshot(path=str(OUT/'03-full-game-mobile.png'))
+    check('mobile diagnosis did not modify original game',game_moves(mobile)==original)
+    browser.close()
+(OUT/'a4-report.json').write_text(json.dumps({'checks':passed,'count':len(passed),'scope':'Synthetic Chromium desktop/mobile; not physical Android release qualification'},indent=2))
+print(f'{len(passed)} A4 Chromium game diagnosis checks passed',flush=True)

@@ -1,0 +1,63 @@
+html body #grDialog.gr-workspace .a4-evidence-dot{cursor:pointer;stroke:var(--gr-surface);stroke-width:1}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="verified"]{fill:#397e62}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="unknown"]{fill:#a48a63}
+html body #grDialog.gr-workspace .a4-evidence-dot:hover{stroke:var(--gr-ink);stroke-width:2}
+
+/* A4 evidence-driven entire-game diagnosis. Scoped to existing review dialog;
+ * no generated score bars, win probabilities or fabricated graphs. */
+html body #grDialog.gr-workspace .a4-diagnosis{margin:21px 0 22px;padding:19px 0 6px;border-top:1px solid var(--gr-line);border-bottom:1px solid var(--gr-line)}
+html body #grDialog.gr-workspace .a4-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+html body #grDialog.gr-workspace .a4-heading h4{font-size:18px;line-height:1.3;font-weight:700;margin-top:4px;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-heading p{font-size:11px;line-height:1.45;color:var(--gr-muted);text-align:right;max-width:145px}
+html body #grDialog.gr-workspace .a4-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:13px 0}
+html body #grDialog.gr-workspace .a4-metric{padding:12px 8px 11px;border:1px solid var(--gr-line);background:var(--rw-soft);border-radius:5px;min-width:0}
+html body #grDialog.gr-workspace .a4-metric span{display:block;font-weight:650;font-size:11px;line-height:1.4;min-height:30px}
+html body #grDialog.gr-workspace .a4-metric b{font-size:23px;line-height:1.3;font-weight:700;display:block;margin:5px 0;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-metric small{font-size:10px;color:var(--gr-muted);display:block;line-height:1.4}
+html body #grDialog.gr-workspace .a4-scope{font-size:11px;line-height:1.55;color:var(--gr-muted);margin:12px 0}
+html body #grDialog.gr-workspace .a4-filters{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;margin:15px 0 12px}
+html body #grDialog.gr-workspace .a4-filters label{font-weight:650;font-size:11px;color:var(--gr-muted);display:grid;gap:5px}
+html body #grDialog.gr-workspace .a4-filters select{width:100%;border:1px solid var(--gr-line);background:var(--gr-surface);color:var(--gr-ink);padding:9px 10px;min-height:40px;border-radius:5px;font-size:12px}
+html body #grDialog.gr-workspace .a4-events{display:flex;flex-direction:column;gap:0;min-width:0}
+html body #grDialog.gr-workspace .a4-event{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:14px 0;border-top:1px solid var(--gr-line)}
+html body #grDialog.gr-workspace .a4-event-main{display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0}
+html body #grDialog.gr-workspace .a4-number{display:grid;place-items:center;min-width:27px;height:27px;border:1px solid var(--gr-line);border-radius:3px;color:var(--gr-muted);font-size:11px;flex-shrink:0;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=verified] .a4-number{background:#e2efe6;border-color:#9cb8a9;color:#284b3d}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=estimated] .a4-number{background:#f4ebd9;border-color:#dcc7a1;color:#715016}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=unknown] .a4-number{background:var(--rw-soft)}
+html body #grDialog.gr-workspace .a4-event-copy{flex:1;min-width:0}
+html body #grDialog.gr-workspace .a4-event-copy b{font-size:12px;line-height:1.45;font-weight:700;display:block;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-event-copy small{display:block;font-size:11px;line-height:1.5;color:var(--gr-muted);margin:4px 0}
+html body #grDialog.gr-workspace .a4-event-copy em{display:block;font-size:10px;color:var(--gr-muted);font-style:normal;letter-spacing:.01em}
+html body #grDialog.gr-workspace .a4-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:142px}
+html body #grDialog.gr-workspace .a4-actions .gr-btn{min-height:34px;font-size:11px;padding:5px 8px;border-radius:5px}
+html body #grDialog.gr-workspace #a4More{margin:8px 0 15px}
+html body #grDialog.gr-workspace .a4-contrast{padding:14px;border:1px solid var(--gr-line);border-radius:6px;margin:15px 0 12px;background:var(--rw-soft)}
+html body #grDialog.gr-workspace .a4-contrast-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+html body #grDialog.gr-workspace .a4-contrast-heading h4{font-size:13px;font-weight:700;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-contrast-heading span{color:var(--gr-muted);font-size:10px}
+html body #grDialog.gr-workspace .a4-contrast-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html body #grDialog.gr-workspace .a4-contrast-grid>div{padding:9px 10px;border:1px solid var(--gr-line);background:var(--gr-surface);border-radius:4px;min-width:0}
+html body #grDialog.gr-workspace .a4-contrast-grid small{font-size:9px;color:var(--gr-muted);letter-spacing:.065em;font-weight:700;display:block}
+html body #grDialog.gr-workspace .a4-contrast-grid b{font-size:16px;display:block;margin:5px 0;color:var(--gr-ink);font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-contrast-grid p{font-size:11px;line-height:1.6;color:var(--gr-muted);overflow-wrap:anywhere}
+html body #grDialog.gr-workspace .a4-contrast-why{font-size:12px;line-height:1.55;margin-top:10px;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-contrast-note{font-size:10px;line-height:1.55;margin-top:7px;color:var(--gr-muted)}
+@media(max-width:900px){
+ html body #grDialog.gr-workspace .a4-event{display:block}
+ html body #grDialog.gr-workspace .a4-actions{justify-content:flex-start;max-width:none;margin:10px 0 0 37px}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace .a4-heading{display:block}
+ html body #grDialog.gr-workspace .a4-heading p{max-width:none;text-align:left;margin-top:5px}
+ html body #grDialog.gr-workspace .a4-metrics{gap:5px}
+ html body #grDialog.gr-workspace .a4-metric{padding:8px 6px}
+ html body #grDialog.gr-workspace .a4-metric span{font-size:10px}
+ html body #grDialog.gr-workspace .a4-metric b{font-size:19px}
+ html body #grDialog.gr-workspace .a4-filters{gap:6px}
+ html body #grDialog.gr-workspace .a4-event-main{gap:8px}
+ html body #grDialog.gr-workspace .a4-contrast{padding:11px}
+ html body #grDialog.gr-workspace .a4-contrast-grid{gap:6px}
+ html body #grDialog.gr-workspace .a4-contrast-grid>div{padding:8px}
+}
+@media(prefers-reduced-motion:reduce){html body #grDialog.gr-workspace .a4-diagnosis *{transition:none!important;animation:none!important}}
