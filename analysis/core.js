@@ -211,7 +211,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         c.estimate=c.score;c.score=null;c.bound='verified-loss';c.pv=[c.i,...C.proofLine(proof.proof)];
       }
     }
-    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?3:c.defenseStatus==='neutralizes-known-threat'?1:2;
+    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?5:c.defenseStatus==='neutralizes-known-threat'?1:c.bound==='exact'&&Number.isFinite(c.score)?2:3;
     raw.candidates.sort((a,b)=>tier(a)-tier(b)||(b.score??-Infinity)-(a.score??-Infinity)||a.i-b.i);
     // A selective positional score cannot override a verified opponent win.
     const previous=raw.move,picked=raw.candidates.find(c=>c.defenseStatus!=='proven-loss'&&c.defenseStatus!=='illegal');
