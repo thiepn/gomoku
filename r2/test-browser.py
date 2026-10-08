@@ -30,6 +30,11 @@ with sync_playwright() as p:
         page.keyboard.press('Escape')
         page.locator('#v92Primary [data-v92-route="improve"]').click()
         page.wait_for_function('document.querySelectorAll("#uiCourseGrid .c20-tile-demo").length===14',timeout=20000)
+        # Original chapter dialogs mount lazily when a chapter is opened.
+        page.evaluate('GomokuCourse2.openChapter(1)')
+        page.wait_for_function("document.querySelector('#ch1CourseDialog')?.open === true")
+        page.evaluate('GomokuCourse2.refresh()')
+        page.wait_for_function("!!document.querySelector('#ch1CourseDialog .c20-checkpoint')")
         chapter=page.locator('#ch1CourseDialog .c20-checkpoint').first
         assert chapter.count()==1,label+' course checkpoint missing'
         baseline=page.evaluate('''()=>{const bar=document.querySelector('#ch1CourseDialog .c20-checkpoint');
