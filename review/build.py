@@ -25,7 +25,7 @@ else:
 # A4 independent diagnosis model loads before the review controls.
 a4_model=(root/'analysis3/game-diagnosis.js').read_text()
 if '</script' in a4_model.lower():raise SystemExit('Unexpected script close in A4 diagnosis')
-a4_block='<script id="analysis4-game-diagnosis-core">\\n'+a4_model+'\n</script>'
+a4_block='<script id="analysis4-game-diagnosis-core">\n'+a4_model+'\n</script>'
 if '<script id="analysis4-game-diagnosis-core">' in s:
     s=re.sub(r'<script id="analysis4-game-diagnosis-core">.*?</script>',lambda _:a4_block,s,count=1,flags=re.S)
 else:
@@ -69,7 +69,7 @@ else:
     s=s.replace('</body>',a3_style+'\n</body>',1)
 # A4 styles are independent of the scoring engine and cannot leak into gameplay.
 a4_css=(root/'analysis3/game-diagnosis.css').read_text()
-a4_style='<style id="analysis4-game-diagnosis-style">\\n'+a4_css+'\n</style>'
+a4_style='<style id="analysis4-game-diagnosis-style">\n'+a4_css+'\n</style>'
 if '<style id="analysis4-game-diagnosis-style">' in s:
     s=re.sub(r'<style id="analysis4-game-diagnosis-style">.*?</style>',lambda _:a4_style,s,count=1,flags=re.S)
 else:
