@@ -116,7 +116,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='3.0.0-a3', ANALYSIS_VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -134,15 +134,16 @@ if(typeof window !== 'undefined') (()=>{
   function loadCache(s) {
     try {
       const raw=localStorage.getItem(STORE);if(!raw || raw.length>2800000)return;
-      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1',VERSION].includes(data.version)||!Array.isArray(data.items))return;
+      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1','3.0.0-a2',VERSION].includes(data.version)||!Array.isArray(data.items))return;
       const legacyFingerprint=JSON.stringify(['2.0.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const previousFingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const previousFingerprint=JSON.stringify(['3.0.0-a2',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a1Fingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
       const olderFingerprint=JSON.stringify(['2.1.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
+      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===a1Fingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
-        if(r?.analysisVersion===VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
+        if(r?.analysisVersion===ANALYSIS_VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
       }
       s.index=Math.max(0,Math.min(s.positions.length-1,Number(saved.index)||0));
       if(saved.variations&&typeof saved.variations==='object')for(const [k,rows]of Object.entries(saved.variations)){const p=s.positions[k];if(!p||!Array.isArray(rows))continue;s.variations[k]=rows.slice(0,12).filter(b=>b&&Array.isArray(b.moves)&&b.moves.length<=60).map(b=>({id:String(++s.branchSerial),moves:core.line(p.board,p.color,s.game.variant,b.moves,p.context).moves,pv:core.line(p.board,p.color,s.game.variant,Array.isArray(b.pv)?b.pv:[],p.context).moves}));}
@@ -165,7 +166,7 @@ if(typeof window !== 'undefined') (()=>{
     dialog.classList.add('gr-workspace');
     dialog.innerHTML=`<div class="gr-shell">
   <header class="gr-header">
-    <div class="rw-brand"><span class="rw-mark" aria-hidden="true">●<i>●</i>●</span><div><h2 id="grTitle">Game review <span>ANALYSIS 2.0</span></h2><p id="grGameMeta"></p></div></div>
+    <div class="rw-brand"><span class="rw-mark" aria-hidden="true">●<i>●</i>●</span><div><h2 id="grTitle">Game review <span>ANALYSIS 3.0</span></h2><p id="grGameMeta"></p></div></div>
   <nav class="rw-tabs" role="tablist" aria-label="Review workspace">
     <button id="rwTabOverview" type="button" role="tab" data-panel="overview" aria-controls="rwOverview">Overview</button>
     <button id="rwTabReview" type="button" role="tab" data-panel="review" aria-controls="rwDecision">Guided review</button>
@@ -188,9 +189,12 @@ if(typeof window !== 'undefined') (()=>{
   <div class="gr-content">
     <section class="gr-board-column" aria-label="Review board">
       <div class="gr-board-heading"><div><span class="gr-kicker" id="grModeLabel">RECORDED GAME</span><h3 id="grBoardTitle"></h3></div><button type="button" class="gr-btn gr-return" id="grReturn" hidden>Return to review</button></div>
-      <div class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div class="gr-board" id="grBoard" role="grid" aria-label="Gomoku analysis board" aria-rowcount="15" aria-colcount="15" aria-describedby="grBoardHelp"></div></div>
+      <div id="a3Command" class="a3-commandbar" role="group" aria-label="Board overlays"><div class="a3-mode-group"><button type="button" data-a3-mode="candidates" aria-pressed="true">Candidates</button><button type="button" data-a3-mode="threats" aria-pressed="false">Threats</button><button type="button" data-a3-mode="line" aria-pressed="false">Variation</button></div><span id="a3CommandMeta" class="a3-command-meta">Measured evidence</span></div>
+       <div class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div class="gr-board" id="grBoard" role="grid" aria-label="Gomoku analysis board" aria-rowcount="15" aria-colcount="15" aria-describedby="grBoardHelp"></div></div>
       <div class="rw-board-caption"><p class="gr-board-help" id="grBoardHelp"></p><p class="gr-quick-verdict" id="grQuickVerdict"></p></div>
-      <div id="rwPlacement" class="rw-placement" hidden><span id="rwPlacementText"></span><button id="rwPlace" type="button" class="gr-btn gr-primary">Place stone</button><button id="rwCancelPlace" type="button" class="gr-btn">Cancel</button></div>
+      <p id="a3BoardStatus" class="a3-board-status" role="status" aria-live="polite"></p>
+       <div id="a3LineDock" class="a3-variation-dock" aria-label="Read-only candidate preview"><span class="a3-dock-info"><strong id="a3LineTitle">Variation explorer</strong><small id="a3LineMeta">Select Preview beside a candidate</small></span><div class="a3-dock-actions"><button type="button" class="gr-btn" id="a3LinePrev" aria-label="Previous variation step">‹</button><button type="button" class="gr-btn" id="a3LineNext" aria-label="Next variation step">›</button><button type="button" class="gr-btn" id="a3LineReset">Reset</button></div></div>
+       <div id="rwPlacement" class="rw-placement" hidden><span id="rwPlacementText"></span><button id="rwPlace" type="button" class="gr-btn gr-primary">Place stone</button><button id="rwCancelPlace" type="button" class="gr-btn">Cancel</button></div>
       <nav class="gr-navigation" aria-label="Move navigation"><button type="button" id="rwFirst" class="gr-btn rw-icon" aria-label="First game move">|‹</button><button type="button" class="gr-btn" id="grPrev" aria-label="Previous game move">‹ Previous</button><span id="grCounter"></span><button type="button" class="gr-btn" id="grNext" aria-label="Next game move">Next ›</button><button type="button" id="rwLast" class="gr-btn rw-icon" aria-label="Last game move">›|</button></nav>
       <section class="gr-balance"><div class="gr-section-head"><h4>Game timeline</h4><span id="rwGraphValue">Black ↑ · White ↓</span></div><div id="grGraph"></div><input id="rwScrubber" type="range" min="1" max="1" value="1" step="1" aria-label="Select game move"><p>Engine balance, not win probability. Gaps mean unscored.</p></section>
       <p class="gr-board-feedback" id="grBoardFeedback" hidden></p>
@@ -206,7 +210,7 @@ if(typeof window !== 'undefined') (()=>{
         <div class="rw-practice"><div><h4>Make the lesson stick.</h4><p>Try the positions again without the answer.</p></div><button type="button" class="gr-btn" id="a2Train">Practice mistakes</button></div>
       </section>
       <section id="rwDecision" role="tabpanel" aria-labelledby="rwTabReview" hidden>
-        <div class="rw-decision-head"><h3 id="grDecisionTitle"></h3><span id="rwDecisionContext"></span></div>
+        <div class="a3-insight-bar" id="a3Insights" aria-label="Analysis evidence"><div class="a3-insight"><span>Depth</span><strong id="a3Depth">—</strong></div><div class="a3-insight"><span>Lines</span><strong id="a3Lines">—</strong></div><div class="a3-insight"><span>Evidence</span><strong id="a3Evidence">—</strong></div></div><div class="rw-decision-head"><h3 id="grDecisionTitle"></h3><span id="rwDecisionContext"></span></div>
         <div class="rw-verdict-row"><span id="rwGradeIcon" class="rw-grade-icon" aria-hidden="true"></span><div><div class="gr-verdict" id="grVerdict"></div><p class="gr-basis" id="grBasis"></p></div></div>
         <p id="rwShortWhy"></p>
                 <div id="grBranchTools" class="gr-branch-tools" hidden><div class="rw-section-title"><h4>Your test line</h4><span>Original game unchanged</span></div><div id="grBranchMoves" class="gr-branch-moves"></div><div class="gr-action-row"><button type="button" class="gr-btn" id="grUndo">Undo</button><button type="button" class="gr-btn" id="rwRedo">Redo</button><button type="button" class="gr-btn" id="grLineNext">Continue suggested line</button><button type="button" class="gr-btn" id="grReply">Play best reply</button></div><label class="gr-saved-label">Saved test lines <select id="grVariations" aria-label="Saved variations for this decision"></select></label></div>
@@ -218,7 +222,7 @@ if(typeof window !== 'undefined') (()=>{
 
         <section id="a2ProofTools" class="a2-proof-tools" hidden><div class="gr-section-head"><b id="a2ProofTitle"></b><span id="a2ProofCounter"></span></div><p id="a2ProofText"></p><label id="a2DefenseLabel" hidden>Try another defense <select id="a2Defense"></select></label><div class="gr-action-row"><button class="gr-btn" id="a2ProofPrev" type="button">‹ Previous step</button><button class="gr-btn gr-primary" id="a2ProofNext" type="button">Next step ›</button></div><button class="gr-link" id="a2ProofExport" type="button">Export verified proof</button></section>
 
-        <section class="gr-alternatives" id="rwAlternatives"><div class="gr-section-head"><h4 id="rwAlternativesTitle">Compare alternatives</h4><span id="grAltHint">Choose a move to test</span></div><p class="rw-subtitle" id="rwAlternativesContext"></p><div id="grCandidates"></div><button type="button" id="rwMoreCandidates" class="gr-link">More alternatives</button></section>
+        <section class="gr-alternatives" id="rwAlternatives"><div class="gr-section-head"><h4 id="rwAlternativesTitle">Compare alternatives</h4><span id="grAltHint">Choose a move to test</span></div><p class="rw-subtitle" id="rwAlternativesContext"></p><div id="a3Compare" class="a3-compare" hidden aria-label="Pinned comparison"></div><div id="grCandidates"></div><button type="button" id="rwMoreCandidates" class="gr-link">More alternatives</button></section>
         <div class="rw-analysis-tools"><button type="button" class="gr-btn" id="grDeeper">Analyze deeper</button><span id="rwStrengthLabel">Deep analysis</span></div>
         <details class="a2-evidence gr-details" id="rwEngine"><summary>Engine evidence &amp; confidence</summary><div id="a2Diagnosis" class="a2-tags"></div><div id="a2SearchStats" class="a2-search-stats"></div><p id="a2ProofLimit" class="gr-muted"></p><div id="rwCandidateEvidence"></div></details>
       </section>
@@ -235,14 +239,20 @@ if(typeof window !== 'undefined') (()=>{
         const i=row*15+col,cell=document.createElement('button');cell.type='button';cell.dataset.point=String(i);cell.className='gr-cell';cell.setAttribute('role','gridcell');cell.setAttribute('aria-rowindex',String(row+1));cell.setAttribute('aria-colindex',String(col+1));cell.tabIndex=i===112?0:-1;cell.innerHTML='<span class="gr-stone"></span><span class="gr-point-mark"></span>';line.append(cell);
       }board.append(line);
     }
+    const a3Svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    a3Svg.setAttribute('class','a3-board-svg');a3Svg.setAttribute('viewBox','0 0 150 150');
+    a3Svg.setAttribute('preserveAspectRatio','none');a3Svg.setAttribute('aria-hidden','true');
+    a3Svg.id='a3BoardSvg';board.append(a3Svg);
     $('grClose').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();if(!$('rwSettings').hidden)toggleOptions(true);else if(session?.mode!=='game')returnToReview();else close();});
     $('grPause').onclick=()=>{const s=session;if(!s)return;if(s.scanning||s.interacting){s.wantsScan=false;s.epoch++;s.scanning=false;s.interacting=false;abort();feedback('Analysis paused. Completed decisions are kept.');render();}else{s.wantsScan=true;scan();}};
     $('grPrev').onclick=()=>session.mode==='proof'?proofStep(-1):session.mode==='explore'?undoBranch():select(session.index-1);$('grNext').onclick=()=>session.mode==='proof'?proofStep(1):session.mode==='explore'?redoBranch():select(session.index+1);$('grKey').onclick=nextKey;
     $('grBefore').onclick=()=>setView(session.view==='before'?'played':'before');$('grPlayed').onclick=()=>setView('played');$('grBest').onclick=showBest;
     $('grReturn').onclick=()=>setView('played');$('grRetry').onclick=retry;$('grExplore').onclick=()=>startBranch(null);
+    $('a3LinePrev').onclick=()=>stepA3(-1);$('a3LineNext').onclick=()=>stepA3(1);
+    $('a3LineReset').onclick=()=>{if(session){session.a3.preview=null;render();}};
     $('grDeeper').onclick=()=>deeper();$('grUndo').onclick=undoBranch;$('grLineNext').onclick=nextLine;$('grReply').onclick=bestReply;
     $('grFilter').onchange=()=>{session.filter=$('grFilter').value;renderMoves();};
-    $('grVariations').onchange=()=>{const s=session,branch=(s.variations[s.index]||[]).find(x=>x.id===$('grVariations').value);if(branch){cancelInteraction(s);s.panel='analysis';s.pending=null;s.proof=null;branch.redo=[];s.branch=branch;s.mode='explore';s.attempt=null;render();}};
+    $('grVariations').onchange=()=>{const s=session,branch=(s.variations[s.index]||[]).find(x=>x.id===$('grVariations').value);if(branch){cancelInteraction(s);if(s.a3)s.a3.preview=null;s.panel='analysis';s.pending=null;s.proof=null;branch.redo=[];s.branch=branch;s.mode='explore';s.attempt=null;render();}};
     $('grExport').onclick=exportReview;
     $('a2Preset').onchange=()=>{session.preset=$('a2Preset').value;try{localStorage.setItem('gomoku.analysis2.preset',session.preset);}catch{}renderWorkspace();};
     $('a2Lines').onchange=()=>{session.lines=Math.max(1,Math.min(8,Number($('a2Lines').value)||5));try{localStorage.setItem('gomoku.analysis3.lines',String(session.lines));}catch{}render();};
@@ -254,6 +264,13 @@ if(typeof window !== 'undefined') (()=>{
     bindWorkspace();
 
     dialog.addEventListener('click',ev=>{
+       const a3Mode=ev.target.closest('[data-a3-mode]');
+       if(a3Mode&&session){session.a3.mode=a3Mode.dataset.a3Mode;render();return;}
+       const a3Preview=ev.target.closest('[data-a3-preview]');
+       if(a3Preview&&session){selectA3Preview(Number(a3Preview.dataset.a3Preview));return;}
+       const a3Pin=ev.target.closest('[data-a3-pin]');
+       if(a3Pin&&session){const i=Number(a3Pin.dataset.a3Pin);session.a3.pinned=session.a3.pinned===i?null:i;render();return;}
+
       const cell=ev.target.closest('[data-point]');if(cell){const i=Number(cell.dataset.point);if(session.mode==='game'&&session.panel!=='analysis'){feedback('Choose Try again to solve this decision, or Free analysis to test a different move.');return;}if(ev.detail>0&&matchMedia('(pointer:coarse)').matches&&session.mode!=='proof'){const st=chosenState();if(st.board[i]||st.result){boardAction(i);return;}session.pending=i;render();return;}session.pending=null;boardAction(i);return;}
       const move=ev.target.closest('[data-review-ply]');if(move){if(move.closest('#rwKeyList'))session.panel='review';select(Number(move.dataset.reviewPly));return;}
       const alt=ev.target.closest('[data-alternative]');if(alt)startBranch(Number(alt.dataset.alternative));
@@ -278,6 +295,10 @@ if(typeof window !== 'undefined') (()=>{
   function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
   function chosenState() {
     const s=session,p=entry();
+    if(s?.panel==='analysis'&&s.mode==='game'&&s.a3?.preview){
+      const q=window.GomokuAnalysisWorkspace3?.previewState(core,p,s.game.variant,result(),s.a3.preview);
+      if(q)return q.state;
+    }
     if(s.panel==='overview'&&s.mode==='game'){const end=s.positions.at(-1);return core.line(end.board,end.color,s.game.variant,[end.played],end.context).states.at(-1);}
     if(s.mode==='proof'&&s.proof){const q=s.proof;return {board:q.index<0?q.cert.position:q.steps[q.index].board,color:q.index<0?q.cert.attacker:3-q.steps[q.index].color,result:null};}
     if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves,p.context).states.at(-1);
@@ -325,11 +346,11 @@ if(typeof window !== 'undefined') (()=>{
     $('grFooterNote').textContent=s.mode==='proof'?'Arrow keys step through the proof. Return to game restores your recorded decision.':storageNotice||'Your recorded game is never changed. Arrow keys navigate moves; Escape closes review.';renderWorkspace();
   }
   function renderCandidates(r,p){
-    // Preserve verified tactical order; an unverified score must not re-rank refuted moves.
     const all=r.candidates.slice();
-    let rows=all.slice(0,session?.moreCandidates?Math.min(8,session.lines||5):Math.min(3,session?.lines||5));const played=all.find(x=>x.i===p.played);if(played&&!rows.includes(played))rows.push(played);
+    let rows=all.slice(0,session?.moreCandidates?Math.min(8,session.lines||5):Math.min(3,session?.lines||5));
+    const played=all.find(c=>c.i===p.played);if(played&&!rows.includes(played))rows.push(played);
     if(!rows.length)return '<p class="gr-muted">No comparable alternatives yet. Use Analyze deeper.</p>';
-    return rows.map((c,j)=>`<button type="button" class="gr-candidate" data-alternative="${c.i}" aria-label="Test ${core.coord(c.i)}, ${esc(c.label)}"><span class="rw-candidate-rank">${j+1}</span><span class="gr-candidate-coord">${core.coord(c.i)}</span><span class="rw-candidate-copy"><b data-tone="${tone(c.label)}">${esc(c.label)}</b><small>${c.i===p.played?'Recorded move':c.i===r.best?'Best found':'Alternative'}${c.basis==='selective-estimate'?' · estimate':''}${c.comparison?.scoreComparable?' · comparable depth '+c.comparison.depth:' · unverified score'}</small><small class="rw-pv">${esc((c.pv||[]).slice(0,5).map(core.coord).join(' → '))||'Continuation not established'}</small></span><span class="rw-candidate-go" aria-hidden="true">Test ›</span></button>`).join('')+(played?'':`<p class="gr-muted">Played ${core.coord(p.played)}: ${esc(r.label)}. ${r.label==='Unscored'?'Not enough evidence to compare it.':''}</p>`);
+    return rows.map((c,j)=>`<div class="a3-candidate-row" data-loss="${c.bound==='verified-loss'}"><button type="button" class="gr-candidate" data-alternative="${c.i}" aria-label="Test ${core.coord(c.i)}, ${esc(c.label)}"><span class="rw-candidate-rank">${j+1}</span><span class="gr-candidate-coord">${core.coord(c.i)}</span><span class="rw-candidate-copy"><b data-tone="${tone(c.label)}">${esc(c.label)}</b><small>${c.i===p.played?'Recorded move':c.i===r.best?'Best found':'Alternative'}${c.basis==='selective-estimate'?' · estimate':''}${c.comparison?.scoreComparable?' · depth '+c.comparison.depth:' · score unverified'}</small><small class="rw-pv">${esc((c.pv||[]).slice(0,6).map(core.coord).join(' → '))||'Continuation not established'}</small></span><span class="rw-candidate-go" aria-hidden="true">Explore ›</span></button><div class="a3-candidate-tools"><button type="button" data-a3-preview="${c.i}" aria-label="Preview variation ${core.coord(c.i)}">Preview</button><button type="button" data-a3-pin="${c.i}" aria-pressed="${session?.a3?.pinned===c.i}" aria-label="Pin ${core.coord(c.i)}">${session?.a3?.pinned===c.i?'Unpin':'Pin'}</button></div></div>`).join('')+(played?'':`<p class="gr-muted">Played ${core.coord(p.played)}: ${esc(r.label)}.</p>`);
   }
 
   function keyIndices(){const s=session;return s.results.map((r,k)=>r&&core.severity(r.label)>0&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?k:-1).filter(k=>k>=0);}
@@ -362,10 +383,10 @@ if(typeof window !== 'undefined') (()=>{
     $('grReply').disabled=!!state.result||s.interacting;
     $('grVariations').innerHTML=(s.variations[s.index]||[]).map((v,k)=>`<option value="${v.id}"${v===b?' selected':''}>${k+1}. ${v.moves.length?core.coord(v.moves[0]):'Empty line'} · ${v.moves.length} test moves</option>`).join('');
   }
-  function select(index){const s=session;if(!s)return;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.pending=null;s.panel=s.panel==='analysis'?'analysis':'review';s.index=Math.max(0,Math.min(s.positions.length-1,index));rememberVisit();s.mode='game';s.view=s.panel==='analysis'?'before':'played';s.branch=null;s.attempt=null;s.touched=true;feedback('');persist();render();revealBoard();}
-  function setView(view){const s=session;if(!s)return;s.pending=null;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.mode='game';s.view=view;s.branch=null;s.attempt=null;s.touched=true;feedback('');render();revealBoard();}
+  function select(index){const s=session;if(!s)return;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}if(s.a3)s.a3.preview=null;s.proof=null;s.pending=null;s.panel=s.panel==='analysis'?'analysis':'review';s.index=Math.max(0,Math.min(s.positions.length-1,index));rememberVisit();s.mode='game';s.view=s.panel==='analysis'?'before':'played';s.branch=null;s.attempt=null;s.touched=true;feedback('');persist();render();revealBoard();}
+  function setView(view){const s=session;if(!s)return;if(s.a3)s.a3.preview=null;s.pending=null;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.mode='game';s.view=view;s.branch=null;s.attempt=null;s.touched=true;feedback('');render();revealBoard();}
   function nextKey(){advanceGuide();}
-  function retry(){const s=session;if(!s)return;s.panel='review';s.pending=null;cancelInteraction(s);s.proof=null;s.mode='retry';s.attempt=null;s.branch=null;s.touched=true;feedback('');render();revealBoard();}
+  function retry(){const s=session;if(!s)return;if(s.a3)s.a3.preview=null;s.panel='review';s.pending=null;cancelInteraction(s);s.proof=null;s.mode='retry';s.attempt=null;s.branch=null;s.touched=true;feedback('');render();revealBoard();}
   function showBest(){const r=result();if(r?.best!==null&&r?.best!==undefined)startBranch(r.best);}
   function startBranch(i){
     const s=session,p=entry(),r=result();cancelInteraction(s);s.panel='analysis';s.pending=null;s.proof=null;s.mode='explore';s.touched=true;s.attempt=null;
@@ -464,7 +485,7 @@ if(typeof window !== 'undefined') (()=>{
   function reviewKeys(){return keyIndices();}
   function setPanel(panel){
     if(!session||!['overview','review','analysis'].includes(panel))return;
-    session.pending=null;session.panel=panel;
+    session.pending=null;session.panel=panel;if(session.a3)session.a3.preview=null;
     if(session.mode!=='game')setView('played');
     session.view=panel==='analysis'?'before':'played';
     session.touched=true;feedback('');render();revealBoard();
@@ -545,6 +566,57 @@ if(typeof window !== 'undefined') (()=>{
     }
     return r;
   }
+  // Read-only PV navigation; never changes the recorded game or saved test branches.
+  function selectA3Preview(i){
+    const s=session,r=result();if(!s||s.panel!=='analysis'||s.mode!=='game'||!r?.candidates.some(c=>c.i===i))return;
+    s.a3.preview={move:i,step:0};s.a3.mode='line';s.view='before';render();
+  }
+  function stepA3(amount){
+    const s=session;if(!s||s.panel!=='analysis'||s.mode!=='game')return;
+    if(!s.a3.preview&&amount>0&&Number.isInteger(result()?.best))s.a3.preview={move:result().best,step:0};
+    const q=window.GomokuAnalysisWorkspace3?.previewState(core,entry(),s.game.variant,result(),s.a3.preview);
+    if(!q)return;
+    s.a3.preview.step=Math.max(0,Math.min(q.total,q.step+amount));
+    s.a3.mode='line';s.view='before';render();
+  }
+  function renderA3(r,p){
+    const s=session,active=s?.panel==='analysis'&&s.mode==='game';
+    const svg=$('a3BoardSvg');if(svg)svg.replaceChildren();
+    if(!active){$('a3BoardStatus').textContent='';$('a3Compare').hidden=true;return;}
+    const a3=window.GomokuAnalysisWorkspace3;
+    if(!a3){$('a3BoardStatus').textContent='Analysis workspace unavailable; normal review remains usable.';return;}
+    for(const b of dialog.querySelectorAll('[data-a3-mode]'))b.setAttribute('aria-pressed',String(b.dataset.a3Mode===s.a3.mode));
+    $('a3Depth').textContent=r?.search?.completedDepth??'—';
+    $('a3Lines').textContent=r?`${r.search?.returned??r.candidates?.length??0} / ${r.multiPV??s.lines}`:'—';
+    $('a3Evidence').textContent=r?.bestProof?'Proven win':r?.refutation?'Threat found':r?.defense?.rootThreat?'Defense':r?.search?.compared?'Estimated':'Unknown';
+    const preview=a3.previewState(core,p,s.game.variant,r,s.a3.preview);
+    const viewingBoard=preview?.state?.board||p.board;
+    const focusedMove=s.a3.preview?.move??r?.best;
+    const focusedCandidate=r?.candidates?.find(c=>c.i===focusedMove);
+    const validMoves=a3.legalVariation(core,p,s.game.variant,focusedCandidate);
+    const model=a3.overlays(p,r,viewingBoard,{mode:s.a3.mode,preview:s.a3.preview,pinned:s.a3.pinned,validMoves});
+    const lines=model.arrows.map(a=>`<line class="a3-arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}" marker-end="url(#a3-arrowhead)"/>`).join('');
+    const dots=model.dots.map(d=>`<circle class="a3-dot" data-kind="${d.type}" cx="${d.x}" cy="${d.y}" r="3.5"/>`).join('');
+    if(svg)svg.innerHTML='<defs><marker id="a3-arrowhead" markerWidth="5" markerHeight="5" refX="3.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5Z" fill="#318a7d"/></marker></defs>'+lines+dots;
+    $('a3BoardStatus').textContent=model.legend;
+    $('a3CommandMeta').textContent=r?(`${r.search?.backend||'Engine'} · ${r.search?.completedDepth||0} ply`):'Analysis pending';
+    $('a3LineTitle').textContent=preview?`${a3.coord(preview.moves[0])} · variation ${preview.step} / ${preview.total}`:'Variation explorer';
+    $('a3LineMeta').textContent=preview?(`Move ${preview.step} of ${preview.total}; read-only searched continuation`):'Select Preview next to a candidate';
+    $('a3LinePrev').disabled=!preview||preview.step===0;
+    $('a3LineNext').disabled=!!s.interacting||(!preview&&!Number.isInteger(r?.best))||(!!preview&&preview.step>=preview.total);
+    $('a3LineReset').disabled=!preview;
+    const selected=s.a3.preview?.move??r?.best;
+    const comparison=a3.compare(r,s.a3.pinned,selected);
+    const area=$('a3Compare');
+    area.hidden=!comparison;
+    if(comparison){
+      const summary=c=>`<div class="a3-compare-card"><span>${c.move===s.a3.pinned?'PINNED':'SELECTED'}</span><strong>${c.coord}</strong><small>${esc(c.label)} · depth ${c.depth}</small><small>${c.proof?esc(c.proof):c.comparable?'Comparable engine estimate':'Score not comparable'}</small></div>`;
+      const markup=summary(comparison.left)+summary(comparison.right)+`<p class="a3-compare-note">${comparison.numericComparison?'Both search values are same-depth estimates, not win probabilities.':'No numerical move difference is asserted without comparable exact-depth scores.'}</p>`;
+      if(area.innerHTML!==markup)area.innerHTML=markup;
+    }
+    if(preview){$('grBoardTitle').textContent=`Read-only line · ${preview.step} of ${preview.total} moves`;
+      $('grBoardHelp').textContent='Previewing a searched continuation. Reset restores the exact position before this recorded move.';}
+  }
   function renderWorkspace(){
     if(!session||!dialog.open)return;
     const s=session,p=entry(),r=result(),active=s.mode!=='game',concealed=s.mode==='retry'&&!s.attempt?.result;
@@ -575,7 +647,13 @@ if(typeof window !== 'undefined') (()=>{
     $('rwAlternatives').hidden=panel!=='analysis';
     $('rwAlternativesTitle').textContent=`Alternatives to move ${p.ply}`;
     $('rwAlternativesContext').textContent=`${side(p.color)} to move · each option replaces ${core.coord(p.played)}, not the latest test move.`;
-    $('grCandidates').innerHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    const candidateHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    if($('grCandidates').innerHTML!==candidateHTML){
+      const focused=document.activeElement?.getAttribute('data-a3-preview')||document.activeElement?.getAttribute('data-a3-pin');
+      const type=document.activeElement?.hasAttribute('data-a3-preview')?'preview':document.activeElement?.hasAttribute('data-a3-pin')?'pin':null;
+      $('grCandidates').innerHTML=candidateHTML;
+      if(type&&focused!==null)$('grCandidates').querySelector('[data-a3-'+type+'="'+focused+'"]')?.focus({preventScroll:true});
+    }
     $('rwMoreCandidates').hidden=!r||r.candidates.length<=3;
     $('rwMoreCandidates').textContent=s.moreCandidates?'Show fewer alternatives':`Show up to ${Math.min(s.lines||5,r?.candidates.length||0)} candidates`;
     $('rwMoreCandidates').setAttribute('aria-expanded',String(!!s.moreCandidates));
@@ -629,10 +707,11 @@ if(typeof window !== 'undefined') (()=>{
     for(const cell of $('grBoard').querySelectorAll('[data-point]')){
       const i=Number(cell.dataset.point),idx=numbered.findIndex(c=>c.i===i);cell.classList.toggle('rw-pending',s.pending===i);cell.classList.toggle('rw-candidate-point',idx>=0&&!board[i]);
       cell.dataset.candidateTone=idx>=0?tone(numbered[idx].label):'';if(idx>=0&&!board[i]){cell.querySelector('.gr-point-mark').textContent=String(idx+1);cell.setAttribute('aria-label',`${core.coord(i)}, candidate ${idx+1}, ${numbered[idx].label}`);}
-      if(numbers.has(i)&&board[i])cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
+      if(numbers.has(i)&&board[i]&&!s.a3?.preview)cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
     }
     $('grFooterNote').textContent=storageNotice?'Storage unavailable: export to keep this review.':'Recorded game unchanged';
     $('rwGlobalNotice').hidden=!$('grFeedback').textContent||panel!=='overview';$('rwGlobalNotice').textContent=$('grFeedback').textContent;
+    renderA3(r,p);
   }
   async function redoBranch(){
     const b=session?.branch;if(!b?.redo?.length)return;
@@ -649,7 +728,7 @@ if(typeof window !== 'undefined') (()=>{
       const game=copy(prepared.game);core=core||createGuidedReviewCore(createEngine,createStudioCore);const ps=core.positions(game);
       if(!ps.length){api.finishGuidedReview?.(!prepared.wasReviewing);return false;}
       opener=document.activeElement;document.querySelectorAll('dialog[open]').forEach(d=>d.close());ensureUI();storageNotice='';
-      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',lines:5,proof:null,panel:'overview',visited:[],guideDone:false,pending:null,moreCandidates:false};
+      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',lines:5,proof:null,panel:'overview',a3:{mode:'candidates',preview:null,pinned:null},visited:[],guideDone:false,pending:null,moreCandidates:false};
       try{const p=localStorage.getItem('gomoku.analysis2.preset');if(A().PRESETS[p])session.preset=p;}catch{}$('a2Preset').value=session.preset;
        try{const n=Number(localStorage.getItem('gomoku.analysis3.lines'));if(Number.isInteger(n)&&n>=1&&n<=8)session.lines=n;}catch{}
        $('a2Lines').value=String(session.lines);
@@ -665,8 +744,8 @@ if(typeof window !== 'undefined') (()=>{
     // Capture before legacy handlers; a single entry point, not another review overlay.
     document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
     const button=$('resultReviewBtn');if(button)button.textContent='Review game';
-    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'2.1.0',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
-      state:()=>session?copy({gameId:session.game.gameId,outcome:session.outcome,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions,proof:session.proof,preset:session.preset,lines:session.lines,panel:session.panel,pending:session.pending,visited:session.visited,guideDone:session.guideDone}):null,
+    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'3.0.0-a3',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
+      state:()=>session?copy({gameId:session.game.gameId,outcome:session.outcome,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions,proof:session.proof,preset:session.preset,lines:session.lines,panel:session.panel,a3:session.a3,pending:session.pending,visited:session.visited,guideDone:session.guideDone}):null,
       core,exportReview});
   }
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&session&&(session.scanning||session.interacting)){pause();feedback('Analysis paused while this tab is hidden. Resume when you return.');}});
