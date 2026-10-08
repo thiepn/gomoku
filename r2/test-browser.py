@@ -42,5 +42,5 @@ with sync_playwright() as p:
         rows.append({'profile':label,'startupMs':round(boot,1),'domInteractiveMs':round(metrics['domInteractive'],1),'skills':metrics['studentSkills'],'errors':errors})
         context.close()
     browser.close()
-(OUT/'startup.json').write_text(json.dumps({'version':'r2.runtime.v1','profiles':rows,'description':'Observed local Chromium cold launch, board-first interaction, online focus and Course 2.0 idempotent render; not a real phone or WAN benchmark.'},indent=2)+'\\n')
+(OUT/'startup.json').write_text(json.dumps({'version':'r2.runtime.v1','profiles':rows,'description':'Observed local Chromium cold launch, board-first interaction, online focus and Course 2.0 idempotent render; not a real phone or WAN benchmark.'},indent=2)+'\n')
 print('PASS R2 runtime cold-start and scoped-refresh browser acceptance:',json.dumps(rows),flush=True)
