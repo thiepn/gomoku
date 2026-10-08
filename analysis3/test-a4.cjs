@@ -8,6 +8,8 @@ const estimate=(extra={})=>({played:112,best:115,label:'Mistake',basis:'selectiv
  candidates:[exact(112,2),exact(115,50)],facts:{win:false,replies:[],ownWins:[]},...extra});
 const proof={format:'GomokuStudioProof',position:Array(225).fill(0),proof:{move:116},attacker:2,rule:'freestyle'};
 proof.position[112]=1;
+const altProof={...proof,position:board.slice(),attacker:1,proof:{move:115}};
+const checked={verifyProof:()=>true,rule:'freestyle'};
 const legalCore={line:(b,color,rule,moves)=>{
  const out=[],states=[{board:b.slice(),color}];for(const i of moves){const a=states.at(-1).board.slice();if(i<0||i>=225||a[i])break;a[i]=states.at(-1).color;out.push(i);states.push({board:a,color:3-states.at(-1).color});}return {moves:out,states};
 }};
@@ -27,27 +29,36 @@ test('immediate opponent finishing reply is distinguished from verified avoidabi
  assert.equal(c.kind,'allows-immediate-win');assert.match(c.note,/alternative/);
 });
 test('valid-scope verified after-position loss is not called avoidable',()=>{
- const c=D.classification(estimate({basis:'verified-proof',refutation:proof}),positions[0]);
+ const c=D.classification(estimate({basis:'verified-proof',refutation:proof}),positions[0],checked);
  assert.equal(c.kind,'verified-opponent-win-after');assert.match(c.note,/avoidability has not been established/);
 });
 test('mismatched after-position certificate is ignored',()=>{
  const fake={...proof,position:board.slice()};
- const c=D.classification(estimate({basis:'verified-proof',refutation:fake}),positions[0]);
+ const c=D.classification(estimate({basis:'verified-proof',refutation:fake}),positions[0],checked);
  assert.equal(c.kind,'provisional-mistake');
 });
+test('cached proof without an independent verifier remains unconfirmed',()=>{
+ const c=D.classification(estimate({basis:'verified-proof',refutation:proof}),positions[0]);
+ assert.notEqual(c.kind,'verified-opponent-win-after');assert.equal(c.verified,false);
+});
+test('wrong attacker or rule cannot masquerade as a verified certificate',()=>{
+ const a=D.classification(estimate({basis:'verified-proof',refutation:{...proof,attacker:1}}),positions[0],checked);
+ const b=D.classification(estimate({basis:'verified-proof',refutation:{...proof,rule:'exact-five'}}),positions[0],checked);
+ assert.equal(a.verified,false);assert.equal(b.verified,false);
+});
 test('proof claim without verified-proof basis is not accepted',()=>{
- const c=D.classification(estimate({refutation:proof}),positions[0]);assert.equal(c.kind,'provisional-mistake');
+ const c=D.classification(estimate({refutation:proof}),positions[0],checked);assert.equal(c.kind,'provisional-mistake');
 });
 test('prior lost position is not double counted as new mistake',()=>{
  const c=D.classification(estimate({facts:{alreadyLost:true}}),positions[0]);
  assert.equal(c.kind,'already-lost');assert.equal(c.needsReview,false);
 });
 test('exhaustive verified defense status stays a pre-existing outcome',()=>{
- const c=D.classification(estimate({defense:{allRefuted:true}}),positions[0]);
+ const c=D.classification(estimate({basis:'verified-proof',defense:{allRefuted:true,enumerationComplete:true,proofCount:2,refuted:4,checked:4}}),positions[0]);
  assert.equal(c.kind,'already-lost');
 });
 test('selected verified winning alternative is distinguished from played outcome',()=>{
- const c=D.classification(estimate({bestProof:proof}),positions[0]);
+ const c=D.classification(estimate({bestProof:altProof}),positions[0],checked);
  assert.equal(c.kind,'verified-winning-alternative');assert.match(c.note,/recorded move/);
 });
 test('blocking one known attack does not claim global safety',()=>{
@@ -93,7 +104,7 @@ test('event filters do not silently count normal moves as errors',()=>{
  assert.deepEqual(D.filterEvents(d,{side:'white'}).map(e=>e.index),[1]);
 });
 test('full-game after verified loss does not use calibrated percentages',()=>{
- const d=D.summarize(positions,[estimate({basis:'verified-proof',refutation:proof}),null]);
+ const d=D.summarize(positions,[estimate({basis:'verified-proof',refutation:proof}),null],checked);
  assert.equal(d.events[0].bucket,'verified');assert.equal(d.events[1].bucket,'unresolved');
  assert.ok(!d.scope.includes('90%'));assert.equal(d.nextReview,0);
 });
