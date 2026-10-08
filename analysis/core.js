@@ -135,7 +135,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     function searchAt(i,budget) {
       let row=inspect(i);
       if(row.status==='illegal'||row.status==='proven-loss'||row.terminal||budget<12)return row;
-      const t=now(),end=Math.min(until,now()+budget),attempted=[];
+      const t=now(),end=now()+budget,attempted=[];
       for(const kind of probeKinds) {
         if(row.status==='proven-loss')break;
         const left=end-now();if(left<12)break;
@@ -154,7 +154,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     // before-position. Only independent replay after our actual move establishes
     // a loss. Prefer quick VCF discovery, then quieter VCT discovery.
     if(timeMs>=10&&board.some(Boolean)&&terminal(board,rule)===null){
-      const vcf=solve('vcf',board,Math.min(100,Math.max(10,timeMs*.38)),40000);
+      const vcf=solve('vcf',board,Math.min(100,Math.max(10,timeMs*.70)),40000);
       if(vcf)addProof(vcf,'vcf','root');
       if(timeMs>=65&&now()<until-12){
         const vct=solve('vct',board,Math.min(180,Math.max(12,Math.min(timeMs*.38,until-now()-4))),80000);
@@ -171,7 +171,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     }
     workMs+=now()-start;
     function refine(order,budget){
-      const end=Math.min(until,now()+Math.max(0,budget)),visited=new Set();
+      const end=now()+Math.max(0,budget),visited=new Set();
       for(const i of order){
         if(visited.has(i)||(!point(i)&&i!==-1))continue;visited.add(i);
         const left=end-now();if(left<12)break;
