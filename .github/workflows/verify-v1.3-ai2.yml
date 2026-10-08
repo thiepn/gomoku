@@ -22,6 +22,8 @@ jobs:
           python-version: '3.12'
       - name: Verify pure AI 2.0 model
         run: node ai2/test-core.cjs
+      - name: Verify R3 adaptation and game-level freeze
+        run: node ai2/test-r3.cjs
       - name: Rebuild portable AI 2.0 artifact
         run: python ai2/build.py
       - name: Require committed generated artifact

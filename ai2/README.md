@@ -27,3 +27,10 @@ python ai2/test-browser.py
 ```
 
 The CI benchmark caps per-position time for repeatability. Full playing-strength measurement would require a much larger color-swapped match corpus against fixed engine versions and statistical confidence intervals.
+
+## R3 — Adaptive reliability and session consistency
+
+- Monotonic `totalGames` and per-game `seq` keep adaptation reliable beyond the 80-game local history cap. Legacy AI 2.0 saves migrate without discarding games.
+- Only eligible, unassisted results **since the latest adjustment** influence promotion/easing. Results from a previously played level cannot be reused after a level change.
+- Fixed and Adaptive opponents both freeze their effective level by active game ID. Difficulty changes and Adaptive toggles apply to the next game, never an in-progress match.
+- No new backend, no Elo claims and no modifications to Analysis/Review search. Regression checks: `node ai2/test-r3.cjs`.

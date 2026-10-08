@@ -9,20 +9,30 @@
   let refreshTimer=0,dialog=null;
   function read(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{};}catch{return {};}}
   function clean(raw){
-    const games=(Array.isArray(raw.games)?raw.games:[]).map(Core.normalizeGame).filter(Boolean).slice(-MAX_GAMES);
+    raw=raw&&typeof raw==='object'?raw:{};
+    const entries=(Array.isArray(raw.games)?raw.games:[]).map(Core.normalizeGame).filter(Boolean).slice(-MAX_GAMES);
+    const maxSeq=entries.reduce((n,g)=>Math.max(n,g.seq||0),0);
+    const totalGames=Math.max(entries.length,maxSeq,Math.floor(Number(raw.totalGames)||0));
+    // Preserve older local AI 2.0 saves without losing their game history.
+    const offset=totalGames-entries.length;
+    const games=entries.map((g,i)=>({...g,seq:g.seq||offset+i+1}));
     const searches=(Array.isArray(raw.searches)?raw.searches:[]).filter(x=>x&&typeof x==='object').slice(-MAX_SEARCHES);
-    return {version:1,adaptive:raw.adaptive===true,games,searches,adaptation:raw.adaptation||null,frozen:raw.frozen||null};
+    return {version:1,adaptive:raw.adaptive===true,games,searches,totalGames,adaptation:raw.adaptation||null,frozen:raw.frozen||null};
   }
   let state=clean(read());
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch{return false;}}
   function selected(){try{return window.GomokuStudio?.aiDifficulty?.().current||'mid';}catch{return 'mid';}}
   function effectiveLevel(input={}){
     const sel=Core.LEVELS.includes(input.selected)?input.selected:'mid';
-    if(input.mode!=='ai'||!state.adaptive)return sel;
+    if(input.mode!=='ai')return sel;
     const gameId=String(input.gameId||'');
-    if(state.frozen&&state.frozen.gameId===gameId&&state.frozen.selected===sel&&Core.LEVELS.includes(state.frozen.level))return state.frozen.level;
-    const resolved=Core.resolveAdaptive(sel,state.games,state.adaptation);
-    state.adaptation=resolved.state;state.frozen={gameId,selected:sel,level:resolved.level,at:Date.now()};save();schedule();return resolved.level;
+    // Difficulty changes and Adaptive toggles cannot affect an ongoing game.
+    if(gameId&&state.frozen?.gameId===gameId&&Core.LEVELS.includes(state.frozen.level))return state.frozen.level;
+    const resolved=state.adaptive?Core.resolveAdaptive(sel,state.games,state.adaptation,state.totalGames):null;
+    if(resolved)state.adaptation=resolved.state;
+    const level=resolved?resolved.level:sel;
+    if(gameId){state.frozen={gameId,selected:sel,level,adaptive:state.adaptive,at:Date.now()};save();schedule();}
+    return level;
   }
   function searchConfig(level,base,context={}){
     const tuned=Core.tuneSearch(level,base);
@@ -42,18 +52,21 @@
       const id=String(game.gameId||'');if(!id||state.games.some(g=>g.id===id))return;
       const human=Number(game.humanColor)||1,winner=Number(detail.result.winner),outcome=winner===0?'draw':winner===human?'win':'loss';
       const frozen=state.frozen&&state.frozen.gameId===id?state.frozen:null;
-      state.games.push({id,at:Date.now(),outcome,effectiveLevel:frozen?.level||game.level||selected(),
+      state.totalGames+=1;
+      state.games.push({id,at:Date.now(),seq:state.totalGames,outcome,effectiveLevel:frozen?.level||game.level||selected(),
         selectedLevel:frozen?.selected||game.level||selected(),assisted:game.assisted===true,rule:game.variant||''});
       state.games=state.games.slice(-MAX_GAMES);if(frozen)state.frozen=null;save();schedule(20);
     }catch{}
   }
   function setAdaptive(value){
-    state.adaptive=value===true;state.frozen=null;
-    if(state.adaptive)state.adaptation=Core.freshAdaptive(selected(),state.games.length);
+    state.adaptive=value===true;
+    // A changed setting applies to the NEXT game, not the current move.
+    if(state.adaptive)state.adaptation=Core.freshAdaptive(selected(),state.totalGames);
     save();render();window.dispatchEvent(new CustomEvent('gomoku-ai2-changed',{detail:{adaptive:state.adaptive}}));return state.adaptive;
   }
   function recordSummary(){
-    const sel=selected(),res=Core.resolveAdaptive(sel,state.games,state.adaptation),rows=Core.eligible(state.games,res.level),p=Core.performance(rows);
+    const sel=selected(),res=Core.resolveAdaptive(sel,state.games,state.adaptation,state.totalGames),
+      rows=Core.eligible(state.games,res.level,res.state.lastChangeGameCount),p=Core.performance(rows);
     return {selected:sel,effective:state.adaptive?(state.frozen?.level||res.level):sel,adaptive:state.adaptive,performance:p,reason:res.reason,games:state.games.length,searches:state.searches.length};
   }
   function ensureUI(){
@@ -73,6 +86,9 @@
     $('ai2Status').textContent=!state.adaptive
       ?'Fixed at '+selLabel+'. Enable Adaptive to adjust only between completed games.'
       :'Playing at '+effLabel+(x.effective!==x.selected?' · starting choice '+selLabel:'')+' · '+x.performance.games+' eligible recent game'+(x.performance.games===1?'':'s')+' at this strength.';
+    if(state.frozen&&(state.frozen.selected!==x.selected||state.frozen.adaptive!==state.adaptive)){
+      $('ai2Status').textContent+=' Changes to difficulty apply in the next game.';
+    }
     if(dialog?.open)renderDetails();
   }
   function ensureDialog(){
@@ -83,7 +99,7 @@
   }
   function renderDetails(){
     const body=$('ai2DialogBody');if(!body)return;const x=recordSummary(),p=x.performance,last=state.searches.at(-1);
-    body.innerHTML='<section><h3>'+(x.adaptive?'Adaptive is on':'Adaptive is off')+'</h3><p>Difficulty is frozen for the whole game. After at least four unassisted games at the current strength, a sustained result above 72% can raise it one step; below 28% can lower it one step. A change has a cooldown and never reacts to the current game.</p></section>'+
+    body.innerHTML='<section><h3>'+(x.adaptive?'Adaptive is on':'Adaptive is off')+'</h3><p>Difficulty is frozen for the whole game, including after setting changes. Each change takes effect in the next game. After at least four unassisted games at the current strength since the last adjustment, a sustained result above 72% can raise it one step; below 28% can lower it one step. A change has a cooldown and never reacts to the current game.</p></section>'+
       '<div class="ai2-metrics"><div><strong>'+p.games+'</strong><span>eligible games</span></div><div><strong>'+Math.round(p.score*100)+'%</strong><span>weighted result</span></div><div><strong>'+state.games.length+'</strong><span>stored AI games</span></div></div>'+
       '<section><h3>Search policy</h3><p>Weak levels keep several plausible candidates so their mistakes remain human-like. Strong levels spend more of the same local-engine budget on the principal line by reducing MultiPV breadth; Expert and Master also receive modestly deeper/wider search.</p>'+
       (last?'<p class="ai2-last">Last search: '+last.effectiveLevel+' · depth '+last.depth+' · '+last.nodes.toLocaleString()+' nodes · '+last.elapsedMs+' ms'+(last.backend?' · '+last.backend:'')+'.</p>':'<p class="ai2-last">No AI 2.0 search telemetry recorded yet.</p>')+'</section>'+
