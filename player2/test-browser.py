@@ -40,6 +40,10 @@ with sync_playwright() as p:
         assert page.evaluate("""()=>document.activeElement===window.__r1FocusedCard
           && document.querySelector('#pj2Stages .pj2-stage')===window.__r1FocusedCard""")
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+2')
+        if mobile:
+            assert page.locator('#pj2Primary').evaluate('(e)=>e.getBoundingClientRect().height>=44')
+            assert page.locator('#pj2Stages .pj2-stage').first.evaluate('(e)=>e.getBoundingClientRect().height>=44')
+            assert page.locator('#pj2JourneyTool').count()==1
         page.screenshot(path=str(OUT/(name+'-journal.png')),full_page=True)
         page.locator('#v92Primary [data-v92-route="play"]').click()
         page.locator('#mainContent').wait_for(state='visible')
@@ -54,9 +58,6 @@ with sync_playwright() as p:
             page.locator('#grDialog').wait_for(state='hidden')
         if mobile:
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+2')
-            assert page.locator('#pj2Primary').evaluate('(e)=>e.getBoundingClientRect().height>=44')
-            assert page.locator('#pj2Stages .pj2-stage').first.evaluate('(e)=>e.getBoundingClientRect().height>=44')
-            assert page.locator('#pj2JourneyTool').count()==1
         page.screenshot(path=str(OUT/(name+'-final.png')),full_page=True)
         assert not errors,errors
         ctx.close()
