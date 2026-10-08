@@ -26,7 +26,8 @@
     "operations/p27-stable-release.json",
     "operations/p27-stable-release.mjs",
     ".github/workflows/verify-p24-browser-device-network.yml",
-    ".github/workflows/verify-p25-product-quality.yml"
+    ".github/workflows/verify-p25-product-quality.yml",
+    "audit/p24-pwa-network.py"
   ],
   "required_physical_profiles": [
     "android-chrome-physical",

@@ -14,6 +14,13 @@ def check(name,condition=True,details=None):
 
 def ready(page):
     page.wait_for_function('document.body.dataset.ready==="true" && document.body.dataset.uiReady==="true" && window.GomokuStudio',timeout=30000)
+    # V11.2 first-run onboarding is created after the base ready markers and
+    # intentionally opens 350 ms later. Closing dialogs immediately races that
+    # delayed showModal, which then blocks Playwright's first board tap.
+    page.wait_for_function("document.body.classList.contains('v112-ready')",timeout=30000)
+    page.wait_for_timeout(450)
+    if page.locator('#v112WelcomeDialog[open]').count():
+        page.locator('#v112UseBoard').click()
     page.evaluate('document.querySelectorAll("dialog[open]").forEach(d=>d.close())')
 
 def controlled(page):
