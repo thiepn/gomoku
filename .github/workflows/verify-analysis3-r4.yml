@@ -1,0 +1,46 @@
+name: Analysis 3.0 R4 evidence and tactical baseline
+
+on:
+  pull_request:
+    paths:
+      - 'analysis3/**'
+      - '.github/workflows/verify-analysis3-r4.yml'
+      - 'analysis/**'
+      - 'review/**'
+      - 'index.html'
+  push:
+    branches:
+      - 'phase/r4-analysis3-foundation'
+    paths:
+      - 'analysis3/**'
+      - '.github/workflows/verify-analysis3-r4.yml'
+      - 'analysis/**'
+      - 'review/**'
+      - 'index.html'
+
+jobs:
+  evidence-and-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pure evidence-boundary regression
+        run: node analysis3/test-evidence.cjs
+      - name: Verify deployed build embeds exact analysis sources
+        run: |
+          python analysis/test-integrity.py
+      - name: Known forcing-defense tactical baseline
+        run: node analysis3/benchmark.cjs
+      - name: Upload inspectable tactical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis3-r4-tactical-baseline
+          path: analysis-test-output/analysis3-a0-baseline.json
+          if-no-files-found: ignore
+          retention-days: 14
