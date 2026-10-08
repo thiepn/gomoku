@@ -31,4 +31,30 @@ const runbook=fs.readFileSync('operations/P26-RUNBOOK.md','utf8').toLowerCase();
 for(const marker of ['defect-only','physical device','24-hour','candidate invalidation','p27','cannot be inferred'])
   assert(runbook.includes(marker),'P26 runbook missing '+marker);
 
+
+// A long-lived frozen release SHA eventually has >100 checks because scheduled
+// P16/P26 jobs accumulate. Force the sole governance check onto page two.
+import {spawnSync} from 'node:child_process';
+const p16PaginationProbe=`
+const names=['p15','governance','p13','ranked','lifecycle','history','profiles','integrity','portable-preview','p19-supply-chain','p20-slo','p21-capacity','p23-security'];
+const record=(name,i)=>({name,id:i,status:'completed',conclusion:'success',started_at:'2026-10-08T09:00:00Z',completed_at:'2026-10-08T09:00:01Z'});
+const first=names.filter(x=>x!=='governance').map(record);
+while(first.length<100)first.push(record('unrelated-check-'+first.length,first.length));
+let calls=0;
+globalThis.fetch=async url=>{
+  calls++;
+  const page=new URL(url).searchParams.get('page');
+  const check_runs=page==='1'?first:page==='2'?[record('governance',101)]:[];
+  return {ok:true,json:async()=>({total_count:101,check_runs})};
+};
+await import('./operations/p16-await-checks.mjs');
+if(calls!==2)throw Error('Expected both check-runs pages; observed '+calls);
+`;
+const p16Probe=spawnSync(process.execPath,['--input-type=module','--eval',p16PaginationProbe],{
+  cwd:process.cwd(),encoding:'utf8',timeout:5000,
+  env:{...process.env,GITHUB_REPOSITORY:'thiepn/gomoku',GITHUB_SHA:config.candidate_source_sha,GITHUB_TOKEN:'test-only-token'}
+});
+assert(p16Probe.status===0,'P16 check-run pagination must preserve governance on page two: '+String(p16Probe.stderr||p16Probe.error||''));
+assert(config.allowed_p26_paths.includes('operations/p16-await-checks.mjs'),'P16 release-control exception must be explicit and narrowly scoped');
+
 console.log('PASS P26 release-candidate, burn-in and physical-device contracts.');

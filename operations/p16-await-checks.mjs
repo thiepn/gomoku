@@ -28,17 +28,26 @@ if(!token)throw new Error('GITHUB_TOKEN is required to read authoritative check 
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function checkRuns(){
-  const res=await fetch('https://api.github.com/repos/'+repo+'/commits/'+sha+'/check-runs?per_page=100',{
-    headers:{
-      Authorization:'Bearer '+token,
-      Accept:'application/vnd.github+json',
-      'X-GitHub-Api-Version':'2022-11-28',
-      'User-Agent':'gomoku-p16-release-control'
-    }
-  });
-  if(!res.ok)throw new Error('GitHub check-runs request failed: '+res.status+' '+await res.text());
-  const data=await res.json();
-  return Array.isArray(data.check_runs)?data.check_runs:[];
+  const runs=[];
+  // Scheduled release checks accumulate on a long-lived commit. A single
+  // per_page=100 response can silently omit an old but still required check.
+  for(let page=1;page<=100;page++){
+    const res=await fetch('https://api.github.com/repos/'+repo+'/commits/'+sha+'/check-runs?per_page=100&page='+page,{
+      headers:{
+        Authorization:'Bearer '+token,
+        Accept:'application/vnd.github+json',
+        'X-GitHub-Api-Version':'2022-11-28',
+        'User-Agent':'gomoku-p16-release-control'
+      }
+    });
+    if(!res.ok)throw new Error('GitHub check-runs request failed on page '+page+': '+res.status+' '+await res.text());
+    const data=await res.json();
+    const batch=Array.isArray(data.check_runs)?data.check_runs:[];
+    runs.push(...batch);
+    const total=Number(data.total_count);
+    if(batch.length<100||(Number.isFinite(total)&&runs.length>=total))return runs;
+  }
+  throw new Error('GitHub check-runs pagination exceeded the 100-page safety limit.');
 }
 function latestByName(runs,name){
   return runs.filter(x=>x?.name===name).sort((a,b)=>new Date(b.completed_at||b.started_at||0)-new Date(a.completed_at||a.started_at||0))[0]||null;
