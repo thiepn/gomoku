@@ -15634,7 +15634,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 })();
 
 </script>
-<script id="ai2-core">\n/* Gomoku 1.3 — AI 2.0 pure calibration/adaptation model.
+<script id="ai2-core">
+/* Gomoku 1.3 — AI 2.0 pure calibration/adaptation model.
  * No DOM, storage, network or engine dependency. */
 (function(root,factory){
   const api=factory();
@@ -15737,7 +15738,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
       scope:'Deterministic fixture benchmark; reference agreement is not Elo, win probability, or proof of optimal play.'};
   }
   return Object.freeze({VERSION,LEVELS,LABELS,TUNING,tuneSearch,normalizeGame,eligible,performance,freshAdaptive,resolveAdaptive,calibrationAudit,benchmarkSummary});
-});\n</script>
+});
+</script>
 <style id="ai2-style">
 .ai2-card{margin-top:12px;padding:12px;border:1px solid var(--hair);border-radius:9px;background:color-mix(in srgb,var(--card) 94%,var(--soft));display:grid;gap:8px}
 .ai2-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.ai2-card-head>div{display:grid;gap:2px}.ai2-card-head>div>span{font-size:8px;letter-spacing:.14em;color:var(--ink2);font-weight:800}.ai2-card-head b{font-size:12px}
@@ -15748,7 +15750,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 @media(max-width:520px){.ai2-metrics{grid-template-columns:1fr}.ai2-dialog-shell{padding:14px}}
 @media(prefers-reduced-motion:reduce){.ai2-dialog,.ai2-card{scroll-behavior:auto}}
 </style>
-<script id="ai2-runtime">\n/* Gomoku 1.3 — AI 2.0 browser runtime.
+<script id="ai2-runtime">
+/* Gomoku 1.3 — AI 2.0 browser runtime.
  * Transparent between-game adaptation + search telemetry. */
 (()=>{
   'use strict';
@@ -15867,7 +15870,8 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
   window.GomokuAI2=Object.freeze({version:Core.VERSION,effectiveLevel,searchConfig,noteSearch,setAdaptive,snapshot,openDetails,
     calibration:()=>Core.calibrationAudit({})});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();\n</script>
+})();
+</script>
 <script id="gamefeel2-core">
 /* Gomoku 1.4 — Game Feel 2.0 pure choreography model. */
 (function(root,factory){
