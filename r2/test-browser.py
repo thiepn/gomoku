@@ -23,7 +23,7 @@ with sync_playwright() as p:
         page.wait_for_function('!!document.querySelector("#v12PrivateRoomMenu")')
         page.locator('#v12PrivateRoomMenu').click()
         page.locator('#oc2Home').wait_for(state='visible',timeout=20000)
-        node=page.locator('#oc2Grid .oc2-destination').first()
+        node=page.locator('#oc2Grid .oc2-destination').first
         node.focus()
         assert page.evaluate('''()=>{let b=document.querySelector('#oc2Grid .oc2-destination');
           GomokuOnline2.refresh();return b===document.querySelector('#oc2Grid .oc2-destination')&&document.activeElement===b;}'''),label+' online refresh replaced focused button'
