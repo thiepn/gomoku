@@ -15,13 +15,13 @@ for tag,old,new,content in [('script','v95-postgame-script','guided-review-scrip
 # A3 pure workspace model must exist before the main review script executes.
 a3_model=(root/'analysis3/workspace-core.js').read_text()
 if '</script' in a3_model.lower():raise SystemExit('Unexpected script terminator in A3 model')
-model_block='<script id="analysis3-workspace-core">\n'+a3_model+'\\n</script>'
+model_block='<script id="analysis3-workspace-core">\n'+a3_model+'\n</script>'
 if '<script id="analysis3-workspace-core">' in s:
     s=re.sub(r'<script id="analysis3-workspace-core">.*?</script>',lambda _:model_block,s,count=1,flags=re.S)
 else:
     needle='<script id="guided-review-script">'
     if s.count(needle)!=1:raise SystemExit('Missing review script anchor for A3')
-    s=s.replace(needle,model_block+'\\n'+needle,1)
+    s=s.replace(needle,model_block+'\n'+needle,1)
 if 'prepareGuidedReview:' not in s:
     marker="window.GomokuStudio=Object.freeze({version:'12.1.0',"
     if s.count(marker)!=1:raise SystemExit('Core API anchor changed.')
@@ -51,12 +51,12 @@ else:
     s=s.replace('</body>',block+'\n</body>')
 # A3 styles are isolated from Guided Review and keep portable/offline parity.
 a3_css=(root/'analysis3/workspace.css').read_text()
-a3_style='<style id="analysis3-workspace-style">\\n'+a3_css+'\\n</style>'
+a3_style='<style id="analysis3-workspace-style">\\n'+a3_css+'\n</style>'
 if '<style id="analysis3-workspace-style">' in s:
     s=re.sub(r'<style id="analysis3-workspace-style">.*?</style>',lambda _:a3_style,s,count=1,flags=re.S)
 else:
     if s.count('</body>')!=1:raise SystemExit('Missing body terminator for A3')
-    s=s.replace('</body>',a3_style+'\\n</body>',1)
+    s=s.replace('</body>',a3_style+'\n</body>',1)
 path.write_text(s)
 sw=root/'sw.js';t=sw.read_text();t=re.sub(r"const CACHE_NAME = '[^']+';",f"const CACHE_NAME = '{cache}';",t,count=1);sw.write_text(t)
 print('Embedded Guided Review / Analysis 3.0 A3 with offline board workspace.')
