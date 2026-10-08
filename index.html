@@ -17025,4 +17025,352 @@ body[data-v92-route="library"] #collectionPlus{display:none!important}
 })();
 
 </script>
+<script id="player2-core">
+/* Gomoku 2.0 — Player Journey & Home 2.0 pure orchestration model. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.GomokuPlayer2Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const VERSION='2.0.0';
+  const n=(v,a=0,b=9999)=>Math.max(a,Math.min(b,Math.round(Number(v)||0)));
+  const clean=v=>String(v??'').trim();
+  function learning(snapshot={}){
+    const skills=Array.isArray(snapshot?.skills)?snapshot.skills:[],summary=snapshot?.summary||{};
+    const fallback=skills.filter(s=>Number(s?.evidence)>0||Number(s?.course)>0||Number(s?.score)>0);
+    const evidenced=Number.isFinite(Number(summary.evidenced))?n(summary.evidenced):fallback.length;
+    const average=Number.isFinite(Number(summary.average))?n(summary.average,0,100):(fallback.length?Math.round(fallback.reduce((sum,s)=>sum+n(s.score,0,100),0)/fallback.length):0);
+    const due=Number.isFinite(Number(summary.dueReviews))?n(summary.dueReviews):skills.reduce((sum,s)=>sum+n(s?.due),0);
+    const total=Number.isFinite(Number(summary.total))?n(summary.total):skills.length;
+    const prescription=(Array.isArray(snapshot?.prescriptions)?snapshot.prescriptions:[])[0]||null;
+    return {skills:total,evidenced,average,due,prescription};
+  }
+  function context(input={}){
+    const j=input.journey?.context||{};
+    const lib=input.library||{};
+    const lc=lib.counts||{};
+    const open=input.opening||{};
+    const online=input.online||{};
+    const comp=input.competitive||{};
+    const learn=learning(input.learning||{});
+    return {
+      journey:j,
+      journeyNext:input.journey?.next||null,
+      learning:learn,
+      library:{
+        total:n(lc.total??j.library?.count),
+        needsReview:n(lc.needsReview),
+        flagged:n(lc.flagged),
+        studies:n(lc.studies)
+      },
+      opening:{
+        due:n(open.skills?.due??j.opening?.due),
+        average:n(open.skills?.average,0,100),
+        evidenced:open.skills?.evidenced===true
+      },
+      online:{
+        active:online.context?.activeRoom===true||j.online?.connected===true,
+        primary:online.primary||null,
+        label:clean(online.room)||'No active room'
+      },
+      competitive:{
+        active:comp.phase?.active===true&&comp.phase?.state!=='match-complete',
+        state:clean(comp.phase?.state),
+        next:comp.next||null,
+        progress:comp.progress||null
+      },
+      postgame:input.postgame||null
+    };
+  }
+  const JOURNEY_LABEL={
+    'resume-practice':'Resume practice','online':'Return to online play','resume-review':'Resume review',
+    'continue-game':'Continue game','analyze-game':'Review finished game','review-critical':'Retry key decisions',
+    'train-due':'Practice due material','train-opening':'Review opening lines','train-new':'Learn a new concept',
+    'new-game':'Play a game','play':'Play','analyze':'Analyze position','train':'Practice','study':'Study','library':'Open Library'
+  };
+  function journeyAction(next){
+    const id=clean(next?.id);if(!id)return null;
+    return {id:'journey:'+id,label:clean(next?.label)||JOURNEY_LABEL[id]||'Continue',detail:clean(next?.detail)||'Continue the current improvement flow.',source:'journey'};
+  }
+  function primary(input={}){
+    const c=context(input);
+    if(c.online.active){
+      return {id:'online',label:c.online.primary?.label||'Return to online match',detail:c.online.primary?.detail||'An online room is active.',source:'online'};
+    }
+    if(c.competitive.active){
+      return {id:'competitive',label:c.competitive.next?.label||'Continue competitive match',detail:c.competitive.next?.detail||'Your local competitive series is still active.',source:'competition'};
+    }
+    const j=journeyAction(c.journeyNext);
+    if(j&&clean(c.journeyNext?.id)!=='new-game')return j;
+    if(c.library.needsReview>0){
+      return {id:'review-center',label:'Review saved games',detail:c.library.needsReview+' saved game'+(c.library.needsReview===1?' needs':'s need')+' current or complete review evidence.',source:'library'};
+    }
+    if(c.learning.prescription){
+      const p=c.learning.prescription;
+      return {id:'learning-next',label:clean(p.title)||clean(p.label)||'Continue learning',detail:clean(p.reason)||clean(p.detail)||'Follow your current Learning Intelligence prescription.',source:'learning'};
+    }
+    const practiceDue=Math.max(n(c.journey.training?.due)+n(c.journey.training?.customDue),n(c.learning.due));
+    if(practiceDue>0){
+      return {id:'training',label:'Practice due material',detail:practiceDue+' due learning or training item'+(practiceDue===1?'':'s')+' are ready.',source:'training'};
+    }
+    if(c.opening.due>0){
+      return {id:'opening',label:'Review opening work',detail:c.opening.due+' opening repetition'+(c.opening.due===1?' is':'s are')+' due.',source:'opening'};
+    }
+    return j||{id:'play',label:'Play a game',detail:'Create fresh game evidence, then review it and feed the result back into learning.',source:'play'};
+  }
+  function stages(input={}){
+    const c=context(input),j=c.journey,learn=c.learning;
+    const reviewWaiting=n(j.review?.pending)+n(j.review?.critical)+c.library.needsReview;
+    const practiceDue=n(j.training?.due)+n(j.training?.customDue)+n(learn.due);
+    return [
+      {id:'play',label:'Play',value:j.game?.inProgress?'In progress':j.game?.result?'Finished game':'Ready',detail:j.game?.inProgress?'Finish the current game before changing the evidence.':'Play a complete game to create useful evidence.'},
+      {id:'review-center',label:'Review',value:reviewWaiting?reviewWaiting+' waiting':'Current',detail:reviewWaiting?'Resolve queued, critical or stale game evidence.':'No known review work is currently waiting.'},
+      {id:'learning-next',label:'Learn',value:learn.evidenced?learn.average+'% evidence':'Baseline',detail:learn.evidenced?learn.evidenced+' of '+learn.skills+' skills currently have learning evidence.':'Build your first skill evidence through authored lessons and practice.'},
+      {id:'training',label:'Practice',value:practiceDue?practiceDue+' due':'Ready',detail:practiceDue?'Retrieve due material before adding more new material.':'Use targeted practice to reinforce a current weakness.'}
+    ];
+  }
+  function threads(input={}){
+    const c=context(input);
+    return [
+      {id:'opening',label:'Openings',value:c.opening.evidenced?c.opening.average+'% evidence':'Baseline',detail:c.opening.due?c.opening.due+' repetition'+(c.opening.due===1?'':'s')+' due':'Opening Study combines concepts, local exploration and repertoire.'},
+      {id:'competitive',label:'Competition',value:c.competitive.active?'Active series':'Available',detail:c.competitive.active?(c.competitive.progress?.label||'Continue the active local match series.'):'Start a structured local match when you want game-to-game continuity.'},
+      {id:'online',label:'Online',value:c.online.active?'Active room':'Available',detail:c.online.active?c.online.label:'Rooms, ranked play and competition remain optional.'},
+      {id:'library',label:'Library',value:c.library.total+' saved',detail:c.library.needsReview?c.library.needsReview+' saved game'+(c.library.needsReview===1?' needs':'s need')+' review.':c.library.studies+' saved '+(c.library.studies===1?'study':'studies')+'.'}
+    ];
+  }
+  function summary(input={}){
+    const c=context(input),next=primary(input);
+    return {
+      version:VERSION,
+      primary:next,
+      stages:stages(input),
+      threads:threads(input),
+      metrics:{
+        learning:c.learning.evidenced?c.learning.average:null,
+        evidencedSkills:c.learning.evidenced,
+        totalSkills:c.learning.skills,
+        reviews:n(c.journey.review?.pending)+n(c.journey.review?.critical)+c.library.needsReview,
+        practice:Math.max(n(c.journey.training?.due)+n(c.journey.training?.customDue),n(c.learning.due)),
+        saved:c.library.total
+      },
+      context:c
+    };
+  }
+  return Object.freeze({VERSION,learning,context,primary,stages,threads,summary});
+});
+
+</script>
+<style id="player2-style">
+/* Gomoku 2.0 — Player Journey & Home 2.0 */
+#pj2Home{display:none;max-width:1040px;margin:0 auto;padding:22px 32px 56px}
+body[data-pj2-route="home"] #pj2Home{display:block}
+body[data-pj2-route="home"] #mainContent{display:none!important}
+.pj2-hero{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:4px 0 17px;border-bottom:1px solid var(--hair)}
+.pj2-hero h1{margin:4px 0 0;font:650 clamp(19px,2.2vw,24px)/1.18 Georgia,serif;letter-spacing:-.01em}
+.pj2-intro{max-width:340px;margin:0;color:var(--ink2);font-size:11px;line-height:1.6}
+#pj2Title:focus{outline:2px solid var(--seal);outline-offset:5px}
+.pj2-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin:20px 0 12px;padding:19px 20px;border:1px solid var(--hair);border-left:4px solid var(--seal);border-radius:11px;background:var(--card)}
+.pj2-next span{display:block;color:var(--seal);font-size:7px;font-weight:800;letter-spacing:.16em}
+.pj2-next h2{margin:5px 0 4px;font-size:23px}.pj2-next p{max-width:680px;margin:0;color:var(--ink2);font-size:10px;line-height:1.55}.pj2-next small{display:block;margin-top:7px;color:var(--ink2);font-size:7px}
+.pj2-primary{min-height:44px;padding:10px 16px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:var(--paper);font-weight:750;font-size:10px}
+.pj2-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 30px}
+.pj2-metrics>div{padding:13px 14px;border:1px solid var(--hair);border-radius:9px;background:var(--card)}
+.pj2-metrics strong{display:block;font:600 24px Georgia,serif}.pj2-metrics span{display:block;margin-top:3px;color:var(--ink2);font-size:8px}
+.pj2-section{margin-top:30px}.pj2-section-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,390px);gap:20px;align-items:end;margin-bottom:13px}.pj2-section-head h2{margin:4px 0 0;font-size:23px}.pj2-section-head>p{margin:0;color:var(--ink2);font-size:9px;line-height:1.55;text-align:right}
+.pj2-stage-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.pj2-stage{min-height:142px;padding:15px;text-align:left;border:1px solid var(--hair);border-radius:10px;background:transparent;color:var(--ink)}
+.pj2-stage:hover,.pj2-thread:hover{border-color:var(--hair2);background:var(--card)}
+.pj2-stage>div,.pj2-thread>div{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}.pj2-stage b,.pj2-thread b{font:600 16px Georgia,serif}.pj2-stage strong,.pj2-thread strong{font-size:8px;color:var(--seal);text-align:right}
+.pj2-stage p,.pj2-thread p{margin:18px 0 0;color:var(--ink2);font-size:9px;line-height:1.55}
+.pj2-thread-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pj2-thread{min-height:100px;padding:14px;text-align:left;border:1px solid var(--hair);border-radius:9px;background:transparent;color:var(--ink)}
+.pj2-thread p{margin-top:11px}.pj2-footnote{margin:24px 0 0;padding-top:14px;border-top:1px solid var(--hair);color:var(--ink2);font-size:8px;line-height:1.55}
+#pj2JourneyTool{min-height:58px}
+#pj2Home .pj2-primary:focus-visible,#pj2Home .pj2-stage:focus-visible,#pj2Home .pj2-thread:focus-visible{outline:3px solid var(--seal);outline-offset:3px}
+@media(max-width:820px){
+  #pj2Home{padding-inline:22px}.pj2-stage-grid{grid-template-columns:1fr 1fr}.pj2-section-head{grid-template-columns:1fr}.pj2-section-head>p{text-align:left}.pj2-hero{align-items:start;flex-direction:column;gap:8px}
+}
+@media(max-width:620px){
+  #pj2Home{padding:20px 14px 92px}.pj2-next{grid-template-columns:1fr}.pj2-primary{width:100%}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-stage-grid,.pj2-thread-grid{grid-template-columns:1fr}
+  .pj2-stage{min-height:112px}.pj2-stage p{margin-top:12px}
+  #v92Primary{overflow-x:auto;scrollbar-width:none}#v92Primary::-webkit-scrollbar{display:none}.v92-nav-main{min-width:0}
+}
+@media(max-width:400px){.pj2-hero h1{font-size:31px}.pj2-metrics{grid-template-columns:1fr 1fr}.pj2-metrics strong{font-size:21px}}
+@media(prefers-reduced-motion:reduce){#pj2Home *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Three game-first destinations; journal is in More. */
+@media (min-width:761px) and (max-width:1050px){
+ html body.ui-studio header.top{gap:12px;padding-left:14px;padding-right:14px}
+ html body.ui-studio #v92Primary{margin:0!important;min-width:0;flex:1 1 auto}
+ html body.ui-studio .v92-nav-main{gap:2px;justify-content:center}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:10px 9px;font-size:12px}
+ html body.ui-studio .header-tools{gap:4px}
+ html body.ui-studio #focusBtn,html body.ui-studio #soundBtn{display:none!important}
+}
+@media (max-width:760px){
+ html body.ui-studio #v92Primary{overflow-x:hidden}
+ html body.ui-studio .v92-nav-main{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;min-width:0}
+ html body.ui-studio .v92-nav-btn{min-width:0;padding:9px 3px;font-size:12px}
+}
+
+</style>
+<script id="player2-runtime">
+/* Gomoku 2.0 — Player Journey & Home 2.0 runtime. */
+(()=>{
+  'use strict';
+  if(window.GomokuPlayer2)return;
+  const Core=window.GomokuPlayer2Core;if(!Core)return;
+  const $=id=>document.getElementById(id);
+  let last=null,timer=0,ready=false;
+  const studio=()=>window.GomokuStudio||null;
+  const copy=x=>{try{return JSON.parse(JSON.stringify(x));}catch{return null;}};
+  function collect(){
+    let journey=null,learning=null,library=null,opening=null,competitive=null,online=null,postgame=null;
+    try{journey=studio()?.journey?.()||null;}catch{}
+    try{learning=window.GomokuLearningV11?.snapshot?.()||null;}catch{}
+    try{library=window.GomokuLibrary2?.snapshot?.()||window.GomokuLibrary2?.refresh?.()||null;}catch{}
+    try{opening=window.GomokuOpening2?.snapshot?.()||null;}catch{}
+    try{competitive=window.GomokuCompetitive2?.snapshot?.()||null;}catch{}
+    try{online=window.GomokuOnline2?.snapshot?.()||null;}catch{}
+    try{postgame=window.GomokuPostGame2?.snapshot?.()||null;}catch{}
+    return {journey,learning,library,opening,competitive,online,postgame};
+  }
+  function ensureJourneyEntry(){
+    const menu=$('v111MenuDialog'),actions=menu?.querySelector('.v111-menu-main');
+    if(!actions)return false;
+    if(!$('pj2JourneyTool')){
+      const b=document.createElement('button');b.id='pj2JourneyTool';
+      b.className='v111-menu-action';b.type='button';
+      b.innerHTML='<b>Player journal</b><span>Your games, reviews and practice progress.</span>';
+      b.onclick=()=>{if(menu.open)menu.close();showHome(true);};
+      actions.append(b);
+    }
+    return true;
+  }
+  function ensureHome(){
+    if($('pj2Home'))return $('pj2Home');
+    const main=$('mainContent')||document.querySelector('main[aria-label="Gomoku Studio workspace"]');if(!main)return null;
+    const home=document.createElement('section');home.id='pj2Home';home.setAttribute('aria-labelledby','pj2Title');
+    home.innerHTML=`<header class="pj2-hero"><div><p class="eyebrow">YOUR GOMOKU JOURNAL</p><h1 id="pj2Title" tabindex="-1">Progress &amp; practice</h1></div><p class="pj2-intro">Look back at your games and choose what to work on next.</p></header>
+      <section class="pj2-next" aria-labelledby="pj2NextTitle"><div><span>YOUR NEXT MOVE</span><h2 id="pj2NextTitle">Continue</h2><p id="pj2NextDetail"></p><small id="pj2NextSource"></small></div><button class="pj2-primary" id="pj2Primary" type="button">Continue</button></section>
+      <div class="pj2-metrics" aria-label="Player evidence summary"><div><strong id="pj2Skill">—</strong><span>learning evidence</span></div><div><strong id="pj2Review">0</strong><span>review waiting</span></div><div><strong id="pj2Practice">0</strong><span>practice due</span></div><div><strong id="pj2Saved">0</strong><span>saved</span></div></div>
+      <section class="pj2-section"><div class="pj2-section-head"><div><p class="eyebrow">IMPROVEMENT LOOP</p><h2>Play, review, improve.</h2></div><p>Specialist tools stay available, but the loop decides what deserves attention next.</p></div><div class="pj2-stage-grid" id="pj2Stages"></div></section>
+      <section class="pj2-section"><div class="pj2-section-head"><div><p class="eyebrow">CURRENT THREADS</p><h2>Games and openings.</h2></div><p>Openings, competition, online play and your archive remain part of the same player history.</p></div><div class="pj2-thread-grid" id="pj2Threads"></div></section>
+      <p class="pj2-footnote">Scores shown here summarize existing learning evidence. They are not Elo, Dan rank, win probability or an official rating.</p>`;
+    main.insertAdjacentElement('beforebegin',home);
+    $('pj2Primary').onclick=()=>route(last?.primary?.id);
+    return home;
+  }
+  function markHome(active){
+    document.body.dataset.pj2Route=active?'home':'app';
+    const status=$('uiRouteStatus');if(active&&status)status.textContent='Player journal section';
+    if(active)for(const b of document.querySelectorAll('#v92Primary [data-v92-route]'))b.setAttribute('aria-current','false');
+  }
+  function showHome(scroll=false){
+    ensureJourneyEntry();if(!ensureHome())return;
+    markHome(true);refresh(true);
+    if(scroll){window.scrollTo({top:0,behavior:'auto'});$('pj2Title')?.focus({preventScroll:true});}
+  }
+  function leaveHome(){if(document.body.dataset.pj2Route==='home')markHome(false);}
+  function clickRoute(name){
+    leaveHome();const b=document.querySelector('#v92Primary [data-v92-route="'+name+'"]');if(b){b.click();return true;}return false;
+  }
+  function journeyRoute(id){
+    const api=studio();const action=String(id||'').replace(/^journey:/,'');
+    if(action==='resume-practice'){leaveHome();api?.resumePracticeSession?.();return true;}
+    if(action==='online')return route('online');
+    if(action==='resume-review'){leaveHome();clickRoute('improve');setTimeout(()=>api?.resumeReview?.(),0);return true;}
+    if(action==='continue-game'||action==='play')return clickRoute('play');
+    if(action==='analyze-game'){leaveHome();clickRoute('improve');setTimeout(()=>api?.reviewGame?.(false),0);return true;}
+    if(action==='review-critical'){leaveHome();api?.openReviewCoach?.();return true;}
+    if(action==='train-due'||action==='train'){return route('training');}
+    if(action==='train-opening')return route('opening');
+    if(action==='train-new'){leaveHome();api?.openAcademy?.();return true;}
+    if(action==='new-game'){leaveHome();clickRoute('play');setTimeout(()=>$('newBtn')?.click(),0);return true;}
+    if(action==='analyze'||action==='study'){return clickRoute('improve');}
+    if(action==='library')return clickRoute('library');
+    return false;
+  }
+  function route(id){
+    if(!id)return false;
+    if(String(id).startsWith('journey:'))return journeyRoute(id);
+    const api=studio();
+    if(id==='home'){showHome(true);return true;}
+    if(id==='play')return clickRoute('play');
+    if(id==='library')return clickRoute('library');
+    if(id==='review-center'){leaveHome();api?.openReviewCenter?.();return true;}
+    if(id==='learning-next'){leaveHome();window.GomokuLearningV11?.runNext?.();return true;}
+    if(id==='training'){leaveHome();api?.openTrainingCenter?.();return true;}
+    if(id==='opening'){leaveHome();api?.openOpening?.();return true;}
+    if(id==='competitive'){leaveHome();api?.openCompetition?.();return true;}
+    if(id==='online'){
+      leaveHome();
+      const snap=window.GomokuOnline2?.snapshot?.();
+      if(window.GomokuOnline2?.route&&snap?.primary?.id){window.GomokuOnline2.route(snap.primary.id);return true;}
+      $('onlineBtn')?.click();return true;
+    }
+    return false;
+  }
+  function text(el,value){const next=String(value??'');if(el&&el.textContent!==next)el.textContent=next;}
+  function updateCard(b,row){
+    b.dataset.pj2Route=row.id;
+    text(b.querySelector('b'),row.label);text(b.querySelector('strong'),row.value);
+    text(b.querySelector('p'),row.detail);
+    b.onclick=()=>route(b.dataset.pj2Route);
+  }
+  function card(row,kind){
+    const b=document.createElement('button');b.type='button';
+    b.className=kind==='stage'?'pj2-stage':'pj2-thread';
+    const head=document.createElement('div'),title=document.createElement('b'),value=document.createElement('strong'),detail=document.createElement('p');
+    head.append(title,value);b.append(head,detail);updateCard(b,row);return b;
+  }
+  function reconcile(container,rows,kind){
+    if(!container)return;
+    const existing=new Map([...container.children].map(b=>[b.dataset.pj2Route,b]));
+    rows.forEach((row,index)=>{
+      const b=existing.get(row.id)||card(row,kind);
+      if(existing.has(row.id))updateCard(b,row);
+      if(container.children[index]!==b)container.insertBefore(b,container.children[index]||null);
+      existing.delete(row.id);
+    });
+    for(const stale of existing.values())stale.remove();
+  }
+  function render(summary){
+    ensureJourneyEntry();let home=ensureHome();last=summary;if(!home)return summary;
+    const required=['pj2NextTitle','pj2NextDetail','pj2NextSource','pj2Primary','pj2Skill','pj2Review','pj2Practice','pj2Saved','pj2Stages','pj2Threads'];
+    if(required.some(id=>!$(id))){home.remove();home=ensureHome();if(!home)return summary;}
+    const put=(id,value)=>{const el=$(id);text(el,value);return el;};
+    put('pj2NextTitle',summary.primary.label);
+    put('pj2NextDetail',summary.primary.detail);
+    put('pj2NextSource','Based on '+summary.primary.source+' evidence');
+    put('pj2Primary',summary.primary.label);
+    put('pj2Skill',summary.metrics.learning===null?'Baseline':summary.metrics.learning+'%');
+    put('pj2Review',summary.metrics.reviews);
+    put('pj2Practice',summary.metrics.practice);
+    put('pj2Saved',summary.metrics.saved);
+    reconcile($('pj2Stages'),summary.stages,'stage');
+    reconcile($('pj2Threads'),summary.threads,'thread');
+    return summary;
+  }
+  function specialistOpen(){return !!document.querySelector('dialog[open]');}
+  function refresh(force=false){
+    if(!force&&document.body.dataset.pj2Route==='home'&&specialistOpen())return last;
+    const input=collect(),summary=Core.summary(input);render(summary);return summary;
+  }
+  function schedule(ms=40){clearTimeout(timer);timer=setTimeout(()=>refresh(),ms);}
+  function boot(){
+    if(!studio()||!$('v92Primary')||document.body.dataset.uiReady!=='true'){setTimeout(boot,40);return;}
+    if(ready)return;ready=true;ensureJourneyEntry();ensureHome();
+    document.addEventListener('click',e=>{if(e.target?.closest?.('#v92Primary [data-v92-route]'))leaveHome();},true);
+    for(const ev of ['gomoku:move','gomoku:result','gomoku:room','gomoku-course2-transfer-changed','gomoku-mistakes-changed'])window.addEventListener(ev,()=>schedule(60));
+    window.addEventListener('storage',()=>schedule(80));
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80);});
+    setInterval(()=>{if(!document.hidden&&document.body.dataset.pj2Route==='home'&&!specialistOpen())refresh();},5000);
+    // Preserve whichever normal route the user already selected.
+    markHome(false);refresh(true);
+  }
+  window.GomokuPlayer2=Object.freeze({version:Core.VERSION,refresh,route,showHome,snapshot:()=>last?copy(last):null});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+</script>
 </body></html>
