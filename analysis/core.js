@@ -2,7 +2,7 @@
  * Pure services shared by the UI, isolated worker, exports, and regression tests. */
 function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   'use strict';
-  const VERSION = '2.1.0', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
+  const VERSION = '3.0.0-a1', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
   const PRESETS = Object.freeze({
     quick: {label:'Quick', timeMs:350, depth:9, width:20, threatDepth:9},
     standard: {label:'Standard', timeMs:1000, depth:12, width:26, threatDepth:11},
@@ -83,13 +83,29 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!tags.length)tags.push('Positional decision');
     return tags;
   }
+  // A1: dual-kind tactical screening. Independent replay, not heuristic inference.
+  // A failed bounded VCF/VCT search is UNKNOWN, never a safety certificate.
   function defenseScreen(board,color,rule,ctx,played,{timeMs=90,depth=9}={}) {
     const e=engineFactory(rule),attacker=3-color,start=now(),until=start+Math.max(0,timeMs);
-    const rows=new Map(),proofs=[],moveCount=ctx.moveCount??board.filter(Boolean).length;
-    let rootThreat=null,enumerated=false,probes=0,proofReuses=0,nodes=0,probeTimedOut=false,workMs=0;
+    const rows=new Map(),proofs=[],rootThreats=[],moveCount=ctx.moveCount??board.filter(Boolean).length;
+    const probeKinds=['vcf','vct'];
+    let enumerated=false,probes=0,proofReuses=0,nodes=0,probeTimedOut=false,workMs=0;
+    const byKind={vcf:{probes:0,proven:0,unknown:0,nodes:0},vct:{probes:0,proven:0,unknown:0,nodes:0}};
     const after=i=>{const b=Array.from(board);if(point(i))b[i]=color;return b;};
     const nextContext=i=>({...ctx,passes:i<0?ctx.passes+1:0,moveCount:moveCount+1});
     const rootLegal=i=>e.legalMove(Int8Array.from(board),i,color,moveCount,{allowOffCenterOpening:ctx.allowLegacyOffCenterOpening});
+    function addProof(solved,kind,source,i) {
+      if(solved?.verified!==true||solved.status!=='proven'||!solved.proof)return null;
+      // Do not silently truncate proofs: oversized trees remain unverified for UI.
+      const b=source==='root'?board:after(i),c=source==='root'?ctx:nextContext(i);
+      const cert=certificate(b,attacker,rule,solved,c);
+      if(!cert||!verify(cert))return null;
+      const existing=proofs.findIndex(p=>p.kind===kind&&JSON.stringify(p.proof)===JSON.stringify(solved.proof));
+      const entry={...solved,kind};
+      if(existing<0){proofs.push(entry);byKind[kind].proven++;}
+      if(source==='root'&&!rootThreats.some(r=>r.kind===kind&&r.move===solved.move))rootThreats.push(entry);
+      return existing<0?proofs.length-1:existing;
+    }
     function inspect(i) {
       const old=rows.get(i);
       if(old&&(old.status==='proven-loss'||old.terminal||old.generation===proofs.length))return old;
@@ -98,63 +114,91 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
       const b=after(i),terminalMove=a.win||(i===-1&&ctx.passes===1)||b.every(Boolean);
       const row={...old,i,legality:a,terminal:!!terminalMove,generation:proofs.length,
         status:a.win?'winning-move':terminalMove?'draw':proofs.length?'neutralizes-known-threat':'unresolved'};
-      if(!terminalMove)for(let k=0;k<proofs.length;k++) {
-        // Verify the entire actual after-position, including remote counter-wins.
-        if(C.verifyProof(b,attacker,rule,proofs[k].proof)) {
-          row.status='proven-loss';row.proofIndex=k;proofReuses++;break;
+      if(!terminalMove)for(let k=0;k<proofs.length;k++){
+        // Replay full legal continuations on the ACTUAL after-board. Counter-wins,
+        // remote blocks and Renju forbidden moves cannot be ignored.
+        if(C.verifyProof(b,attacker,rule,proofs[k].proof)){
+          row.status='proven-loss';row.proofIndex=k;row.proofKind=proofs[k].kind;proofReuses++;break;
         }
       }
       rows.set(i,row);return row;
     }
+    function solve(kind,b,budget,limit) {
+      if(budget<10)return null;
+      const result=C.solve(b,attacker,rule,{kind,timeMs:budget,depth,
+        nodeLimit:limit,orderWithSearch:false});
+      probes++;nodes+=result.nodes||0;probeTimedOut=probeTimedOut||!!result.timedOut;
+      byKind[kind].probes++;byKind[kind].nodes+=result.nodes||0;
+      if(result.status!=='proven'||!result.verified)byKind[kind].unknown++;
+      return result;
+    }
     function searchAt(i,budget) {
-      const row=inspect(i);if(row.status==='illegal'||row.status==='proven-loss'||row.terminal||budget<10)return row;
-      const t=now(),solved=C.solve(after(i),attacker,rule,{kind:'vcf',timeMs:budget,depth,nodeLimit:60000,orderWithSearch:false});
-      probes++;nodes+=solved.nodes||0;probeTimedOut=probeTimedOut||solved.timedOut;
-      row.probe={status:solved.status,timedOut:!!solved.timedOut,depth:solved.maxDepth,nodes:solved.nodes};
-      if(solved.verified&&solved.status==='proven') {
-        proofs.push(solved);row.generation=-1;
+      let row=inspect(i);
+      if(row.status==='illegal'||row.status==='proven-loss'||row.terminal||budget<12)return row;
+      const t=now(),end=now()+budget,attempted=[];
+      for(const kind of probeKinds) {
+        if(row.status==='proven-loss')break;
+        const left=end-now();if(left<12)break;
+        const share=kind==='vcf'?Math.min(90,Math.max(12,left*.40)):Math.min(170,left);
+        const solved=solve(kind,after(i),Math.min(left,share),kind==='vct'?80000:60000);
+        if(!solved)continue;
+        attempted.push({kind,status:solved.status,timedOut:!!solved.timedOut,depth:solved.maxDepth,nodes:solved.nodes});
+        addProof(solved,kind,'after',i);
+        row.generation=-1;row=inspect(i);
       }
-      const result=inspect(i);workMs+=now()-t;return result;
+      row.probes=[...(row.probes||[]),...attempted];
+      row.probe=row.probes.at(-1)||null;
+      workMs+=now()-t;return row;
     }
-    // Opponent-to-move is hypothetical: this does not prove the current side lost.
-    if(timeMs>=10&&board.some(Boolean)&&terminal(board,rule)===null) {
-      const solved=C.solve(board,attacker,rule,{kind:'vcf',timeMs:Math.max(10,Math.min(100,timeMs*.70)),depth,nodeLimit:40000,orderWithSearch:false});
-      probes++;nodes+=solved.nodes||0;probeTimedOut=!!solved.timedOut;
-      if(solved.verified&&solved.status==='proven'){rootThreat=solved;proofs.push(solved);}
+    // Both probes treat the opponent as a HYPOTHETICAL attacker in the
+    // before-position. Only independent replay after our actual move establishes
+    // a loss. Prefer quick VCF discovery, then quieter VCT discovery.
+    if(timeMs>=10&&board.some(Boolean)&&terminal(board,rule)===null){
+      const vcf=solve('vcf',board,Math.min(100,Math.max(10,timeMs*.70)),40000);
+      if(vcf)addProof(vcf,'vcf','root');
+      if(timeMs>=65&&now()<until-12){
+        const vct=solve('vct',board,Math.min(180,Math.max(12,Math.min(timeMs*.38,until-now()-4))),80000);
+        if(vct)addProof(vct,'vct','root');
+      }
     }
-    if(rootThreat) {
-      // Include distant endpoints and pass; prioritize proof squares under a deadline.
-      const all=[...new Set([played,...C.proofLine(rootThreat.proof),...Array.from({length:225},(_,i)=>i).filter(i=>!board[i]),-1])].filter(i=>point(i)||i===-1);
+    if(rootThreats.length){
+      // Include every distant legal blocking location; otherwise all-refuted
+      // would be an unsupported existential claim.
+      const all=[...new Set([played,...rootThreats.flatMap(p=>C.proofLine(p.proof)),
+        ...Array.from({length:225},(_,i)=>i).filter(i=>!board[i]),-1])].filter(i=>point(i)||i===-1);
       enumerated=true;
       for(const i of all){if(now()>=until){enumerated=false;break;}inspect(i);}
     }
     workMs+=now()-start;
-    function refine(order,budget) {
+    function refine(order,budget){
       const end=now()+Math.max(0,budget),visited=new Set();
-      for(const i of order) {
-        if(visited.has(i)||!point(i)&&i!==-1)continue;visited.add(i);
+      for(const i of order){
+        if(visited.has(i)||(!point(i)&&i!==-1))continue;visited.add(i);
         const left=end-now();if(left<12)break;
-        searchAt(i,Math.min(70,Math.max(10,left/Math.min(3,Math.max(1,order.length-visited.size+1)))));
+        searchAt(i,Math.min(240,Math.max(12,left/Math.min(3,Math.max(1,order.length-visited.size+1)))));
       }
-      // A newly established proof may refute earlier candidates too.
       for(const i of rows.keys())inspect(i);
     }
     function defenses(){return [...rows.values()].filter(r=>point(r.i)&&r.status!=='illegal'&&r.status!=='proven-loss'&&r.generation===proofs.length).map(r=>r.i);}
-    function evidence(i) {
+    function evidence(i){
       const row=inspect(i);if(row.status!=='proven-loss')return null;
-      return certificate(after(i),attacker,rule,proofs[row.proofIndex],nextContext(i));
+      const cert=certificate(after(i),attacker,rule,proofs[row.proofIndex],nextContext(i));
+      return cert&&verify(cert)?cert:null;
     }
-    function report() {
+    function report(){
       const legalRows=[...rows.values()].filter(r=>r.status!=='illegal');
-      return {kind:'vcf',depthLimit:depth,rootThreat:rootThreat?.move??null,
-        rootThreatLine:rootThreat?C.proofLine(rootThreat.proof):[],
+      const root=rootThreats[0];
+      return {kind:'vcf+vct',depthLimit:depth,rootThreat:root?.move??null,rootThreatKind:root?.kind??null,
+        rootThreatLine:root?C.proofLine(root.proof):[],rootThreats:rootThreats.map(p=>({kind:p.kind,move:p.move})),
         checked:legalRows.length,refuted:legalRows.filter(r=>r.status==='proven-loss').length,
-        defenses:rootThreat?defenses():[],enumerationComplete:enumerated,
+        defenses:root?defenses():[],enumerationComplete:enumerated,
         allRefuted:enumerated&&legalRows.length>0&&legalRows.every(r=>r.status==='proven-loss'),
         proofCount:proofs.length,proofReuses,probes,nodes,timedOut:probeTimedOut,
-        elapsedMs:Math.round(workMs),scope:'Verified losing continuations; unrefuted moves are not proven draws or wins.'};
+        kinds:JSON.parse(JSON.stringify(byKind)),elapsedMs:Math.round(workMs),
+        scope:'Verified VCF/VCT continuations only. An unrefuted defense is not a proven draw, win or safe move.'};
     }
-    return {inspect,refine,defenses,evidence,report,after,nextContext,get rootThreat(){return rootThreat;},get proofs(){return proofs;}};
+    return {inspect,refine,defenses,evidence,report,after,nextContext,
+      get rootThreat(){return rootThreats[0]||null;},get rootThreats(){return rootThreats;},get proofs(){return proofs;}};
   }
   function applyDefense(raw,screen,played) {
     const wanted=[...new Set([played,...screen.defenses()])].filter(point);
@@ -180,13 +224,14 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   function explainDefense(out,raw,screen,board,color,rule,ctx) {
     const them=color===1?'White':'Black',summary=screen.report(),root=screen.rootThreat;
     const rootShape=root?engineFactory(rule).classify(Int8Array.from(board),root.move,3-color):null;
-    const attackName=rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'forcing attack';
+    const attackName=root.kind==='vct'?'continuous-three attack':rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'continuous-four attack';
+    const knownCount=summary.rootThreats?.length||0;
     function decorate(target,i) {
       const row=screen.inspect(i);target.defenseStatus=row.status;
       if(row.status==='proven-loss'&&!['Winning move','Already lost','Draw by passes'].includes(target.label)) {
         const solved=screen.proofs[row.proofIndex],pv=C.proofLine(solved.proof),at=coord(i);
         const a=engineFactory(rule).classify(Int8Array.from(screen.after(i)),solved.move,3-color);
-        const name=a.fours?.length&&a.threes?.length?'four–three attack':'forcing attack';
+        const name=solved.kind==='vct'?'continuous-three attack':a.fours?.length&&a.threes?.length?'four–three attack':'continuous-four attack';
         // This proves the after-position loses, not that the loss was avoidable.
         if(target.basis!=='rules')target.label='Losing move';
         target.basis='verified-proof';target.loss=null;target.score=null;
@@ -196,7 +241,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         const counterfactual=target.explanation?.why?.match(/ By occupying [\s\S]*/)?.[0]||'';
         target.estimatedLabel=target.label;target.estimatedLoss=target.loss;
         target.label=i===out.best?'Best found':'Defensive move';target.basis='verified-defense';target.loss=null;
-        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${counterfactual} Other continuations remain unresolved; stopping this attack is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
+        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${knownCount>1?' Multiple known threats were screened.':''}${counterfactual} Other continuations remain unresolved; interrupting the checked line is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
         target.tactical={status:'neutralizes-known-threat',reply:root.move};
       }
     }
@@ -222,7 +267,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     const scopedFactory=r=>{const e=engineFactory(r);return {...e,legalMove:(b,i,c,n,opt={})=>e.legalMove(b,i,c,n,{...opt,allowOffCenterOpening:ctx.allowLegacyOffCenterOpening})};};
     const R=reviewFactory(scopedFactory,studioFactory),e=engineFactory(rule);
     const centerOnly=rule==='renju-practice'&&color===1&&!board.some(Boolean)&&!ctx.allowLegacyOffCenterOpening;
-    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:Math.min(420,budget*.28),depth:Math.min(preset.threatDepth,budget<700?7:19)});
+    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:Math.min(1200,budget*.34),depth:Math.min(preset.threatDepth,budget<700?7:19)});
     let raw;
     if(centerOnly) {
       raw={rule,color,move:112,pv:[112],candidates:[{i:112,score:0,bound:'rule-forced',pv:[112]}],depth:0,nodes:0,elapsedMs:0,
@@ -245,6 +290,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     const after=Array.from(board),a=legal(board,color,rule,played,ctx);if(point(played)&&a.legal)after[played]=color;
     out.refutation=screen.evidence(played);
     out.opponentThreat=screen.rootThreat?certificate(board,3-color,rule,screen.rootThreat,ctx):null;
+     out.opponentThreats=screen.rootThreats.map(t=>({kind:t.kind,move:t.move,verified:true}));
     out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';
     out.timeMs=Math.round(now()-started);out.budget=budget;
     out.search={backend:raw.backend||'rules',engine:raw.parameters.engine,completedDepth:raw.depth||0,selectiveDepth:raw.selDepth||raw.depth||0,
@@ -345,7 +391,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!card||card.version!==2)throw Error('Unsupported mistake card.');validate(card.board,card.color,card.rule);
     if(!point(card.played)||!legal(card.board,card.color,card.rule,card.played,card.context).legal)throw Error('Invalid saved decision.');
     if(card.id!==positionKey(card.board,card.color,card.rule,card.context)||JSON.stringify(card).length>240000)throw Error('Invalid or oversized mistake card.');
-    if(!trainable(card.reference?.analysisVersion==='2.0.0'?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
+    if(!trainable(['2.0.0','2.1.0'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
     const clean=clone(card);clean.context=context(card.context);clean.source={gameId:String(card.source?.gameId||'').slice(0,100),title:String(card.source?.title||'Reviewed game').slice(0,120),ply:Math.max(1,Math.min(450,Number(card.source?.ply)||1)),date:Math.max(0,Number(card.source?.date)||0)};
     const stats=card.stats||{};clean.stats={};for(const k of ['attempts','successes','lapses','assisted','streak','due','last']){const v=stats[k];if(v!==null&&v!==undefined&&(!Number.isSafeInteger(v)||v<0||v>8640000000000000))throw Error('Invalid practice statistics.');clean.stats[k]=v??0;}
     clean.events=Array.isArray(card.events)?card.events.slice(-40).filter(e=>e&&typeof e.id==='string'&&['correct','incorrect'].includes(e.status)&&Number.isFinite(e.at)):[];
