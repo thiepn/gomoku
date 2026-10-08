@@ -4,13 +4,16 @@ Gomoku 2.0 turns the mature V1.x systems into one coherent player journey.
 
 The V1.x stack already contains strong specialist systems: Learning Intelligence, Course 2.0, AI 2.0, post-game review, competitive play, online competition, opening study and Library & Archive 2.0. The remaining product-level problem is orchestration: users still need to know which subsystem to open next.
 
-V2.0 adds a first-class **Home** destination and one evidence-driven loop:
+R1 preserves a secondary **Player journal** reached through More and one evidence-driven loop:
 
 **Play → Review → Learn → Practice → Play again**
 
-## Home
+## R1 — Game-first route and accessible journal
 
-Home is now the default route and provides:
+**Play opens first**: the board is no longer hidden behind a dashboard.
+Primary navigation remains **Play · Improve · Library**. The journal is
+available through **More → Player journal**, with all evidence preserved.
+The journal provides:
 
 - one context-aware next action
 - current learning-evidence strength, without inventing a rating
@@ -53,12 +56,11 @@ No new persistence key or network dependency is introduced.
 
 ## Major-release boundary
 
-V2.0 changes the root information architecture from:
+R1 reverses the dashboard-first decision. The existing three main
+destinations remain first-class, and More contains the Player journal.
 
-**Play · Improve · Library · More**
-
-to:
-
-**Home · Play · Improve · Library · More**
-
-This is intentionally the first V2 release because it changes how the whole product is entered and understood rather than adding another specialist feature.
+Journal cards are reconciled by route identifier instead of destroyed on
+every refresh. Keyboard focus survives both event-driven and periodic
+updates; text only changes when evidence changes. Opening the journal moves
+focus to its labelled heading and announces the section in the live region.
+No new persistence key, server dependency or data migration is needed.
