@@ -23,15 +23,27 @@
      played.bound==='exact'&&best.bound==='exact'&&Number.isFinite(played.score)&&Number.isFinite(best.score)&&
      Number.isInteger(played.depth)&&played.depth===best.depth&&played.depth>=2);
  }
- function classification(result,position){
+ function matchesCertificate(cert,position,rule,attacker,after,verifyProof){
+   if(typeof verifyProof!=='function'||!cert||cert.format!=='GomokuStudioProof'||!Array.isArray(cert.position)||
+      !Array.isArray(position?.board)||position.board.length!==225||cert.position.length!==225||
+      cert.rule!==rule||cert.attacker!==attacker||!POINT(cert.proof?.move))return false;
+   const move=position.played,color=position.color;
+   for(let i=0;i<225;i++)if(cert.position[i]!==((after&&i===move)?color:position.board[i]))return false;
+   try{return verifyProof(cert)===true;}catch{return false;}
+ }
+ function classification(result,position,{verifyProof,rule='freestyle'}={}){
    if(!result)return {kind:'pending',bucket:'unresolved',importance:0,certainty:'not analyzed',label:'Not analyzed',
      note:'This move has not been analyzed.',needsReview:false,verified:false};
    const f=result.facts||{},hasAlternative=POINT(result.best)&&result.best!==result.played;
    const immediateMiss=Array.isArray(f.ownWins)&&f.ownWins.length>0&&!f.win;
    const instantLoss=!f.win&&Array.isArray(f.replies)&&f.replies.length>0&&!f.alreadyLost;
-   const postProof=result.refutation?.format==='GomokuStudioProof'&&result.refutation?.proof&&
-     result.refutation?.position?.[result.played]===position?.color&&result.basis==='verified-proof';
-   const priorLost=f.alreadyLost===true||result.defense?.allRefuted===true;
+   const postProof=result.basis==='verified-proof'&&matchesCertificate(result.refutation,position,rule,3-position.color,true,verifyProof);
+   const verifiedBest=hasAlternative&&matchesCertificate(result.bestProof,position,rule,position.color,false,verifyProof)&&
+     result.bestProof.proof.move===result.best;
+   const allRefuted=result.basis==='verified-proof'&&result.defense?.allRefuted===true&&
+     result.defense?.enumerationComplete===true&&result.defense?.proofCount>0&&
+     result.defense?.refuted===result.defense?.checked&&result.defense?.checked>0;
+   const priorLost=f.alreadyLost===true||allRefuted;
    if(f.win)return {kind:'won-immediately',bucket:'verified',importance:3,certainty:'rule fact',verified:true,
      label:'Immediate win',note:'This move legally completed five; the game ends.',needsReview:false};
    if(priorLost)return {kind:'already-lost',bucket:'verified',importance:1,certainty:'rule fact or exhaustive verified defense',verified:true,
@@ -42,7 +54,7 @@
      label:'Immediate winning reply',note:'The opponent has a legal one-move finish after this move. Whether every alternative also loses needs separate evidence.',needsReview:true};
    if(postProof)return {kind:'verified-opponent-win-after',bucket:'verified',importance:5,certainty:'verified forcing proof',verified:true,
      label:'Verified losing continuation',note:'A checked forcing win exists for the opponent after this move; avoidability has not been established.',needsReview:true};
-   if(result.bestProof?.format==='GomokuStudioProof'&&hasAlternative)
+   if(verifiedBest)
      return {kind:'verified-winning-alternative',bucket:'verified',importance:4,certainty:'verified forcing proof',verified:true,
        label:'Verified winning alternative',note:'A verified forcing win was available from this position. The recorded move has not thereby been proven to lose.',needsReview:true};
    if(result.basis==='verified-defense'||result.defense?.rootThreat&&result.defense?.defenses?.includes(result.played))
@@ -63,7 +75,7 @@
    return {kind:'unknown',bucket:'unresolved',importance:0,certainty:'not established',verified:false,
      label:'Unresolved',note:'No justified conclusion from the available evidence.',needsReview:false};
  }
- function contrast(result,position,core,rule){
+ function contrast(result,position,core,rule,{verifyProof}={}){
    if(!result||!position)return null;
    const hasPlayed=POINT(result.played),hasBest=POINT(result.best),different=hasPlayed&&hasBest&&result.played!==result.best;
    const played=playedCandidate(result),best=bestCandidate(result);
@@ -79,7 +91,7 @@
    const playedLine=safeLine(result.played,played),bestLine=different?safeLine(result.best,best):[];
    const cmp=sameRoot(result)&&different&&playedLine.length>0&&bestLine.length>0;
    const gap=cmp?Math.max(0,best.score-played.score):null;
-   const fact=classification(result,position);
+   const fact=classification(result,position,{verifyProof,rule});
    const verdict=fact.kind==='verified-opponent-win-after'?
      'The played position has a verified opponent win. The best found alternative has not been proven safe.':
      fact.kind==='missed-immediate-win'?'The recorded move passed up a legal immediate finish; subsequent loss is not proven.':
@@ -91,10 +103,10 @@
      playedLine,bestLine,comparable:cmp,scoreGap:gap,depth:cmp?played.depth:null,
      certainty:fact.certainty,bucket:fact.bucket,verdict,hasAlternative:different&&bestLine.length>0};
  }
- function summarize(positions,results,{mode='all',humanColor=1}={}){
+ function summarize(positions,results,{mode='all',humanColor=1,rule='freestyle',verifyProof}={}){
    if(!Array.isArray(positions)||!Array.isArray(results))return {total:0,analyzed:0,coverage:0,events:[],summary:{verified:0,provisional:0,unresolved:0,pending:0},reviewIndices:[],bySide:{}};
    const events=positions.map((p,k)=>{
-     const result=results[k]||null,cls=classification(result,p||{});
+     const result=results[k]||null,cls=classification(result,p||{},{verifyProof,rule});
      return {index:k,ply:p?.ply||k+1,color:p?.color||1,played:p?.played,
        coord:COORD(p?.played),label:cls.label,kind:cls.kind,bucket:cls.bucket,
        importance:cls.importance,certainty:cls.certainty,verified:cls.verified,
