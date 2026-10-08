@@ -225,6 +225,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     const them=color===1?'White':'Black',summary=screen.report(),root=screen.rootThreat;
     const rootShape=root?engineFactory(rule).classify(Int8Array.from(board),root.move,3-color):null;
     const attackName=root.kind==='vct'?'continuous-three attack':rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'continuous-four attack';
+    const knownCount=summary.rootThreats?.length||0;
     function decorate(target,i) {
       const row=screen.inspect(i);target.defenseStatus=row.status;
       if(row.status==='proven-loss'&&!['Winning move','Already lost','Draw by passes'].includes(target.label)) {
@@ -240,7 +241,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         const counterfactual=target.explanation?.why?.match(/ By occupying [\s\S]*/)?.[0]||'';
         target.estimatedLabel=target.label;target.estimatedLoss=target.loss;
         target.label=i===out.best?'Best found':'Defensive move';target.basis='verified-defense';target.loss=null;
-        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${counterfactual} Other continuations remain unresolved; stopping this attack is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
+        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${knownCount>1?' Multiple known threats were screened.':''}${counterfactual} Other continuations remain unresolved; interrupting the checked line is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
         target.tactical={status:'neutralizes-known-threat',reply:root.move};
       }
     }
@@ -289,7 +290,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     const after=Array.from(board),a=legal(board,color,rule,played,ctx);if(point(played)&&a.legal)after[played]=color;
     out.refutation=screen.evidence(played);
     out.opponentThreat=screen.rootThreat?certificate(board,3-color,rule,screen.rootThreat,ctx):null;
-     out.opponentThreats=screen.rootThreats.map(t=>({kind:t.kind,certificate:certificate(board,3-color,rule,t,ctx)}));
+     out.opponentThreats=screen.rootThreats.map(t=>({kind:t.kind,move:t.move,verified:true}));
     out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';
     out.timeMs=Math.round(now()-started);out.budget=budget;
     out.search={backend:raw.backend||'rules',engine:raw.parameters.engine,completedDepth:raw.depth||0,selectiveDepth:raw.selDepth||raw.depth||0,
