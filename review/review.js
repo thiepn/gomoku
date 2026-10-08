@@ -204,7 +204,7 @@ if(typeof window !== 'undefined') (()=>{
        <div id="a3LineDock" class="a3-variation-dock" aria-label="Read-only candidate preview"><span class="a3-dock-info"><strong id="a3LineTitle">Variation explorer</strong><small id="a3LineMeta">Select Preview beside a candidate</small></span><div class="a3-dock-actions"><button type="button" class="gr-btn" id="a3LinePrev" aria-label="Previous variation step">‹</button><button type="button" class="gr-btn" id="a3LineNext" aria-label="Next variation step">›</button><button type="button" class="gr-btn" id="a3LineReset">Reset</button></div></div>
        <div id="rwPlacement" class="rw-placement" hidden><span id="rwPlacementText"></span><button id="rwPlace" type="button" class="gr-btn gr-primary">Place stone</button><button id="rwCancelPlace" type="button" class="gr-btn">Cancel</button></div>
       <nav class="gr-navigation" aria-label="Move navigation"><button type="button" id="rwFirst" class="gr-btn rw-icon" aria-label="First game move">|‹</button><button type="button" class="gr-btn" id="grPrev" aria-label="Previous game move">‹ Previous</button><span id="grCounter"></span><button type="button" class="gr-btn" id="grNext" aria-label="Next game move">Next ›</button><button type="button" id="rwLast" class="gr-btn rw-icon" aria-label="Last game move">›|</button></nav>
-      <section class="gr-balance"><div class="gr-section-head"><h4>Game timeline</h4><span id="rwGraphValue">Black ↑ · White ↓</span></div><div id="grGraph"></div><input id="rwScrubber" type="range" min="1" max="1" value="1" step="1" aria-label="Select game move"><p>Engine balance, not win probability. Gaps mean unscored.</p></section>
+      <section class="gr-balance"><div class="gr-section-head"><h4>Game timeline</h4><span id="rwGraphValue">Black ↑ · White ↓</span></div><div id="grGraph"></div><input id="rwScrubber" type="range" min="1" max="1" value="1" step="1" aria-label="Select game move"><p>Only comparable searched values are drawn; gaps and evidence markers are not win probabilities.</p></section>
       <p class="gr-board-feedback" id="grBoardFeedback" hidden></p>
     </section>
     <section class="gr-inspector" aria-label="Move assessment">
@@ -395,11 +395,18 @@ if(typeof window !== 'undefined') (()=>{
   function renderGraph(){
     const s=session,n=s.positions.length,w=550,h=92;let paths=[],segment=[];
     const pts=s.results.map((r,k)=>{
-      if(!r||!Number.isFinite(r.score)){if(segment.length)paths.push(segment.join(' '));segment=[];return null;}
+      if(!r||r.search?.sameRootComparison!==true||!Number.isFinite(r.score)){if(segment.length)paths.push(segment.join(' '));segment=[];return null;}
       const value=Math.sign(r.score)*Math.log10(1+Math.abs(r.score))*(s.positions[k].color===1?1:-1);
       const p={x:10+(n===1?.5:k/(n-1))*(w-20),y:46-Math.max(-1,Math.min(1,value/8))*34,k};segment.push(`${segment.length?'L':'M'}${p.x},${p.y}`);return p;
     });if(segment.length)paths.push(segment.join(' '));
-    $('grGraph').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Engine evaluation by move; use the move list below to navigate"><path d="M0 46H550" class="gr-zero"/>${paths.map(d=>`<path d="${d}" class="gr-eval-line"/>`).join('')}${pts.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="${p.k===(s.panel==='overview'?n-1:s.index)?5:3}" class="gr-eval-dot" data-review-ply="${p.k}"><title>Move ${p.k+1}: ${esc(s.results[p.k].label)}</title></circle>`).join('')}</svg>`;
+    const D=window.GomokuGameDiagnosis4;
+    const diagnosis=D?.summarize(s.positions,s.results,{rule:s.game.variant,verifyProof:verifyA4Certificate,humanColor:s.game.humanColor});
+    const flags=(diagnosis?.events||[]).filter(e=>e.bucket==='verified'||e.bucket==='unresolved'||e.bucket==='pending').map(ev=>{
+      const x=10+(n===1?.5:ev.index/(n-1))*(w-20),kind=ev.bucket==='verified'?'verified':'unknown';
+      return `<circle cx="${x}" cy="82" r="${ev.index===s.index?4:2.6}" class="a4-evidence-dot" data-a4-kind="${kind}" data-review-ply="${ev.index}"><title>Move ${ev.ply}: ${esc(ev.label)} · ${esc(ev.certainty)}</title></circle>`;
+    }).join('');
+    $('rwGraphValue').textContent='Comparable estimates · evidence marks below';
+    $('grGraph').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Comparable engine estimates with verified and unresolved evidence markers; missing values are not interpolated"><path d="M0 46H550" class="gr-zero"/>${paths.map(d=>`<path d="${d}" class="gr-eval-line"/>`).join('')}${pts.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="${p.k===(s.panel==='overview'?n-1:s.index)?5:3}" class="gr-eval-dot" data-review-ply="${p.k}"><title>Move ${p.k+1}: ${esc(s.results[p.k].label)} · comparable estimate only</title></circle>`).join('')}${flags}</svg>`;
   }
   function renderBranch(){
     const s=session,b=s.branch,state=chosenState();
@@ -651,9 +658,10 @@ if(typeof window !== 'undefined') (()=>{
     const game=D.summarize(s.positions,s.results,{mode:s.a4.side==='mine'?'mine':'all',humanColor:s.game.humanColor,rule:s.game.variant,verifyProof:verifyA4Certificate});
     const rows=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:s.a4.limit});
     const all=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:500});
-    const verified=game.events.filter(e=>e.bucket==='verified'&&e.needsReview).length;
-    const estimates=game.events.filter(e=>e.kind==='provisional-mistake').length;
-    const unknown=game.events.filter(e=>e.bucket==='unresolved').length+game.summary.pending;
+    const scoped=D.filterEvents(game,{side:s.a4.side,category:'all',humanColor:s.game.humanColor,limit:500});
+    const verified=scoped.filter(e=>e.bucket==='verified'&&e.needsReview).length;
+    const estimates=scoped.filter(e=>e.kind==='provisional-mistake').length;
+    const unknown=scoped.filter(e=>e.bucket==='unresolved'||e.bucket==='pending').length;
     $('a4Coverage').textContent=`${game.analyzed} of ${game.total} moves reviewed · ${game.total?Math.round(game.coverage*100):0}% scan coverage`;
     const metrics=[
       ['Confirmed tactical issues',verified,'Rule fact / verified continuation'],
@@ -662,6 +670,7 @@ if(typeof window !== 'undefined') (()=>{
     ];
     const metricsHTML=metrics.map(([title,n,meaning])=>`<div class="a4-metric"><span>${esc(title)}</span><b>${n}</b><small>${esc(meaning)}</small></div>`).join('');
     if($('a4Metrics').innerHTML!==metricsHTML)$('a4Metrics').innerHTML=metricsHTML;
+    $('a4Side').querySelector('[value=mine]').disabled=s.game.mode!=='ai';
     $('a4Side').value=s.a4.side;$('a4Category').value=s.a4.category;
     $('a4Scope').textContent='This report separates confirmed rule/tactical events from provisional engine judgments. Counts are evidence categories, not game accuracy or winning percentages. Events may update after deeper search.';
     const html=rows.length?rows.map(ev=>{
