@@ -86,6 +86,8 @@ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-footer{background:#1
 html body #grDialog.gr-workspace .a3-board-status{display:none}
 html body #grDialog.gr-workspace[data-panel="analysis"] .a3-board-status{display:block;font-size:10px;line-height:1.5;color:#a0bbb5;margin:1px 0}
 html body #grDialog.gr-workspace .a3-board-status:empty{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"]:not([data-review-mode="game"]) .a3-commandbar,
+html body #grDialog.gr-workspace[data-panel="analysis"]:not([data-review-mode="game"]) .a3-variation-dock{display:none!important}
 html body #grDialog.gr-workspace[data-panel="analysis"] :is(.a3-mode-group button,.a3-candidate-tools button):focus-visible{outline:2px solid #c7f4c7;outline-offset:2px}
 @media(max-width:1100px) and (min-width:721px){
  html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:minmax(0,1fr) minmax(330px,.9fr)}
