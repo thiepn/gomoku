@@ -1,0 +1,136 @@
+name: Analysis 3.0 A6 runtime and offline qualification
+
+on:
+  push:
+    branches:
+      - phase/a6-runtime-offline-performance
+    paths:
+      - 'analysis3/**'
+      - 'review/**'
+      - 'analysis/**'
+      - 'client-cache-version.txt'
+      - '.github/workflows/verify-analysis3-a6.yml'
+      - 'index.html'
+      - 'sw.js'
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate modular source syntax
+        run: |
+          node --check review/review.js
+          node --check analysis3/workspace-core.js
+          node --check analysis3/game-diagnosis.js
+          node --check analysis3/practice-core.js
+          node --check analysis3/runtime-policy.js
+          node --check analysis/runtime.js
+          node --check sw.js
+          node --check analysis/training.js
+          node --check analysis3/test-a3.cjs
+          node --check analysis3/test-a4.cjs
+          node --check analysis3/test-a5.cjs
+          node --check analysis3/test-a6.cjs
+          node --check analysis3/test-a6-sw.cjs
+          python -m py_compile review/build.py analysis/build.py analysis3/test-a3-browser.py analysis3/test-a4-browser.py analysis3/test-a5-browser.py analysis3/test-a6-browser.py review/ux/test-integrity.py
+      - name: Rebuild portable review and verify source boundaries
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          python review/ux/test-integrity.py
+          python analysis/test-integrity.py
+          python ui/test-integrity.py
+      - name: Run tactical and visual-model regressions
+        run: |
+          node analysis3/test-evidence.cjs
+          node analysis3/test-a1.cjs
+          node analysis3/test-a2.cjs
+          node analysis3/test-a3.cjs
+          node analysis3/test-a4.cjs
+          node analysis3/test-a5.cjs
+          node analysis3/test-a6.cjs
+          node analysis3/test-a6-sw.cjs
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+          node analysis/test-forcing-defense.cjs
+          node analysis/test-proof-coverage.cjs
+      - name: Check repeatable offline embedding and guarded changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,subprocess
+          files=[Path('index.html'),Path('sw.js')]
+          hashes={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+          for task in ('review/build.py','ui/build.py','analysis/build.py'):
+              subprocess.run(['python',task],check=True)
+          expected={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+          assert hashes==expected,(hashes,expected)
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert changed<={'index.html','sw.js'},changed
+          print('PASS guarded deterministic portable generation')
+          PY
+      - name: Install browser acceptance environment
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Check real browser interactions, screenshots, and regression flows
+        env:
+          CHROMIUM_PATH: playwright
+          A3_URL: http://127.0.0.1:8765/
+          A4_URL: http://127.0.0.1:8765/
+          A5_URL: http://127.0.0.1:8765/
+          A6_URL: http://127.0.0.1:8765/
+          WORKSPACE_URL: http://127.0.0.1:8765/
+          REVIEW_URL: http://127.0.0.1:8765/
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/a3-http.log 2>&1 &
+          python analysis3/test-a3-browser.py
+          python analysis3/test-a4-browser.py
+          python analysis3/test-a5-browser.py
+          python analysis3/test-a6-browser.py
+          python analysis/test-browser.py
+          python review/ux/test-workspace.py
+          python review/test-browser.py
+          python review/test-recovery.py
+      - name: Publish QA evidence for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis3-a6-browser-and-portable-evidence
+          path: |
+            analysis3-test-output/
+            analysis4-test-output/
+            analysis5-test-output/
+            analysis6-test-output/
+            workspace-test-output/
+            review-test-output/
+            analysis-test-output/
+            index.html
+            sw.js
+          retention-days: 14
+      - name: Commit tested portable build only after every check passes
+        if: success()
+        run: |
+          if ! git diff --quiet -- index.html sw.js; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- index.html sw.js
+            git commit -m 'A6: synchronize fully qualified retained-worker offline portable build'
+            git push origin HEAD:phase/a6-runtime-offline-performance
+          fi
