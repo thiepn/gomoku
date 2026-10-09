@@ -1,0 +1,98 @@
+{
+  "format": "GomokuAnalysis3PhysicalQualificationWorksheet",
+  "version": 7,
+  "sourceSha": null,
+  "indexSha256": null,
+  "serviceWorkerSha256": null,
+  "manifestSha256": null,
+  "candidatePreviewUrl": null,
+  "issuedAt": null,
+  "physicalEvidence": {
+    "android-chrome": {
+      "status": "pending_manual",
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testCases": [
+        {
+          "name": "fresh launch and legal game",
+          "result": "not_tested"
+        },
+        {
+          "name": "Renju and proof review",
+          "result": "not_tested"
+        },
+        {
+          "name": "mistake training and recovery",
+          "result": "not_tested"
+        },
+        {
+          "name": "background/resume",
+          "result": "not_tested"
+        },
+        {
+          "name": "offline then reconnect",
+          "result": "not_tested"
+        }
+      ],
+      "testedAt": null,
+      "attachments": [],
+      "testerAttestation": null
+    },
+    "samsung-internet": {
+      "status": "pending_manual",
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testCases": [
+        {
+          "name": "review and training",
+          "result": "not_tested"
+        },
+        {
+          "name": "touch/keyboard correctness",
+          "result": "not_tested"
+        },
+        {
+          "name": "offline/reconnect",
+          "result": "not_tested"
+        }
+      ],
+      "testedAt": null,
+      "attachments": [],
+      "testerAttestation": null
+    },
+    "installed-android-pwa": {
+      "status": "pending_manual",
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testCases": [
+        {
+          "name": "install from candidate",
+          "result": "not_tested"
+        },
+        {
+          "name": "standalone offline launch",
+          "result": "not_tested"
+        },
+        {
+          "name": "preserved games and study history after process restart",
+          "result": "not_tested"
+        },
+        {
+          "name": "safe service worker update",
+          "result": "not_tested"
+        }
+      ],
+      "testedAt": null,
+      "attachments": [],
+      "testerAttestation": null
+    }
+  },
+  "ownerApproval": {
+    "status": "not_requested",
+    "approvedBy": null,
+    "approvedAt": null
+  }
+}
