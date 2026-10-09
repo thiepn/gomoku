@@ -132,6 +132,8 @@ function audit({candidate,cutover,liveProbe,telemetry,devices,incidents,handoff}
   return result('blocked-production-integrity','Real production HTTPS eight-asset byte receipt missing, altered, redirected or from a different deployment.');
  const t=telemetryCheck(telemetry,cutover);
  if(!t.ok)return result('blocked-stability','24–72h P20 stability monitoring incomplete: '+t.reason);
+ if(!after(liveProbe.observedAt,t.end)||ts(liveProbe.observedAt)-ts(t.end)>6*3_600_000)
+  return result('blocked-production-integrity','Final eight-asset HTTPS integrity probe must occur within six hours after full P20 stability window.');
  const physical=verifyDevices(devices,cutover,candidate);
  if(physical)return result('blocked-physical',physical,{hoursObserved:t.hours});
  if(!incidents||incidents.format!=='GomokuAnalysis3A13IncidentReview'||
@@ -147,7 +149,9 @@ function audit({candidate,cutover,liveProbe,telemetry,devices,incidents,handoff}
     incidents.entries.some(x=>!x||!['sev1','sev2','sev3','sev4'].includes(x.severity)||
      x.status!=='resolved'||!after(x.resolvedAt,cutover.deployedAt)))
   return result('blocked-incident-review','Independently reviewed P20 alerts, incident history and recoverability are missing or non-green.');
- if(!handoff||handoff.format!=='GomokuAnalysis3A13OperationalHandoff'||
+ if(!handoff||!after(handoff.acceptedAt,liveProbe.observedAt)||
+   devices.devices.some(row=>!after(handoff.acceptedAt,row.observedAt))||
+   handoff.format!=='GomokuAnalysis3A13OperationalHandoff'||
    handoff.deploymentId!==cutover.deploymentId||
    handoff.status!=='accepted-by-owner-for-independent-review'||
    !after(handoff.acceptedAt,incidents.reviewedAt)||
