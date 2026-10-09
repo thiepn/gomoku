@@ -15,7 +15,12 @@
   'keyboard-accessibility','offline-browser-reload','deterministic-build',
   'security-scope','rollback-dry-run'
  ]);
- const PHYSICAL=Object.freeze(['android-chrome','samsung-internet','installed-android-pwa']);
+ const DEVICE_CHECKS=Object.freeze({
+   'android-chrome':Object.freeze(['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility']),
+   'samsung-internet':Object.freeze(['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume']),
+   'installed-android-pwa':Object.freeze(['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update'])
+ });
+ const PHYSICAL=Object.freeze(Object.keys(DEVICE_CHECKS));
  const HASH=/^[0-9a-f]{64}$/,SHA=/^[0-9a-f]{40}$/;
  const SEP='/';
  function evidenceState(row,{sha,artifactHash}={}){
@@ -43,7 +48,17 @@
    for(const id of PHYSICAL){
      const row=manifest?.physicalEvidence?.[id];
      let state=evidenceState(row,{sha,artifactHash});
-     if(state==='passed'&&(!row.device||!row.osVersion||!row.browserVersion||!row.testCases?.length||!row.signature))state='insufficient-device-evidence';
+     if(state==='passed'){
+       const checks=Array.isArray(row.testCases)?row.testCases:[];
+       const complete=DEVICE_CHECKS[id].every(name=>checks.some(c=>
+         c?.id===name&&c?.status==='passed'&&typeof c.observation==='string'&&c.observation.trim().length>=6));
+       const attributable=typeof row.device==='string'&&row.device.trim()&&typeof row.osVersion==='string'&&row.osVersion.trim()&&
+         typeof row.browserVersion==='string'&&row.browserVersion.trim()&&
+         typeof row.testedUrl==='string'&&/^https:\/\//.test(row.testedUrl)&&
+         typeof row.tester==='string'&&row.tester.trim()&&
+         typeof row.signature==='string'&&row.signature.trim()&&checks.length<=50;
+       if(!complete||!attributable)state='insufficient-device-evidence';
+     }
      physical[id]=state;
    }
    const automationReady=valid&&manifest?.targetBranch==='phase/a7-release-qualification'&&
@@ -69,5 +84,5 @@
    return {action:'rollback-to-verified',expectedBuildHash:previousBuild,
      reason:'Restore only the previously verified immutable assets; do not overwrite personal game or training databases.'};
  }
- return Object.freeze({VERSION:'3.0.0-a7',TESTS,PHYSICAL,qualify,evidenceState,fallbackDecision});
+ return Object.freeze({VERSION:'3.0.0-a7',TESTS,PHYSICAL,DEVICE_CHECKS,qualify,evidenceState,fallbackDecision});
 });
