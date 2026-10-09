@@ -55,6 +55,7 @@ jobs:
           python -m http.server 8765 --bind 127.0.0.1 >/tmp/a8-http.log 2>&1 &
           python analysis3/test-a5-browser.py
           python analysis3/test-a8-browser.py
+          python analysis3/test-a7-browser.py
       - name: Upload reproducible debug evidence
         if: always()
         uses: actions/upload-artifact@v4
