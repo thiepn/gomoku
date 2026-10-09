@@ -37,7 +37,7 @@ if(typeof window!=='undefined') (()=>{
    const index=S.queue.findIndex(c=>c.id===old);
    if(index>=0){S.index=index;S.card=S.queue[index];render();}
    else if(S.queue.length)selectIndex(0);
-   else{epoch++;window.GomokuAnalysisRuntime?.cancel();S.index=-1;S.card=null;S.reference=null;S.attempt=null;S.busy=false;render();}
+   else{epoch++;window.GomokuAnalysisRuntime?.cancel();S.index=-1;S.card=null;S.reference=null;S.referenceEligible=false;S.attempt=null;S.busy=false;render();}
  }
  async function refresh(){
    if(!S)return;const current=S,items=await GomokuMistakes.list();if(S!==current)return;S.items=items.sort((a,b)=>(a.stats.due||0)-(b.stats.due||0)||b.updated-a.updated);
@@ -84,22 +84,33 @@ if(typeof window!=='undefined') (()=>{
  }
  async function selectIndex(index){
    if(!S||index<0||index>=S.queue.length)return;
-   epoch++;GomokuAnalysisRuntime.cancel();S.index=index;S.card=S.queue[index];S.attempt=null;S.preview=null;S.hints=0;S.assisted=false;S.reference=null;S.busy=false;
+   epoch++;GomokuAnalysisRuntime.cancel();S.index=index;S.card=S.queue[index];S.attempt=null;S.preview=null;S.hints=0;S.assisted=false;S.reference=null;S.referenceEligible=false;S.busy=false;
    render();note('Checking the saved position with the current analysis engine…');await checkReference(1000);
  }
  async function checkReference(budget){
    if(!S?.card)return;const s=S,c=s.card,id=++epoch;s.busy=true;render();
-   try{const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,c.played,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;s.reference=r;note(A.trainable(r)?'Position checked. Choose your move; the answer is still hidden.':'Reanalysis no longer confirms the saved mistake. This position is for exploration; deepen the reference search or remove it. Recall history will not change.');}
+   try{const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,c.played,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;
+     s.reference=r;
+     const D=window.GomokuGameDiagnosis4;
+     const q=P()?.qualification(r,{board:c.board,color:c.color,played:c.played,context:c.context,ply:c.source?.ply},c.rule,
+       D?(result,pos)=>D.classification(result,pos,{verifyProof:cert=>A.verify(cert),rule:c.rule}):undefined);
+     s.referenceEligible=A.trainable(r)&&q?.eligible===true;
+     note(s.referenceEligible?'Fresh evidence supports this exercise. Choose a legal move; the target is hidden.':
+       'The saved claim is not currently confirmed or comparable. Explore or recheck deeper; recall history will not change.');}
    catch(e){if(S===s&&epoch===id&&e.name!=='AbortError')note('Analysis unavailable: '+e.message+' Use Recheck deeper to retry.');}
    finally{if(S===s&&epoch===id){s.busy=false;render();}}
  }
  async function attempt(i,budget=1000){
-   if(!S?.card||S.busy)return;const s=S,c=s.card;if(!s.reference){note('Recheck this saved position before scoring an attempt.');return;}
+   if(!S?.card||S.busy)return;const s=S,c=s.card;if(!s.reference||!s.referenceEligible){note('Fresh analysis has not confirmed a trainable target. Recheck deeper before scoring a recall.');return;}
    const legal=A.legal(c.board,c.color,c.rule,i,c.context);if(!legal.legal){note('Illegal move: '+legal.reason);return;}
    const id=++epoch;s.busy=true;s.preview=null;s.attempt={i,result:null,verdict:null};render();note(`Checking ${coord(i)} and the strongest alternatives…`);
    try{
      const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,i,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;
-     const verdict=A.attemptVerdict(r,s.reference,s.assisted);s.attempt={i,result:r,verdict};
+     const solvedWin=!!(s.reference.facts?.ownWins?.length)||
+       (s.reference.bestProof?.format==='GomokuStudioProof'&&A.verify(s.reference.bestProof));
+     const verdict=P()?P().answerPolicy(r,s.reference,{assisted:s.assisted,verifiedTarget:solvedWin,
+       verifyProof:cert=>A.verify(cert)}):A.attemptVerdict(r,s.reference,s.assisted);
+     s.attempt={i,result:r,verdict};
      await GomokuMistakes.record(c.id,verdict,`${s.runId}:${c.id}`);if(S!==s||epoch!==id)return;
      await refresh();note(verdict.message+(verdict.status!=='unresolved'?' Recall history saved.':''));
    }catch(e){if(S===s&&epoch===id&&e.name!=='AbortError')note('The attempt was not recorded: '+e.message);}
@@ -122,7 +133,7 @@ if(typeof window!=='undefined') (()=>{
      opener=document.activeElement;
      if($('grDialog')?.open){GomokuReview.pause();restore=null;}
      else{const p=api.prepareGuidedReview?.();restore=p?()=>api.finishGuidedReview?.(!p.wasReviewing):null;}
-     ensure();S={items:[],queue:[],ids:options.ids||null,index:-1,card:null,reference:null,attempt:null,busy:false,hints:0,assisted:false,preview:null,filter:options.ids?.length?'game':'all',focus:options.focus||'all',plan:null,runId:token()};
+     ensure();S={items:[],queue:[],ids:options.ids||null,index:-1,card:null,reference:null,referenceEligible:false,attempt:null,busy:false,hints:0,assisted:false,preview:null,filter:options.ids?.length?'game':'all',focus:options.focus||'all',plan:null,runId:token()};
      dialog.showModal();$('a2TrainingFilter').value=S.filter;await refresh();if(!S||!dialog.open)return;note('Choose a saved position. Due dates are suggestions, never locks.');$('a2TrainingClose').focus();
      if(S.queue.length)await selectIndex(0);
    }catch(e){restore?.();restore=null;console.error('Mistake training:',e);if(dialog?.open)note('Could not open practice: '+e.message);else{const p=document.createElement('p');p.setAttribute('role','alert');p.textContent='Finish the current move before opening mistake training: '+e.message;document.body.append(p);setTimeout(()=>p.remove(),7000);}}
