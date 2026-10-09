@@ -19,6 +19,16 @@ for name,file,anchor in [('analysis2-core','core.js','<script id="guided-review-
     else:
         if s.count(anchor)!=1:raise SystemExit('Missing unique anchor '+anchor)
         s=s.replace(anchor,block+'\n'+anchor,1)
+# A6 runtime policy loads before the transactional background worker.
+policy=(ROOT/'analysis3/runtime-policy.js').read_text()
+if '</script' in policy.lower():raise SystemExit('Unexpected A6 policy script close')
+policy_block='<script id="analysis6-runtime-policy">\n'+policy+'\\n</script>'
+if '<script id="analysis6-runtime-policy">' in s:
+    s=re.sub(r'<script id="analysis6-runtime-policy">.*?</script>',lambda _:policy_block,s,count=1,flags=re.S)
+else:
+    needle='<script id="analysis2-runtime">'
+    if s.count(needle)!=1:raise SystemExit('Missing unique analysis runtime anchor')
+    s=s.replace(needle,policy_block+'\n'+needle,1)
 # Embed the independent A5 planner before the saved-mistake training runtime.
 planner=(ROOT/'analysis3/practice-core.js').read_text()
 if '</script' in planner.lower():raise SystemExit('A5 planner contains script terminator')
