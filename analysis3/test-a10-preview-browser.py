@@ -17,9 +17,19 @@ def check(name,truth):
     checks.append(name);print("PASS "+name,flush=True)
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
-server=ThreadingHTTPServer(("127.0.0.1",0),partial(Quiet,directory=str(SITE)))
-thread=Thread(target=server.serve_forever,daemon=True);thread.start()
-url=f"http://127.0.0.1:{server.server_port}/"
+remote=os.environ.get("A10_PREVIEW_URL")
+server=None
+if remote:
+    from urllib.parse import urlsplit
+    parts=urlsplit(remote)
+    if (parts.scheme!="https" or not parts.hostname or not parts.hostname.endswith(".vercel.app")
+        or parts.path!="/" or parts.query or parts.fragment or parts.username or parts.password):
+        raise ValueError("Remote A10 browser test needs a dedicated HTTPS .vercel.app root URL")
+    url=remote
+else:
+    server=ThreadingHTTPServer(("127.0.0.1",0),partial(Quiet,directory=str(SITE)))
+    thread=Thread(target=server.serve_forever,daemon=True);thread.start()
+    url=f"http://127.0.0.1:{server.server_port}/"
 try:
     with sync_playwright() as pw:
         browser=pw.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -74,7 +84,8 @@ try:
             ctx.close()
         browser.close()
 finally:
-    server.shutdown();server.server_close()
+    if server:server.shutdown();server.server_close()
 (OUT/"a10-browser.json").write_text(json.dumps({"status":"passed","count":len(checks),"checks":checks,
- "notes":"Real Chromium over localhost; synthetic touch/mobile only, not physical device or hosted HTTPS preview."},indent=2)+"\n")
+ "notes":("Real Chromium on hosted HTTPS preview; still synthetic touch/mobile, not physical Android." if remote else
+          "Real Chromium over localhost; synthetic touch/mobile only, not physical device or hosted HTTPS preview.")},indent=2)+"\n")
 print(f"{len(checks)} A10 packaged PWA/device-emulation checks passed")
