@@ -1,15 +1,22 @@
 /* Explicitly scoped read-only production asset observer. NEVER executes without human operator opt-in. */
 'use strict';
 const crypto=require('node:crypto');
+const net=require('node:net');
 const fs=require('node:fs');
 const A9=require('./rc9-core.cjs');
 const A12=require('./a12-cutover-preflight.cjs');
 const LOCK=require('./a10-source-lock.json');
 const SHA=/^[a-f0-9]{64}$/i;
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+function allowedPublicOrigin(origin){
+ if(!A12.origin(origin))return false;
+ const host=new URL(origin).hostname.toLowerCase();
+ return net.isIP(host)===0&&!host.includes(':')&&!host.startsWith('[')&&
+   !['.local','.internal','.localhost','.test','.example','.invalid'].some(s=>host.endsWith(s));
+}
 async function probe({origin,candidate,deploymentId,approved=false,fetchFn=fetch,clock=()=>new Date()}={}){
  if(approved!==true)throw Error('A13 read-only production probing requires explicit operator authorization.');
- if(!A12.origin(origin))throw Error('Production origin must be an explicitly scoped clean HTTPS domain, never localhost or a preview.');
+ if(!allowedPublicOrigin(origin))throw Error('Production origin must be an explicitly scoped clean HTTPS domain, never localhost or a preview.');
  if(typeof deploymentId!=='string'||!deploymentId.trim())
    throw Error('Exact production deployment identity required.');
  if(!candidate||candidate.sourceSha!==LOCK.sourceSha||
@@ -50,4 +57,4 @@ if(require.main===module){
   console.log(JSON.stringify(result,null,2));
  })().catch(e=>{console.error(String(e));process.exitCode=2});
 }
-module.exports={probe,hash};
+module.exports={probe,hash,allowedPublicOrigin};
