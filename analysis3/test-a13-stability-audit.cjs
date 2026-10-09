@@ -28,9 +28,10 @@ function fixture(){
   originalResponseDigest:h,
   verifiedAssets:A9.ASSETS.map(path=>({path,sha256:assets[path],bytes:123}))};
  const samples=Array.from({length:24},(_,i)=>({start:iso(begin+i*hour),
-  requests:1000,failed:0,persistenceChecks:100,persistenceMisses:0,
-  recoveryChecks:100,recoveryMisses:0,cleanMinutes:60,criticalAlerts:0}));
+  sampledMinutes:60,serviceGoodMinutes:60,persistenceGoodMinutes:60,
+  recoveryGoodMinutes:60,runtimeCleanMinutes:60,criticalAlerts:0}));
  const telemetry={format:'GomokuAnalysis3A13P20Telemetry',source:'p20-production',
+  aggregatedFrom:'gomoku-p20-slo-sample',
   origin:orig,deploymentId:dep,evidenceDigest:h,collector:'SYNTHETIC AGGREGATE',
   windowStart:iso(begin),windowEnd:iso(begin+24*hour),
   collectedAt:'2026-10-02T02:00:00Z',samples};
@@ -84,12 +85,13 @@ test('over 72 hour horizon not permitted',x=>x.telemetry.samples=Array.from({len
 test('gap in hourly P20 telemetry is blocked',x=>x.telemetry.samples[4].start=iso(begin+5*hour),'blocked-stability');
 test('duplicate hourly P20 sample is blocked',x=>x.telemetry.samples[1].start=x.telemetry.samples[0].start,'blocked-stability');
 test('telemetry starts outside deployment admission window',x=>x.telemetry.samples[0].start='2026-10-03T01:00:00.000Z','blocked-stability');
-test('impossible metric counters are rejected',x=>x.telemetry.samples[5].failed=1001,'blocked-stability');
-test('unobserved service cannot be certified',x=>x.telemetry.samples.forEach(y=>{y.requests=0;y.persistenceChecks=0;y.recoveryChecks=0}),'blocked-stability');
-test('99.9 percent service availability enforced',x=>x.telemetry.samples[0].failed=100,'blocked-stability');
-test('99.9 percent persistence enforced',x=>x.telemetry.samples[0].persistenceMisses=50,'blocked-stability');
-test('99.9 percent recovery freshness enforced',x=>x.telemetry.samples[0].recoveryMisses=50,'blocked-stability');
-test('99 percent runtime clean minutes enforced',x=>x.telemetry.samples[0].cleanMinutes=30,'blocked-stability');
+test('impossible metric counters are rejected',x=>x.telemetry.samples[5].serviceGoodMinutes=61,'blocked-stability');
+test('missing P20 minute samples cannot be certified',x=>x.telemetry.samples[1].sampledMinutes=0,'blocked-stability');
+test('99.9 percent service availability enforced',x=>x.telemetry.samples[0].serviceGoodMinutes=0,'blocked-stability');
+test('99.9 percent persistence enforced',x=>x.telemetry.samples[0].persistenceGoodMinutes=0,'blocked-stability');
+test('99.9 percent recovery freshness enforced',x=>x.telemetry.samples[0].recoveryGoodMinutes=0,'blocked-stability');
+test('99 percent runtime clean minutes enforced',x=>x.telemetry.samples[0].runtimeCleanMinutes=30,'blocked-stability');
+test('missing actual P20 sampler provenance is blocked',x=>x.telemetry.aggregatedFrom='untrusted-requests','blocked-stability');
 test('critical P20 alerts prevent stability review',x=>x.telemetry.samples[0].criticalAlerts=1,'blocked-stability');
 test('collection must follow completed 24-hour window',x=>x.telemetry.collectedAt='2026-10-01T12:00:00Z','blocked-stability');
 test('missing physical installed PWA blocks',x=>x.devices.devices.pop(),'blocked-physical');
