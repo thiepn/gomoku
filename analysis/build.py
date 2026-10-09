@@ -39,6 +39,16 @@ if '<script id="analysis5-practice-core">' in s:
     s=re.sub(r'<script id="analysis5-practice-core">.*?</script>',lambda _:a5_block,s,count=1,flags=re.S)
 else:
     s=s.replace(anchor,a5_block+'\n'+anchor,1)
+# A8 non-mutating position-health and backup preflight; embed before trainer.
+integrity=(ROOT/'analysis3/practice-integrity.js').read_text()
+if '</script' in integrity.lower():raise SystemExit('A8 integrity module contains script terminator')
+integrity_block='<script id="analysis8-practice-integrity">\n'+integrity+'\n</script>'
+if '<script id="analysis8-practice-integrity">' in s:
+    s=re.sub(r'<script id="analysis8-practice-integrity">.*?</script>',lambda _:integrity_block,s,count=1,flags=re.S)
+else:
+    a8_anchor='<script id="analysis2-training">'
+    if s.count(a8_anchor)!=1:raise SystemExit('Missing unique A8 training anchor')
+    s=s.replace(a8_anchor,integrity_block+'\n'+a8_anchor,1)
 planner_css=(ROOT/'analysis3/practice.css').read_text()
 a5_css='<style id="analysis5-practice-style">\n'+planner_css+'\n</style>'
 if '<style id="analysis5-practice-style">' in s:
