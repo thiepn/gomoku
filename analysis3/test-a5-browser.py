@@ -31,7 +31,21 @@ with sync_playwright() as pw:
     original=pg.evaluate('GomokuStudio.exportGame().moves')
     check('full-game review shows evidence-gated personalized plan',pg.locator('#a5GamePlan').is_visible() and pg.locator('#a5GamePlanTitle').count()==1)
     pg.wait_for_function('GomokuReview.state()?.results.every(Boolean)',timeout=65000)
+    # The quick-scan fixture may contain zero evidence-qualified mistakes.
+    # Refine its known move-7 forced-defense decision before expecting a card.
+    pg.evaluate('GomokuReview.select(7)')
+    pg.evaluate('GomokuReview.deeper()')
+    pg.wait_for_function('GomokuReview.state() && !GomokuReview.state().interacting',timeout=55000)
     pg.evaluate('GomokuReview.saveMistakes()')
+    diagnostic=pg.evaluate("""()=>{
+      const s=GomokuReview.state(),p=s.positions[6],r=s.results[6],A=createAnalysis2(createEngine,createStudioCore,createGuidedReviewCore);
+      const D=GomokuGameDiagnosis4,P=GomokuPractice5;
+      return {label:r?.label,basis:r?.basis,analysisVersion:r?.analysisVersion,
+        qualification:P.qualification(r,p,s.game.variant,(res,pos)=>D.classification(res,pos,{rule:s.game.variant,verifyProof:c=>A.verify(c)})),
+        oldTrainable:A.trainable(r),refutation:!!r?.refutation,
+        plan:P.gamePlan(s.positions,s.results,s.game,{analysis:A,
+          diagnose:(res,pos)=>D.classification(res,pos,{rule:s.game.variant,verifyProof:c=>A.verify(c)})}).eligible};}""")
+    print('A5 evidence-gated fixture:',json.dumps(diagnostic),flush=True)
     pg.wait_for_function('GomokuMistakes.list().then(x=>x.length)>0',timeout=20000)
     cards=pg.evaluate('GomokuMistakes.list()')
     check('review supplies real, schema-v2 mistake positions',len(cards)>=1 and all(c['version']==2 for c in cards))
@@ -62,6 +76,9 @@ with sync_playwright() as pw:
     pg.close();ctx.close()
     ctx=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     mobile=load(ctx)
+    # Independent browser contexts intentionally have isolated IndexedDB.
+    # Explicitly import the exact validated schema-v2 exercise (not another user's data).
+    mobile.evaluate('(cards)=>GomokuMistakes.importData({format:"GomokuMistakeLibrary",version:2,cards})',cards)
     mobile.evaluate("GomokuTraining.open()")
     mobile.wait_for_function("GomokuTraining.state()?.card&&!GomokuTraining.state().busy",timeout=45000)
     check('mobile training plan and board remain functional',mobile.locator('#a5Dashboard').is_visible() and mobile.locator('#a2TrainingBoard').is_visible())
