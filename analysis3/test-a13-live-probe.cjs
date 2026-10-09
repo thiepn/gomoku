@@ -25,7 +25,9 @@ function args(overrides={}){return {origin,candidate:candidate(),deploymentId,ap
   assert.equal(calls,0);});
  await test('deny localhost/preview/http origins before sending request',async()=>{
   for(const x of ['http://gomoku.thiepn.dev/','https://localhost/',
-   'https://demo.vercel.app/','https://gomoku.thiepn.dev/anything']){
+   'https://demo.vercel.app/','https://192.168.1.5/',
+   'https://169.254.169.254/','https://[::1]/','https://host.local/',
+   'https://gomoku.thiepn.dev/anything']){
    let calls=0;await assert.rejects(A13.probe(args({origin:x,fetchFn:async()=>{calls++}})),/origin/);
    assert.equal(calls,0);
   }});
@@ -66,6 +68,8 @@ function args(overrides={}){return {origin,candidate:candidate(),deploymentId,ap
   A13.probe(args({fetchFn:async url=>stub(url,{body:Buffer.alloc(10*1024*1024+1)})})),/length/);});
  await test('no network side effects from an imported library',async()=>{
   assert.equal(typeof A13.probe,'function');
-  assert.equal(typeof A13.hash,'function');});
+  assert.equal(typeof A13.hash,'function');
+  assert.equal(A13.allowedPublicOrigin(origin),true);
+  assert.equal(A13.allowedPublicOrigin('https://10.0.0.2/'),false);});
  console.log(n+' A13 read-only production-probe tests passed using mock HTTP bytes only.');
 })().catch(e=>{console.error(e);process.exitCode=1});
