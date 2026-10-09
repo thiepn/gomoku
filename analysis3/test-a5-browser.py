@@ -36,7 +36,10 @@ with sync_playwright() as pw:
     pg.evaluate('GomokuReview.select(7)')
     pg.evaluate('GomokuReview.deeper()')
     pg.wait_for_function('GomokuReview.state() && !GomokuReview.state().interacting',timeout=55000)
-    pg.evaluate('GomokuReview.saveMistakes()')
+    saved=pg.evaluate('GomokuReview.saveMistakes()')
+    storage=pg.evaluate("GomokuMistakes.status()")
+    immediate=pg.evaluate("GomokuMistakes.list().then(xs=>xs.map(x=>({id:x.id,ply:x.source?.ply})))")
+    print('A8 persistence probe:',json.dumps({'saved':saved,'status':storage,'immediate':immediate}),flush=True)
     diagnostic=pg.evaluate("""()=>{
       const s=GomokuReview.state(),p=s.positions[6],r=s.results[6],A=createAnalysis2(createEngine,createStudioCore,createGuidedReviewCore);
       const D=GomokuGameDiagnosis4,P=GomokuPractice5;
