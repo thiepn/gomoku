@@ -49,7 +49,7 @@ with sync_playwright() as pw:
         plan:P.gamePlan(s.positions,s.results,s.game,{analysis:A,
           diagnose:(res,pos)=>D.classification(res,pos,{rule:s.game.variant,verifyProof:c=>A.verify(c)})}).eligible};}""")
     print('A5 evidence-gated fixture:',json.dumps(diagnostic),flush=True)
-    pg.wait_for_function('GomokuMistakes.list().then(x=>x.length)>0',timeout=20000)
+    pg.wait_for_function('GomokuMistakes.list().then(x=>x.length>0)',timeout=20000)
     cards=pg.evaluate('GomokuMistakes.list()')
     check('review supplies real, schema-v2 mistake positions',len(cards)>=1 and all(c['version']==2 for c in cards))
     ids=[c['id'] for c in cards]
