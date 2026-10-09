@@ -24,7 +24,7 @@ function fixture(){
   rollbackArchiveSha256:LOCK.offlineZipSha256,productionDataMigration:'none',
   rollbackAvailable:true};
  const liveProbe={format:'GomokuAnalysis3A13ProductionProbe',origin:orig,
-  sourceSha:LOCK.sourceSha,deploymentId:dep,observedAt:'2026-10-01T01:05:00Z',
+  sourceSha:LOCK.sourceSha,deploymentId:dep,observedAt:'2026-10-02T01:05:00Z',
   originalResponseDigest:h,
   verifiedAssets:A9.ASSETS.map(path=>({path,sha256:assets[path],bytes:123}))};
  const samples=Array.from({length:24},(_,i)=>({start:iso(begin+i*hour),
@@ -79,6 +79,7 @@ test('real production HTTPS probe missing',x=>x.liveProbe=null,'blocked-producti
 test('production digest fails if one file differs',x=>x.liveProbe.verifiedAssets[0].sha256=q,'blocked-production-integrity');
 test('production digest fails if asset duplicate',x=>x.liveProbe.verifiedAssets[1]={...x.liveProbe.verifiedAssets[0]},'blocked-production-integrity');
 test('source mismatch in HTTPS receipt',x=>x.liveProbe.sourceSha='b'.repeat(40),'blocked-production-integrity');
+test('pre-window-end HTTPS proof does not establish 24-hour stability',x=>x.liveProbe.observedAt='2026-10-01T01:05:00Z','blocked-production-integrity');
 test('stale deployment receipt cannot qualify',x=>x.liveProbe.deploymentId='prior-deployment','blocked-production-integrity');
 test('no 24-hour horizon',x=>x.telemetry.samples.pop(),'blocked-stability');
 test('over 72 hour horizon not permitted',x=>x.telemetry.samples=Array.from({length:73},(_,i)=>({...x.telemetry.samples[0],start:iso(begin+i*hour)})),'blocked-stability');
@@ -106,6 +107,7 @@ test('actual user data loss stops closure',x=>x.incidents.playerDataLoss=true,'b
 test('unresolved incident stops certification',x=>x.incidents.entries=[{severity:'sev1',status:'open'}],'blocked-incident-review');
 test('handoff must have owner signature',x=>x.handoff.ownerSignatureEvidenceDigest='bad','blocked-handoff');
 test('handoff requires owner and independent reviewer',x=>x.handoff.independentReviewer=x.cutover.operator,'blocked-handoff');
+test('handoff cannot predate final production integrity probe',x=>x.handoff.acceptedAt='2026-10-02T01:01:00Z','blocked-handoff');
 test('handoff only after incident review',x=>x.handoff.acceptedAt='2026-10-01T02:00:00Z','blocked-handoff');
 const no=Audit.audit();assert.equal(no.status,'blocked-source');
 assert.deepEqual(Audit.audit(fixture()).observedSloRatios,{availability:1,persistence:1,recovery:1,runtime:1});
