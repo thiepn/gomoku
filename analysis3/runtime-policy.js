@@ -73,6 +73,7 @@
     }
     put(k,result){
       let serialized;try{serialized=JSON.stringify(result);}catch{return false;}
+      if(typeof serialized!=='string')return false;
       const bytes=serialized.length*2+String(k).length*2;
       if(bytes>this.bytesLimit)return false;
       this.delete(k);
