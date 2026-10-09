@@ -7,8 +7,9 @@ const ROOT=path.resolve(__dirname,'..'),DIR=path.join(ROOT,'analysis7-test-outpu
 const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT,p))).digest('hex');
 const sha=()=>cp.execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8'}).trim();
 const STAGES=Object.freeze({
- integrity:['source-integrity','review-core','deterministic-build','security-scope'],
- tactical:['rules-renju','proof-coverage','a0-evidence','a1-forcing-defense','a2-comparability','a3-workspace','a4-diagnosis','a5-practice','a6-worker-lifecycle','a6-offline-scope'],
+ integrity:['source-integrity','review-core'],
+ tactical:['rules-renju','proof-coverage','a0-evidence','a1-forcing-defense','a2-comparability','a3-workspace','a4-diagnosis','a5-practice','a6-worker-lifecycle','a6-offline-scope','security-scope'],
+ build:['deterministic-build'],
  benchmark:['a7-threat-benchmark'],
  browser:['desktop-chromium','mobile-emulation','keyboard-accessibility'],
  offline:['offline-browser-reload'],
