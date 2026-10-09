@@ -1,0 +1,176 @@
+{
+  "format": "GomokuAnalysis3A9PhysicalCandidateWorksheet",
+  "version": 9,
+  "instructions": "Unverified worksheet. Populate sourceSha, index/service-worker/manifest hashes from a9 RC receipt; use the exact public HTTPS preview URL for the same artifact. Every case must be performed on a real physical device, and each observation must be described. No row is passed or approved by default.",
+  "sourceSha": null,
+  "indexSha256": null,
+  "serviceWorkerSha256": null,
+  "manifestSha256": null,
+  "candidatePreviewUrl": null,
+  "issuedAt": null,
+  "physicalEvidence": {
+    "android-chrome": {
+      "status": "pending_manual",
+      "sha": null,
+      "artifactHash": null,
+      "issuer": null,
+      "timestamp": null,
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testedUrl": null,
+      "tester": null,
+      "signature": null,
+      "testCases": [
+        {
+          "id": "fresh-launch",
+          "description": "Launch the exact preview URL in a new browser process",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "rules-renju",
+          "description": "Finish real Freestyle, Exact-Five and Renju interactions without illegal placements",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "review-proof",
+          "description": "Analyze and verify a forced threat then restore recorded game",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "training",
+          "description": "Open original mistake library, complete an attempt and preserve due/event history",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "offline-reconnect",
+          "description": "Open already installed/cached game with network disabled and reconnect",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "resume",
+          "description": "Background, suspend and restore app without losing saved game and exercises",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "accessibility",
+          "description": "All relevant controls remain visible and operable in portrait/touch view",
+          "status": "not_tested",
+          "observation": null
+        }
+      ],
+      "attachmentPaths": []
+    },
+    "samsung-internet": {
+      "status": "pending_manual",
+      "sha": null,
+      "artifactHash": null,
+      "issuer": null,
+      "timestamp": null,
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testedUrl": null,
+      "tester": null,
+      "signature": null,
+      "testCases": [
+        {
+          "id": "fresh-launch",
+          "description": "Launch the exact preview URL in a new browser process",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "rules-renju",
+          "description": "Finish real Freestyle, Exact-Five and Renju interactions without illegal placements",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "review-proof",
+          "description": "Analyze and verify a forced threat then restore recorded game",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "training",
+          "description": "Open original mistake library, complete an attempt and preserve due/event history",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "offline-reconnect",
+          "description": "Open already installed/cached game with network disabled and reconnect",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "resume",
+          "description": "Background, suspend and restore app without losing saved game and exercises",
+          "status": "not_tested",
+          "observation": null
+        }
+      ],
+      "attachmentPaths": []
+    },
+    "installed-android-pwa": {
+      "status": "pending_manual",
+      "sha": null,
+      "artifactHash": null,
+      "issuer": null,
+      "timestamp": null,
+      "device": null,
+      "osVersion": null,
+      "browserVersion": null,
+      "testedUrl": null,
+      "tester": null,
+      "signature": null,
+      "testCases": [
+        {
+          "id": "install-preview",
+          "description": "Install the correct candidate preview as a standalone Android PWA",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "standalone-launch",
+          "description": "Launch the actual installed PWA outside browser tabs",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "offline-launch",
+          "description": "Force-close and relaunch installed PWA fully offline",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "saved-data-relaunch",
+          "description": "Saved games and recall events remain after process restart",
+          "status": "not_tested",
+          "observation": null
+        },
+        {
+          "id": "service-worker-update",
+          "description": "Candidate SW update completes safely without data loss or broken shell",
+          "status": "not_tested",
+          "observation": null
+        }
+      ],
+      "attachmentPaths": []
+    }
+  },
+  "ownerApproval": {
+    "status": "not_requested",
+    "sha": null,
+    "artifactHash": null,
+    "approvedBy": null,
+    "approvedAt": null
+  }
+}
