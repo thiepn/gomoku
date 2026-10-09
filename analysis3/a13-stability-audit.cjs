@@ -32,43 +32,46 @@ function assetChecks(assets,expected){
  return A9.ASSETS.every(x=>names.has(x));
 }
 function telemetryCheck(t,cutover){
+ // Normalize real P20 samples: one server-side SLO sample per MINUTE (not HTTP request counts).
+ // Every hourly bucket must be derived from 60 independent P20 minute observations.
  if(t?.format!=='GomokuAnalysis3A13P20Telemetry'||t.source!=='p20-production'||
-   t.deploymentId!==cutover.deploymentId||t.origin!==cutover.productionOrigin||
-   !H64.test(t.evidenceDigest||'')||!nonempty(t.collector)||!instant(t.collectedAt)||
+   t.aggregatedFrom!=='gomoku-p20-slo-sample'||t.deploymentId!==cutover.deploymentId||
+   t.origin!==cutover.productionOrigin||!H64.test(t.evidenceDigest||'')||
+   !nonempty(t.collector)||!instant(t.collectedAt)||
    !Array.isArray(t.samples)||t.samples.length<24||t.samples.length>72)
-  return {ok:false,reason:'P20 source, aggregate data, immutable evidence digest, or 24–72 samples missing.'};
+  return {ok:false,reason:'Authentic P20 minute-sampler provenance, original evidence or 24–72 hourly buckets absent.'};
  const hour=3_600_000,first=ts(t.samples[0]?.start);
  if(!Number.isFinite(first)||first<ts(cutover.deployedAt)||
    first-ts(cutover.deployedAt)>2*hour)
-  return {ok:false,reason:'Stability window must begin within two hours after actual deployment.'};
- let requests=0,failed=0,persist=0,persistMiss=0,recovery=0,recoveryMiss=0,clean=0,alerts=0;
+  return {ok:false,reason:'Stability window must begin within two hours of the production cutover.'};
+ let totalMinutes=0,serviceGood=0,persistenceGood=0,recoveryGood=0,runtimeClean=0,alerts=0;
  for(let i=0;i<t.samples.length;i++){
   const s=t.samples[i],start=ts(s?.start);
-  if(!instant(s?.start)||!Number.isFinite(start)||!/T\d{2}:00:00(?:\.000)?Z$/.test(s.start)||
-     start!==first+i*hour)
-   return {ok:false,reason:'Missing, duplicated, out-of-order or non-hourly telemetry bucket at '+i};
-  for(const k of ['requests','failed','persistenceChecks','persistenceMisses',
-     'recoveryChecks','recoveryMisses','cleanMinutes','criticalAlerts'])
-   if(!Number.isSafeInteger(s[k])||s[k]<0)return {ok:false,reason:'Invalid counter: '+k+' at '+i};
-  if(s.failed>s.requests||s.persistenceMisses>s.persistenceChecks||
-     s.recoveryMisses>s.recoveryChecks||s.cleanMinutes>60)
-   return {ok:false,reason:'Impossible hourly telemetry values at '+i};
-  requests+=s.requests;failed+=s.failed;persist+=s.persistenceChecks;
-  persistMiss+=s.persistenceMisses;recovery+=s.recoveryChecks;
-  recoveryMiss+=s.recoveryMisses;clean+=s.cleanMinutes;alerts+=s.criticalAlerts;
+  if(!instant(s?.start)||!Number.isFinite(start)||
+     !/T\d{2}:00:00(?:\.000)?Z$/.test(s.start)||start!==first+i*hour)
+   return {ok:false,reason:'Missing, duplicated, non-hourly or out-of-order P20 sample bucket at '+i};
+  for(const k of ['sampledMinutes','serviceGoodMinutes','persistenceGoodMinutes',
+    'recoveryGoodMinutes','runtimeCleanMinutes','criticalAlerts'])
+   if(!Number.isSafeInteger(s[k])||s[k]<0)return {ok:false,reason:'Invalid P20 minute counter '+k+' at '+i};
+  if(s.sampledMinutes!==60||s.serviceGoodMinutes>60||
+     s.persistenceGoodMinutes>60||s.recoveryGoodMinutes>60||
+     s.runtimeCleanMinutes>60)
+   return {ok:false,reason:'Partial, missing or impossible P20 minute-level records at '+i};
+  totalMinutes+=s.sampledMinutes;serviceGood+=s.serviceGoodMinutes;
+  persistenceGood+=s.persistenceGoodMinutes;
+  recoveryGood+=s.recoveryGoodMinutes;runtimeClean+=s.runtimeCleanMinutes;
+  alerts+=s.criticalAlerts;
  }
  const end=first+t.samples.length*hour;
  if(!after(t.collectedAt,new Date(end).toISOString())||
    t.windowStart!==new Date(first).toISOString()||
    t.windowEnd!==new Date(end).toISOString())
-  return {ok:false,reason:'Stability window bounds or collection time do not match samples.'};
- if(requests===0||persist===0||recovery===0)
-  return {ok:false,reason:'No observed requests or persistence/recovery probes; cannot certify an unobserved service.'};
- const ratios={availability:1-failed/requests,persistence:1-persistMiss/persist,
-  recovery:1-recoveryMiss/recovery,runtime:clean/(60*t.samples.length)};
+  return {ok:false,reason:'P20 window bounds or collection timestamp inconsistent with real minute samples.'};
+ const ratios={availability:serviceGood/totalMinutes,persistence:persistenceGood/totalMinutes,
+  recovery:recoveryGood/totalMinutes,runtime:runtimeClean/totalMinutes};
  if(alerts!==0||ratios.availability<0.999||ratios.persistence<0.999||
-     ratios.recovery<0.999||ratios.runtime<0.99)
-  return {ok:false,reason:'P20 error-budget, critical-alert or runtime-clean-minute threshold exceeded.',ratios};
+    ratios.recovery<0.999||ratios.runtime<0.99)
+  return {ok:false,reason:'P20 service/persistence/recovery/runtime SLO or critical alert threshold breached.',ratios};
  return {ok:true,ratios,end:new Date(end).toISOString(),hours:t.samples.length};
 }
 function verifyDevices(d,cutover,candidate){
