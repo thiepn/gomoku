@@ -71,6 +71,9 @@ with sync_playwright() as pw:
     for width in [390,768]:
         ctx,page,errors=load(browser,width,844,is_mobile=(width==390),has_touch=(width==390),
           reduced_motion='reduce')
+        # The mobile overview intentionally leads with its text-only game summary.
+        # Navigate to the actual Review workspace before requiring its board.
+        page.evaluate("GomokuReview.setPanel('review')")
         check(f'{width}px review board remains visible',page.locator('#grBoard').is_visible())
         check(f'{width}px no document overflow',page.evaluate("()=>document.documentElement.scrollWidth<=innerWidth+2"))
         check(f'{width}px controls remain reachable',page.locator('#grClose').is_visible() and page.locator('#rwOptions').is_visible())
