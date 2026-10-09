@@ -34,7 +34,7 @@ def load(ctx, fixture=GAME):
         pg.goto(URL, wait_until='domcontentloaded', timeout=45000)
     else:
         pg.set_content(MOCK + HTML, wait_until='domcontentloaded')
-    pg.wait_for_function('window.GomokuReview?.workspaceVersion === "3.0.0-a4"', timeout=20000)
+    pg.wait_for_function('window.GomokuReview?.workspaceVersion === "3.0.0-a5"', timeout=20000)
     pg.wait_for_timeout(1000)
     pg.evaluate('(g)=>{document.querySelectorAll("dialog[open]").forEach(d=>d.close());GomokuStudio.importGame(g);GomokuReview.open();}', fixture)
     pg.wait_for_function('GomokuReview.state()?.results.every(Boolean) && !GomokuReview.state().scanning', timeout=45000)

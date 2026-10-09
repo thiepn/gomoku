@@ -1,0 +1,33 @@
+/* A5 practice controls supplement, never replace, the legacy mistake board. */
+#a2Trainer .a5-dashboard{border:1px solid var(--gr-line);background:var(--gr-surface);padding:15px 16px;margin:15px 0 17px}
+#a2Trainer .a5-dashboard-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:12px}
+#a2Trainer .a5-eyebrow{color:var(--gr-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;font-size:10px}
+#a2Trainer #a5PlanTitle{font-weight:750;font-size:18px;line-height:1.3;margin-top:5px}
+#a2Trainer #a5PlanMeta{font-size:11px;line-height:1.5;color:var(--gr-muted);margin:6px 0 12px}
+#a2Trainer .a5-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--gr-line);border:1px solid var(--gr-line);margin:12px 0}
+#a2Trainer .a5-figures span{background:var(--gr-surface);padding:10px 8px;font-size:10px;line-height:1.5;color:var(--gr-muted)}
+#a2Trainer .a5-figures b{display:block;font-variant-numeric:tabular-nums;font-size:21px;line-height:1.2;color:var(--gr-ink)}
+#a2Trainer .a5-practice-controls{display:flex;gap:7px;align-items:end;flex-wrap:wrap}
+#a2Trainer .a5-practice-controls label{font-size:11px;display:grid;gap:5px;color:var(--gr-muted);flex:1;min-width:150px}
+#a2Trainer .a5-practice-controls select{width:100%;min-height:42px;padding:7px 9px;border:1px solid var(--gr-line);border-radius:5px;color:var(--gr-ink);background:var(--gr-surface);font-size:12px}
+#a2Trainer #a5StartDue{min-height:42px}
+#a2Trainer .a5-theme-note{margin:10px 0 0;font-size:11px;color:var(--gr-muted);line-height:1.55}
+#a2Trainer #a5EvidenceTag{display:inline-flex;align-items:center;border:1px solid var(--gr-line);padding:4px 8px;margin:8px 0 0;border-radius:3px;font-size:10px;line-height:1.4;background:var(--gr-surface);color:var(--gr-muted)}
+#a2Trainer #a5EvidenceTag[data-proof="rules"]{border-color:#779f80;color:#426c4c}
+#a2Trainer #a5EvidenceTag[data-proof="provisional"]{border-color:#b4a278;color:#846d36}
+#a2Trainer #a5EvidenceTag[data-proof="unknown"]{border-color:var(--gr-line)}
+#a2Trainer .a5-lesson-header{margin:18px 0 9px;font-weight:650;font-size:13px;color:var(--gr-ink)}
+#a2Trainer .a2-library-card .a5-topic{display:inline-block;font-size:10px;color:var(--gr-muted);margin-top:2px}
+#grDialog .a5-review-plan{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--gr-line);padding:14px 0;margin-top:8px}
+#grDialog .a5-review-plan span{display:block;font-size:11px;color:var(--gr-muted);line-height:1.45}
+#grDialog .a5-review-plan strong{font-size:13px;color:var(--gr-ink);display:block}
+#grDialog .a5-review-plan .gr-btn{min-width:112px;min-height:42px}
+@media(max-width:720px){
+ #a2Trainer .a5-dashboard{padding:12px}
+ #a2Trainer .a5-dashboard-head{display:block}
+ #a2Trainer .a5-figures span{padding:8px 5px}
+ #a2Trainer .a5-figures b{font-size:18px}
+ #a2Trainer .a5-practice-controls{display:grid;grid-template-columns:1fr}
+ #grDialog .a5-review-plan{display:block}
+ #grDialog .a5-review-plan .gr-btn{width:100%;margin-top:10px}
+}

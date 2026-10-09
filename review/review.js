@@ -116,7 +116,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='3.0.0-a4', ANALYSIS_VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='3.0.0-a5', ANALYSIS_VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -141,13 +141,14 @@ if(typeof window !== 'undefined') (()=>{
   function loadCache(s) {
     try {
       const raw=localStorage.getItem(STORE);if(!raw || raw.length>2800000)return;
-      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1','3.0.0-a2','3.0.0-a3',VERSION].includes(data.version)||!Array.isArray(data.items))return;
+      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1','3.0.0-a2','3.0.0-a3','3.0.0-a4',VERSION].includes(data.version)||!Array.isArray(data.items))return;
       const legacyFingerprint=JSON.stringify(['2.0.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const previousFingerprint=JSON.stringify(['3.0.0-a3',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const previousFingerprint=JSON.stringify(['3.0.0-a4',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a3Fingerprint=JSON.stringify(['3.0.0-a3',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
       const a2Fingerprint=JSON.stringify(['3.0.0-a2',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
       const a1Fingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
       const olderFingerprint=JSON.stringify(['2.1.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===a2Fingerprint)||data.items.find(x=>x.fingerprint===a1Fingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
+      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===a3Fingerprint)||data.items.find(x=>x.fingerprint===a2Fingerprint)||data.items.find(x=>x.fingerprint===a1Fingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
@@ -224,6 +225,7 @@ if(typeof window !== 'undefined') (()=>{
         <div class="rw-section-title"><h4>Your key moments</h4><span id="rwKeyCount"></span></div><div id="rwKeyList"></div>
         <details id="a2GameCoach" class="gr-details"><summary>Lessons from this game</summary><div id="a2CoachSummary"></div></details>
         <div class="rw-practice"><div><h4>Make the lesson stick.</h4><p>Try the positions again without the answer.</p></div><button type="button" class="gr-btn" id="a2Train">Practice mistakes</button></div>
+         <section class="a5-review-plan" id="a5GamePlan" aria-label="Game-based tactical study plan"><div><strong id="a5GamePlanTitle">Your next practice</strong><span id="a5GamePlanReason">Review decisions to build a learning plan.</span></div><button type="button" class="gr-btn gr-primary" id="a5BeginPractice">Study this game</button></section>
       </section>
       <section id="rwDecision" role="tabpanel" aria-labelledby="rwTabReview" hidden>
         <div class="a3-insight-bar" id="a3Insights" aria-label="Analysis evidence"><div class="a3-insight"><span>Depth</span><strong id="a3Depth">—</strong></div><div class="a3-insight"><span>Lines</span><strong id="a3Lines">—</strong></div><div class="a3-insight"><span>Evidence</span><strong id="a3Evidence">—</strong></div></div><div class="rw-decision-head"><h3 id="grDecisionTitle"></h3><span id="rwDecisionContext"></span></div>
@@ -276,7 +278,12 @@ if(typeof window !== 'undefined') (()=>{
      $('a2Overlays').onchange=render;$('a2BestProof').onclick=()=>startProof('bestProof');$('a2Refutation').onclick=()=>startProof('refutation');
     $('a2ProofPrev').onclick=()=>proofStep(-1);$('a2ProofNext').onclick=()=>proofStep(1);$('a2ProofExport').onclick=()=>downloadJSON(session.proof.cert,'gomoku-threat-proof.json');
     $('a2Defense').onchange=()=>{const p=session.proof,step=p.steps[p.index];p.choices[step.choiceIndex]=Number($('a2Defense').value);p.steps=A().proofSteps(p.cert,p.choices);render();};
-    $('a2Train').onclick=async()=>{try{const s=session;await saveMistakes();if(session===s)await window.GomokuTraining.open({ids:cards().map(c=>c.id)});}catch(e){feedback(e.message);}};
+    const beginPractice=async(dueOnly=false)=>{try{
+      const s=session,planned=cards();if(!planned.length){feedback('No sufficiently supported practice positions yet. Analyze key moments deeper.');return;}
+      await saveMistakes();if(session===s)await window.GomokuTraining.open({ids:planned.map(c=>c.id),focus:dueOnly?'due':'all'});
+    }catch(e){feedback(e.message);}};
+    $('a2Train').onclick=()=>beginPractice(false);
+    $('a5BeginPractice').onclick=()=>beginPractice(false);
     $('a2Library').onclick=()=>window.GomokuTraining.open();$('a2Refine').onclick=()=>{toggleOptions(true);refine();};
     bindWorkspace();
 
@@ -472,7 +479,19 @@ if(typeof window !== 'undefined') (()=>{
     finally{if(session===s&&s.epoch===epoch){s.scanning=false;s.refining=false;render();saveMistakes().catch(e=>feedback(e.message));}}
   }
 
-  function cards(){const s=session;if(!s)return [];return s.results.map((r,k)=>r&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?A().makeCard(r,s.positions[k],s.game):null).filter(Boolean);}
+  function gameStudyPlan(){
+    const s=session, P=window.GomokuPractice5,D=window.GomokuGameDiagnosis4;
+    if(!s||!P)return null;
+    return P.gamePlan(s.positions,s.results,s.game,{
+      analysis:A(),
+      diagnose:D?(r,p)=>D.classification(r,p,{rule:s.game.variant,verifyProof:verifyA4Certificate}):undefined
+    });
+  }
+  function cards(){
+    const plan=gameStudyPlan();if(plan)return plan.issues.map(x=>x.card);
+    const s=session;if(!s)return [];
+    return s.results.map((r,k)=>r&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?A().makeCard(r,s.positions[k],s.game):null).filter(Boolean);
+  }
   async function saveMistakes(){const c=cards();if(c.length)await window.GomokuMistakes.add(c);return c.length;}
   async function refine(){
     const indices=keyIndices().concat(session.results.map((r,k)=>!r||r.label==='Unscored'?k:-1).filter(k=>k>=0)).filter((v,k,a)=>a.indexOf(v)===k).slice(0,8);
@@ -776,6 +795,14 @@ if(typeof window !== 'undefined') (()=>{
     const winner=s.outcome?.winner;
     $('rwOutcome').textContent=winner===0?'Draw':winner===1||winner===2?`${side(winner)} won`:'Game recap';
     $('rwOutcome').textContent+=` · ${total} moves${s.game.mode==='ai'?' · You played '+side(s.game.humanColor):''}`;
+    const study=gameStudyPlan();
+    const mainTheme=study?Object.entries(study.byTheme).sort((a,b)=>b[1].length-a[1].length)[0]?.[0]:null;
+    const themeName=window.GomokuPractice5?.THEMES.find(t=>t.id===mainTheme)?.title;
+    $('a5GamePlanTitle').textContent=study?.eligible?`${study.eligible} practice position${study.eligible===1?'':'s'} from this game`:'Practice plan needs better evidence';
+    $('a5GamePlanReason').textContent=study?.eligible?
+      `${themeName||'Tactical study'} is the leading theme. Every exercise is rechecked before recall is recorded; unknown decisions are excluded.`:
+      'No eligible exercises yet. Scan or refine the game to find supported alternatives.';
+    $('a5BeginPractice').disabled=!study?.eligible;
     $('rwOverviewTitle').textContent=s.guideDone?'Take one lesson into your next game.':'Find the moves that mattered.';
     $('rwOverviewText').textContent=s.guideDone?(keys.length?`${s.visited.filter(k=>keys.includes(k)).length} of ${keys.length} key moments explored. Practise them now, or return to any move.`:'You reached the end of this review. You can return to any move or explore alternatives.'):done<total?'The review is building as the engine checks your game. Start now; more results will appear.':keys.length?`${keys.length} of your decisions are worth a closer look. Understand the threat, compare a move, then try it yourself.`:unclear?'No mistake has been established yet. Some decisions need deeper analysis.':'No actionable mistake was found in this search. You can still examine every move.';
     $('rwStart').textContent=s.guideDone?(keys.length?'Review key moments again →':'Review every move again →'):keys.length?`Review ${keys.length} key moment${keys.length===1?'':'s'} →`:'Review every move →';
@@ -828,7 +855,7 @@ if(typeof window !== 'undefined') (()=>{
     // Capture before legacy handlers; a single entry point, not another review overlay.
     document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
     const button=$('resultReviewBtn');if(button)button.textContent='Review game';
-    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'3.0.0-a4',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
+    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'3.0.0-a5',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
       state:()=>session?copy({gameId:session.game.gameId,outcome:session.outcome,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions,proof:session.proof,preset:session.preset,lines:session.lines,panel:session.panel,a3:session.a3,a4:session.a4,pending:session.pending,visited:session.visited,guideDone:session.guideDone}):null,
       core,exportReview});
   }
