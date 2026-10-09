@@ -134,7 +134,7 @@ if(typeof window !== 'undefined') (()=>{
   }
   function evaluate(board,color,rule,played,budget=350,context=entry()?.context||{},extra={}) {
     const preset=budget<=350?'quick':budget<=1100?'standard':budget<=2400?'deep':'maximum';
-    return window.GomokuAnalysisRuntime.request(board,color,rule,played,{timeMs:budget,preset,context,multiPV:extra.multiPV??session?.lines??5});
+    return window.GomokuAnalysisRuntime.request(board,color,rule,played,{timeMs:budget,preset,context,multiPV:extra.multiPV??session?.lines??5,adaptiveBudget:session?.performanceMode==='auto'});
   }
   function pause(){const s=session;if(!s)return;s.wantsScan=false;s.epoch++;s.scanning=false;s.interacting=false;abort();render();}
   const fingerprint=g=>JSON.stringify([VERSION,g.variant,g.renjuCenterRule,g.initial,g.startColor,g.moves]);
@@ -188,7 +188,7 @@ if(typeof window !== 'undefined') (()=>{
   <div class="gr-progress-section"><div class="gr-progress-copy"><span id="grProgress" role="status" aria-live="polite"></span><button type="button" class="gr-link" id="grPause">Pause analysis</button></div><progress id="grProgressBar" max="1" value="0" aria-label="Game analysis progress"></progress></div>
   <section id="rwSettings" class="rw-settings" hidden aria-label="Review options">
     <div class="rw-settings-heading"><h3>Review options</h3><button type="button" class="gr-btn" id="rwOptionsClose">Done</button></div>
-    <div class="a2-toolbar"><label>Analysis strength <select id="a2Preset" aria-label="Analysis strength"><option value="quick">Quick · 0.35 s</option><option value="standard">Standard · 1 s</option><option value="deep" selected>Deep · 2.4 s</option><option value="maximum">Maximum · 10 s</option></select></label><label>Lines <select id="a2Lines" aria-label="Analysis candidate lines"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label><button type="button" class="gr-btn" id="a2Refine">Recheck key moments</button></div>
+    <div class="a2-toolbar"><label>Analysis strength <select id="a2Preset" aria-label="Analysis strength"><option value="quick">Quick · 0.35 s</option><option value="standard">Standard · 1 s</option><option value="deep" selected>Deep · 2.4 s</option><option value="maximum">Maximum · 10 s</option></select></label><label>Lines <select id="a2Lines" aria-label="Analysis candidate lines"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label><label>Performance <select id="a6Performance" aria-label="Analysis worker performance mode"><option value="full">Full selected budget</option><option value="auto">Adapt to device</option></select></label><button type="button" class="gr-btn" id="a2Refine">Recheck key moments</button></div><p id="a6RuntimeSummary" class="gr-muted" role="status" aria-live="polite">Worker performance information appears after analysis begins.</p>
     <div class="rw-setting-checks"><label><input type="checkbox" id="a2Overlays" checked> Tactical markers</label><label><input type="checkbox" id="rwCandidateMarkers" checked> Number candidates in free analysis</label><label><input type="checkbox" id="rwShowNumbers"> Number every stone</label></div>
     <p>Strength controls deeper analysis, not the initial scan. Search time excludes verification. Estimates can change; a verified threat is shown separately.</p>
     <div class="rw-settings-actions"><button type="button" id="rwExportOption" class="gr-btn">Export review</button><button type="button" id="rwLibraryOption" class="gr-btn">Mistake library</button></div>
@@ -275,6 +275,11 @@ if(typeof window !== 'undefined') (()=>{
     $('grExport').onclick=exportReview;
     $('a2Preset').onchange=()=>{session.preset=$('a2Preset').value;try{localStorage.setItem('gomoku.analysis2.preset',session.preset);}catch{}renderWorkspace();};
     $('a2Lines').onchange=()=>{session.lines=Math.max(1,Math.min(8,Number($('a2Lines').value)||5));try{localStorage.setItem('gomoku.analysis3.lines',String(session.lines));}catch{}render();};
+   $('a6Performance').onchange=()=>{
+     if(!session)return;session.performanceMode=$('a6Performance').value==='auto'?'auto':'full';
+     try{localStorage.setItem('gomoku.analysis3.performance',session.performanceMode);}catch{}
+     renderWorkspace();
+   };
      $('a2Overlays').onchange=render;$('a2BestProof').onclick=()=>startProof('bestProof');$('a2Refutation').onclick=()=>startProof('refutation');
     $('a2ProofPrev').onclick=()=>proofStep(-1);$('a2ProofNext').onclick=()=>proofStep(1);$('a2ProofExport').onclick=()=>downloadJSON(session.proof.cert,'gomoku-threat-proof.json');
     $('a2Defense').onchange=()=>{const p=session.proof,step=p.steps[p.index];p.choices[step.choiceIndex]=Number($('a2Defense').value);p.steps=A().proofSteps(p.cert,p.choices);render();};
@@ -773,7 +778,15 @@ if(typeof window !== 'undefined') (()=>{
     $('grPlayed').setAttribute('aria-pressed',String(!active&&s.view==='played'));
     $('grBest').disabled=!r||!core.point(r.best);$('grBest').setAttribute('aria-label',r&&core.point(r.best)?`Show best found ${core.coord(r.best)}`:'Best move not yet available');
     $('grBefore').textContent=s.view==='before'?'Show played position':'Position before move';
-    $('rwStrengthLabel').textContent=`${s.preset[0].toUpperCase()+s.preset.slice(1)} · ${(A().PRESETS[s.preset].timeMs/1000)} s search budget · ${s.lines} requested lines`;
+    const runtimeStats=window.GomokuAnalysisRuntime?.stats();
+    const governor=window.GomokuRuntimePolicy6;
+    const chosenBudget=governor?.admission({timeMs:A().PRESETS[s.preset].timeMs,
+       adaptiveBudget:s.performanceMode==='auto'},governor.deviceSnapshot(window));
+    const actualMs=chosenBudget?.appliedMs??A().PRESETS[s.preset].timeMs;
+    $('rwStrengthLabel').textContent=`${s.preset[0].toUpperCase()+s.preset.slice(1)} · ${(actualMs/1000).toFixed(2)} s allowed search · ${s.lines} lines${chosenBudget?.capped?' · device-capped':''}`;
+    $('a6RuntimeSummary').textContent=runtimeStats?
+      `${runtimeStats.deviceClass} device · ${runtimeStats.workersCreated} worker starts · ${runtimeStats.coalescedRequests} shared requests · ${Math.round(runtimeStats.cacheBytes/1024)} KiB cached / ${Math.round(runtimeStats.maxCacheBytes/1024)} KiB · ${runtimeStats.cancelled} canceled`:
+      'Worker statistics unavailable. The original game is still preserved.';
     $('rwScrubber').max=total;$('rwScrubber').value=panel==='overview'?total:p.ply;$('rwScrubber').setAttribute('aria-valuetext',panel==='overview'?`Final position, move ${total}`:`Move ${p.ply}, ${side(p.color)} ${core.coord(p.played)}, ${r?.label||'not yet assessed'}`);
     $('rwFirst').disabled=s.index===0;$('rwLast').disabled=s.index===total-1;
     $('rwFirst').hidden=active;$('rwLast').hidden=active;
@@ -839,10 +852,12 @@ if(typeof window !== 'undefined') (()=>{
       const game=copy(prepared.game);core=core||createGuidedReviewCore(createEngine,createStudioCore);const ps=core.positions(game);
       if(!ps.length){api.finishGuidedReview?.(!prepared.wasReviewing);return false;}
       opener=document.activeElement;document.querySelectorAll('dialog[open]').forEach(d=>d.close());ensureUI();storageNotice='';
-      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',lines:5,proof:null,panel:'overview',a3:{mode:'candidates',preview:null,pinned:null},a4:{side:game.mode==='ai'?'mine':'both',category:'key',limit:24},visited:[],guideDone:false,pending:null,moreCandidates:false};
+      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',lines:5,performanceMode:'full',proof:null,panel:'overview',a3:{mode:'candidates',preview:null,pinned:null},a4:{side:game.mode==='ai'?'mine':'both',category:'key',limit:24},visited:[],guideDone:false,pending:null,moreCandidates:false};
       try{const p=localStorage.getItem('gomoku.analysis2.preset');if(A().PRESETS[p])session.preset=p;}catch{}$('a2Preset').value=session.preset;
        try{const n=Number(localStorage.getItem('gomoku.analysis3.lines'));if(Number.isInteger(n)&&n>=1&&n<=8)session.lines=n;}catch{}
        $('a2Lines').value=String(session.lines);
+       try{const m=localStorage.getItem('gomoku.analysis3.performance');if(m==='auto'||m==='full')session.performanceMode=m;}catch{}
+       $('a6Performance').value=session.performanceMode;
       loadCache(session);if(Number.isInteger(options.ply)){session.index=Math.max(0,Math.min(ps.length-1,options.ply-1));session.touched=true;session.panel='review';}
       $('grFilter').value='all';$('rwSettings').hidden=true;$('rwOptions').setAttribute('aria-expanded','false');dialog.showModal();feedback('');render();(session.panel==='overview'?$('rwStart'):$('grRetry')).focus({preventScroll:true});scan();return true;
     }catch(e){console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
