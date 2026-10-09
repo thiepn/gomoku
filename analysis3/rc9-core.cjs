@@ -33,7 +33,7 @@ function inspectSource({sourceSha,branch,cacheVersion,sw,manifest,index,assetPat
  if(!/id="guided-review-script"/.test(index||''))issues.push('Game Review module absent from portable app.');
  const paths=new Set(assetPaths||[]);
  for(const p of ASSETS)if(!paths.has(p))issues.push('Offline app asset missing: '+p);
- for(const p of ASSETS)if(!(sw||'').includes("'./"+p+"'")&&p!=='index.html')
+ for(const p of ASSETS)if(!(sw||'').includes("'./"+p+"'")&&!['index.html','sw.js'].includes(p))
    issues.push('Service worker install list missing '+p);
  return {ok:issues.length===0,issues,checkedAssets:ASSETS.length,branch:BRANCH,cacheVersion};
 }
