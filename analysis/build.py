@@ -22,7 +22,7 @@ for name,file,anchor in [('analysis2-core','core.js','<script id="guided-review-
 # A6 runtime policy loads before the transactional background worker.
 policy=(ROOT/'analysis3/runtime-policy.js').read_text()
 if '</script' in policy.lower():raise SystemExit('Unexpected A6 policy script close')
-policy_block='<script id="analysis6-runtime-policy">\n'+policy+'\\n</script>'
+policy_block='<script id="analysis6-runtime-policy">\n'+policy+'\n</script>'
 if '<script id="analysis6-runtime-policy">' in s:
     s=re.sub(r'<script id="analysis6-runtime-policy">.*?</script>',lambda _:policy_block,s,count=1,flags=re.S)
 else:
