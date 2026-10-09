@@ -69,6 +69,29 @@ function final(){
  if(!q.automationReady)process.exitCode=1;
  // Physical signoff is not possible inside this CI. This is an expected release hold.
 }
+function verifyPhysical(worksheetPath){
+ if(!worksheetPath)throw Error('Supply path to completed physical evidence worksheet');
+ const evidence=JSON.parse(fs.readFileSync(path.resolve(worksheetPath),'utf8'));
+ const state=read();
+ const fields=[['sourceSha','sourceSha'],['indexSha256','artifactHash'],
+   ['serviceWorkerSha256','serviceWorkerHash'],['manifestSha256','manifestHash']];
+ for(const [external,internal] of fields){
+   if(evidence[external]!==state[internal])throw Error('Physical evidence refers to a different build: '+external);
+ }
+ const sign=evidence.ownerApproval||{},approved={
+   status:sign.status==='approved'?'approved':'pending',sha:sign.sha,
+   artifactHash:sign.artifactHash,approvedBy:sign.approvedBy,approvedAt:sign.approvedAt
+ };
+ const complete={...state,physicalEvidence:evidence.physicalEvidence||{},approval:approved};
+ const q=Gate.qualify(complete);
+ const destination=path.join(DIR,'a7-attested-qualification.json');
+ fs.writeFileSync(destination,JSON.stringify({...complete,qualification:{
+   state:q.state,automationReady:q.automationReady,physicalReady:q.physicalReady,
+   humanApproval:q.humanApproval,blockers:q.blockers}},null,2)+'\\n');
+ console.log(JSON.stringify({result:q.state,blockers:q.blockers,report:destination}));
+ if(q.state!=='release-qualified')process.exitCode=2;
+ // Human evidence checking is NOT release deployment or publishing.
+}
 function dryRollback(){
  const current=hash('index.html'),previous=hash('manifest.webmanifest');
  const denied=Gate.fallbackDecision({productionBroken:true,currentBuild:current,previousBuild:previous,ownerApproved:false});
@@ -82,5 +105,6 @@ switch(process.argv[2]){
  case 'mark':attest(process.argv[3]);break;
  case 'finalize':final();break;
  case 'rollback-test':dryRollback();break;
- default:throw Error('Usage: node analysis3/a7-report.cjs init|mark <stage>|finalize|rollback-test');
+ case 'verify-physical':verifyPhysical(process.argv[3]);break;
+ default:throw Error('Usage: node analysis3/a7-report.cjs init|mark <stage>|finalize|rollback-test|verify-physical <worksheet.json>');
 }
