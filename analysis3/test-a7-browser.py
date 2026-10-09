@@ -19,6 +19,16 @@ def load(browser,width,height,**options):
     errors=[];page.on('pageerror',lambda exc:errors.append(str(exc)))
     page.goto(BASE,wait_until='domcontentloaded',timeout=45000)
     page.wait_for_function("!!window.GomokuReview && !!window.GomokuTraining && !!window.GomokuRuntimePolicy6",timeout=25000)
+    # The real first-run onboarding is a separate modal and opens on a 120+350ms
+    # timer. Complete that first-use step *before* opening the review workspace.
+    # Otherwise the onboarding callback may overlap a programmatic review launch,
+    # which a real person cannot trigger until leaving the welcome screen.
+    page.wait_for_function("!!document.getElementById('v112WelcomeDialog')",timeout=12000)
+    page.wait_for_timeout(650)
+    if page.locator('#v112WelcomeDialog').is_visible():
+        check('first-use welcome can be dismissed by its accessible close control',
+              page.locator('#v112WelcomeClose').get_attribute('aria-label') is not None)
+        page.locator('#v112WelcomeClose').click()
     page.evaluate("g=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());GomokuStudio.importGame(g);GomokuReview.open()}",GAME)
     page.wait_for_function("GomokuReview.state() && !GomokuReview.state().scanning",timeout=75000)
     return ctx,page,errors
