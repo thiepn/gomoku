@@ -11,7 +11,7 @@ function result(status,reason){return {format:'GomokuAnalysis3A12Preflight',sour
  canMerge:false,canTag:false,canDeployProduction:false,canModifyProductionData:false,
  notice:'Documentary review only. Originals require independent live authentication. Never a release authorization.'};}
 function assess({a11,review,ci,authorization,baseline,monitor}={}){
- if(a11?.format!=='GomokuAnalysis3A11Admission'||a11?.status!=='ready-for-independent-release-review'||
+ if(a11?.format!=='GomokuAnalysis3A11Admission'||a11?.version!==11||a11?.status!=='ready-for-independent-release-review'||
    a11.sourceSha!==LOCK.sourceSha||a11.offlineZipSha256!==LOCK.offlineZipSha256||
    a11.physicalCases?.required!==18||a11.physicalCases?.passed!==18||
    a11.stages?.source!=='locked-a9-automation'||a11.stages?.preview!=='eight-assets-match-receipt-documentary'||

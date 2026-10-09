@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),A=require('./a12-cutover-preflight.cj
 const C=require('./rc9-core.cjs'),LOCK=require('./a10-source-lock.json');
 const h='b'.repeat(64),a='a'.repeat(40),b='c'.repeat(40);
 function fixture(){
- const a11={format:'GomokuAnalysis3A11Admission',status:'ready-for-independent-release-review',
+ const a11={format:'GomokuAnalysis3A11Admission',version:11,status:'ready-for-independent-release-review',
   sourceSha:LOCK.sourceSha,offlineZipSha256:LOCK.offlineZipSha256,physicalCases:{required:18,passed:18},
   issues:[],canMerge:false,canTag:false,canDeployProduction:false,stages:{
    source:'locked-a9-automation',preview:'eight-assets-match-receipt-documentary',
@@ -37,10 +37,11 @@ function test(name,edit,expected){const x=fixture();if(edit)edit(x);const r=A.as
  assert.equal(r.status,expected,name);
  for(const k of ['canMerge','canTag','canDeployProduction','canModifyProductionData'])
   assert.equal(r[k],false,name);n++;console.log('PASS '+name);}
-test('empty input fail closed',()=>{},'manual-review-only');
+test('complete SYNTHETIC packet reaches manual review only',()=>{},'manual-review-only');
 const none=A.assess();assert.equal(none.status,'blocked-a11');
 test('A11 not accepted',x=>x.a11.status='awaiting-physical','blocked-a11');
 test('A11 source drift',x=>x.a11.sourceSha=a,'blocked-a11');
+test('wrong A11 document version',x=>x.a11.version=12,'blocked-a11');
 test('A11 false deploy rights mandatory',x=>x.a11.canDeployProduction=true,'blocked-a11');
 test('no independent review',x=>x.review=null,'blocked-review');
 test('17 physical observations insufficient',x=>x.review.physicalCases=17,'blocked-review');
