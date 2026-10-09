@@ -1,0 +1,161 @@
+name: A10 manually approved isolated HTTPS preview (never production)
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type I_APPROVE_A10_ISOLATED_PREVIEW; this may publish public preview URL'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/phase/a10-https-preview-device-qualification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Require explicit preview-only authorization
+        env:
+          A10_CONFIRM: ${{ inputs.confirmation }}
+        run: |
+          test "$A10_CONFIRM" = 'I_APPROVE_A10_ISOLATED_PREVIEW' ||
+            { echo 'Isolated preview authorization missing'; exit 1; }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a10-input
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Lock the exact A9 qualified source and prepare only eight static assets
+        run: python analysis3/a10-stage-preview.py .a10-input analysis10-test-output/preview-static
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a10-staged-immutable-preview
+          path: analysis10-test-output/
+          if-no-files-found: error
+          retention-days: 2
+
+  isolated-preview:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: gomoku-a10-preview
+    permissions:
+      contents: read
+      actions: read
+    env:
+      VERCEL_ORG_ID: ${{ vars.A10_VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.A10_VERCEL_PROJECT_ID }}
+      VERCEL_CLI_VERSION: ${{ vars.A10_VERCEL_CLI_VERSION }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: a10-staged-immutable-preview
+          path: analysis10-test-output
+      - name: Fail closed if the separate Vercel project is unconfigured or connected to Git
+        env:
+          VERCEL_TOKEN: ${{ secrets.A10_VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_PROJECT_ID" && test -n "$VERCEL_ORG_ID" ||
+            { echo 'Dedicated A10 preview credentials / scope missing'; exit 1; }
+          test "$VERCEL_ORG_ID" = 'team_LVo30en2fIX29vZH3gnYxmoi' ||
+            { echo 'Incorrect THIEPN preview team'; exit 1; }
+          echo "$VERCEL_CLI_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
+            { echo 'Specify reviewed, exactly pinned A10_VERCEL_CLI_VERSION'; exit 1; }
+          node - <<'NODE'
+          (async()=>{
+            const id=process.env.VERCEL_PROJECT_ID,team=process.env.VERCEL_ORG_ID,token=process.env.VERCEL_TOKEN;
+            const r=await fetch('https://api.vercel.com/v9/projects/'+encodeURIComponent(id)+'?teamId='+encodeURIComponent(team),
+              {headers:{Authorization:'Bearer '+token}});
+            if(!r.ok)throw Error('Dedicated preview project missing or inaccessible: '+r.status);
+            const project=await r.json();
+            if(project.id!==id||project.name!=='gomoku-a10-preview'||project.link)
+              throw Error('Refusing to use another Vercel project or any Git-linked project.');
+            console.log('PASS dedicated, unlinked gomoku-a10-preview project verified.');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - name: Build static-only Vercel output without rebuilding game files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,shutil,os
+          receipt=json.loads(Path('analysis10-test-output/a10-verified-preview.json').read_text())
+          src=Path('analysis10-test-output/preview-static')
+          dst=Path('.vercel/output/static')
+          dst.mkdir(parents=True,exist_ok=True)
+          paths=sorted(p.relative_to(src) for p in src.rglob('*') if p.is_file())
+          assert len(paths)==8,'Unexpected static asset set'
+          for rel in paths:
+              data=(src/rel).read_bytes()
+              assert hashlib.sha256(data).hexdigest()==receipt['assets'][rel.as_posix()]
+              target=dst/rel;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+          Path('.vercel/output/config.json').write_text(json.dumps({'version':3})+'\n')
+          Path('.vercel/project.json').write_text(json.dumps({
+              'projectId':os.environ['VERCEL_PROJECT_ID'],'orgId':os.environ['VERCEL_ORG_ID']})+'\n')
+          print('PASS verified static-only preview payload, 8 immutable source assets')
+          PY
+      - name: Install reviewed Vercel CLI
+        run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
+      - name: Publish a unique preview deployment only (NEVER --prod)
+        id: deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.A10_VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          URL="$(vercel deploy --prebuilt --yes)"
+          A10_PREVIEW_URL="$URL" node - <<'NODE'
+          const v=process.env.A10_PREVIEW_URL;
+          const u=new URL(v);
+          if(u.protocol!=='https:'||!u.hostname.endsWith('.vercel.app')||u.pathname!=='/'||
+             u.search||u.hash||u.username||u.password)process.exit(1);
+          console.log('PASS isolated HTTPS preview hostname: '+u.origin);
+          NODE
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+      - name: Verify exact A9 bytes served on isolated HTTPS origin
+        env:
+          A10_PREVIEW_URL: ${{ steps.deployment.outputs.url }}
+        run: node analysis3/a10-preview-integrity.cjs
+      - name: Run real Chromium PWA checks on HTTPS preview
+        env:
+          A10_PREVIEW_URL: ${{ steps.deployment.outputs.url }}
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a10-preview-browser.py
+      - name: Publish preview URL and findings (NOT physical-device approval)
+        env:
+          A10_PREVIEW_URL: ${{ steps.deployment.outputs.url }}
+        run: |
+          echo "### A10 hosted candidate preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "URL: $A10_PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Static content: byte-for-byte matched A9 qualified artifact." >> "$GITHUB_STEP_SUMMARY"
+          echo "Android Chrome / Samsung Internet / installed PWA: **NOT TESTED on physical devices**." >> "$GITHUB_STEP_SUMMARY"
+          echo "Production: **unchanged**." >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive HTTPS preview checks
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a10-hosted-preview-verification
+          path: |
+            analysis10-test-output/a10-https-probe.json
+            analysis10-test-output/a10-browser.json
+            analysis10-test-output/a10-mobile-packaged.png
+          retention-days: 14
+          if-no-files-found: warn

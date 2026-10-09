@@ -1,0 +1,17 @@
+{
+  "format": "GomokuA10ImmutablePreviewSource",
+  "version": 10,
+  "repository": "thiepn/gomoku",
+  "upstreamBranch": "phase/a9-immutable-release-candidate",
+  "sourceSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "githubRunId": "37922288752",
+  "githubArtifactName": "analysis3-a9-immutable-candidate-evidence",
+  "githubArtifactId": "11612273760",
+  "offlineZip": "gomoku-analysis3-a9-offline-candidate.zip",
+  "offlineZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "originProductionBranch": "main",
+  "staticAssetCount": 8,
+  "requiredPreviewHostSuffix": ".vercel.app",
+  "releaseStatus": "awaiting-physical",
+  "productionChangeAuthorized": false
+}
