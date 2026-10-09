@@ -1,4 +1,4 @@
-"""A10 physical-device acceptance: observational matrix, never automated attestation."""
+/* A10 physical-device acceptance: observational matrix, never automated attestation. */
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),A9=require('./rc9-core.cjs');
 const ROOT=path.resolve(__dirname,'..');
