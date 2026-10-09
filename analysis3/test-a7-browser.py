@@ -19,6 +19,16 @@ def load(browser,width,height,**options):
     errors=[];page.on('pageerror',lambda exc:errors.append(str(exc)))
     page.goto(BASE,wait_until='domcontentloaded',timeout=45000)
     page.wait_for_function("!!window.GomokuReview && !!window.GomokuTraining && !!window.GomokuRuntimePolicy6",timeout=25000)
+    # The real first-run onboarding is a separate modal and opens on a 120+350ms
+    # timer. Complete that first-use step *before* opening the review workspace.
+    # Otherwise the onboarding callback may overlap a programmatic review launch,
+    # which a real person cannot trigger until leaving the welcome screen.
+    page.wait_for_function("!!document.getElementById('v112WelcomeDialog')",timeout=12000)
+    page.wait_for_timeout(650)
+    if page.locator('#v112WelcomeDialog').is_visible():
+        check('first-use welcome can be dismissed by its accessible close control',
+              page.locator('#v112WelcomeClose').get_attribute('aria-label') is not None)
+        page.locator('#v112WelcomeClose').click()
     page.evaluate("g=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());GomokuStudio.importGame(g);GomokuReview.open()}",GAME)
     page.wait_for_function("GomokuReview.state() && !GomokuReview.state().scanning",timeout=75000)
     return ctx,page,errors
@@ -26,7 +36,15 @@ with sync_playwright() as pw:
     browser=pw.chromium.launch(headless=True,args=['--no-sandbox'])
     ctx,page,errors=load(browser,1440,900)
     baseline=page.evaluate('GomokuStudio.exportGame().moves')
-    check('review opens with an accessible dialog',page.locator('#grDialog').is_visible() and page.locator('#grDialog').get_attribute('aria-labelledby') is not None)
+    dialog_diagnostics=page.evaluate("""()=>{
+      const d=document.querySelector('#grDialog');
+      return {found:!!d,open:!!d?.open,aria:d?.getAttribute('aria-labelledby'),
+        visibility:d?getComputedStyle(d).visibility:null,display:d?getComputedStyle(d).display:null,
+        rect:d?d.getBoundingClientRect().toJSON():null,openDialogs:[...document.querySelectorAll('dialog[open]')].map(e=>e.id),
+        reviewState:!!GomokuReview.state()};}""")
+    print('A8 accessibility dialog diagnostics:',json.dumps(dialog_diagnostics),flush=True)
+    check('review dialog is actually open and visible',page.locator('#grDialog').is_visible())
+    check('review dialog names the visible title',page.locator('#grDialog').get_attribute('aria-labelledby')=='grTitle')
     check('full game board has all 225 distinct accessible intersections',page.locator('#grBoard [data-point]').count()==225)
     check('every review board intersection has a readable coordinate',page.locator('#grBoard [data-point]').evaluate_all("(xs)=>xs.length===225&&xs.every(x=>x.getAttribute('aria-label')?.length>1)"))
     check('game review has meaningful tab and board names',page.locator('#grBoard').get_attribute('aria-label') is not None and page.locator('#rwOverview').count()==1)
@@ -53,6 +71,9 @@ with sync_playwright() as pw:
     for width in [390,768]:
         ctx,page,errors=load(browser,width,844,is_mobile=(width==390),has_touch=(width==390),
           reduced_motion='reduce')
+        # The mobile overview intentionally leads with its text-only game summary.
+        # Navigate to the actual Review workspace before requiring its board.
+        page.evaluate("GomokuReview.setPanel('review')")
         check(f'{width}px review board remains visible',page.locator('#grBoard').is_visible())
         check(f'{width}px no document overflow',page.evaluate("()=>document.documentElement.scrollWidth<=innerWidth+2"))
         check(f'{width}px controls remain reachable',page.locator('#grClose').is_visible() and page.locator('#rwOptions').is_visible())

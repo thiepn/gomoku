@@ -1,0 +1,70 @@
+name: Analysis 3.0 A8 durable practice recovery smoke
+on:
+  push:
+    branches:
+      - phase/a8-practice-persistence-reliability
+    paths:
+      - 'analysis3/**'
+      - 'review/**'
+      - 'analysis/**'
+      - '.github/workflows/verify-analysis3-a8.yml'
+      - 'client-cache-version.txt'
+      - 'sw.js'
+      - 'index.html'
+permissions:
+  contents: read
+jobs:
+  practice-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Rebuild and verify portable app
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          python review/ux/test-integrity.py
+          python analysis/test-integrity.py
+          python ui/test-integrity.py
+      - name: Run core evidence and store regressions
+        run: |
+          node --check analysis3/practice-integrity.js
+          node --check analysis/training.js
+          node --check analysis/runtime.js
+          python -m py_compile analysis3/test-a8-browser.py
+          node analysis3/test-a5.cjs
+          node analysis3/test-a6.cjs
+          node analysis3/test-a7.cjs
+          node analysis3/test-a8.cjs
+      - name: Install Chromium
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Run actual HTTP IndexedDB reproduction
+        env:
+          A5_URL: http://127.0.0.1:8765/
+          CHROMIUM_PATH: playwright
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/a8-http.log 2>&1 &
+          python analysis3/test-a5-browser.py
+          python analysis3/test-a8-browser.py
+          python analysis3/test-a7-browser.py
+          python review/ux/test-workspace.py
+      - name: Upload reproducible debug evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a8-practice-debug
+          path: |
+            analysis5-test-output/
+            analysis8-test-output/
+            index.html
+            sw.js
+          retention-days: 7

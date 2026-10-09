@@ -41,7 +41,7 @@ def load(ctx, fixture=GAME):
     return pg
 
 def hit(pg, selector):
-    return pg.locator(selector).evaluate('''e=>{const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,t=document.elementFromPoint(x,y);return x>=0&&y>=0&&x<=innerWidth&&y<=innerHeight&&(t===e||e.contains(t));}''')
+    return pg.locator(selector).first.evaluate('''e=>{const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,t=document.elementFromPoint(x,y);return x>=0&&y>=0&&x<=innerWidth&&y<=innerHeight&&(t===e||e.contains(t));}''')
 
 def in_view(pg, selector):
     r = pg.locator(selector).bounding_box()
@@ -87,7 +87,19 @@ with sync_playwright() as pw:
         check('a guided-board click does not silently start a variation',state(pg)['mode']=='game' and 'Free analysis' in pg.locator('#grFeedback').inner_text())
         pg.locator('#rwTabAnalysis').click();pg.wait_for_timeout(70)
         check('free analysis explicitly starts before the selected move',state(pg)['view']=='before' and 'REPLACE' in pg.locator('#grModeLabel').inner_text())
-        check('free analysis prioritizes visible candidate choices',hit(pg,'#grCandidates .gr-candidate:first-child'))
+        candidate_diag=pg.evaluate("""()=>{
+          const e=document.querySelector('#grCandidates .gr-candidate'),panel=document.querySelector('#grDialog .gr-inspector');
+          if(!e||!panel)return {exists:!!e,panel:!!panel};
+          const a=e.getBoundingClientRect(),b=panel.getBoundingClientRect();
+          const x=a.left+a.width/2,y=a.top+a.height/2;
+          const top=document.elementFromPoint(x,y);
+          return {first:{x:a.x,y:a.y,width:a.width,height:a.height},inspector:{x:b.x,y:b.y,width:b.width,height:b.height},
+            scrollTop:panel.scrollTop,scrollHeight:panel.scrollHeight,clientHeight:panel.clientHeight,
+            hitElement:top?.outerHTML?.slice(0,220),overflow:getComputedStyle(panel).overflowY,
+            decisionScroll:document.querySelector('#rwDecision')?.scrollTop,
+            panelName:document.querySelector('#grDialog')?.dataset.panel};}""")
+        print('A8 candidate visibility diagnostic:',json.dumps(candidate_diag),flush=True)
+        check('free analysis prioritizes visible candidate choices',hit(pg,'#grCandidates .gr-candidate'))
         check('return-to-review is available before a test stone is placed',hit(pg,'#grReturn'))
         candidates=pg.locator('#grCandidates [data-alternative]').evaluate_all('(es)=>es.map(e=>Number(e.dataset.alternative))')
         markers=pg.locator('#grBoard .rw-candidate-point').evaluate_all('(es)=>es.map(e=>[Number(e.dataset.point),e.querySelector(".gr-point-mark").textContent])')

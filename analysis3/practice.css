@@ -31,3 +31,10 @@
  #grDialog .a5-review-plan{display:block}
  #grDialog .a5-review-plan .gr-btn{width:100%;margin-top:10px}
 }
+
+/* A8 — quiet inline data-integrity controls, not a parallel SaaS dashboard. */
+#a2Trainer .a8-recovery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--gr-line)}
+#a2Trainer .a8-recovery-tools .gr-btn{min-height:36px;padding:6px 11px;font-size:11px}
+#a2Trainer .a8-recovery-status{font-size:11px;line-height:1.55;color:var(--gr-muted);margin:8px 0 0}
+#a2Trainer .a8-recovery-status[data-health=attention]{color:#9b513a}
+@media(max-width:390px){#a2Trainer .a8-recovery-tools .gr-btn{flex:1}}

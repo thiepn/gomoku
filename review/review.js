@@ -329,7 +329,23 @@ if(typeof window !== 'undefined') (()=>{
     const list=$('grMoveList'),sel=list.querySelector('.gr-current');
     if(sel&&list.clientHeight){const a=sel.getBoundingClientRect(),b=list.getBoundingClientRect();if(a.top<b.top)list.scrollTop+=a.top-b.top;else if(a.bottom>b.bottom)list.scrollTop+=a.bottom-b.bottom;}
   }
-  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
+  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;
+    // Analysis is board-first, but the ranked alternatives must be visible in
+    // its independent inspector rather than hidden below the decision header.
+    // Only scroll the inspector on entering this mode; do not steal keyboard
+    // focus, move the document, or change the recorded position.
+    if(session?.panel==='analysis'){
+      // The workspace inspector uses a fixed-height move-record area beneath
+      // the independently scrollable #rwDecision. Scroll the actual inner
+      // panel, not its overflow:hidden flex parent (which cannot scroll).
+      const scroller=$('rwDecision'),first=$('grCandidates')?.querySelector('.gr-candidate');
+      if(innerWidth>720&&scroller&&first&&scroller.clientHeight){
+        const a=first.getBoundingClientRect(),b=scroller.getBoundingClientRect();
+        if(a.top<b.top+12||a.bottom>b.bottom-12)
+          scroller.scrollTop+=a.top-b.top-Math.min(90,Math.max(12,b.height*.12));
+      }
+    }
+  });}
   function chosenState() {
     const s=session,p=entry();
     if(s?.panel==='analysis'&&s.mode==='game'&&s.a3?.preview){
