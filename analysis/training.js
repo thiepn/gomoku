@@ -65,9 +65,9 @@ if(typeof window!=='undefined') (()=>{
    $('a5Focus').value=S.focus;
    $('a5StartDue').disabled=!(plan?.due)||S.busy;
    const topic=c?P()?.theme(S.reference||c.reference,c.source,c.rule):null;
-   const objective=c?P()?.qualification(S.reference||c.reference,{board:c.board,color:c.color},c.rule):null;
+   const objective=c&&S.reference?P()?.qualification(S.reference,{board:c.board,color:c.color,played:c.played,context:c.context},c.rule):null;
    $('a5EvidenceTag').dataset.proof=objective?.evidence||'unknown';
-   $('a5EvidenceTag').textContent=c?`${P()?.THEMES.find(t=>t.id===topic)?.title||'Tactical decision'} · ${objective?.evidence==='rules'?'Rule-confirmed exercise':objective?.evidence==='verified'?'Verified evidence':'Engine estimate / recheck required'}`:'Select a lesson to begin';
+   $('a5EvidenceTag').textContent=c?`${P()?.THEMES.find(t=>t.id===topic)?.title||'Tactical decision'} · ${objective?.evidence==='rules'?'Rule-confirmed exercise':objective?.evidence==='verified'?'Verified evidence':objective?.evidence==='provisional'?'Search estimate · rechecked':'Historical task · recheck pending'}`:'Select a lesson to begin';
    $('a2TrainingMeta').textContent=`${S.items.length} saved · ${S.items.filter(x=>x.stats.due<=Date.now()).length} due now · ${GomokuMistakes.status().persistent?'Stored on this device':'Tab-only storage'}`;
    $('a2Question').textContent=c?`${side(c.color)} to play · original move ${c.source.ply}`:'Choose a saved position below';
    const board=c?c.board.slice():new Array(225).fill(0);const i=S.preview??at?.i;if(c&&Number.isInteger(i))board[i]=c.color;
