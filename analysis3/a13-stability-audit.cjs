@@ -115,15 +115,19 @@ function audit({candidate,cutover,liveProbe,telemetry,devices,incidents,handoff}
    !LIVE.allowedPublicOrigin(cutover.productionOrigin)||
    !nonempty(cutover.deploymentId)||!nonempty(cutover.operator)||
    !nonempty(cutover.owner)||cutover.owner===cutover.operator||
-   !nonempty(cutover.independentWitness)||cutover.independentWitness===cutover.operator||
+   !nonempty(cutover.independentWitness)||(cutover.independentWitness===cutover.operator||cutover.independentWitness===cutover.owner)||
    !H64.test(cutover.a12PreflightDigest||'')||
    !H64.test(cutover.ownerAuthorizationDigest||'')||
    !H64.test(cutover.deploymentEvidenceDigest||'')||
    !instant(cutover.authorizedAt)||!after(cutover.deployedAt,cutover.authorizedAt)||
-   cutover.rollbackArchiveSha256!==LOCK.offlineZipSha256||
+   cutover.candidateArchiveSha256!==LOCK.offlineZipSha256||
+   !H64.test(cutover.previousStableArchiveSha256||'')||
+   cutover.previousStableSourceSha!==cutover.previousMainSha||
+   !instant(cutover.previousStableRestoreTestedAt)||
+   ts(cutover.previousStableRestoreTestedAt)>ts(cutover.deployedAt)||
    cutover.productionDataMigration!=='none'||cutover.rollbackAvailable!==true)
   return result('blocked-cutover','A genuinely executed, witnessed, SHA-bound and separately authorized production cutover is not documented.');
- if(!liveProbe||liveProbe.format!=='GomokuAnalysis3A13ProductionProbe'||
+ if(!liveProbe||liveProbe.format!=='GomokuAnalysis3A13ProductionProbe'||liveProbe.version!==13||
     liveProbe.sourceSha!==LOCK.sourceSha||liveProbe.origin!==cutover.productionOrigin||
     liveProbe.deploymentId!==cutover.deploymentId||
     !after(liveProbe.observedAt,cutover.deployedAt)||
@@ -144,7 +148,7 @@ function audit({candidate,cutover,liveProbe,telemetry,devices,incidents,handoff}
     !H64.test(incidents.alertExportDigest||'')||
     !H64.test(incidents.rollbackReadinessDigest||'')||
     incidents.noOpenSev1OrSev2!==true||incidents.playerDataLoss!==false||
-    incidents.rollBackExecuted!==false||incidents.rollbackReady!==true||
+    incidents.rollbackExecuted!==false||incidents.rollbackReady!==true||
     !Array.isArray(incidents.entries)||
     incidents.entries.some(x=>!x||!['sev1','sev2','sev3','sev4'].includes(x.severity)||
      x.status!=='resolved'||!after(x.resolvedAt,cutover.deployedAt)))
