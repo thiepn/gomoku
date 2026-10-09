@@ -24,6 +24,10 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data?.type === 'GOMOK_OFFLINE_STATUS' && event.source?.postMessage) {
+    event.source.postMessage({ type: 'GOMOK_OFFLINE_STATUS', cacheName: CACHE_NAME,
+      scopePath: scopeURL.pathname, shellPath });
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -56,13 +60,23 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(CACHE_NAME).catch(() => null);
       let response = null;
       try {
-        response = await fetch(request);
+        // Prevent an offline/captive-portal fetch from hanging installed games.
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          response = await fetch(request, { signal: controller.signal, cache: 'no-store' });
+        } finally { clearTimeout(timeout); }
       } catch {}
 
-      if (response?.ok) {
+      // Do not overwrite a valid offline game with JSON, a captive-portal page,
+      // an opaque response, or a redirected sign-in page from another origin.
+      const type = response?.headers?.get('content-type') || '';
+      const sameOrigin = response?.url ? new URL(response.url).origin === scopeURL.origin : false;
+      if (response?.ok && sameOrigin && type.toLowerCase().includes('text/html')) {
         if (cache) await cache.put(shellURL, response.clone()).catch(() => {});
         return response;
       }
+      // Non-document responses are returned online but are never cached.
 
       const cached = cache ? await cache.match(shellURL).catch(() => null) : null;
       return cached || response || Response.error();
