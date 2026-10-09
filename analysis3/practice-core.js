@@ -96,14 +96,16 @@
      themes:byTheme,shown:Math.min(items.length,Math.max(1,limit)),total:items.length,
      disclaimer:'Due dates come from existing saved stats. This planner never writes or replaces recall events.'};
  }
- function answerPolicy(r,reference,{assisted=false,verifiedTarget=false}={}){
+ function answerPolicy(r,reference,{assisted=false,verifiedTarget=false,verifyProof}={}){
    const unscored={status:'unresolved',advance:false,assisted,
      message:'Not enough evidence to score this response. Your review interval and recall history are unchanged.'};
    if(!r||!reference||r.basis==='insufficient-search'||r.label==='Unscored')return unscored;
    const needWin=verifiedTarget||reference?.facts?.ownWins?.length>0;
    const immediateWin=r.facts?.win===true;
-   const certifiedWin=!!(r.bestProof?.format==='GomokuStudioProof'&&r.bestProof?.proof&&
-     r.bestProof.proof.move===r.played&&r.basis==='verified-proof');
+   const certifiedWin=!!(typeof verifyProof==='function'&&r.bestProof?.format==='GomokuStudioProof'&&
+     r.bestProof?.proof?.move===r.played&&r.basis==='verified-proof'&&
+     r.bestProof.rule===r.rule&&r.bestProof.attacker===r.color&&
+     (()=>{try{return verifyProof(r.bestProof)===true;}catch{return false;}})());
    if(needWin){
      if(immediateWin||certifiedWin)return {status:'correct',advance:!assisted,assisted,
        message:assisted?'Winning answer after help; recorded only as assisted.':'Winning line established for this attempt.'};
