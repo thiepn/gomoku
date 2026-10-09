@@ -28,8 +28,8 @@ for name,digest in baseline['preserved'].items():
     if name=='_game-app-excluding-material':
         content=normalize_ai2_hooks(content);a=content.index('function bake(){');b=content.index('function drawTri(',a);content=content[:a]+content[b:]
     assert hashlib.sha256(content.encode()).hexdigest()==digest,'Baseline logic changed: '+name
-for tag,name,file in [('script','analysis2-core','core.js'),('script','analysis6-runtime-policy','../analysis3/runtime-policy.js'),('script','analysis2-runtime','runtime.js'),('script','analysis2-training','training.js'),('style','analysis2-style','analysis.css'),('script','analysis5-practice-core','../analysis3/practice-core.js'),('style','analysis5-practice-style','../analysis3/practice.css')]:
+for tag,name,file in [('script','analysis2-core','core.js'),('script','analysis6-runtime-policy','../analysis3/runtime-policy.js'),('script','analysis2-runtime','runtime.js'),('script','analysis2-training','training.js'),('style','analysis2-style','analysis.css'),('script','analysis5-practice-core','../analysis3/practice-core.js'),('script','analysis8-practice-integrity','../analysis3/practice-integrity.js'),('style','analysis5-practice-style','../analysis3/practice.css')]:
     matches=re.findall(fr'<{tag} id="{name}">(.*?)</{tag}>',html,re.S)
     assert len(matches)==1 and matches[0].strip()==(root/'analysis'/file).read_text().strip(),'Embedding/source mismatch: '+file
-assert html.index('id="analysis2-core"')<html.index('id="analysis6-runtime-policy"')<html.index('id="analysis2-runtime"')<html.index('id="guided-review-script"')<html.index('id="analysis5-practice-core"')<html.index('id="analysis2-training"')
+assert html.index('id="analysis2-core"')<html.index('id="analysis6-runtime-policy"')<html.index('id="analysis2-runtime"')<html.index('id="guided-review-script"')<html.index('id="analysis5-practice-core"')<html.index('id="analysis8-practice-integrity"')<html.index('id="analysis2-training"')
 print('PASS',len(baseline['preserved']),'prior-release module/logic hashes preserved after normalizing reviewed AI 2.0 seams; four Analysis 2.0 embeddings verified.')
