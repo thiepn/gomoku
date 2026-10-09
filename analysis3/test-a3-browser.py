@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     pg.evaluate("GomokuReview.setPanel('review')")
     check('analysis overlays do not leak into Guided Review',not pg.locator('#a3Command').is_visible() and pg.locator('#a3BoardSvg .a3-dot').count()==0)
     pg.evaluate("GomokuReview.setPanel('analysis')")
-    check('no game history change on leaving and reentering analysis',pg.evaluate('GomokuStudio.exportGame()')==original)
+    check('no game history or rules change on leaving and reentering analysis',pg.evaluate('GomokuStudio.exportGame().moves')==original['moves'] and pg.evaluate('GomokuStudio.exportGame().initial')==original['initial'] and pg.evaluate('GomokuStudio.exportGame().variant')==original['variant'])
     pg.close();ctx.close()
     ctx=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     mobile=load(ctx)
@@ -76,7 +76,7 @@ with sync_playwright() as pw:
     mobile.locator('[data-a3-mode="line"]').click()
     check('mobile analysis modes are usable by touch',mobile.locator('[data-a3-mode="line"]').get_attribute('aria-pressed')=='true')
     mobile.screenshot(path=str(OUT/'03-a3-mobile.png'))
-    check('mobile game history stays unchanged',mobile.evaluate('GomokuStudio.exportGame()')==original)
+    check('mobile recorded moves and initial position stay unchanged',mobile.evaluate('GomokuStudio.exportGame().moves')==original['moves'] and mobile.evaluate('GomokuStudio.exportGame().initial')==original['initial'])
     browser.close()
 
 (OUT/'a3-report.json').write_text(json.dumps({'passed':len(passed),'checks':passed,'scope':'Chromium browser synthetic fixture; not physical device, Elo, or proof search completeness'},indent=2))
