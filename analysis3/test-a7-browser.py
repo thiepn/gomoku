@@ -26,7 +26,15 @@ with sync_playwright() as pw:
     browser=pw.chromium.launch(headless=True,args=['--no-sandbox'])
     ctx,page,errors=load(browser,1440,900)
     baseline=page.evaluate('GomokuStudio.exportGame().moves')
-    check('review opens with an accessible dialog',page.locator('#grDialog').is_visible() and page.locator('#grDialog').get_attribute('aria-labelledby') is not None)
+    dialog_diagnostics=page.evaluate("""()=>{
+      const d=document.querySelector('#grDialog');
+      return {found:!!d,open:!!d?.open,aria:d?.getAttribute('aria-labelledby'),
+        visibility:d?getComputedStyle(d).visibility:null,display:d?getComputedStyle(d).display:null,
+        rect:d?d.getBoundingClientRect().toJSON():null,openDialogs:[...document.querySelectorAll('dialog[open]')].map(e=>e.id),
+        reviewState:!!GomokuReview.state()};}""")
+    print('A8 accessibility dialog diagnostics:',json.dumps(dialog_diagnostics),flush=True)
+    check('review dialog is actually open and visible',page.locator('#grDialog').is_visible())
+    check('review dialog names the visible title',page.locator('#grDialog').get_attribute('aria-labelledby')=='grTitle')
     check('full game board has all 225 distinct accessible intersections',page.locator('#grBoard [data-point]').count()==225)
     check('every review board intersection has a readable coordinate',page.locator('#grBoard [data-point]').evaluate_all("(xs)=>xs.length===225&&xs.every(x=>x.getAttribute('aria-label')?.length>1)"))
     check('game review has meaningful tab and board names',page.locator('#grBoard').get_attribute('aria-label') is not None and page.locator('#rwOverview').count()==1)
