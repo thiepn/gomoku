@@ -18,7 +18,7 @@ def load(ctx):
     page.set_default_timeout(16000)
     if URL:page.goto(URL,wait_until='domcontentloaded',timeout=45000)
     else:page.set_content(MOCK+HTML,wait_until='domcontentloaded')
-    page.wait_for_function("window.GomokuReview?.workspaceVersion==='3.0.0-a4' && !!window.GomokuGameDiagnosis4",timeout=20000)
+    page.wait_for_function("window.GomokuReview?.workspaceVersion==='3.0.0-a5' && !!window.GomokuGameDiagnosis4",timeout=20000)
     page.wait_for_timeout(500)
     page.evaluate("""game=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());GomokuStudio.importGame(game);GomokuReview.open();}""",GAME)
     page.wait_for_function('GomokuReview.state() && !GomokuReview.state().scanning',timeout=65000)
