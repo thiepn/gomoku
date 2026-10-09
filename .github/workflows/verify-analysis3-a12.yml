@@ -1,0 +1,37 @@
+name: Analysis 3.0 A12 nondeploying cutover preflight
+on:
+  push:
+    branches: [phase/a12-cutover-preflight-monitoring]
+  pull_request:
+    paths:
+      - 'analysis3/a12-*'
+      - 'analysis3/test-a12-*'
+      - 'analysis3/A12-*'
+      - '.github/workflows/verify-analysis3-a12.yml'
+permissions:
+  contents: read
+jobs:
+  a12-cutover-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # P19 immutable
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # P19 immutable
+        with:
+          node-version: '22'
+      - name: Qualify tests and supply-chain without production credentials
+        run: |
+          node --check analysis3/a12-cutover-preflight.cjs
+          node --check analysis3/test-a12-cutover-preflight.cjs
+          node analysis3/test-a12-cutover-preflight.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Confirm missing A11 review remains blocked
+        run: |
+          set +e
+          node analysis3/a12-cutover-preflight.cjs > a12-result.json
+          result=$?
+          set -e
+          test "$result" -eq 2
+          node -e "const r=require('./a12-result.json'); if(r.status!=='blocked-a11'||r.canDeployProduction!==false||r.canMerge!==false||r.canTag!==false) process.exit(1)"
