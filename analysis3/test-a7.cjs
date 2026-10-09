@@ -3,6 +3,11 @@ const assert=require('node:assert/strict'),G=require('./release-gate.js');
 let count=0;const test=(name,f)=>{f();count++;console.log('PASS '+name)};
 const sha='a'.repeat(40),hash='b'.repeat(64),sw='c'.repeat(64),manifestHash='d'.repeat(64);
 const row=({status='passed',source=sha,artifact=hash,extra={}}={})=>({status,sha:source,artifactHash:artifact,issuer:'GitHub Actions/ci',timestamp:'2026-10-09T07:00:00Z',...extra});
+const validDevice=id=>row({extra:{device:'Recorded test device',osVersion:'Android 15',
+ browserVersion:'Tested 128',testedUrl:'https://candidate.example/gomoku/',tester:'Named tester',
+ signature:'Explicit human test attestation',testCases:G.DEVICE_CHECKS[id].map(name=>({
+ id:name,status:'passed',observation:'Observed correct behavior on physical hardware'
+ }))}});
 const base=()=>({
  sourceSha:sha,artifactHash:hash,serviceWorkerHash:sw,manifestHash,targetBranch:'phase/a7-release-qualification',productionUnchanged:true,
  automatedEvidence:Object.fromEntries(G.TESTS.map(id=>[id,row()])),physicalEvidence:{},
@@ -27,21 +32,34 @@ test('forged device row without concrete tester evidence is rejected',()=>{
  const m=base();m.physicalEvidence['android-chrome']=row();
  assert.equal(G.qualify(m).physical['android-chrome'],'insufficient-device-evidence');
 });
+test('generic one-line physical passes cannot bypass required per-device matrices',()=>{
+ const m=base();
+ for(const p of G.PHYSICAL){
+   m.physicalEvidence[p]=validDevice(p);
+   m.physicalEvidence[p].testCases=m.physicalEvidence[p].testCases.slice(0,1);
+ }
+ assert.equal(G.qualify(m).physicalReady,false);
+});
+test('a physical test reported as passed without an observation is rejected',()=>{
+ const m=base();m.physicalEvidence['android-chrome']=validDevice('android-chrome');
+ m.physicalEvidence['android-chrome'].testCases[0].observation='';
+ assert.equal(G.qualify(m).physical['android-chrome'],'insufficient-device-evidence');
+});
 test('checklist without explicit test-case execution fails',()=>{
  const m=base();m.physicalEvidence['android-chrome']=row({extra:{device:'Galaxy',osVersion:'Android 15',browserVersion:'122',signature:'tester',testCases:[]}});
  assert.equal(G.qualify(m).physical['android-chrome'],'insufficient-device-evidence');
 });
 test('successful physical records do not release without owner authorization',()=>{
- const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=row({extra:{device:'Device under test',osVersion:'Android 15',browserVersion:'128',signature:'signed evidence',testCases:['offline','resume']}});
+ const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=validDevice(p);
  const d=G.qualify(m);assert.equal(d.state,'awaiting-owner-approval');assert.equal(d.humanApproval,false);
 });
 test('matching explicit approval qualifies but never deploys',()=>{
- const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=row({extra:{device:'Device',osVersion:'Android 15',browserVersion:'128',signature:'signed',testCases:['PWA'] }});
+ const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=validDevice(p);
  m.approval={status:'approved',sha,artifactHash:hash,approvedAt:'2026-10-09T10:00:00Z',approvedBy:'Owner'};
  const d=G.qualify(m);assert.equal(d.state,'release-qualified');assert.match(d.limits,/does not create or ship/);
 });
 test('a malicious approval from another commit cannot qualify',()=>{
- const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=row({extra:{device:'Device',osVersion:'15',browserVersion:'128',signature:'sig',testCases:['PWA']}});
+ const m=base();for(const p of G.PHYSICAL)m.physicalEvidence[p]=validDevice(p);
  m.approval={status:'approved',sha:'f'.repeat(40),artifactHash:hash,approvedAt:'2026-10-09T10:00:00Z',approvedBy:'Owner'};
  assert.equal(G.qualify(m).humanApproval,false);
 });
