@@ -3,7 +3,7 @@
 const fs=require('node:fs');
 const A9=require('./rc9-core.cjs');
 const LOCK=require('./a10-source-lock.json');
-const A12=require('./a12-cutover-preflight.cjs');
+const LIVE=require('./a13-live-probe.cjs');
 const H40=/^[a-f0-9]{40}$/i,H64=/^[a-f0-9]{64}$/i;
 const nonempty=v=>typeof v==='string'&&v.trim().length>0;
 const instant=v=>nonempty(v)&&Number.isFinite(Date.parse(v))&&/^\d{4}-\d{2}-\d{2}T/.test(v)&&/(Z|\+00:00)$/.test(v);
@@ -112,7 +112,7 @@ function audit({candidate,cutover,liveProbe,telemetry,devices,incidents,handoff}
    !H40.test(cutover.a12HeadSha||'')||!H40.test(cutover.previousMainSha||'')||
    !H40.test(cutover.productionCommitSha||'')||
    cutover.previousMainSha===cutover.productionCommitSha||
-   !A12.origin(cutover.productionOrigin)||
+   !LIVE.allowedPublicOrigin(cutover.productionOrigin)||
    !nonempty(cutover.deploymentId)||!nonempty(cutover.operator)||
    !nonempty(cutover.owner)||cutover.owner===cutover.operator||
    !nonempty(cutover.independentWitness)||cutover.independentWitness===cutover.operator||
