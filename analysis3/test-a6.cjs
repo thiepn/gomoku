@@ -120,6 +120,16 @@ const original=JSON.stringify(board);
    const b=R.request(board,1,'freestyle',117,{timeMs:500,verifyOnly:true,certificate:{proof:{move:110}}});
    assert.equal(R.stats().busy,true);FakeWorker.all.at(-1).reply({valid:false});await b;
  });
+ await test('A6 delayed error from a canceled worker cannot abort a newer worker',async()=>{
+   const oldJob=R.request(board,2,'freestyle',119,{timeMs:600});
+   const old=FakeWorker.all.at(-1);
+   const newJob=R.request(board,2,'freestyle',120,{timeMs:600});
+   await assert.rejects(oldJob,{name:'AbortError'});
+   old.error('stale error should be ignored');
+   assert.equal(R.stats().busy,true);
+   FakeWorker.all.at(-1).reply({label:'Current worker result'});
+   assert.equal((await newJob).label,'Current worker result');
+ });
  await test('A6 foreground worker errors reject and safely rebuild worker',async()=>{
    const p=R.request(board,1,'freestyle',118,{timeMs:330});
    const old=FakeWorker.all.at(-1);old.error();
