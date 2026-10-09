@@ -329,7 +329,20 @@ if(typeof window !== 'undefined') (()=>{
     const list=$('grMoveList'),sel=list.querySelector('.gr-current');
     if(sel&&list.clientHeight){const a=sel.getBoundingClientRect(),b=list.getBoundingClientRect();if(a.top<b.top)list.scrollTop+=a.top-b.top;else if(a.bottom>b.bottom)list.scrollTop+=a.bottom-b.bottom;}
   }
-  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
+  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;
+    // Analysis is board-first, but the ranked alternatives must be visible in
+    // its independent inspector rather than hidden below the decision header.
+    // Only scroll the inspector on entering this mode; do not steal keyboard
+    // focus, move the document, or change the recorded position.
+    if(session?.panel==='analysis'){
+      const inspector=dialog.querySelector('.gr-inspector'),first=$('grCandidates')?.querySelector('.gr-candidate');
+      if(inspector&&first){
+        const a=first.getBoundingClientRect(),b=inspector.getBoundingClientRect();
+        if(a.top<b.top+12||a.bottom>b.bottom-12)
+          inspector.scrollTop+=a.top-b.top-Math.min(90,Math.max(12,b.height*.12));
+      }
+    }
+  });}
   function chosenState() {
     const s=session,p=entry();
     if(s?.panel==='analysis'&&s.mode==='game'&&s.a3?.preview){
