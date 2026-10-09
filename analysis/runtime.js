@@ -172,15 +172,29 @@ if(typeof window!=='undefined') (()=>{
    }));
  }
  async function remove(id){await transact([id],rows=>rows.filter(x=>x.id!==id));}
+ async function audit(){
+   const entries=await list(),I=window.GomokuPracticeIntegrity8;
+   if(!I)throw Error('Practice integrity checker is unavailable.');
+   const analysis=A();
+   return I.inspect(entries,{validateCard:c=>analysis.validateCard(c),backend});
+ }
+ async function previewImport(data){
+   const I=window.GomokuPracticeIntegrity8;
+   if(!I)throw Error('Practice integrity checker is unavailable.');
+   const analysis=A(),entries=await list();
+   return I.previewImport(entries,data,{validateCard:c=>analysis.validateCard(c)});
+ }
  async function importData(data){
    if(!data||data.format!=='GomokuMistakeLibrary'||data.version!==2||!Array.isArray(data.cards)||data.cards.length>150)throw Error('Unsupported mistake library.');
    if(JSON.stringify(data).length>14000000)throw Error('Mistake import exceeds 14 MB.');
+   // Reject duplicate source IDs and oversized merges before the transaction.
+   await previewImport(data);
    const engine=A(),cards=data.cards.map(c=>engine.validateCard(c));
    // Validate every card before opening a write transaction. Incoming statistics
    // never replace existing local recall history; new cards retain their history.
    await add(cards);return cards.length;
  }
- window.GomokuMistakes=Object.freeze({version:2,list,add,record,remove,importData,
+ window.GomokuMistakes=Object.freeze({version:2,list,add,record,remove,audit,previewImport,importData,
    exportData:async()=>({format:'GomokuMistakeLibrary',version:2,exportedAt:new Date().toISOString(),cards:await list()}),
    status:()=>({backend,error:lastError,persistent:backend==='indexeddb'})});
 })();
