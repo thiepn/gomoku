@@ -1,0 +1,50 @@
+name: Analysis 3.0 A13 nondeploying stability and operational handoff
+on:
+  push:
+    branches: [phase/a13-stability-operations-handoff]
+  pull_request:
+    paths:
+      - 'analysis3/a13-*'
+      - 'analysis3/test-a13-*'
+      - 'analysis3/A13-*'
+      - '.github/workflows/verify-analysis3-a13.yml'
+permissions:
+  contents: read
+concurrency:
+  group: a13-readonly-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a13-readonly-stability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # P19 pinned
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # P19 pinned
+        with:
+          node-version: '22'
+      - name: Verify source syntax, adversarial P20/physical/recovery contracts and immutable actions
+        run: |
+          node --check analysis3/a13-stability-audit.cjs
+          node --check analysis3/test-a13-stability-audit.cjs
+          node --check analysis3/a13-live-probe.cjs
+          node --check analysis3/test-a13-live-probe.cjs
+          node analysis3/test-a13-stability-audit.cjs
+          node analysis3/test-a13-live-probe.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Prove absence of live deployment and missing evidence blocks qualification
+        run: |
+          set +e
+          node analysis3/a13-stability-audit.cjs > a13-blocked-evidence.json
+          result=$?
+          set -e
+          test "$result" -eq 2
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const r=require('./a13-blocked-evidence.json');
+          assert.equal(r.status,'blocked-source');
+          for(const x of ['canCertifyStable','canCloseRelease','canMerge','canTag','canDeployProduction','canChangeProductionData'])
+            assert.equal(r[x],false);
+          console.log('PASS nondeploying A13 remains blocked without real authorized A12 cutover');
+          NODE
