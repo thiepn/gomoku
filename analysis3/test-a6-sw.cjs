@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const script=fs.readFileSync('sw.js','utf8'),listeners={};
-const CACHE='gomoku-test-a6',base='https://thiepn.dev/gomoku/';
+const CACHE=script.match(/const CACHE_NAME = '([^']+)'/)[1],base='https://thiepn.dev/gomoku/';
 const data=new Map(),opened=[],removed=[];let online=true,networkCalls=[];
 const cache={
  addAll:async paths=>{for(const p of paths){const url=new URL(p,base).href;data.set(url,new ResponseStub('INSTALL:'+p,{url}));}},
