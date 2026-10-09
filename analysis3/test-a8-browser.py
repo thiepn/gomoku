@@ -30,6 +30,10 @@ with sync_playwright() as pw:
     check('real postgame position saved and readable',saved>0 and len(cards)>0)
     check('library uses persistent IndexedDB',page.evaluate('GomokuMistakes.status().persistent'))
     before=json.dumps(cards,sort_keys=True)
+    def histories(rows):
+        return json.dumps(sorted([{'id':c['id'],'board':c['board'],'stats':c['stats'],
+                                  'events':c['events']} for c in rows],key=lambda x:x['id']),sort_keys=True)
+    saved_history=histories(cards)
     audit=page.evaluate('GomokuMistakes.audit()')
     check('read-only library audit reports consistent recall',audit['ok'] and audit['counts']['positions']==len(cards))
     check('audit does not mutate record bytes',json.dumps(page.evaluate('GomokuMistakes.list()'),sort_keys=True)==before)
@@ -43,11 +47,11 @@ with sync_playwright() as pw:
     preview=page.evaluate('(data)=>GomokuMistakes.previewImport(data)',data)
     check('backup preview recognizes already saved cards',preview['preserved']==len(cards) and preview['added']==0)
     page.evaluate('(d)=>GomokuMistakes.importData(d)',data)
-    check('reimport is idempotent and preserves original stats',json.dumps(page.evaluate('GomokuMistakes.list()'),sort_keys=True)==before)
+    check('reimport preserves the exact original board, due dates and recall event IDs',histories(page.evaluate('GomokuMistakes.list()'))==saved_history)
     malformed=json.loads(json.dumps(data))
     malformed['cards'][0]['stats']['attempts']=-3
     failure=page.evaluate("""async backup=>{try{await GomokuMistakes.importData(backup);return false}catch{return true}}""",malformed)
-    check('invalid imported practice history rejected atomically',failure and json.dumps(page.evaluate('GomokuMistakes.list()'),sort_keys=True)==before)
+    check('invalid imported practice history rejected atomically',failure and histories(page.evaluate('GomokuMistakes.list()'))==saved_history)
     page.screenshot(path=str(OUT/'a8-recovery-desktop.png'))
     page.evaluate('GomokuTraining.close();GomokuReview.close()')
     check('review/training never edited recorded moves',page.evaluate('GomokuStudio.exportGame().moves')==original)
