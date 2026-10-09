@@ -61,7 +61,9 @@ if(typeof window!=='undefined') (()=>{
    url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
    try{worker=new Worker(url);created++;}
    catch(e){URL.revokeObjectURL(url);url=null;throw e;}
+   const owner=worker;
    worker.onmessage=({data:d})=>{
+     if(worker!==owner)return; // old worker from a canceled generation
      const job=pending;
      if(!job||job.id!==d.id)return; // stale or canceled worker reply
      if(d.stage){for(const sub of job.subscribers){try{sub.onProgress?.(d.stage);}catch{}}return;}
@@ -72,10 +74,12 @@ if(typeof window!=='undefined') (()=>{
    };
    worker.onerror=e=>{
      e.preventDefault();
+     if(worker!==owner)return;
      if(pending)fail(pending,Error(e.message||'Analysis worker failed.'));
      else disposeWorker();
    };
    worker.onmessageerror=()=>{
+     if(worker!==owner)return;
      if(pending)fail(pending,Error('Analysis worker returned an unreadable message.'));
      else disposeWorker();
    };
