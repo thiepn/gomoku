@@ -335,11 +335,14 @@ if(typeof window !== 'undefined') (()=>{
     // Only scroll the inspector on entering this mode; do not steal keyboard
     // focus, move the document, or change the recorded position.
     if(session?.panel==='analysis'){
-      const inspector=dialog.querySelector('.gr-inspector'),first=$('grCandidates')?.querySelector('.gr-candidate');
-      if(inspector&&first){
-        const a=first.getBoundingClientRect(),b=inspector.getBoundingClientRect();
+      // The workspace inspector uses a fixed-height move-record area beneath
+      // the independently scrollable #rwDecision. Scroll the actual inner
+      // panel, not its overflow:hidden flex parent (which cannot scroll).
+      const scroller=$('rwDecision'),first=$('grCandidates')?.querySelector('.gr-candidate');
+      if(innerWidth>720&&scroller&&first&&scroller.clientHeight){
+        const a=first.getBoundingClientRect(),b=scroller.getBoundingClientRect();
         if(a.top<b.top+12||a.bottom>b.bottom-12)
-          inspector.scrollTop+=a.top-b.top-Math.min(90,Math.max(12,b.height*.12));
+          scroller.scrollTop+=a.top-b.top-Math.min(90,Math.max(12,b.height*.12));
       }
     }
   });}
