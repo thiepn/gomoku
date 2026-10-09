@@ -5323,7 +5323,7 @@ body[data-theme="night"] :is(#grDialog,#a2Trainer),body[data-theme="dark"] :is(#
  * Pure services shared by the UI, isolated worker, exports, and regression tests. */
 function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   'use strict';
-  const VERSION = '2.1.0', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
+  const VERSION = '3.0.0-a2', POSITION_VERSION = '2.0.0', C = studioFactory(engineFactory);
   const PRESETS = Object.freeze({
     quick: {label:'Quick', timeMs:350, depth:9, width:20, threatDepth:9},
     standard: {label:'Standard', timeMs:1000, depth:12, width:26, threatDepth:11},
@@ -5404,13 +5404,29 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!tags.length)tags.push('Positional decision');
     return tags;
   }
+  // A1: dual-kind tactical screening. Independent replay, not heuristic inference.
+  // A failed bounded VCF/VCT search is UNKNOWN, never a safety certificate.
   function defenseScreen(board,color,rule,ctx,played,{timeMs=90,depth=9}={}) {
     const e=engineFactory(rule),attacker=3-color,start=now(),until=start+Math.max(0,timeMs);
-    const rows=new Map(),proofs=[],moveCount=ctx.moveCount??board.filter(Boolean).length;
-    let rootThreat=null,enumerated=false,probes=0,proofReuses=0,nodes=0,probeTimedOut=false,workMs=0;
+    const rows=new Map(),proofs=[],rootThreats=[],moveCount=ctx.moveCount??board.filter(Boolean).length;
+    const probeKinds=['vcf','vct'];
+    let enumerated=false,probes=0,proofReuses=0,nodes=0,probeTimedOut=false,workMs=0;
+    const byKind={vcf:{probes:0,proven:0,unknown:0,nodes:0},vct:{probes:0,proven:0,unknown:0,nodes:0}};
     const after=i=>{const b=Array.from(board);if(point(i))b[i]=color;return b;};
     const nextContext=i=>({...ctx,passes:i<0?ctx.passes+1:0,moveCount:moveCount+1});
     const rootLegal=i=>e.legalMove(Int8Array.from(board),i,color,moveCount,{allowOffCenterOpening:ctx.allowLegacyOffCenterOpening});
+    function addProof(solved,kind,source,i) {
+      if(solved?.verified!==true||solved.status!=='proven'||!solved.proof)return null;
+      // Do not silently truncate proofs: oversized trees remain unverified for UI.
+      const b=source==='root'?board:after(i),c=source==='root'?ctx:nextContext(i);
+      const cert=certificate(b,attacker,rule,solved,c);
+      if(!cert||!verify(cert))return null;
+      const existing=proofs.findIndex(p=>p.kind===kind&&JSON.stringify(p.proof)===JSON.stringify(solved.proof));
+      const entry={...solved,kind};
+      if(existing<0){proofs.push(entry);byKind[kind].proven++;}
+      if(source==='root'&&!rootThreats.some(r=>r.kind===kind&&r.move===solved.move))rootThreats.push(entry);
+      return existing<0?proofs.length-1:existing;
+    }
     function inspect(i) {
       const old=rows.get(i);
       if(old&&(old.status==='proven-loss'||old.terminal||old.generation===proofs.length))return old;
@@ -5419,63 +5435,91 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
       const b=after(i),terminalMove=a.win||(i===-1&&ctx.passes===1)||b.every(Boolean);
       const row={...old,i,legality:a,terminal:!!terminalMove,generation:proofs.length,
         status:a.win?'winning-move':terminalMove?'draw':proofs.length?'neutralizes-known-threat':'unresolved'};
-      if(!terminalMove)for(let k=0;k<proofs.length;k++) {
-        // Verify the entire actual after-position, including remote counter-wins.
-        if(C.verifyProof(b,attacker,rule,proofs[k].proof)) {
-          row.status='proven-loss';row.proofIndex=k;proofReuses++;break;
+      if(!terminalMove)for(let k=0;k<proofs.length;k++){
+        // Replay full legal continuations on the ACTUAL after-board. Counter-wins,
+        // remote blocks and Renju forbidden moves cannot be ignored.
+        if(C.verifyProof(b,attacker,rule,proofs[k].proof)){
+          row.status='proven-loss';row.proofIndex=k;row.proofKind=proofs[k].kind;proofReuses++;break;
         }
       }
       rows.set(i,row);return row;
     }
+    function solve(kind,b,budget,limit) {
+      if(budget<10)return null;
+      const result=C.solve(b,attacker,rule,{kind,timeMs:budget,depth,
+        nodeLimit:limit,orderWithSearch:false});
+      probes++;nodes+=result.nodes||0;probeTimedOut=probeTimedOut||!!result.timedOut;
+      byKind[kind].probes++;byKind[kind].nodes+=result.nodes||0;
+      if(result.status!=='proven'||!result.verified)byKind[kind].unknown++;
+      return result;
+    }
     function searchAt(i,budget) {
-      const row=inspect(i);if(row.status==='illegal'||row.status==='proven-loss'||row.terminal||budget<10)return row;
-      const t=now(),solved=C.solve(after(i),attacker,rule,{kind:'vcf',timeMs:budget,depth,nodeLimit:60000,orderWithSearch:false});
-      probes++;nodes+=solved.nodes||0;probeTimedOut=probeTimedOut||solved.timedOut;
-      row.probe={status:solved.status,timedOut:!!solved.timedOut,depth:solved.maxDepth,nodes:solved.nodes};
-      if(solved.verified&&solved.status==='proven') {
-        proofs.push(solved);row.generation=-1;
+      let row=inspect(i);
+      if(row.status==='illegal'||row.status==='proven-loss'||row.terminal||budget<12)return row;
+      const t=now(),end=now()+budget,attempted=[];
+      for(const kind of probeKinds) {
+        if(row.status==='proven-loss')break;
+        const left=end-now();if(left<12)break;
+        const share=kind==='vcf'?Math.min(90,Math.max(12,left*.40)):Math.min(170,left);
+        const solved=solve(kind,after(i),Math.min(left,share),kind==='vct'?80000:60000);
+        if(!solved)continue;
+        attempted.push({kind,status:solved.status,timedOut:!!solved.timedOut,depth:solved.maxDepth,nodes:solved.nodes});
+        addProof(solved,kind,'after',i);
+        row.generation=-1;row=inspect(i);
       }
-      const result=inspect(i);workMs+=now()-t;return result;
+      row.probes=[...(row.probes||[]),...attempted];
+      row.probe=row.probes.at(-1)||null;
+      workMs+=now()-t;return row;
     }
-    // Opponent-to-move is hypothetical: this does not prove the current side lost.
-    if(timeMs>=10&&board.some(Boolean)&&terminal(board,rule)===null) {
-      const solved=C.solve(board,attacker,rule,{kind:'vcf',timeMs:Math.max(10,Math.min(100,timeMs*.70)),depth,nodeLimit:40000,orderWithSearch:false});
-      probes++;nodes+=solved.nodes||0;probeTimedOut=!!solved.timedOut;
-      if(solved.verified&&solved.status==='proven'){rootThreat=solved;proofs.push(solved);}
+    // Both probes treat the opponent as a HYPOTHETICAL attacker in the
+    // before-position. Only independent replay after our actual move establishes
+    // a loss. Prefer quick VCF discovery, then quieter VCT discovery.
+    if(timeMs>=10&&board.some(Boolean)&&terminal(board,rule)===null){
+      const vcf=solve('vcf',board,Math.min(100,Math.max(10,timeMs*.70)),40000);
+      if(vcf)addProof(vcf,'vcf','root');
+      if(timeMs>=65&&now()<until-12){
+        const vct=solve('vct',board,Math.min(180,Math.max(12,Math.min(timeMs*.38,until-now()-4))),80000);
+        if(vct)addProof(vct,'vct','root');
+      }
     }
-    if(rootThreat) {
-      // Include distant endpoints and pass; prioritize proof squares under a deadline.
-      const all=[...new Set([played,...C.proofLine(rootThreat.proof),...Array.from({length:225},(_,i)=>i).filter(i=>!board[i]),-1])].filter(i=>point(i)||i===-1);
+    if(rootThreats.length){
+      // Include every distant legal blocking location; otherwise all-refuted
+      // would be an unsupported existential claim.
+      const all=[...new Set([played,...rootThreats.flatMap(p=>C.proofLine(p.proof)),
+        ...Array.from({length:225},(_,i)=>i).filter(i=>!board[i]),-1])].filter(i=>point(i)||i===-1);
       enumerated=true;
       for(const i of all){if(now()>=until){enumerated=false;break;}inspect(i);}
     }
     workMs+=now()-start;
-    function refine(order,budget) {
+    function refine(order,budget){
       const end=now()+Math.max(0,budget),visited=new Set();
-      for(const i of order) {
-        if(visited.has(i)||!point(i)&&i!==-1)continue;visited.add(i);
+      for(const i of order){
+        if(visited.has(i)||(!point(i)&&i!==-1))continue;visited.add(i);
         const left=end-now();if(left<12)break;
-        searchAt(i,Math.min(70,Math.max(10,left/Math.min(3,Math.max(1,order.length-visited.size+1)))));
+        searchAt(i,Math.min(240,Math.max(12,left/Math.min(3,Math.max(1,order.length-visited.size+1)))));
       }
-      // A newly established proof may refute earlier candidates too.
       for(const i of rows.keys())inspect(i);
     }
     function defenses(){return [...rows.values()].filter(r=>point(r.i)&&r.status!=='illegal'&&r.status!=='proven-loss'&&r.generation===proofs.length).map(r=>r.i);}
-    function evidence(i) {
+    function evidence(i){
       const row=inspect(i);if(row.status!=='proven-loss')return null;
-      return certificate(after(i),attacker,rule,proofs[row.proofIndex],nextContext(i));
+      const cert=certificate(after(i),attacker,rule,proofs[row.proofIndex],nextContext(i));
+      return cert&&verify(cert)?cert:null;
     }
-    function report() {
+    function report(){
       const legalRows=[...rows.values()].filter(r=>r.status!=='illegal');
-      return {kind:'vcf',depthLimit:depth,rootThreat:rootThreat?.move??null,
-        rootThreatLine:rootThreat?C.proofLine(rootThreat.proof):[],
+      const root=rootThreats[0];
+      return {kind:'vcf+vct',depthLimit:depth,rootThreat:root?.move??null,rootThreatKind:root?.kind??null,
+        rootThreatLine:root?C.proofLine(root.proof):[],rootThreats:rootThreats.map(p=>({kind:p.kind,move:p.move})),
         checked:legalRows.length,refuted:legalRows.filter(r=>r.status==='proven-loss').length,
-        defenses:rootThreat?defenses():[],enumerationComplete:enumerated,
+        defenses:root?defenses():[],enumerationComplete:enumerated,
         allRefuted:enumerated&&legalRows.length>0&&legalRows.every(r=>r.status==='proven-loss'),
         proofCount:proofs.length,proofReuses,probes,nodes,timedOut:probeTimedOut,
-        elapsedMs:Math.round(workMs),scope:'Verified losing continuations; unrefuted moves are not proven draws or wins.'};
+        kinds:JSON.parse(JSON.stringify(byKind)),elapsedMs:Math.round(workMs),
+        scope:'Verified VCF/VCT continuations only. An unrefuted defense is not a proven draw, win or safe move.'};
     }
-    return {inspect,refine,defenses,evidence,report,after,nextContext,get rootThreat(){return rootThreat;},get proofs(){return proofs;}};
+    return {inspect,refine,defenses,evidence,report,after,nextContext,
+      get rootThreat(){return rootThreats[0]||null;},get rootThreats(){return rootThreats;},get proofs(){return proofs;}};
   }
   function applyDefense(raw,screen,played) {
     const wanted=[...new Set([played,...screen.defenses()])].filter(point);
@@ -5488,7 +5532,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         c.estimate=c.score;c.score=null;c.bound='verified-loss';c.pv=[c.i,...C.proofLine(proof.proof)];
       }
     }
-    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?3:c.defenseStatus==='neutralizes-known-threat'?1:2;
+    const tier=c=>c.defenseStatus==='winning-move'?0:c.i===raw.tactical?.move&&raw.tactical?.verified?0:c.defenseStatus==='proven-loss'?5:c.defenseStatus==='neutralizes-known-threat'?1:c.bound==='exact'&&Number.isFinite(c.score)?2:3;
     raw.candidates.sort((a,b)=>tier(a)-tier(b)||(b.score??-Infinity)-(a.score??-Infinity)||a.i-b.i);
     // A selective positional score cannot override a verified opponent win.
     const previous=raw.move,picked=raw.candidates.find(c=>c.defenseStatus!=='proven-loss'&&c.defenseStatus!=='illegal');
@@ -5501,13 +5545,14 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
   function explainDefense(out,raw,screen,board,color,rule,ctx) {
     const them=color===1?'White':'Black',summary=screen.report(),root=screen.rootThreat;
     const rootShape=root?engineFactory(rule).classify(Int8Array.from(board),root.move,3-color):null;
-    const attackName=rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'forcing attack';
+    const attackName=root?.kind==='vct'?'continuous-three attack':rootShape?.fours?.length&&rootShape?.threes?.length?'four–three attack':'continuous-four attack';
+    const knownCount=summary.rootThreats?.length||0;
     function decorate(target,i) {
       const row=screen.inspect(i);target.defenseStatus=row.status;
       if(row.status==='proven-loss'&&!['Winning move','Already lost','Draw by passes'].includes(target.label)) {
         const solved=screen.proofs[row.proofIndex],pv=C.proofLine(solved.proof),at=coord(i);
         const a=engineFactory(rule).classify(Int8Array.from(screen.after(i)),solved.move,3-color);
-        const name=a.fours?.length&&a.threes?.length?'four–three attack':'forcing attack';
+        const name=solved.kind==='vct'?'continuous-three attack':a.fours?.length&&a.threes?.length?'four–three attack':'continuous-four attack';
         // This proves the after-position loses, not that the loss was avoidable.
         if(target.basis!=='rules')target.label='Losing move';
         target.basis='verified-proof';target.loss=null;target.score=null;
@@ -5517,7 +5562,7 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
         const counterfactual=target.explanation?.why?.match(/ By occupying [\s\S]*/)?.[0]||'';
         target.estimatedLabel=target.label;target.estimatedLoss=target.loss;
         target.label=i===out.best?'Best found':'Defensive move';target.basis='verified-defense';target.loss=null;
-        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${counterfactual} Other continuations remain unresolved; stopping this attack is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
+        target.explanation={why:`${coord(i)} interrupts the verified ${them} ${attackName} starting at ${coord(root.move)}. It is a tactical defensive move: the checked forcing line no longer works after this placement.${knownCount>1?' Multiple known threats were screened.':''}${counterfactual} Other continuations remain unresolved; interrupting the checked line is not a proof of a draw or win.`,lesson:'Defend against the whole combination, including its later endpoints, rather than waiting for the first four.',highlights:[i,root.move]};
         target.tactical={status:'neutralizes-known-threat',reply:root.move};
       }
     }
@@ -5533,30 +5578,67 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     out.diagnosis=diagnosis(out,out.playedShape,out.bestShape);
     if(out.basis==='verified-defense')out.diagnosis.unshift('Prevents a forcing attack');
   }
+
+  // Native WASM/JS owns game search. A2 controls time, root coverage and evidence.
+  function searchPlan(preset,budget,lines=5){
+    const requested=Number.isInteger(lines)?Math.max(1,Math.min(8,lines)):5;
+    const threatMs=Math.min(900,Math.round(budget*.25));
+    const refineReserve=Math.min(420,Math.round(budget*.14));
+    return {requested,threatMs,refineReserve,mainMs:Math.max(50,budget-threatMs-refineReserve),allowSecondPass:budget>=2400};
+  }
+  function rootComparability(raw,c){
+    const depth=Number.isInteger(c?.depth)?c.depth:(raw.depth||0);
+    if(c?.bound==='verified-loss')return {kind:'verified-loss',depth,scoreComparable:false,reason:'Verified loss, not heuristic score'};
+    if(c?.bound==='rule-forced')return {kind:'rules',depth,scoreComparable:false,reason:'Forced by opening rule'};
+    const ok=c?.bound==='exact'&&Number.isFinite(c.score)&&raw.depth>=2&&depth===raw.depth&&!raw.timedOut;
+    return {kind:ok?'same-root-estimate':'incomplete',depth,scoreComparable:ok,
+      reason:ok?'Same completed search root and depth; not a proof':'Incomplete, unequal-depth, or non-exact search bounds'};
+  }
   function analyze(board,color,rule,played,options={}) {
     validate(board,color,rule);const ctx=context(options.context),started=now();
     if(ctx.passes>=2||terminal(board,rule)!==null)throw Error('This position is terminal; there is no next move to analyze.');
     const preset=PRESETS[options.preset]||PRESETS.deep;
     const budget=Math.max(100,Math.min(15000,Number(options.timeMs)||preset.timeMs));
+    const plan=searchPlan(preset,budget,options.multiPV),passes=[];
     // Only historical replay inherits a legacy opening policy; the live engine
     // and new Renju games retain their center-first rule.
     const scopedFactory=r=>{const e=engineFactory(r);return {...e,legalMove:(b,i,c,n,opt={})=>e.legalMove(b,i,c,n,{...opt,allowOffCenterOpening:ctx.allowLegacyOffCenterOpening})};};
     const R=reviewFactory(scopedFactory,studioFactory),e=engineFactory(rule);
     const centerOnly=rule==='renju-practice'&&color===1&&!board.some(Boolean)&&!ctx.allowLegacyOffCenterOpening;
-    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:Math.min(420,budget*.28),depth:Math.min(preset.threatDepth,budget<700?7:19)});
+    const screen=defenseScreen(board,color,rule,ctx,played,{timeMs:centerOnly?0:plan.threatMs,depth:Math.min(preset.threatDepth,budget<700?7:19)});
     let raw;
     if(centerOnly) {
       raw={rule,color,move:112,pv:[112],candidates:[{i:112,score:0,bound:'rule-forced',pv:[112]}],depth:0,nodes:0,elapsedMs:0,
         tactical:{status:'skipped'},parameters:{budget,engine:'6.0-hybrid'},analysisQuality:'opening-rule',confidence:{band:'rule-forced'}};
     } else {
-      raw=C.analyze(board,color,rule,{timeMs:Math.max(50,budget-(now()-started)-Math.min(500,budget*.26)),depth:preset.depth,width:preset.width,
-        multiPV:5,includeMoves:[...new Set([...(point(played)?[played]:[]),...screen.defenses()])],threatDepth:preset.threatDepth,
-        threatNodeLimit:options.preset==='maximum'?180000:60000,backend:options.backend||'auto',seed:17});
-      raw.parameters.budget=budget;
+      const engineOptions={timeMs:Math.max(50,Math.min(plan.mainMs,budget-(now()-started)-plan.refineReserve)),
+        depth:preset.depth,width:preset.width,multiPV:plan.requested,
+        includeMoves:[...new Set([...(point(played)?[played]:[]),...screen.defenses()])],
+        threatDepth:preset.threatDepth,threatNodeLimit:options.preset==='maximum'?180000:60000,
+        backend:options.backend||'auto',seed:17};
+      raw=C.analyze(board,color,rule,engineOptions);
+      if(!raw||!Array.isArray(raw.candidates))throw Error('Search returned no candidate array.');
       raw.candidates=raw.candidates.filter(c=>legal(board,color,rule,c.i,ctx).legal);
+      passes.push({phase:'primary',depth:raw.depth||0,nodes:raw.nodes||0,ttHits:raw.ttHits||0,backend:raw.backend||'unknown',lines:raw.candidates.length});
+      const leftover=budget-(now()-started)-plan.refineReserve;
+      if(plan.allowSecondPass&&leftover>=600){
+        const focus=[...new Set([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,plan.requested).map(c=>c.i)])]
+          .filter(i=>point(i)&&legal(board,color,rule,i,ctx).legal);
+        const again=C.analyze(board,color,rule,{...engineOptions,
+          timeMs:Math.max(50,Math.min(leftover,Math.round(plan.mainMs*.65))),
+          depth:Math.min(22,preset.depth+2),width:Math.min(48,preset.width+2),includeMoves:focus});
+        if(again&&Array.isArray(again.candidates)){
+          again.candidates=again.candidates.filter(c=>legal(board,color,rule,c.i,ctx).legal);
+          passes.push({phase:'focused',depth:again.depth||0,nodes:again.nodes||0,ttHits:again.ttHits||0,
+            backend:again.backend||'unknown',lines:again.candidates.length});
+          if((again.depth||0)>=(raw.depth||0)&&(!raw.tactical?.verified||again.tactical?.verified))raw=again;
+        }
+      }
+      raw.parameters=raw.parameters||{};raw.parameters.budget=budget;
     }
     if(!centerOnly){
-      screen.refine([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,5).map(c=>c.i)],Math.max(0,budget-(now()-started)-15));
+      screen.refine([raw.move,played,...screen.defenses(),...raw.candidates.slice(0,plan.requested).map(c=>c.i)],
+        Math.max(0,Math.min(plan.refineReserve,budget-(now()-started)-15)));
       applyDefense(raw,screen,played);
     }
     const out=R.pack(raw,board,color,played);
@@ -5566,23 +5648,35 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     const after=Array.from(board),a=legal(board,color,rule,played,ctx);if(point(played)&&a.legal)after[played]=color;
     out.refutation=screen.evidence(played);
     out.opponentThreat=screen.rootThreat?certificate(board,3-color,rule,screen.rootThreat,ctx):null;
-    out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';
+     out.opponentThreats=screen.rootThreats.map(t=>({kind:t.kind,move:t.move,verified:true}));
+    out.analysisVersion=VERSION;out.context=ctx;out.positionId=positionKey(board,color,rule,ctx);out.preset=options.preset||'custom';out.multiPV=plan.requested;
     out.timeMs=Math.round(now()-started);out.budget=budget;
     out.search={backend:raw.backend||'rules',engine:raw.parameters.engine,completedDepth:raw.depth||0,selectiveDepth:raw.selDepth||raw.depth||0,
       nodes:raw.nodes||0,ttHits:raw.ttHits||0,stableDepth:raw.stableDepth||0,rootChanges:raw.rootChanges||0,
       confidence:raw.confidence?.band||'low',timedOut:!!raw.timedOut,selective:true,
-      compared:out.candidates.filter(c=>c.bound==='exact').length,returned:out.candidates.length,requestedLines:5,
-      proofStatus:raw.tactical?.status||'skipped',proofNodes:raw.tactical?.nodes||0};
+      compared:0,returned:out.candidates.length,requestedLines:plan.requested,
+      proofStatus:raw.tactical?.status||'skipped',proofNodes:raw.tactical?.nodes||0,searchPasses:passes,refinementBudgetMs:plan.refineReserve};
     out.playedShape=shape(board,color,rule,played,ctx);out.bestShape=point(out.best)?shape(board,color,rule,out.best,ctx):null;
     out.diagnosis=diagnosis(out,out.playedShape,out.bestShape);
     if(out.refutation&&!out.facts.alreadyLost&&!out.facts.replies.length) {
       out.explanation.why+=` A separate rule-verified search shows ${color===1?'White':'Black'} can force a win after this move within ${out.refutation.upperBoundPlies} plies (an upper bound). Open the threat proof to inspect every required defense. This alone does not establish that a different move saves the game.`;
     }
     for(const c of out.candidates) {
-      c.depth=raw.candidates.find(x=>x.i===c.i)?.depth??raw.depth??0;
+      const source=raw.candidates.find(x=>x.i===c.i)||null;
+      c.depth=source?.depth??raw.depth??0;
       c.shape=shape(board,color,rule,c.i,ctx);
       c.pv=R.line(board,color,rule,c.pv,{...ctx}).moves;
-      c.delta=c.bound==='exact'&&raw.depth>=2?c.loss:null;
+      c.comparison=rootComparability(raw,source||c);
+      c.delta=c.comparison.scoreComparable?c.loss:null;
+    }
+    out.search.compared=out.candidates.filter(c=>c.comparison?.scoreComparable).length;
+    out.search.totalRootNodes=passes.reduce((n,p)=>n+p.nodes,0);
+    out.search.totalRootTTHits=passes.reduce((n,p)=>n+p.ttHits,0);
+    const playedRow=out.candidates.find(c=>c.i===played),bestRow=out.candidates.find(c=>c.i===out.best);
+    out.search.sameRootComparison=!!(playedRow?.comparison?.scoreComparable&&bestRow?.comparison?.scoreComparable);
+    if(out.basis==='selective-estimate'&&!out.search.sameRootComparison){
+      out.loss=null;out.score=null;out.label='Unscored';out.basis='insufficient-search';
+      out.explanation.why+=' The played and recommended moves lack equal completed-depth evidence; no mistake grade or numeric score loss is established.';
     }
     // Explain preventative defense using a checked counterfactual, not a
     // generic strategic label inferred from a score. Only the displayed lines
@@ -5666,61 +5760,245 @@ function createAnalysis2(engineFactory, studioFactory, reviewFactory) {
     if(!card||card.version!==2)throw Error('Unsupported mistake card.');validate(card.board,card.color,card.rule);
     if(!point(card.played)||!legal(card.board,card.color,card.rule,card.played,card.context).legal)throw Error('Invalid saved decision.');
     if(card.id!==positionKey(card.board,card.color,card.rule,card.context)||JSON.stringify(card).length>240000)throw Error('Invalid or oversized mistake card.');
-    if(!trainable(card.reference?.analysisVersion==='2.0.0'?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
+    if(!trainable(['2.0.0','2.1.0','3.0.0-a1'].includes(card.reference?.analysisVersion)?{...card.reference,analysisVersion:VERSION}:card.reference)||card.reference.played!==card.played||card.reference.color!==card.color||card.reference.rule!==card.rule||card.reference.key!==`${card.rule}:${card.color}:${card.board.join('')}`)throw Error('Mistake evidence does not match this position.');
     const clean=clone(card);clean.context=context(card.context);clean.source={gameId:String(card.source?.gameId||'').slice(0,100),title:String(card.source?.title||'Reviewed game').slice(0,120),ply:Math.max(1,Math.min(450,Number(card.source?.ply)||1)),date:Math.max(0,Number(card.source?.date)||0)};
     const stats=card.stats||{};clean.stats={};for(const k of ['attempts','successes','lapses','assisted','streak','due','last']){const v=stats[k];if(v!==null&&v!==undefined&&(!Number.isSafeInteger(v)||v<0||v>8640000000000000))throw Error('Invalid practice statistics.');clean.stats[k]=v??0;}
     clean.events=Array.isArray(card.events)?card.events.slice(-40).filter(e=>e&&typeof e.id==='string'&&['correct','incorrect'].includes(e.status)&&Number.isFinite(e.at)):[];
     // Imported analysis is historical, not a newly verified engine result.
     clean.reference.imported=true;clean.reference.stale=clean.reference.analysisVersion!==VERSION;return clean;
   }
-  return {VERSION,PRESETS,defenseScreen,positionKey,validate,context,terminal,legal,analyze,verify,proofSteps,shape,trainable,attemptVerdict,schedule,makeCard,validateCard};
+  return {VERSION,PRESETS,searchPlan,rootComparability,defenseScreen,positionKey,validate,context,terminal,legal,analyze,verify,proofSteps,shape,trainable,attemptVerdict,schedule,makeCard,validateCard};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={createAnalysis2};
 
 </script>
+<script id="analysis6-runtime-policy">
+/* A6 — deterministic search admission and bounded result-cache policy.
+ * All routine functions are pure except the dedicated in-memory ResultCache.
+ * No network, storage, search-provenance or game-state dependency. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  if(root&&typeof root==='object')root.GomokuRuntimePolicy6=api;
+})(typeof globalThis==='object'?globalThis:null,function(){
+  'use strict';
+  const VERSION='3.0.0-a6',MIN_MS=120,MAX_MS=15000;
+  const own=(obj,key)=>Object.prototype.hasOwnProperty.call(obj,key);
+  const integer=(value,fallback,min,max)=>{
+    const x=Number(value);return Number.isFinite(x)?Math.max(min,Math.min(max,Math.floor(x))):fallback;
+  };
+  function deviceClass({memoryGb=null,cores=null,saveData=false,coarsePointer=false}={}){
+    if(saveData||Number.isFinite(memoryGb)&&memoryGb<=2||Number.isFinite(cores)&&cores<=2)return 'constrained';
+    if(Number.isFinite(memoryGb)&&memoryGb<=4||Number.isFinite(cores)&&cores<=4)return 'balanced';
+    return coarsePointer?'balanced':'unrestricted';
+  }
+  function deviceSnapshot(env){
+    const nav=env?.navigator||{};
+    let coarse=false;try{coarse=env?.matchMedia?.('(pointer: coarse)')?.matches===true;}catch{}
+    return {memoryGb:Number.isFinite(nav.deviceMemory)?nav.deviceMemory:null,
+      cores:Number.isFinite(nav.hardwareConcurrency)?nav.hardwareConcurrency:null,
+      saveData:nav.connection?.saveData===true,coarsePointer:coarse};
+  }
+  function admission(options={},device={}){
+    const requested=integer(options.timeMs,700,MIN_MS,MAX_MS);
+    const kind=deviceClass(device);
+    // Explicit user-selected strength settings are honored by default.
+    // Opt-in adaptive budgets narrow only the search time; they do not upgrade
+    // or falsify the request's proof/evaluation strength.
+    const caps={constrained:650,balanced:1600,unrestricted:MAX_MS};
+    const applied=options.adaptiveBudget===true?Math.min(requested,caps[kind]):requested;
+    return Object.freeze({requestedMs:requested,appliedMs:applied,deviceClass:kind,
+      adaptive:options.adaptiveBudget===true,capped:applied<requested,reason:applied<requested?'Device-aware performance cap':'User-selected search budget'});
+  }
+  function stable(value){
+    if(value===null||typeof value!=='object')return JSON.stringify(value);
+    if(Array.isArray(value))return '['+value.map(stable).join(',')+']';
+    const keys=Object.keys(value).sort();
+    return '{'+keys.map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}';
+  }
+  function key(board,color,rule,played,options={},generation='3.0.0-a2'){
+    if(!Array.isArray(board)&&!ArrayBuffer.isView(board))throw Error('Invalid board');
+    if(board.length!==225||!Array.from(board).every(v=>v===0||v===1||v===2))throw Error('Invalid 15×15 board');
+    if(![1,2].includes(color)||typeof rule!=='string'||!Number.isInteger(played)||played < -1||played>=225)throw Error('Invalid search request');
+    const opts={};
+    // Only options that influence evidence, search state or engine backend.
+    for(const k of ['preset','timeMs','multiPV','context','backend','verifyOnly','certificate','adaptiveBudget','maxDepth','width','randomSeed']){
+      if(own(options,k))opts[k]=options[k];
+    }
+    return stable([VERSION,generation,rule,color,played,Array.from(board),opts]);
+  }
+  class ResultCache{
+    constructor({maxEntries=24,maxBytes=4*1024*1024,ttlMs=45*60*1000,now=()=>Date.now()}={}){
+      this.limit=integer(maxEntries,24,1,128);
+      this.bytesLimit=integer(maxBytes,4*1024*1024,4096,16*1024*1024);
+      this.ttl=integer(ttlMs,45*60*1000,1000,24*60*60*1000);
+      this.now=now;this.map=new Map();this.bytes=0;this.evictions=0;
+    }
+    get size(){return this.map.size;}
+    get(k){
+      const hit=this.map.get(k);
+      if(!hit)return null;
+      if(this.now()-hit.at>this.ttl){this.delete(k);return null;}
+      this.map.delete(k);this.map.set(k,hit);
+      return JSON.parse(hit.serialized);
+    }
+    delete(k){
+      const row=this.map.get(k);if(!row)return false;
+      this.bytes-=row.bytes;this.map.delete(k);return true;
+    }
+    put(k,result){
+      let serialized;try{serialized=JSON.stringify(result);}catch{return false;}
+      if(typeof serialized!=='string')return false;
+      const bytes=serialized.length*2+String(k).length*2;
+      if(bytes>this.bytesLimit)return false;
+      this.delete(k);
+      this.map.set(k,{serialized,bytes,at:this.now()});this.bytes+=bytes;
+      while(this.map.size>this.limit||this.bytes>this.bytesLimit){
+        this.delete(this.map.keys().next().value);this.evictions++;
+      }
+      return true;
+    }
+    clear(){this.map.clear();this.bytes=0;}
+    stats(){return {cachedPositions:this.size,cacheBytes:this.bytes,evictions:this.evictions,
+      maxPositions:this.limit,maxCacheBytes:this.bytesLimit,ttlMs:this.ttl};}
+  }
+  return Object.freeze({VERSION,MIN_MS,MAX_MS,deviceClass,deviceSnapshot,admission,stable,key,ResultCache});
+});
+
+</script>
 <script id="analysis2-runtime">
-/* Persistent, interruptible analysis worker + transactional local mistake bank. */
+/* A6 — retained worker, exact-flight sharing, abortable subscribers and bounded evidence cache.
+ * Legacy GomokuMistakes/IndexedDB schema below is preserved byte-for-byte. */
 if(typeof window!=='undefined') (()=>{
  'use strict';
- let worker=null,url=null,pending=null,serial=0,timer=null,created=0,completed=0,cacheHits=0;
- const cache=new Map(),clone=x=>JSON.parse(JSON.stringify(x));
- const runtime={version:'2.1.0',request,cancel,release,stats:()=>({workersCreated:created,completed,cacheHits,cachedPositions:cache.size,busy:!!pending})};
+ const Policy=window.GomokuRuntimePolicy6;
+ if(!Policy)throw Error('Analysis runtime performance policy missing from offline bundle.');
+ const cache=new Policy.ResultCache({maxEntries:24,maxBytes:4*1024*1024,ttlMs:45*60*1000});
+ let worker=null,url=null,pending=null,serial=0,watchdog=null;
+ let created=0,completed=0,cacheHits=0,joined=0,cancellations=0,errors=0,adaptiveCaps=0;
+ const clone=x=>JSON.parse(JSON.stringify(x));
+ const abortError=()=>new DOMException('Analysis canceled','AbortError');
+ function disposeWorker(){
+   if(worker){worker.terminate();worker=null;}
+   if(url){URL.revokeObjectURL(url);url=null;}
+ }
+ function stopTimer(){if(watchdog!==null){clearTimeout(watchdog);watchdog=null;}}
+ function deliver(job,value,error){
+   if(pending!==job)return;
+   pending=null;stopTimer();
+   for(const sub of job.subscribers){
+     if(sub.signal&&sub.onAbort)sub.signal.removeEventListener('abort',sub.onAbort);
+     try{if(error)sub.reject(error);else sub.resolve({...clone(value),cacheHit:false});}catch{}
+   }
+   job.subscribers.clear();
+ }
  function cancel(){
    if(!pending)return;
-   const job=pending;pending=null;clearTimeout(timer);worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;
-   job.reject(new DOMException('Analysis canceled','AbortError'));
+   const job=pending;cancellations++;deliver(job,null,abortError());
+   // Synchronous analysis cannot cooperatively yield inside a native search:
+   // terminate only the canceled worker and build a replacement next time.
+   disposeWorker();
  }
- function release(){cancel();worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;}
+ function release(){cancel();disposeWorker();}
+ function join(job,options){
+   return new Promise((resolve,reject)=>{
+     const signal=options.signal;
+     if(signal?.aborted){reject(abortError());return;}
+     const sub={resolve,reject,signal,onProgress:options.onProgress,onAbort:null};
+     job.subscribers.add(sub);
+     if(signal){
+       sub.onAbort=()=>{
+         if(!job.subscribers.delete(sub))return;
+         signal.removeEventListener('abort',sub.onAbort);
+         reject(abortError());
+         if(pending===job&&!job.subscribers.size)cancel();
+       };
+       signal.addEventListener('abort',sub.onAbort,{once:true});
+       if(signal.aborted)sub.onAbort();
+     }
+   });
+ }
+ function fail(job,error,{reset=true}={}){
+   errors++;
+   deliver(job,null,error instanceof Error?error:Error(String(error)));
+   if(reset)disposeWorker();
+ }
  function ensure(){
    if(worker)return;
    if(typeof Worker!=='function')throw Error('Background analysis is unavailable in this browser.');
    const source=v5WorkerPrelude()+`;const R=(${createGuidedReviewCore.toString()});const A=(${createAnalysis2.toString()})(createEngine,createStudioCore,R);onmessage=({data:d})=>{try{postMessage({id:d.id,stage:'Searching candidates and verifying threats'});const result=d.options.verifyOnly?{valid:A.verify(d.options.certificate)}:A.analyze(d.board,d.color,d.rule,d.played,d.options);postMessage({id:d.id,result});}catch(e){postMessage({id:d.id,error:e.message||String(e)});}};`;
-   url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));worker=new Worker(url);created++;
+   url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+   try{worker=new Worker(url);created++;}
+   catch(e){URL.revokeObjectURL(url);url=null;throw e;}
+   const owner=worker;
    worker.onmessage=({data:d})=>{
-     if(!pending||pending.id!==d.id)return;
-     if(d.stage){pending.onProgress?.(d.stage);return;}
-     const job=pending;pending=null;clearTimeout(timer);
-     if(d.error){job.reject(Error(d.error));return;}
-     completed++;cache.set(job.key,clone(d.result));while(cache.size>32)cache.delete(cache.keys().next().value);
-     job.resolve({...d.result,cacheHit:false});
+     if(worker!==owner)return; // old worker from a canceled generation
+     const job=pending;
+     if(!job||job.id!==d.id)return; // stale or canceled worker reply
+     if(d.stage){for(const sub of job.subscribers){try{sub.onProgress?.(d.stage);}catch{}}return;}
+     if(d.error){fail(job,Error(d.error),{reset:false});return;}
+     completed++;
+     if(job.cacheable)cache.put(job.key,d.result);
+     deliver(job,d.result,null);
    };
    worker.onerror=e=>{
-     e.preventDefault();const job=pending;pending=null;clearTimeout(timer);worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;
-     job?.reject(Error(e.message||'Analysis worker could not start.'));
+     e.preventDefault();
+     if(worker!==owner)return;
+     if(pending)fail(pending,Error(e.message||'Analysis worker failed.'));
+     else disposeWorker();
+   };
+   worker.onmessageerror=()=>{
+     if(worker!==owner)return;
+     if(pending)fail(pending,Error('Analysis worker returned an unreadable message.'));
+     else disposeWorker();
    };
  }
  function request(board,color,rule,played,options={}){
-   cancel();const key=JSON.stringify([runtime.version,rule,color,played,board,options.preset,options.timeMs,options.context,options.backend,options.verifyOnly,options.certificate]);
-   if(cache.has(key)&&!options.force){const value=cache.get(key);cache.delete(key);cache.set(key,value);cacheHits++;return Promise.resolve({...clone(value),cacheHit:true});}
-   return new Promise((resolve,reject)=>{
-     try{
-       ensure();const id=++serial;pending={id,key,resolve,reject,onProgress:options.onProgress};
-       const plain={...options};delete plain.onProgress;
-       timer=setTimeout(()=>{if(pending?.id!==id)return;const job=pending;pending=null;worker?.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;job.reject(Error('Analysis exceeded its safety limit. Completed work is kept; retry with a smaller budget.'));},Math.max(10000,(Number(options.timeMs)||10000)+17000));
-       worker.postMessage({id,board:Array.from(board),color,rule,played,options:plain});
-     }catch(error){const job=pending;pending=null;clearTimeout(timer);if(worker)worker.terminate();worker=null;if(url)URL.revokeObjectURL(url);url=null;reject(error);}
-   });
+   if(options.signal?.aborted)return Promise.reject(abortError());
+   let policy,key,effective;
+   try{
+     policy=Policy.admission(options,Policy.deviceSnapshot(window));
+     effective={...options};
+     delete effective.onProgress;delete effective.signal;
+     if(options.adaptiveBudget===true){
+       effective.timeMs=policy.appliedMs;
+       if(policy.capped)adaptiveCaps++;
+     }
+     key=Policy.key(board,color,rule,played,effective,runtime.version);
+   }catch(error){return Promise.reject(error);}
+   if(pending&&pending.key===key&&!options.force){
+     joined++;return join(pending,options);
+   }
+   // New analysis supersedes the old UI request. No stale result can win a race.
+   cancel();
+   if(!options.force){
+     const hit=cache.get(key);
+     if(hit!==null){cacheHits++;return Promise.resolve({...hit,cacheHit:true});}
+   }
+   try{ensure();}catch(error){return Promise.reject(error);}
+   const job={id:++serial,key,subscribers:new Set(),cacheable:options.verifyOnly!==true};
+   pending=job;
+   const promise=join(job,options);
+   if(pending!==job)return promise; // signal may have aborted immediately
+   const budget=Number(effective.timeMs)||10000;
+   watchdog=setTimeout(()=>{
+     if(pending!==job)return;
+     fail(job,Error('Analysis exceeded its bounded worker deadline. Retry with a smaller search budget.'));
+   },Math.max(10000,budget+17000));
+   try{
+     worker.postMessage({id:job.id,board:Array.from(board),color,rule,played,options:effective});
+   }catch(e){if(pending===job)fail(job,e);}
+   return promise;
  }
+ const runtime={version:'3.0.0-a2',runtimeVersion:Policy.VERSION,
+   request,cancel,release,
+   stats:()=>({workersCreated:created,completed,cacheHits,coalescedRequests:joined,
+     cancelled:cancellations,errors,adaptiveCaps,cacheGeneration:Policy.VERSION,
+     ...cache.stats(),busy:!!pending,subscribers:pending?.subscribers.size||0,
+     deviceClass:Policy.deviceClass(Policy.deviceSnapshot(window))}),
+   deviceInfo:()=>Policy.deviceClass(Policy.deviceSnapshot(window)),
+   clearResults:()=>cache.clear()
+ };
  window.GomokuAnalysisRuntime=Object.freeze(runtime);
  let dbPromise=null,backend='opening',lastError='',memory=new Map();
  const A=()=>createAnalysis2(createV5EngineFactory(createEngine,V5_WASM_BASE64),createStudioCore,createGuidedReviewCore);
@@ -5763,18 +6041,249 @@ if(typeof window!=='undefined') (()=>{
    }));
  }
  async function remove(id){await transact([id],rows=>rows.filter(x=>x.id!==id));}
+ async function audit(){
+   const entries=await list(),I=window.GomokuPracticeIntegrity8;
+   if(!I)throw Error('Practice integrity checker is unavailable.');
+   const analysis=A();
+   return I.inspect(entries,{validateCard:c=>analysis.validateCard(c),backend});
+ }
+ async function previewImport(data){
+   const I=window.GomokuPracticeIntegrity8;
+   if(!I)throw Error('Practice integrity checker is unavailable.');
+   const analysis=A(),entries=await list();
+   return I.previewImport(entries,data,{validateCard:c=>analysis.validateCard(c)});
+ }
  async function importData(data){
    if(!data||data.format!=='GomokuMistakeLibrary'||data.version!==2||!Array.isArray(data.cards)||data.cards.length>150)throw Error('Unsupported mistake library.');
    if(JSON.stringify(data).length>14000000)throw Error('Mistake import exceeds 14 MB.');
+   // Reject duplicate source IDs and oversized merges before the transaction.
+   await previewImport(data);
    const engine=A(),cards=data.cards.map(c=>engine.validateCard(c));
    // Validate every card before opening a write transaction. Incoming statistics
    // never replace existing local recall history; new cards retain their history.
    await add(cards);return cards.length;
  }
- window.GomokuMistakes=Object.freeze({version:2,list,add,record,remove,importData,
+ window.GomokuMistakes=Object.freeze({version:2,list,add,record,remove,audit,previewImport,importData,
    exportData:async()=>({format:'GomokuMistakeLibrary',version:2,exportedAt:new Date().toISOString(),cards:await list()}),
    status:()=>({backend,error:lastError,persistent:backend==='indexeddb'})});
 })();
+
+</script>
+<script id="analysis3-workspace-core">
+/* A3 — pure analysis-workspace view model; no rules or engine evaluation here. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  if(root&&typeof root==='object')root.GomokuAnalysisWorkspace3=api;
+})(typeof globalThis==='object'?globalThis:null,function(){
+  'use strict';
+  const point=i=>Number.isInteger(i)&&i>=0&&i<225;
+  const coord=i=>point(i)?'ABCDEFGHJKLMNOP'[i%15]+(15-Math.floor(i/15)):'Pass';
+  const xy=i=>({x:(i%15)*10+5,y:Math.floor(i/15)*10+5});
+  const pick=(result,i)=>result?.candidates?.find(c=>c.i===i)||null;
+  function legalVariation(core,position,rule,candidate){
+    if(!candidate||!point(candidate.i)||!Array.isArray(position?.board))return [];
+    const proposed=Array.isArray(candidate.pv)?candidate.pv:[];
+    const sequence=proposed[0]===candidate.i?proposed:[candidate.i,...proposed];
+    // The established review core enforces all variant rules, passes and terminal states.
+    try{return core.line(position.board,position.color,rule,sequence.slice(0,24),position.context).moves;}
+    catch{return [];}
+  }
+  function previewState(core,position,rule,result,preview){
+    if(!preview||!point(preview.move))return null;
+    const candidate=pick(result,preview.move);
+    const moves=legalVariation(core,position,rule,candidate);
+    if(!moves.length)return null;
+    const step=Math.max(0,Math.min(moves.length,Number.isInteger(preview.step)?preview.step:0));
+    const trace=core.line(position.board,position.color,rule,moves.slice(0,step),position.context);
+    if(!trace?.states?.length)return null;
+    return {state:trace.states.at(-1),step,total:moves.length,moves,candidate};
+  }
+  function overlays(position,result,board,{mode='candidates',preview=null,pinned=null,validMoves=[]}={}){
+    if(!Array.isArray(position?.board)||position.board.length!==225)return {dots:[],arrows:[],legend:'Position unavailable'};
+    if(!result)return {dots:[],arrows:[],legend:'Analysis pending'};
+    const dots=[],arrows=[];
+    const add=(i,type,label)=>{if(point(i)&&!board?.[i]&&!dots.some(x=>x.i===i))dots.push({i,...xy(i),type,label});};
+    if(mode==='threats'){
+      for(const i of result.explanation?.highlights||[])add(i,'threat','Tactical point');
+      for(const i of result.defense?.rootThreats?.map(t=>t.move)||[])add(i,'threat','Verified opponent attack');
+      return {dots,arrows,legend:dots.length?'Tactical points; unknown attacks may remain':'No tactical points established at this search budget'};
+    }
+    const focus=preview?.move??(point(result.best)?result.best:null);
+    if(mode==='candidates'){
+      for(const c of (result.candidates||[]).filter(c=>c.bound!=='verified-loss').slice(0,8)){
+        add(c.i,c.i===result.best?'best':'candidate',c.comparison?.scoreComparable?'Comparable searched candidate':'Candidate; score unverified');
+      }
+      if(point(pinned))add(pinned,'pinned','Pinned alternative');
+      return {dots,arrows,legend:'Measured candidates only; not a heatmap of all 225 points'};
+    }
+    const legal=(Array.isArray(validMoves)?validMoves:[]).filter(point).slice(0,12);
+    for(let k=0;k<legal.length;k++){
+      const i=legal[k],p=xy(i);
+      dots.push({i,...p,type:k===0?'best':'variation',label:'Variation move '+(k+1)});
+      if(k){const q=xy(legal[k-1]);arrows.push({from:legal[k-1],to:i,x1:q.x,y1:q.y,x2:p.x,y2:p.y});}
+    }
+    return {dots,arrows,legend:legal.length?'Searched continuation; not a verified proof':'No continuation available'};
+  }
+  function compare(result,pinned,previewMove){
+    const first=pick(result,pinned),second=pick(result,previewMove);
+    if(!first||!second||first.i===second.i)return null;
+    const summary=c=>({move:c.i,coord:coord(c.i),label:c.label||'Unscored',bound:c.bound||'unknown',
+      depth:Number.isInteger(c.depth)?c.depth:0,comparable:c.comparison?.scoreComparable===true,
+      proof:c.bound==='verified-loss'?'Verified opponent win after move':c.basis==='verified-proof'?'Verified winning line':null});
+    return {left:summary(first),right:summary(second),numericComparison:
+      first.comparison?.scoreComparable===true&&second.comparison?.scoreComparable===true&&
+      first.depth===second.depth&&Number.isFinite(first.score)&&Number.isFinite(second.score)};
+  }
+  return Object.freeze({coord,xy,legalVariation,previewState,overlays,compare});
+});
+
+</script>
+<script id="analysis4-game-diagnosis-core">
+/* A4 game diagnosis: evidence-aware, pure, variant-independent presentation model.
+ * Trust only separately established rules/proofs; never infer guaranteed outcomes from engine scores. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  if(root&&typeof root==='object')root.GomokuGameDiagnosis4=api;
+})(typeof globalThis==='object'?globalThis:null,function(){
+ 'use strict';
+ const POINT=i=>Number.isInteger(i)&&i>=0&&i<225;
+ const COORD=i=>POINT(i)?'ABCDEFGHJKLMNOP'[i%15]+(15-Math.floor(i/15)):'Pass';
+ const NEGATIVE=new Set(['Blunder','Mistake','Inaccuracy','Missed win','Losing move']);
+ const SECONDARY=new Set(['Good','Best found','Winning move','Winning threat','Winning plan','Defensive move']);
+ const SIDE=c=>c===1?'Black':'White';
+ function playedCandidate(result){
+   return result?.candidates?.find(c=>c.i===result.played)||null;
+ }
+ function bestCandidate(result){
+   return result?.candidates?.find(c=>c.i===result.best)||null;
+ }
+ function sameRoot(result){
+   const played=playedCandidate(result),best=bestCandidate(result);
+   return !!(result?.search?.sameRootComparison&&played?.comparison?.scoreComparable&&best?.comparison?.scoreComparable&&
+     played.bound==='exact'&&best.bound==='exact'&&Number.isFinite(played.score)&&Number.isFinite(best.score)&&
+     Number.isInteger(played.depth)&&played.depth===best.depth&&played.depth>=2);
+ }
+ function matchesCertificate(cert,position,rule,attacker,after,verifyProof){
+   if(typeof verifyProof!=='function'||!cert||cert.format!=='GomokuStudioProof'||!Array.isArray(cert.position)||
+      !Array.isArray(position?.board)||position.board.length!==225||cert.position.length!==225||
+      cert.rule!==rule||cert.attacker!==attacker||!POINT(cert.proof?.move))return false;
+   const move=position.played,color=position.color;
+   for(let i=0;i<225;i++)if(cert.position[i]!==((after&&i===move)?color:position.board[i]))return false;
+   try{return verifyProof(cert)===true;}catch{return false;}
+ }
+ function classification(result,position,{verifyProof,rule='freestyle'}={}){
+   if(!result)return {kind:'pending',bucket:'unresolved',importance:0,certainty:'not analyzed',label:'Not analyzed',
+     note:'This move has not been analyzed.',needsReview:false,verified:false};
+   const f=result.facts||{},hasAlternative=POINT(result.best)&&result.best!==result.played;
+   const immediateMiss=Array.isArray(f.ownWins)&&f.ownWins.length>0&&!f.win;
+   const instantLoss=!f.win&&Array.isArray(f.replies)&&f.replies.length>0&&!f.alreadyLost;
+   const postProof=result.basis==='verified-proof'&&matchesCertificate(result.refutation,position,rule,3-position.color,true,verifyProof);
+   const verifiedBest=hasAlternative&&matchesCertificate(result.bestProof,position,rule,position.color,false,verifyProof)&&
+     result.bestProof.proof.move===result.best;
+   const allRefuted=result.basis==='verified-proof'&&result.defense?.allRefuted===true&&
+     result.defense?.enumerationComplete===true&&result.defense?.proofCount>0&&
+     result.defense?.refuted===result.defense?.checked&&result.defense?.checked>0;
+   const priorLost=f.alreadyLost===true||allRefuted;
+   if(f.win)return {kind:'won-immediately',bucket:'verified',importance:3,certainty:'rule fact',verified:true,
+     label:'Immediate win',note:'This move legally completed five; the game ends.',needsReview:false};
+   if(priorLost)return {kind:'already-lost',bucket:'verified',importance:1,certainty:'rule fact or exhaustive verified defense',verified:true,
+     label:'Already lost',note:'The position was already lost before this move. Do not count it as a new avoidable mistake.',needsReview:false};
+   if(immediateMiss)return {kind:'missed-immediate-win',bucket:'verified',importance:5,certainty:'rule fact',verified:true,
+     label:'Missed immediate win',note:'A legal one-move win existed before this decision. This move did not finish the game; it is not automatically a proven loss.',needsReview:true};
+   if(instantLoss)return {kind:'allows-immediate-win',bucket:'verified',importance:5,certainty:'rule fact',verified:true,
+     label:'Immediate winning reply',note:'The opponent has a legal one-move finish after this move. Whether every alternative also loses needs separate evidence.',needsReview:true};
+   if(postProof)return {kind:'verified-opponent-win-after',bucket:'verified',importance:5,certainty:'verified forcing proof',verified:true,
+     label:'Verified losing continuation',note:'A checked forcing win exists for the opponent after this move; avoidability has not been established.',needsReview:true};
+   if(verifiedBest)
+     return {kind:'verified-winning-alternative',bucket:'verified',importance:4,certainty:'verified forcing proof',verified:true,
+       label:'Verified winning alternative',note:'A verified forcing win was available from this position. The recorded move has not thereby been proven to lose.',needsReview:true};
+   if(result.basis==='verified-defense'||result.defense?.rootThreat&&result.defense?.defenses?.includes(result.played))
+     return {kind:'known-threat-blocked',bucket:'verified',importance:2,certainty:'verified threat interrupted',verified:true,
+       label:'Known threat blocked',note:'The recorded move interrupts a previously verified attack. Other threats may remain.',needsReview:false};
+   if(NEGATIVE.has(result.label)&&sameRoot(result)&&hasAlternative)
+     return {kind:'provisional-mistake',bucket:'provisional',importance:result.label==='Blunder'?4:result.label==='Mistake'?3:2,
+       certainty:'same-root search estimate',verified:false,label:result.label,
+       note:'The searched alternative evaluates better at a comparable completed depth. This is not proof of a forced outcome.',needsReview:true};
+   if(NEGATIVE.has(result.label))
+     return {kind:'unconfirmed-mistake',bucket:'unresolved',importance:2,certainty:'incomplete comparison',verified:false,
+       label:'Unconfirmed move judgment',note:'The current evidence cannot justify a numerical or causal mistake grade.',needsReview:true};
+   if(result.label==='Unscored'||result.basis==='insufficient-search')
+     return {kind:'unscored',bucket:'unresolved',importance:1,certainty:'insufficient search',verified:false,
+       label:'Unscored',note:'The available search does not establish a comparable decision.',needsReview:false};
+   if(SECONDARY.has(result.label))return {kind:'no-error-shown',bucket:'provisional',importance:0,certainty:'search estimate or positional fact',verified:false,
+     label:result.label,note:'No error established here by the current search; this is not a proof of perfect play.',needsReview:false};
+   return {kind:'unknown',bucket:'unresolved',importance:0,certainty:'not established',verified:false,
+     label:'Unresolved',note:'No justified conclusion from the available evidence.',needsReview:false};
+ }
+ function contrast(result,position,core,rule,{verifyProof}={}){
+   if(!result||!position)return null;
+   const hasPlayed=POINT(result.played),hasBest=POINT(result.best),different=hasPlayed&&hasBest&&result.played!==result.best;
+   const played=playedCandidate(result),best=bestCandidate(result);
+   const safeLine=(i,source)=>{
+     if(!POINT(i)||!source||!Array.isArray(position.board))return [];
+     const proposed=Array.isArray(source.pv)?source.pv:[];
+     const pref=proposed[0]===i?proposed:[i,...proposed];
+     try {
+       const legal=core.line(position.board,position.color,rule,pref.slice(0,16),position.context).moves||[];
+       return legal[0]===i?legal.slice(0,8):[];
+     }catch{return [];}
+   };
+   const playedLine=safeLine(result.played,played),bestLine=different?safeLine(result.best,best):[];
+   const cmp=sameRoot(result)&&different&&playedLine.length>0&&bestLine.length>0;
+   const gap=cmp?Math.max(0,best.score-played.score):null;
+   const fact=classification(result,position,{verifyProof,rule});
+   const verdict=fact.kind==='verified-opponent-win-after'?
+     'The played position has a verified opponent win. The best found alternative has not been proven safe.':
+     fact.kind==='missed-immediate-win'?'The recorded move passed up a legal immediate finish; subsequent loss is not proven.':
+     fact.kind==='allows-immediate-win'?'An immediate opponent finish is available after the recorded move.':
+     fact.kind==='already-lost'?'This position was already lost before the move; do not assign avoidable blame.':
+     cmp?'The alternative is preferred by comparable selective engine estimates, not a forced-game proof.':
+     'These continuations do not support a numerical comparison at the current search depth.';
+   return {played:result.played,best:hasBest?result.best:null,
+     playedLine,bestLine,comparable:cmp,scoreGap:gap,depth:cmp?played.depth:null,
+     certainty:fact.certainty,bucket:fact.bucket,verdict,hasAlternative:different&&bestLine.length>0};
+ }
+ function summarize(positions,results,{mode='all',humanColor=1,rule='freestyle',verifyProof}={}){
+   if(!Array.isArray(positions)||!Array.isArray(results))return {total:0,analyzed:0,coverage:0,events:[],summary:{verified:0,provisional:0,unresolved:0,pending:0},reviewIndices:[],bySide:{}};
+   const events=positions.map((p,k)=>{
+     const result=results[k]||null,cls=classification(result,p||{},{verifyProof,rule});
+     return {index:k,ply:p?.ply||k+1,color:p?.color||1,played:p?.played,
+       coord:COORD(p?.played),label:cls.label,kind:cls.kind,bucket:cls.bucket,
+       importance:cls.importance,certainty:cls.certainty,verified:cls.verified,
+       needsReview:cls.needsReview,note:cls.note,hasAnalysis:!!result,
+       hasBest:POINT(result?.best)&&result.best!==result.played,
+       bestCoord:POINT(result?.best)?COORD(result.best):null,
+       searchDepth:result?.search?.completedDepth??null};
+   });
+   const analyzed=events.filter(e=>e.hasAnalysis).length;
+   const summary={verified:0,provisional:0,unresolved:0,pending:0};
+   for(const e of events){if(e.bucket==='verified')summary.verified++;else if(e.bucket==='provisional')summary.provisional++;else if(!e.hasAnalysis)summary.pending++;else summary.unresolved++;}
+   const focus=mode==='mine'?events.filter(e=>e.color===humanColor):events;
+   const impact=focus.filter(e=>e.needsReview)
+     .sort((a,b)=>b.importance-a.importance|| (a.bucket==='verified'?-1:1) -(b.bucket==='verified'?-1:1)||a.index-b.index);
+   const sideRows=side=>{const r=events.filter(e=>e.color===side);return {moves:r.length,analyzed:r.filter(e=>e.hasAnalysis).length,
+     verifiedEvents:r.filter(e=>e.bucket==='verified'&&e.needsReview).length,
+     provisionalErrors:r.filter(e=>e.kind==='provisional-mistake').length,unresolved:r.filter(e=>!e.hasAnalysis||e.bucket==='unresolved').length};};
+   return {total:events.length,analyzed,coverage:events.length?analyzed/events.length:0,
+     events,summary,reviewIndices:impact.map(e=>e.index),
+     bySide:{Black:sideRows(1),White:sideRows(2)},
+     nextReview:impact[0]?.index??null,
+     scope:'Events reflect rule facts, independently validated tactical evidence, provisional same-root search estimates, and unknown positions. No win rate, Elo change, or causal game swing is inferred.'};
+ }
+ function filterEvents(diagnosis,{side='both',category='all',humanColor=1,limit=100}={}){
+   let rows=diagnosis?.events||[];
+   if(side==='mine')rows=rows.filter(x=>x.color===humanColor);
+   else if(side==='black'||side==='white')rows=rows.filter(x=>x.color===(side==='black'?1:2));
+   if(category==='verified')rows=rows.filter(x=>x.bucket==='verified');
+   else if(category==='provisional')rows=rows.filter(x=>x.bucket==='provisional'&&x.needsReview);
+   else if(category==='unresolved')rows=rows.filter(x=>x.bucket==='unresolved'||x.bucket==='pending');
+   else if(category==='key')rows=rows.filter(x=>x.needsReview);
+   return rows.slice(0,Math.max(1,Math.min(500,Number.isInteger(limit)?limit:100)));
+ }
+ return Object.freeze({classification,contrast,summarize,filterEvents,COORD,SIDE,sameRoot});
+});
 
 </script>
 <script id="guided-review-script">
@@ -5896,7 +6405,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports={createGuided
 
 if(typeof window !== 'undefined') (()=>{
   'use strict';
-  const VERSION='2.1.0', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
+  const VERSION='3.0.0-a5', ANALYSIS_VERSION='3.0.0-a2', STORE='gomoku.guided-review.v1', $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=x=>JSON.parse(JSON.stringify(x));
   const side=c=>c===1?'Black':'White';
@@ -5905,22 +6414,34 @@ if(typeof window !== 'undefined') (()=>{
   let storageNotice='';
   const abort=()=>window.GomokuAnalysisRuntime?.cancel();
   const A=()=>createAnalysis2(createEngine,createStudioCore,createGuidedReviewCore);
-  function evaluate(board,color,rule,played,budget=350,context=entry()?.context||{}) {
+  const a4VerifiedCertificates=new WeakMap();
+  function verifyA4Certificate(cert){
+    if(!cert||typeof cert!=='object')return false;
+    if(a4VerifiedCertificates.has(cert))return a4VerifiedCertificates.get(cert);
+    let valid=false;try{valid=A().verify(cert)===true;}catch{}
+    a4VerifiedCertificates.set(cert,valid);return valid;
+  }
+  function evaluate(board,color,rule,played,budget=350,context=entry()?.context||{},extra={}) {
     const preset=budget<=350?'quick':budget<=1100?'standard':budget<=2400?'deep':'maximum';
-    return window.GomokuAnalysisRuntime.request(board,color,rule,played,{timeMs:budget,preset,context});
+    return window.GomokuAnalysisRuntime.request(board,color,rule,played,{timeMs:budget,preset,context,multiPV:extra.multiPV??session?.lines??5,adaptiveBudget:session?.performanceMode==='auto'});
   }
   function pause(){const s=session;if(!s)return;s.wantsScan=false;s.epoch++;s.scanning=false;s.interacting=false;abort();render();}
   const fingerprint=g=>JSON.stringify([VERSION,g.variant,g.renjuCenterRule,g.initial,g.startColor,g.moves]);
   function loadCache(s) {
     try {
       const raw=localStorage.getItem(STORE);if(!raw || raw.length>2800000)return;
-      const data=JSON.parse(raw);if(!['2.0.0',VERSION].includes(data.version)||!Array.isArray(data.items))return;
+      const data=JSON.parse(raw);if(!['2.0.0','2.1.0','3.0.0-a1','3.0.0-a2','3.0.0-a3','3.0.0-a4',VERSION].includes(data.version)||!Array.isArray(data.items))return;
       const legacyFingerprint=JSON.stringify(['2.0.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
-      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
+      const previousFingerprint=JSON.stringify(['3.0.0-a4',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a3Fingerprint=JSON.stringify(['3.0.0-a3',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a2Fingerprint=JSON.stringify(['3.0.0-a2',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const a1Fingerprint=JSON.stringify(['3.0.0-a1',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const olderFingerprint=JSON.stringify(['2.1.0',s.game.variant,s.game.renjuCenterRule,s.game.initial,s.game.startColor,s.game.moves]);
+      const saved=data.items.find(x=>x.fingerprint===s.fingerprint)||data.items.find(x=>x.fingerprint===previousFingerprint)||data.items.find(x=>x.fingerprint===a3Fingerprint)||data.items.find(x=>x.fingerprint===a2Fingerprint)||data.items.find(x=>x.fingerprint===a1Fingerprint)||data.items.find(x=>x.fingerprint===olderFingerprint)||data.items.find(x=>x.fingerprint===legacyFingerprint);
       if(!saved||!Array.isArray(saved.results))return;
       for(let k=0;k<s.positions.length;k++){
         const r=saved.results[k],p=s.positions[k];
-        if(r?.analysisVersion===VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
+        if(r?.analysisVersion===ANALYSIS_VERSION&&r.positionId===A().positionKey(p.board,p.color,s.game.variant,p.context)&&r.key===p.key&&r.played===p.played&&Array.isArray(r.candidates)&&r.explanation&&typeof r.explanation.why==='string'&&typeof r.label==='string'&&r.candidates.length<=40&&r.candidates.every(c=>core.point(c.i)&&typeof c.label==='string')&&r.facts&&Array.isArray(r.explanation.highlights))s.results[k]=r;
       }
       s.index=Math.max(0,Math.min(s.positions.length-1,Number(saved.index)||0));
       if(saved.variations&&typeof saved.variations==='object')for(const [k,rows]of Object.entries(saved.variations)){const p=s.positions[k];if(!p||!Array.isArray(rows))continue;s.variations[k]=rows.slice(0,12).filter(b=>b&&Array.isArray(b.moves)&&b.moves.length<=60).map(b=>({id:String(++s.branchSerial),moves:core.line(p.board,p.color,s.game.variant,b.moves,p.context).moves,pv:core.line(p.board,p.color,s.game.variant,Array.isArray(b.pv)?b.pv:[],p.context).moves}));}
@@ -5943,7 +6464,7 @@ if(typeof window !== 'undefined') (()=>{
     dialog.classList.add('gr-workspace');
     dialog.innerHTML=`<div class="gr-shell">
   <header class="gr-header">
-    <div class="rw-brand"><span class="rw-mark" aria-hidden="true">●<i>●</i>●</span><div><h2 id="grTitle">Game review <span>ANALYSIS 2.0</span></h2><p id="grGameMeta"></p></div></div>
+    <div class="rw-brand"><span class="rw-mark" aria-hidden="true">●<i>●</i>●</span><div><h2 id="grTitle">Game review <span>ANALYSIS 3.0 · GAME DIAGNOSIS</span></h2><p id="grGameMeta"></p></div></div>
   <nav class="rw-tabs" role="tablist" aria-label="Review workspace">
     <button id="rwTabOverview" type="button" role="tab" data-panel="overview" aria-controls="rwOverview">Overview</button>
     <button id="rwTabReview" type="button" role="tab" data-panel="review" aria-controls="rwDecision">Guided review</button>
@@ -5956,7 +6477,7 @@ if(typeof window !== 'undefined') (()=>{
   <div class="gr-progress-section"><div class="gr-progress-copy"><span id="grProgress" role="status" aria-live="polite"></span><button type="button" class="gr-link" id="grPause">Pause analysis</button></div><progress id="grProgressBar" max="1" value="0" aria-label="Game analysis progress"></progress></div>
   <section id="rwSettings" class="rw-settings" hidden aria-label="Review options">
     <div class="rw-settings-heading"><h3>Review options</h3><button type="button" class="gr-btn" id="rwOptionsClose">Done</button></div>
-    <div class="a2-toolbar"><label>Analysis strength <select id="a2Preset" aria-label="Analysis strength"><option value="quick">Quick · 0.35 s</option><option value="standard">Standard · 1 s</option><option value="deep" selected>Deep · 2.4 s</option><option value="maximum">Maximum · 10 s</option></select></label><button type="button" class="gr-btn" id="a2Refine">Recheck key moments</button></div>
+    <div class="a2-toolbar"><label>Analysis strength <select id="a2Preset" aria-label="Analysis strength"><option value="quick">Quick · 0.35 s</option><option value="standard">Standard · 1 s</option><option value="deep" selected>Deep · 2.4 s</option><option value="maximum">Maximum · 10 s</option></select></label><label>Lines <select id="a2Lines" aria-label="Analysis candidate lines"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label><label>Performance <select id="a6Performance" aria-label="Analysis worker performance mode"><option value="full">Full selected budget</option><option value="auto">Adapt to device</option></select></label><button type="button" class="gr-btn" id="a2Refine">Recheck key moments</button></div><p id="a6RuntimeSummary" class="gr-muted" role="status" aria-live="polite">Worker performance information appears after analysis begins.</p>
     <div class="rw-setting-checks"><label><input type="checkbox" id="a2Overlays" checked> Tactical markers</label><label><input type="checkbox" id="rwCandidateMarkers" checked> Number candidates in free analysis</label><label><input type="checkbox" id="rwShowNumbers"> Number every stone</label></div>
     <p>Strength controls deeper analysis, not the initial scan. Search time excludes verification. Estimates can change; a verified threat is shown separately.</p>
     <div class="rw-settings-actions"><button type="button" id="rwExportOption" class="gr-btn">Export review</button><button type="button" id="rwLibraryOption" class="gr-btn">Mistake library</button></div>
@@ -5966,11 +6487,14 @@ if(typeof window !== 'undefined') (()=>{
   <div class="gr-content">
     <section class="gr-board-column" aria-label="Review board">
       <div class="gr-board-heading"><div><span class="gr-kicker" id="grModeLabel">RECORDED GAME</span><h3 id="grBoardTitle"></h3></div><button type="button" class="gr-btn gr-return" id="grReturn" hidden>Return to review</button></div>
-      <div class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div class="gr-board" id="grBoard" role="grid" aria-label="Gomoku analysis board" aria-rowcount="15" aria-colcount="15" aria-describedby="grBoardHelp"></div></div>
+      <div id="a3Command" class="a3-commandbar" role="group" aria-label="Board overlays"><div class="a3-mode-group"><button type="button" data-a3-mode="candidates" aria-pressed="true">Candidates</button><button type="button" data-a3-mode="threats" aria-pressed="false">Threats</button><button type="button" data-a3-mode="line" aria-pressed="false">Variation</button></div><span id="a3CommandMeta" class="a3-command-meta">Measured evidence</span></div>
+       <div class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div class="gr-board" id="grBoard" role="grid" aria-label="Gomoku analysis board" aria-rowcount="15" aria-colcount="15" aria-describedby="grBoardHelp"></div></div>
       <div class="rw-board-caption"><p class="gr-board-help" id="grBoardHelp"></p><p class="gr-quick-verdict" id="grQuickVerdict"></p></div>
-      <div id="rwPlacement" class="rw-placement" hidden><span id="rwPlacementText"></span><button id="rwPlace" type="button" class="gr-btn gr-primary">Place stone</button><button id="rwCancelPlace" type="button" class="gr-btn">Cancel</button></div>
+      <p id="a3BoardStatus" class="a3-board-status" role="status" aria-live="polite"></p>
+       <div id="a3LineDock" class="a3-variation-dock" aria-label="Read-only candidate preview"><span class="a3-dock-info"><strong id="a3LineTitle">Variation explorer</strong><small id="a3LineMeta">Select Preview beside a candidate</small></span><div class="a3-dock-actions"><button type="button" class="gr-btn" id="a3LinePrev" aria-label="Previous variation step">‹</button><button type="button" class="gr-btn" id="a3LineNext" aria-label="Next variation step">›</button><button type="button" class="gr-btn" id="a3LineReset">Reset</button></div></div>
+       <div id="rwPlacement" class="rw-placement" hidden><span id="rwPlacementText"></span><button id="rwPlace" type="button" class="gr-btn gr-primary">Place stone</button><button id="rwCancelPlace" type="button" class="gr-btn">Cancel</button></div>
       <nav class="gr-navigation" aria-label="Move navigation"><button type="button" id="rwFirst" class="gr-btn rw-icon" aria-label="First game move">|‹</button><button type="button" class="gr-btn" id="grPrev" aria-label="Previous game move">‹ Previous</button><span id="grCounter"></span><button type="button" class="gr-btn" id="grNext" aria-label="Next game move">Next ›</button><button type="button" id="rwLast" class="gr-btn rw-icon" aria-label="Last game move">›|</button></nav>
-      <section class="gr-balance"><div class="gr-section-head"><h4>Game timeline</h4><span id="rwGraphValue">Black ↑ · White ↓</span></div><div id="grGraph"></div><input id="rwScrubber" type="range" min="1" max="1" value="1" step="1" aria-label="Select game move"><p>Engine balance, not win probability. Gaps mean unscored.</p></section>
+      <section class="gr-balance"><div class="gr-section-head"><h4>Game timeline</h4><span id="rwGraphValue">Black ↑ · White ↓</span></div><div id="grGraph"></div><input id="rwScrubber" type="range" min="1" max="1" value="1" step="1" aria-label="Select game move"><p>Only comparable searched values are drawn; gaps and evidence markers are not win probabilities.</p></section>
       <p class="gr-board-feedback" id="grBoardFeedback" hidden></p>
     </section>
     <section class="gr-inspector" aria-label="Move assessment">
@@ -5979,24 +6503,34 @@ if(typeof window !== 'undefined') (()=>{
         <h3 id="rwOverviewTitle">Find the moves that mattered.</h3><p id="rwOverviewText" class="rw-subtitle">Your review is being prepared. You can already explore the game.</p>
         <div id="grSummary" class="gr-summary"></div>
         <button type="button" id="rwStart" class="gr-btn gr-primary rw-start">Start guided review →</button>
+         <section id="a4GameDiagnosis" class="a4-diagnosis" aria-label="Full game diagnosis">
+           <div class="a4-heading"><div><span class="gr-kicker">GAME DIAGNOSIS · A4</span><h4>Decisions, evidence, and turning points</h4></div><p id="a4Coverage">Awaiting analysis</p></div>
+           <div id="a4Metrics" class="a4-metrics" aria-label="Whole game analysis coverage"></div>
+           <p id="a4Scope" class="a4-scope">Only verified rule facts and separately checked tactical proofs are confirmed. Engine estimates may change.</p>
+           <div class="a4-filters" aria-label="Game event filters"><label>Player <select id="a4Side" aria-label="Filter game events by player"><option value="mine">Your moves</option><option value="both">Both sides</option><option value="black">Black</option><option value="white">White</option></select></label><label>Evidence <select id="a4Category" aria-label="Filter game events by evidence"><option value="key">Key decisions</option><option value="all">Every move</option><option value="verified">Verified events</option><option value="provisional">Estimated mistakes</option><option value="unresolved">Unresolved</option></select></label></div>
+           <div id="a4Events" class="a4-events" aria-label="Analyzed decisions"></div>
+           <button type="button" id="a4More" class="gr-link" hidden>Show more decisions</button>
+         </section>
         <div class="rw-section-title"><h4>Your key moments</h4><span id="rwKeyCount"></span></div><div id="rwKeyList"></div>
         <details id="a2GameCoach" class="gr-details"><summary>Lessons from this game</summary><div id="a2CoachSummary"></div></details>
         <div class="rw-practice"><div><h4>Make the lesson stick.</h4><p>Try the positions again without the answer.</p></div><button type="button" class="gr-btn" id="a2Train">Practice mistakes</button></div>
+         <section class="a5-review-plan" id="a5GamePlan" aria-label="Game-based tactical study plan"><div><strong id="a5GamePlanTitle">Your next practice</strong><span id="a5GamePlanReason">Review decisions to build a learning plan.</span></div><button type="button" class="gr-btn gr-primary" id="a5BeginPractice">Study this game</button></section>
       </section>
       <section id="rwDecision" role="tabpanel" aria-labelledby="rwTabReview" hidden>
-        <div class="rw-decision-head"><h3 id="grDecisionTitle"></h3><span id="rwDecisionContext"></span></div>
+        <div class="a3-insight-bar" id="a3Insights" aria-label="Analysis evidence"><div class="a3-insight"><span>Depth</span><strong id="a3Depth">—</strong></div><div class="a3-insight"><span>Lines</span><strong id="a3Lines">—</strong></div><div class="a3-insight"><span>Evidence</span><strong id="a3Evidence">—</strong></div></div><div class="rw-decision-head"><h3 id="grDecisionTitle"></h3><span id="rwDecisionContext"></span></div>
         <div class="rw-verdict-row"><span id="rwGradeIcon" class="rw-grade-icon" aria-hidden="true"></span><div><div class="gr-verdict" id="grVerdict"></div><p class="gr-basis" id="grBasis"></p></div></div>
         <p id="rwShortWhy"></p>
                 <div id="grBranchTools" class="gr-branch-tools" hidden><div class="rw-section-title"><h4>Your test line</h4><span>Original game unchanged</span></div><div id="grBranchMoves" class="gr-branch-moves"></div><div class="gr-action-row"><button type="button" class="gr-btn" id="grUndo">Undo</button><button type="button" class="gr-btn" id="rwRedo">Redo</button><button type="button" class="gr-btn" id="grLineNext">Continue suggested line</button><button type="button" class="gr-btn" id="grReply">Play best reply</button></div><label class="gr-saved-label">Saved test lines <select id="grVariations" aria-label="Saved variations for this decision"></select></label></div>
 <div id="rwCompare" class="rw-compare"><button type="button" id="grPlayed" class="rw-compare-move"><span>Played</span><b id="rwPlayedCoord"></b><small id="rwPlayedGrade"></small></button><button type="button" id="grBest" class="rw-compare-move"><span id="rwBestHeading">Best found</span><b id="rwBestCoord"></b><small id="rwBestGrade"></small></button></div>
         <div class="gr-action-row rw-main-actions"><button type="button" class="gr-btn gr-primary" id="grRetry">Try again</button><button type="button" class="gr-btn" id="grBefore">Position before move</button><button type="button" class="gr-btn" id="grExplore">Explore alternatives</button><button type="button" class="gr-btn" id="rwReveal" hidden>Reveal an answer</button></div>
-        <div class="rw-threat-actions"><button class="gr-btn" type="button" id="a2BestProof" hidden>Show why this wins</button><button class="gr-btn" type="button" id="a2Refutation" hidden>Show the opponent’s threat</button></div>
+        <section id="a4DecisionContrast" class="a4-contrast" aria-label="Played versus alternative"></section>
+         <div class="rw-threat-actions"><button class="gr-btn" type="button" id="a2BestProof" hidden>Show why this wins</button><button class="gr-btn" type="button" id="a2Refutation" hidden>Show the opponent’s threat</button></div>
         <div class="gr-coach"><h4 id="grWhyTitle">Why this move matters</h4><details id="rwExplanation" class="gr-details"><summary>Full explanation</summary><p id="grWhy"></p></details><div class="gr-lesson"><span>REMEMBER NEXT TIME</span><p id="grLesson"></p></div></div>
         <div class="gr-feedback" id="grFeedback" role="status" aria-live="polite" hidden></div>
 
         <section id="a2ProofTools" class="a2-proof-tools" hidden><div class="gr-section-head"><b id="a2ProofTitle"></b><span id="a2ProofCounter"></span></div><p id="a2ProofText"></p><label id="a2DefenseLabel" hidden>Try another defense <select id="a2Defense"></select></label><div class="gr-action-row"><button class="gr-btn" id="a2ProofPrev" type="button">‹ Previous step</button><button class="gr-btn gr-primary" id="a2ProofNext" type="button">Next step ›</button></div><button class="gr-link" id="a2ProofExport" type="button">Export verified proof</button></section>
 
-        <section class="gr-alternatives" id="rwAlternatives"><div class="gr-section-head"><h4 id="rwAlternativesTitle">Compare alternatives</h4><span id="grAltHint">Choose a move to test</span></div><p class="rw-subtitle" id="rwAlternativesContext"></p><div id="grCandidates"></div><button type="button" id="rwMoreCandidates" class="gr-link">More alternatives</button></section>
+        <section class="gr-alternatives" id="rwAlternatives"><div class="gr-section-head"><h4 id="rwAlternativesTitle">Compare alternatives</h4><span id="grAltHint">Choose a move to test</span></div><p class="rw-subtitle" id="rwAlternativesContext"></p><div id="a3Compare" class="a3-compare" hidden aria-label="Pinned comparison"></div><div id="grCandidates"></div><button type="button" id="rwMoreCandidates" class="gr-link">More alternatives</button></section>
         <div class="rw-analysis-tools"><button type="button" class="gr-btn" id="grDeeper">Analyze deeper</button><span id="rwStrengthLabel">Deep analysis</span></div>
         <details class="a2-evidence gr-details" id="rwEngine"><summary>Engine evidence &amp; confidence</summary><div id="a2Diagnosis" class="a2-tags"></div><div id="a2SearchStats" class="a2-search-stats"></div><p id="a2ProofLimit" class="gr-muted"></p><div id="rwCandidateEvidence"></div></details>
       </section>
@@ -6013,26 +6547,58 @@ if(typeof window !== 'undefined') (()=>{
         const i=row*15+col,cell=document.createElement('button');cell.type='button';cell.dataset.point=String(i);cell.className='gr-cell';cell.setAttribute('role','gridcell');cell.setAttribute('aria-rowindex',String(row+1));cell.setAttribute('aria-colindex',String(col+1));cell.tabIndex=i===112?0:-1;cell.innerHTML='<span class="gr-stone"></span><span class="gr-point-mark"></span>';line.append(cell);
       }board.append(line);
     }
+    const a3Svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    a3Svg.setAttribute('class','a3-board-svg');a3Svg.setAttribute('viewBox','0 0 150 150');
+    a3Svg.setAttribute('preserveAspectRatio','none');a3Svg.setAttribute('aria-hidden','true');
+    a3Svg.id='a3BoardSvg';board.append(a3Svg);
     $('grClose').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();if(!$('rwSettings').hidden)toggleOptions(true);else if(session?.mode!=='game')returnToReview();else close();});
     $('grPause').onclick=()=>{const s=session;if(!s)return;if(s.scanning||s.interacting){s.wantsScan=false;s.epoch++;s.scanning=false;s.interacting=false;abort();feedback('Analysis paused. Completed decisions are kept.');render();}else{s.wantsScan=true;scan();}};
     $('grPrev').onclick=()=>session.mode==='proof'?proofStep(-1):session.mode==='explore'?undoBranch():select(session.index-1);$('grNext').onclick=()=>session.mode==='proof'?proofStep(1):session.mode==='explore'?redoBranch():select(session.index+1);$('grKey').onclick=nextKey;
     $('grBefore').onclick=()=>setView(session.view==='before'?'played':'before');$('grPlayed').onclick=()=>setView('played');$('grBest').onclick=showBest;
     $('grReturn').onclick=()=>setView('played');$('grRetry').onclick=retry;$('grExplore').onclick=()=>startBranch(null);
+    $('a3LinePrev').onclick=()=>stepA3(-1);$('a3LineNext').onclick=()=>stepA3(1);
+    $('a3LineReset').onclick=()=>{if(session){session.a3.preview=null;render();}};
     $('grDeeper').onclick=()=>deeper();$('grUndo').onclick=undoBranch;$('grLineNext').onclick=nextLine;$('grReply').onclick=bestReply;
     $('grFilter').onchange=()=>{session.filter=$('grFilter').value;renderMoves();};
-    $('grVariations').onchange=()=>{const s=session,branch=(s.variations[s.index]||[]).find(x=>x.id===$('grVariations').value);if(branch){cancelInteraction(s);s.panel='analysis';s.pending=null;s.proof=null;branch.redo=[];s.branch=branch;s.mode='explore';s.attempt=null;render();}};
+    $('grVariations').onchange=()=>{const s=session,branch=(s.variations[s.index]||[]).find(x=>x.id===$('grVariations').value);if(branch){cancelInteraction(s);if(s.a3)s.a3.preview=null;s.panel='analysis';s.pending=null;s.proof=null;branch.redo=[];s.branch=branch;s.mode='explore';s.attempt=null;render();}};
     $('grExport').onclick=exportReview;
     $('a2Preset').onchange=()=>{session.preset=$('a2Preset').value;try{localStorage.setItem('gomoku.analysis2.preset',session.preset);}catch{}renderWorkspace();};
-    $('a2Overlays').onchange=render;$('a2BestProof').onclick=()=>startProof('bestProof');$('a2Refutation').onclick=()=>startProof('refutation');
+    $('a2Lines').onchange=()=>{session.lines=Math.max(1,Math.min(8,Number($('a2Lines').value)||5));try{localStorage.setItem('gomoku.analysis3.lines',String(session.lines));}catch{}render();};
+   $('a6Performance').onchange=()=>{
+     if(!session)return;session.performanceMode=$('a6Performance').value==='auto'?'auto':'full';
+     try{localStorage.setItem('gomoku.analysis3.performance',session.performanceMode);}catch{}
+     renderWorkspace();
+   };
+     $('a2Overlays').onchange=render;$('a2BestProof').onclick=()=>startProof('bestProof');$('a2Refutation').onclick=()=>startProof('refutation');
     $('a2ProofPrev').onclick=()=>proofStep(-1);$('a2ProofNext').onclick=()=>proofStep(1);$('a2ProofExport').onclick=()=>downloadJSON(session.proof.cert,'gomoku-threat-proof.json');
     $('a2Defense').onchange=()=>{const p=session.proof,step=p.steps[p.index];p.choices[step.choiceIndex]=Number($('a2Defense').value);p.steps=A().proofSteps(p.cert,p.choices);render();};
-    $('a2Train').onclick=async()=>{try{const s=session;await saveMistakes();if(session===s)await window.GomokuTraining.open({ids:cards().map(c=>c.id)});}catch(e){feedback(e.message);}};
+    const beginPractice=async(dueOnly=false)=>{try{
+      const s=session,planned=cards();if(!planned.length){feedback('No sufficiently supported practice positions yet. Analyze key moments deeper.');return;}
+      await saveMistakes();if(session===s)await window.GomokuTraining.open({ids:planned.map(c=>c.id),focus:dueOnly?'due':'all'});
+    }catch(e){feedback(e.message);}};
+    $('a2Train').onclick=()=>beginPractice(false);
+    $('a5BeginPractice').onclick=()=>beginPractice(false);
     $('a2Library').onclick=()=>window.GomokuTraining.open();$('a2Refine').onclick=()=>{toggleOptions(true);refine();};
     bindWorkspace();
 
     dialog.addEventListener('click',ev=>{
+       const a3Mode=ev.target.closest('[data-a3-mode]');
+       if(a3Mode&&session){session.a3.mode=a3Mode.dataset.a3Mode;render();return;}
+       const a3Preview=ev.target.closest('[data-a3-preview]');
+       if(a3Preview&&session){selectA3Preview(Number(a3Preview.dataset.a3Preview));return;}
+       const a3Pin=ev.target.closest('[data-a3-pin]');
+       if(a3Pin&&session){const i=Number(a3Pin.dataset.a3Pin);session.a3.pinned=session.a3.pinned===i?null:i;render();return;}
+
       const cell=ev.target.closest('[data-point]');if(cell){const i=Number(cell.dataset.point);if(session.mode==='game'&&session.panel!=='analysis'){feedback('Choose Try again to solve this decision, or Free analysis to test a different move.');return;}if(ev.detail>0&&matchMedia('(pointer:coarse)').matches&&session.mode!=='proof'){const st=chosenState();if(st.board[i]||st.result){boardAction(i);return;}session.pending=i;render();return;}session.pending=null;boardAction(i);return;}
-      const move=ev.target.closest('[data-review-ply]');if(move){if(move.closest('#rwKeyList'))session.panel='review';select(Number(move.dataset.reviewPly));return;}
+      const a4Jump=ev.target.closest('[data-a4-ply]');
+       if(a4Jump&&session){
+         const k=Number(a4Jump.dataset.a4Ply),isCompare=a4Jump.hasAttribute('data-a4-compare');
+         if(!Number.isInteger(k)||k<0||k>=session.positions.length)return;
+         session.panel='review';select(k);
+         if(isCompare){setPanel('analysis');const q=result();session.a3.pinned=q?.played??null;if(core.point(q?.best))selectA3Preview(q.best);else render();}
+         return;
+       }
+       const move=ev.target.closest('[data-review-ply]');if(move){if(move.closest('#rwKeyList'))session.panel='review';select(Number(move.dataset.reviewPly));return;}
       const alt=ev.target.closest('[data-alternative]');if(alt)startBranch(Number(alt.dataset.alternative));
     });
     dialog.addEventListener('keydown',ev=>{
@@ -6052,9 +6618,29 @@ if(typeof window !== 'undefined') (()=>{
     const list=$('grMoveList'),sel=list.querySelector('.gr-current');
     if(sel&&list.clientHeight){const a=sel.getBoundingClientRect(),b=list.getBoundingClientRect();if(a.top<b.top)list.scrollTop+=a.top-b.top;else if(a.bottom>b.bottom)list.scrollTop+=a.bottom-b.bottom;}
   }
-  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;});}
+  function revealBoard(){requestAnimationFrame(()=>{if(!dialog?.open)return;dialog.querySelector('.gr-board-column').scrollTop=0;dialog.querySelector('.gr-inspector').scrollTop=0;$('rwDecision').scrollTop=0;$('rwOverview').scrollTop=0;keepMoveVisible();if(innerWidth<=720)dialog.querySelector('.gr-content').scrollTop=0;
+    // Analysis is board-first, but the ranked alternatives must be visible in
+    // its independent inspector rather than hidden below the decision header.
+    // Only scroll the inspector on entering this mode; do not steal keyboard
+    // focus, move the document, or change the recorded position.
+    if(session?.panel==='analysis'){
+      // The workspace inspector uses a fixed-height move-record area beneath
+      // the independently scrollable #rwDecision. Scroll the actual inner
+      // panel, not its overflow:hidden flex parent (which cannot scroll).
+      const scroller=$('rwDecision'),first=$('grCandidates')?.querySelector('.gr-candidate');
+      if(innerWidth>720&&scroller&&first&&scroller.clientHeight){
+        const a=first.getBoundingClientRect(),b=scroller.getBoundingClientRect();
+        if(a.top<b.top+12||a.bottom>b.bottom-12)
+          scroller.scrollTop+=a.top-b.top-Math.min(90,Math.max(12,b.height*.12));
+      }
+    }
+  });}
   function chosenState() {
     const s=session,p=entry();
+    if(s?.panel==='analysis'&&s.mode==='game'&&s.a3?.preview){
+      const q=window.GomokuAnalysisWorkspace3?.previewState(core,p,s.game.variant,result(),s.a3.preview);
+      if(q)return q.state;
+    }
     if(s.panel==='overview'&&s.mode==='game'){const end=s.positions.at(-1);return core.line(end.board,end.color,s.game.variant,[end.played],end.context).states.at(-1);}
     if(s.mode==='proof'&&s.proof){const q=s.proof;return {board:q.index<0?q.cert.position:q.steps[q.index].board,color:q.index<0?q.cert.attacker:3-q.steps[q.index].color,result:null};}
     if(s.mode==='explore'&&s.branch)return core.line(p.board,p.color,s.game.variant,s.branch.moves,p.context).states.at(-1);
@@ -6102,10 +6688,11 @@ if(typeof window !== 'undefined') (()=>{
     $('grFooterNote').textContent=s.mode==='proof'?'Arrow keys step through the proof. Return to game restores your recorded decision.':storageNotice||'Your recorded game is never changed. Arrow keys navigate moves; Escape closes review.';renderWorkspace();
   }
   function renderCandidates(r,p){
-    const all=r.candidates.slice().sort((a,b)=>(b.i===r.best)-(a.i===r.best)||(b.score??-Infinity)-(a.score??-Infinity));
-    let rows=all.slice(0,session?.moreCandidates?5:3);const played=all.find(x=>x.i===p.played);if(played&&!rows.includes(played))rows.push(played);
+    const all=r.candidates.slice();
+    let rows=all.slice(0,session?.moreCandidates?Math.min(8,session.lines||5):Math.min(3,session?.lines||5));
+    const played=all.find(c=>c.i===p.played);if(played&&!rows.includes(played))rows.push(played);
     if(!rows.length)return '<p class="gr-muted">No comparable alternatives yet. Use Analyze deeper.</p>';
-    return rows.map((c,j)=>`<button type="button" class="gr-candidate" data-alternative="${c.i}" aria-label="Test ${core.coord(c.i)}, ${esc(c.label)}"><span class="rw-candidate-rank">${j+1}</span><span class="gr-candidate-coord">${core.coord(c.i)}</span><span class="rw-candidate-copy"><b data-tone="${tone(c.label)}">${esc(c.label)}</b><small>${c.i===p.played?'Recorded move':c.i===r.best?'Best found':'Alternative'}${c.basis==='selective-estimate'?' · estimate':''}</small><small class="rw-pv">${esc((c.pv||[]).slice(0,5).map(core.coord).join(' → '))||'Continuation not established'}</small></span><span class="rw-candidate-go" aria-hidden="true">Test ›</span></button>`).join('')+(played?'':`<p class="gr-muted">Played ${core.coord(p.played)}: ${esc(r.label)}. ${r.label==='Unscored'?'Not enough evidence to compare it.':''}</p>`);
+    return rows.map((c,j)=>`<div class="a3-candidate-row" data-loss="${c.bound==='verified-loss'}"><button type="button" class="gr-candidate" data-alternative="${c.i}" aria-label="Test ${core.coord(c.i)}, ${esc(c.label)}"><span class="rw-candidate-rank">${j+1}</span><span class="gr-candidate-coord">${core.coord(c.i)}</span><span class="rw-candidate-copy"><b data-tone="${tone(c.label)}">${esc(c.label)}</b><small>${c.i===p.played?'Recorded move':c.i===r.best?'Best found':'Alternative'}${c.basis==='selective-estimate'?' · estimate':''}${c.comparison?.scoreComparable?' · depth '+c.comparison.depth:' · score unverified'}</small><small class="rw-pv">${esc((c.pv||[]).slice(0,6).map(core.coord).join(' → '))||'Continuation not established'}</small></span><span class="rw-candidate-go" aria-hidden="true">Explore ›</span></button><div class="a3-candidate-tools"><button type="button" data-a3-preview="${c.i}" aria-label="Preview variation ${core.coord(c.i)}">Preview</button><button type="button" data-a3-pin="${c.i}" aria-pressed="${session?.a3?.pinned===c.i}" aria-label="Pin ${core.coord(c.i)}">${session?.a3?.pinned===c.i?'Unpin':'Pin'}</button></div></div>`).join('')+(played?'':`<p class="gr-muted">Played ${core.coord(p.played)}: ${esc(r.label)}.</p>`);
   }
 
   function keyIndices(){const s=session;return s.results.map((r,k)=>r&&core.severity(r.label)>0&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?k:-1).filter(k=>k>=0);}
@@ -6125,11 +6712,18 @@ if(typeof window !== 'undefined') (()=>{
   function renderGraph(){
     const s=session,n=s.positions.length,w=550,h=92;let paths=[],segment=[];
     const pts=s.results.map((r,k)=>{
-      if(!r||!Number.isFinite(r.score)){if(segment.length)paths.push(segment.join(' '));segment=[];return null;}
+      if(!r||r.search?.sameRootComparison!==true||!Number.isFinite(r.score)){if(segment.length)paths.push(segment.join(' '));segment=[];return null;}
       const value=Math.sign(r.score)*Math.log10(1+Math.abs(r.score))*(s.positions[k].color===1?1:-1);
       const p={x:10+(n===1?.5:k/(n-1))*(w-20),y:46-Math.max(-1,Math.min(1,value/8))*34,k};segment.push(`${segment.length?'L':'M'}${p.x},${p.y}`);return p;
     });if(segment.length)paths.push(segment.join(' '));
-    $('grGraph').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Engine evaluation by move; use the move list below to navigate"><path d="M0 46H550" class="gr-zero"/>${paths.map(d=>`<path d="${d}" class="gr-eval-line"/>`).join('')}${pts.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="${p.k===(s.panel==='overview'?n-1:s.index)?5:3}" class="gr-eval-dot" data-review-ply="${p.k}"><title>Move ${p.k+1}: ${esc(s.results[p.k].label)}</title></circle>`).join('')}</svg>`;
+    const D=window.GomokuGameDiagnosis4;
+    const diagnosis=D?.summarize(s.positions,s.results,{rule:s.game.variant,verifyProof:verifyA4Certificate,humanColor:s.game.humanColor});
+    const flags=(diagnosis?.events||[]).filter(e=>e.bucket==='verified'||e.bucket==='unresolved'||e.bucket==='pending').map(ev=>{
+      const x=10+(n===1?.5:ev.index/(n-1))*(w-20),kind=ev.bucket==='verified'?'verified':'unknown';
+      return `<circle cx="${x}" cy="82" r="${ev.index===s.index?4:2.6}" class="a4-evidence-dot" data-a4-kind="${kind}" data-review-ply="${ev.index}"><title>Move ${ev.ply}: ${esc(ev.label)} · ${esc(ev.certainty)}</title></circle>`;
+    }).join('');
+    $('rwGraphValue').textContent='Comparable estimates · evidence marks below';
+    $('grGraph').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Comparable engine estimates with verified and unresolved evidence markers; missing values are not interpolated"><path d="M0 46H550" class="gr-zero"/>${paths.map(d=>`<path d="${d}" class="gr-eval-line"/>`).join('')}${pts.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="${p.k===(s.panel==='overview'?n-1:s.index)?5:3}" class="gr-eval-dot" data-review-ply="${p.k}"><title>Move ${p.k+1}: ${esc(s.results[p.k].label)} · comparable estimate only</title></circle>`).join('')}${flags}</svg>`;
   }
   function renderBranch(){
     const s=session,b=s.branch,state=chosenState();
@@ -6138,10 +6732,10 @@ if(typeof window !== 'undefined') (()=>{
     $('grReply').disabled=!!state.result||s.interacting;
     $('grVariations').innerHTML=(s.variations[s.index]||[]).map((v,k)=>`<option value="${v.id}"${v===b?' selected':''}>${k+1}. ${v.moves.length?core.coord(v.moves[0]):'Empty line'} · ${v.moves.length} test moves</option>`).join('');
   }
-  function select(index){const s=session;if(!s)return;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.pending=null;s.panel=s.panel==='analysis'?'analysis':'review';s.index=Math.max(0,Math.min(s.positions.length-1,index));rememberVisit();s.mode='game';s.view=s.panel==='analysis'?'before':'played';s.branch=null;s.attempt=null;s.touched=true;feedback('');persist();render();revealBoard();}
-  function setView(view){const s=session;if(!s)return;s.pending=null;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.mode='game';s.view=view;s.branch=null;s.attempt=null;s.touched=true;feedback('');render();revealBoard();}
+  function select(index){const s=session;if(!s)return;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}if(s.a3)s.a3.preview=null;s.proof=null;s.pending=null;s.panel=s.panel==='analysis'?'analysis':'review';s.index=Math.max(0,Math.min(s.positions.length-1,index));rememberVisit();s.mode='game';s.view=s.panel==='analysis'?'before':'played';s.branch=null;s.attempt=null;s.touched=true;feedback('');persist();render();revealBoard();}
+  function setView(view){const s=session;if(!s)return;if(s.a3)s.a3.preview=null;s.pending=null;if(s.interacting){s.epoch++;s.interacting=false;abort();if(s.wantsScan)setTimeout(scan,0);}s.proof=null;s.mode='game';s.view=view;s.branch=null;s.attempt=null;s.touched=true;feedback('');render();revealBoard();}
   function nextKey(){advanceGuide();}
-  function retry(){const s=session;if(!s)return;s.panel='review';s.pending=null;cancelInteraction(s);s.proof=null;s.mode='retry';s.attempt=null;s.branch=null;s.touched=true;feedback('');render();revealBoard();}
+  function retry(){const s=session;if(!s)return;if(s.a3)s.a3.preview=null;s.panel='review';s.pending=null;cancelInteraction(s);s.proof=null;s.mode='retry';s.attempt=null;s.branch=null;s.touched=true;feedback('');render();revealBoard();}
   function showBest(){const r=result();if(r?.best!==null&&r?.best!==undefined)startBranch(r.best);}
   function startBranch(i){
     const s=session,p=entry(),r=result();cancelInteraction(s);s.panel='analysis';s.pending=null;s.proof=null;s.mode='explore';s.touched=true;s.attempt=null;
@@ -6180,7 +6774,7 @@ if(typeof window !== 'undefined') (()=>{
       const st=core.line(p.board,p.color,s.game.variant,b.moves.slice(0,-1),p.context).states.at(-1);
       await interactive(async(ss,current)=>{const r=await evaluate(st.board,st.color,ss.game.variant,i,A().PRESETS[ss.preset].timeMs,st.context);if(current()&&ss.branch===b&&JSON.stringify(b.moves)===signature){b.last=r;feedback('This test move has been reanalyzed. The original review is unchanged.');}});return;
     }
-    const p=entry(),index=session.index;if((result()?.budget||0)>A().PRESETS[session.preset||'deep'].timeMs){feedback('This position already has a higher-budget analysis. Choose an equal or larger budget; the stronger saved result is kept.');return;}await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,A().PRESETS[s.preset||'deep'].timeMs,p.context);if(!current())return;s.results[index]=r;persist(s);saveMistakes().catch(e=>feedback(e.message));feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
+    const p=entry(),index=session.index;if((result()?.budget||0)>A().PRESETS[session.preset||'deep'].timeMs&&result()?.multiPV===session.lines){feedback('This position already has a higher-budget analysis. Choose an equal or larger budget; the stronger saved result is kept.');return;}await interactive(async(s,current)=>{const r=await evaluate(p.board,p.color,s.game.variant,p.played,A().PRESETS[s.preset||'deep'].timeMs,p.context);if(!current())return;s.results[index]=r;persist(s);saveMistakes().catch(e=>feedback(e.message));feedback('Deeper analysis completed. Provisional labels and alternatives have been updated.');});}
   async function scan(){
     const s=session;if(!s||s.scanning||s.interacting||!s.wantsScan)return;const epoch=++s.epoch;s.scanning=true;renderProgress();
     const order=[s.index,...s.positions.map((p,k)=>k).filter(k=>s.positions[k].color===s.game.humanColor),...s.positions.map((_,k)=>k)].filter((v,k,a)=>a.indexOf(v)===k);
@@ -6195,7 +6789,19 @@ if(typeof window !== 'undefined') (()=>{
     finally{if(session===s&&s.epoch===epoch){s.scanning=false;s.refining=false;render();saveMistakes().catch(e=>feedback(e.message));}}
   }
 
-  function cards(){const s=session;if(!s)return [];return s.results.map((r,k)=>r&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?A().makeCard(r,s.positions[k],s.game):null).filter(Boolean);}
+  function gameStudyPlan(){
+    const s=session, P=window.GomokuPractice5,D=window.GomokuGameDiagnosis4;
+    if(!s||!P)return null;
+    return P.gamePlan(s.positions,s.results,s.game,{
+      analysis:A(),
+      diagnose:D?(r,p)=>D.classification(r,p,{rule:s.game.variant,verifyProof:verifyA4Certificate}):undefined
+    });
+  }
+  function cards(){
+    const plan=gameStudyPlan();if(plan)return plan.issues.map(x=>x.card);
+    const s=session;if(!s)return [];
+    return s.results.map((r,k)=>r&&(s.game.mode!=='ai'||s.positions[k].color===s.game.humanColor)?A().makeCard(r,s.positions[k],s.game):null).filter(Boolean);
+  }
   async function saveMistakes(){const c=cards();if(c.length)await window.GomokuMistakes.add(c);return c.length;}
   async function refine(){
     const indices=keyIndices().concat(session.results.map((r,k)=>!r||r.label==='Unscored'?k:-1).filter(k=>k>=0)).filter((v,k,a)=>a.indexOf(v)===k).slice(0,8);
@@ -6240,7 +6846,7 @@ if(typeof window !== 'undefined') (()=>{
   function reviewKeys(){return keyIndices();}
   function setPanel(panel){
     if(!session||!['overview','review','analysis'].includes(panel))return;
-    session.pending=null;session.panel=panel;
+    session.pending=null;session.panel=panel;if(session.a3)session.a3.preview=null;
     if(session.mode!=='game')setView('played');
     session.view=panel==='analysis'?'before':'played';
     session.touched=true;feedback('');render();revealBoard();
@@ -6288,6 +6894,9 @@ if(typeof window !== 'undefined') (()=>{
     $('rwFirst').onclick=()=>select(0);$('rwLast').onclick=()=>select(session.positions.length-1);
     $('rwScrubber').oninput=()=>select(Number($('rwScrubber').value)-1);
     $('rwMoreCandidates').onclick=()=>{session.moreCandidates=!session.moreCandidates;render();};
+    $('a4Side').onchange=()=>{if(!session)return;session.a4.side=$('a4Side').value;session.a4.limit=24;renderA4();};
+    $('a4Category').onchange=()=>{if(!session)return;session.a4.category=$('a4Category').value;session.a4.limit=24;renderA4();};
+    $('a4More').onclick=()=>{if(!session)return;session.a4.limit=Math.min(session.positions.length,session.a4.limit+24);renderA4();};
     $('rwRedo').onclick=redoBranch;
     $('rwPlace').onclick=()=>{const i=session?.pending;session.pending=null;if(core.point(i))boardAction(i);};
     $('rwCancelPlace').onclick=()=>{session.pending=null;render();};
@@ -6321,6 +6930,105 @@ if(typeof window !== 'undefined') (()=>{
     }
     return r;
   }
+  // Read-only PV navigation; never changes the recorded game or saved test branches.
+  function selectA3Preview(i){
+    const s=session,r=result();if(!s||s.panel!=='analysis'||s.mode!=='game'||!r?.candidates.some(c=>c.i===i))return;
+    s.a3.preview={move:i,step:0};s.a3.mode='line';s.view='before';render();
+  }
+  function stepA3(amount){
+    const s=session;if(!s||s.panel!=='analysis'||s.mode!=='game')return;
+    if(!s.a3.preview&&amount>0&&Number.isInteger(result()?.best))s.a3.preview={move:result().best,step:0};
+    const q=window.GomokuAnalysisWorkspace3?.previewState(core,entry(),s.game.variant,result(),s.a3.preview);
+    if(!q)return;
+    s.a3.preview.step=Math.max(0,Math.min(q.total,q.step+amount));
+    s.a3.mode='line';s.view='before';render();
+  }
+  function renderA3(r,p){
+    const s=session,active=s?.panel==='analysis'&&s.mode==='game';
+    const svg=$('a3BoardSvg');if(svg)svg.replaceChildren();
+    if(!active){$('a3BoardStatus').textContent='';$('a3Compare').hidden=true;return;}
+    const a3=window.GomokuAnalysisWorkspace3;
+    if(!a3){$('a3BoardStatus').textContent='Analysis workspace unavailable; normal review remains usable.';return;}
+    for(const b of dialog.querySelectorAll('[data-a3-mode]'))b.setAttribute('aria-pressed',String(b.dataset.a3Mode===s.a3.mode));
+    $('a3Depth').textContent=r?.search?.completedDepth??'—';
+    $('a3Lines').textContent=r?`${r.search?.returned??r.candidates?.length??0} / ${r.multiPV??s.lines}`:'—';
+    $('a3Evidence').textContent=r?.bestProof?'Proven win':r?.refutation?'Threat found':r?.defense?.rootThreat?'Defense':r?.search?.compared?'Estimated':'Unknown';
+    const preview=a3.previewState(core,p,s.game.variant,r,s.a3.preview);
+    const viewingBoard=preview?.state?.board||p.board;
+    const focusedMove=s.a3.preview?.move??r?.best;
+    const focusedCandidate=r?.candidates?.find(c=>c.i===focusedMove);
+    const validMoves=a3.legalVariation(core,p,s.game.variant,focusedCandidate);
+    const model=a3.overlays(p,r,viewingBoard,{mode:s.a3.mode,preview:s.a3.preview,pinned:s.a3.pinned,validMoves});
+    const lines=model.arrows.map(a=>`<line class="a3-arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}" marker-end="url(#a3-arrowhead)"/>`).join('');
+    const dots=model.dots.map(d=>`<circle class="a3-dot" data-kind="${d.type}" cx="${d.x}" cy="${d.y}" r="3.5"/>`).join('');
+    if(svg)svg.innerHTML='<defs><marker id="a3-arrowhead" markerWidth="5" markerHeight="5" refX="3.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5Z" fill="#318a7d"/></marker></defs>'+lines+dots;
+    $('a3BoardStatus').textContent=model.legend;
+    $('a3CommandMeta').textContent=r?(`${r.search?.backend||'Engine'} · ${r.search?.completedDepth||0} ply`):'Analysis pending';
+    $('a3LineTitle').textContent=preview?`${a3.coord(preview.moves[0])} · variation ${preview.step} / ${preview.total}`:'Variation explorer';
+    $('a3LineMeta').textContent=preview?(`Move ${preview.step} of ${preview.total}; read-only searched continuation`):'Select Preview next to a candidate';
+    $('a3LinePrev').disabled=!preview||preview.step===0;
+    $('a3LineNext').disabled=!!s.interacting||(!preview&&!Number.isInteger(r?.best))||(!!preview&&preview.step>=preview.total);
+    $('a3LineReset').disabled=!preview;
+    const selected=s.a3.preview?.move??r?.best;
+    const comparison=a3.compare(r,s.a3.pinned,selected);
+    const area=$('a3Compare');
+    area.hidden=!comparison;
+    if(comparison){
+      const summary=c=>`<div class="a3-compare-card"><span>${c.move===s.a3.pinned?'PINNED':'SELECTED'}</span><strong>${c.coord}</strong><small>${esc(c.label)} · depth ${c.depth}</small><small>${c.proof?esc(c.proof):c.comparable?'Comparable engine estimate':'Score not comparable'}</small></div>`;
+      const markup=summary(comparison.left)+summary(comparison.right)+`<p class="a3-compare-note">${comparison.numericComparison?'Both search values are same-depth estimates, not win probabilities.':'No numerical move difference is asserted without comparable exact-depth scores.'}</p>`;
+      if(area.innerHTML!==markup)area.innerHTML=markup;
+    }
+    if(preview){$('grBoardTitle').textContent=`Read-only line · ${preview.step} of ${preview.total} moves`;
+      $('grBoardHelp').textContent='Previewing a searched continuation. Reset restores the exact position before this recorded move.';}
+  }
+  function renderA4(){
+    const s=session, D=window.GomokuGameDiagnosis4;
+    if(!s||!D||!$('a4GameDiagnosis'))return;
+    const game=D.summarize(s.positions,s.results,{mode:s.a4.side==='mine'?'mine':'all',humanColor:s.game.humanColor,rule:s.game.variant,verifyProof:verifyA4Certificate});
+    const rows=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:s.a4.limit});
+    const all=D.filterEvents(game,{side:s.a4.side,category:s.a4.category,humanColor:s.game.humanColor,limit:500});
+    const scoped=D.filterEvents(game,{side:s.a4.side,category:'all',humanColor:s.game.humanColor,limit:500});
+    const verified=scoped.filter(e=>e.bucket==='verified'&&e.needsReview).length;
+    const estimates=scoped.filter(e=>e.kind==='provisional-mistake').length;
+    const unknown=scoped.filter(e=>e.bucket==='unresolved'||e.bucket==='pending').length;
+    $('a4Coverage').textContent=`${game.analyzed} of ${game.total} moves reviewed · ${game.total?Math.round(game.coverage*100):0}% scan coverage`;
+    const metrics=[
+      ['Confirmed tactical issues',verified,'Rule fact / verified continuation'],
+      ['Estimated mistakes',estimates,'Comparable selective search only'],
+      ['Still unresolved',unknown,'Unscored, incomplete, or pending']
+    ];
+    const metricsHTML=metrics.map(([title,n,meaning])=>`<div class="a4-metric"><span>${esc(title)}</span><b>${n}</b><small>${esc(meaning)}</small></div>`).join('');
+    if($('a4Metrics').innerHTML!==metricsHTML)$('a4Metrics').innerHTML=metricsHTML;
+    $('a4Side').querySelector('[value=mine]').disabled=s.game.mode!=='ai';
+    $('a4Side').value=s.a4.side;$('a4Category').value=s.a4.category;
+    $('a4Scope').textContent='This report separates confirmed rule/tactical events from provisional engine judgments. Counts are evidence categories, not game accuracy or winning percentages. Events may update after deeper search.';
+    const html=rows.length?rows.map(ev=>{
+      const tone=ev.bucket==='verified'?'verified':ev.bucket==='provisional'?'estimated':'unknown';
+      const p=s.positions[ev.index],r=s.results[ev.index];
+      return `<article class="a4-event" data-a4-evidence="${tone}" data-a4-kind="${esc(ev.kind)}"><div class="a4-event-main"><span class="a4-number">${ev.ply}</span><span class="a4-event-copy"><b>${ev.color===1?'Black':'White'} · ${esc(ev.coord)} · ${esc(ev.label)}</b><small>${esc(ev.note)}</small><em>${esc(ev.certainty)}${ev.searchDepth!==null?' · depth '+ev.searchDepth:''}</em></span></div><div class="a4-actions"><button type="button" class="gr-btn" data-a4-ply="${ev.index}" aria-label="Review move ${ev.ply}">Review</button>${r&&ev.hasBest?'<button type="button" class="gr-btn" data-a4-ply="'+ev.index+'" data-a4-compare="true" aria-label="Compare alternatives for move '+ev.ply+'">Compare</button>':''}</div></article>`;
+    }).join(''):'<p class="gr-muted">No moves match this evidence filter. Select Every move to inspect all available positions.</p>';
+    if($('a4Events').innerHTML!==html){
+      const focused=document.activeElement?.getAttribute('data-a4-ply'),compare=document.activeElement?.hasAttribute('data-a4-compare');
+      const y=$('a4Events').scrollTop;$('a4Events').innerHTML=html;$('a4Events').scrollTop=y;
+      if(focused!==null&&focused!==undefined){
+        const selector='[data-a4-ply="'+focused+'"]'+(compare?'[data-a4-compare]':':not([data-a4-compare])');
+        $('a4Events').querySelector(selector)?.focus({preventScroll:true});
+      }
+    }
+    $('a4More').hidden=all.length<=rows.length;
+    $('a4More').textContent=`Show next ${Math.min(24,all.length-rows.length)} of ${all.length} matching moves`;
+    $('a4GameDiagnosis').dataset.complete=String(game.analyzed===game.total);
+  }
+  function renderA4Contrast(r,p,concealed,active,panel){
+    const area=$('a4DecisionContrast'),D=window.GomokuGameDiagnosis4;
+    if(!area)return;
+    if(!D||!r||!p||concealed||active||panel==='overview'){area.hidden=true;return;}
+    const diff=D.contrast(r,p,core,session.game.variant,{verifyProof:verifyA4Certificate}),cls=D.classification(r,p,{rule:session.game.variant,verifyProof:verifyA4Certificate});
+    if(!diff){area.hidden=true;return;}
+    const line=a=>a.length?a.map(core.coord).join(' → '):'No legal searched continuation';
+    const body=`<div class="a4-contrast-heading"><h4>Played vs best found</h4><span>${esc(cls.certainty)}</span></div><div class="a4-contrast-grid"><div><small>RECORDED MOVE</small><b>${esc(core.coord(diff.played))}</b><p>${esc(line(diff.playedLine))}</p></div><div><small>SEARCHED ALTERNATIVE</small><b>${diff.best===null?'—':esc(core.coord(diff.best))}</b><p>${esc(line(diff.bestLine))}</p></div></div><p class="a4-contrast-why">${esc(diff.verdict)}</p>${diff.comparable?'<p class="a4-contrast-note">Estimated score gap: '+Math.round(diff.scoreGap)+' engine units at completed depth '+diff.depth+'. These are not probabilities or proof of a saved game.</p>':'<p class="a4-contrast-note">No valid equal-depth numerical comparison is available.</p>'}`;
+    area.hidden=false;if(area.innerHTML!==body)area.innerHTML=body;
+  }
   function renderWorkspace(){
     if(!session||!dialog.open)return;
     const s=session,p=entry(),r=result(),active=s.mode!=='game',concealed=s.mode==='retry'&&!s.attempt?.result;
@@ -6351,9 +7059,15 @@ if(typeof window !== 'undefined') (()=>{
     $('rwAlternatives').hidden=panel!=='analysis';
     $('rwAlternativesTitle').textContent=`Alternatives to move ${p.ply}`;
     $('rwAlternativesContext').textContent=`${side(p.color)} to move · each option replaces ${core.coord(p.played)}, not the latest test move.`;
-    $('grCandidates').innerHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    const candidateHTML=concealed?'':r?renderCandidates(r,p):'<p class="gr-muted">Checking the available moves…</p>';
+    if($('grCandidates').innerHTML!==candidateHTML){
+      const focused=document.activeElement?.getAttribute('data-a3-preview')||document.activeElement?.getAttribute('data-a3-pin');
+      const type=document.activeElement?.hasAttribute('data-a3-preview')?'preview':document.activeElement?.hasAttribute('data-a3-pin')?'pin':null;
+      $('grCandidates').innerHTML=candidateHTML;
+      if(type&&focused!==null)$('grCandidates').querySelector('[data-a3-'+type+'="'+focused+'"]')?.focus({preventScroll:true});
+    }
     $('rwMoreCandidates').hidden=!r||r.candidates.length<=3;
-    $('rwMoreCandidates').textContent=s.moreCandidates?'Show fewer alternatives':`Show all ${Math.min(6,r?.candidates.length||0)} alternatives`;
+    $('rwMoreCandidates').textContent=s.moreCandidates?'Show fewer alternatives':`Show up to ${Math.min(s.lines||5,r?.candidates.length||0)} candidates`;
     $('rwMoreCandidates').setAttribute('aria-expanded',String(!!s.moreCandidates));
     const assessed=displayResult();
     $('rwCandidateEvidence').innerHTML=concealed?'':(assessed?.candidates||(!active?r?.candidates:[])||[]).length?`<p>Candidate values are engine units, not probabilities. Bounds are not directly comparable to exact values.</p><table><caption>Search evidence for this decision</caption><thead><tr><th>Move</th><th>Value / bound</th><th>Depth</th><th>Loss</th></tr></thead><tbody>${(assessed?.candidates||r.candidates).slice(0,6).map(c=>`<tr><td>${core.coord(c.i)}</td><td>${Number.isFinite(c.score)?Math.round(c.score):'—'} · ${esc(c.bound||'not reported')}</td><td>${c.depth??'—'}</td><td>${Number.isFinite(c.loss)?Math.round(c.loss):'not comparable'}</td></tr>`).join('')}</tbody></table>`:'';
@@ -6369,7 +7083,15 @@ if(typeof window !== 'undefined') (()=>{
     $('grPlayed').setAttribute('aria-pressed',String(!active&&s.view==='played'));
     $('grBest').disabled=!r||!core.point(r.best);$('grBest').setAttribute('aria-label',r&&core.point(r.best)?`Show best found ${core.coord(r.best)}`:'Best move not yet available');
     $('grBefore').textContent=s.view==='before'?'Show played position':'Position before move';
-    $('rwStrengthLabel').textContent=`${s.preset[0].toUpperCase()+s.preset.slice(1)} · ${(A().PRESETS[s.preset].timeMs/1000)} s search budget`;
+    const runtimeStats=window.GomokuAnalysisRuntime?.stats();
+    const governor=window.GomokuRuntimePolicy6;
+    const chosenBudget=governor?.admission({timeMs:A().PRESETS[s.preset].timeMs,
+       adaptiveBudget:s.performanceMode==='auto'},governor.deviceSnapshot(window));
+    const actualMs=chosenBudget?.appliedMs??A().PRESETS[s.preset].timeMs;
+    $('rwStrengthLabel').textContent=`${s.preset[0].toUpperCase()+s.preset.slice(1)} · ${(actualMs/1000).toFixed(2)} s allowed search · ${s.lines} lines${chosenBudget?.capped?' · device-capped':''}`;
+    $('a6RuntimeSummary').textContent=runtimeStats?
+      `${runtimeStats.deviceClass} device · ${runtimeStats.workersCreated} worker starts · ${runtimeStats.coalescedRequests} shared requests · ${Math.round(runtimeStats.cacheBytes/1024)} KiB cached / ${Math.round(runtimeStats.maxCacheBytes/1024)} KiB · ${runtimeStats.cancelled} canceled`:
+      'Worker statistics unavailable. The original game is still preserved.';
     $('rwScrubber').max=total;$('rwScrubber').value=panel==='overview'?total:p.ply;$('rwScrubber').setAttribute('aria-valuetext',panel==='overview'?`Final position, move ${total}`:`Move ${p.ply}, ${side(p.color)} ${core.coord(p.played)}, ${r?.label||'not yet assessed'}`);
     $('rwFirst').disabled=s.index===0;$('rwLast').disabled=s.index===total-1;
     $('rwFirst').hidden=active;$('rwLast').hidden=active;
@@ -6391,6 +7113,14 @@ if(typeof window !== 'undefined') (()=>{
     const winner=s.outcome?.winner;
     $('rwOutcome').textContent=winner===0?'Draw':winner===1||winner===2?`${side(winner)} won`:'Game recap';
     $('rwOutcome').textContent+=` · ${total} moves${s.game.mode==='ai'?' · You played '+side(s.game.humanColor):''}`;
+    const study=gameStudyPlan();
+    const mainTheme=study?Object.entries(study.byTheme).sort((a,b)=>b[1].length-a[1].length)[0]?.[0]:null;
+    const themeName=window.GomokuPractice5?.THEMES.find(t=>t.id===mainTheme)?.title;
+    $('a5GamePlanTitle').textContent=study?.eligible?`${study.eligible} practice position${study.eligible===1?'':'s'} from this game`:'Practice plan needs better evidence';
+    $('a5GamePlanReason').textContent=study?.eligible?
+      `${themeName||'Tactical study'} is the leading theme. Every exercise is rechecked before recall is recorded; unknown decisions are excluded.`:
+      'No eligible exercises yet. Scan or refine the game to find supported alternatives.';
+    $('a5BeginPractice').disabled=!study?.eligible;
     $('rwOverviewTitle').textContent=s.guideDone?'Take one lesson into your next game.':'Find the moves that mattered.';
     $('rwOverviewText').textContent=s.guideDone?(keys.length?`${s.visited.filter(k=>keys.includes(k)).length} of ${keys.length} key moments explored. Practise them now, or return to any move.`:'You reached the end of this review. You can return to any move or explore alternatives.'):done<total?'The review is building as the engine checks your game. Start now; more results will appear.':keys.length?`${keys.length} of your decisions are worth a closer look. Understand the threat, compare a move, then try it yourself.`:unclear?'No mistake has been established yet. Some decisions need deeper analysis.':'No actionable mistake was found in this search. You can still examine every move.';
     $('rwStart').textContent=s.guideDone?(keys.length?'Review key moments again →':'Review every move again →'):keys.length?`Review ${keys.length} key moment${keys.length===1?'':'s'} →`:'Review every move →';
@@ -6398,17 +7128,19 @@ if(typeof window !== 'undefined') (()=>{
     const keyHTML=keys.length?keys.map((k,j)=>{const q=s.results[k],pos=s.positions[k];return `<button type="button" class="rw-key-row" data-review-ply="${k}"><span class="rw-key-number">${j+1}</span><span><b>Move ${pos.ply} · ${core.coord(pos.played)}</b><small>${esc(q.diagnosis?.[0]||q.explanation.lesson)}</small></span><strong data-tone="${tone(q.label)}">${esc(q.label)}</strong><span aria-hidden="true">›</span></button>`;}).join(''):`<p class="gr-muted">${done<total?'Key moments will appear here as the game is analyzed.':'No key moments found. Choose Review every move to explore the complete game.'}</p>`;
     if($('rwKeyList').innerHTML!==keyHTML){const focused=document.activeElement?.dataset.reviewPly;$('rwKeyList').innerHTML=keyHTML;if(focused!==undefined)$('rwKeyList').querySelector(`[data-review-ply="${focused}"]`)?.focus({preventScroll:true});}
     // Markers are optional and never shown during a concealed retry.
-    const numbered=panel==='analysis'&&!active&&s.view==='before'&&$('a2Overlays').checked&&$('rwCandidateMarkers').checked?r?.candidates.slice().sort((a,b)=>(b.i===r.best)-(a.i===r.best)||(b.score??-Infinity)-(a.score??-Infinity)).slice(0,3)||[]:[];
+    const numbered=panel==='analysis'&&!active&&s.view==='before'&&$('a2Overlays').checked&&$('rwCandidateMarkers').checked?r?.candidates.filter(c=>c.bound!=='verified-loss').slice(0,3)||[]:[];
     const board=chosenState().board;
     const action=$('rwQuickAction');action.hidden=panel==='overview'||s.mode==='proof';action.disabled=s.interacting;action.textContent=s.mode==='explore'?(chosenState().result?'Undo move':'Play best reply'):s.mode==='retry'?(s.attempt?'Try again':'Reveal best move'):panel==='analysis'?'Test best found':'Try again';
     let numbers=new Map();if($('rwShowNumbers').checked){s.game.moves.slice(0,s.panel==='overview'?s.game.moves.length:p.ply-(s.view==='before'||active?1:0)).forEach((m,k)=>{if(m.i>=0)numbers.set(m.i,k+1);});}
     for(const cell of $('grBoard').querySelectorAll('[data-point]')){
       const i=Number(cell.dataset.point),idx=numbered.findIndex(c=>c.i===i);cell.classList.toggle('rw-pending',s.pending===i);cell.classList.toggle('rw-candidate-point',idx>=0&&!board[i]);
       cell.dataset.candidateTone=idx>=0?tone(numbered[idx].label):'';if(idx>=0&&!board[i]){cell.querySelector('.gr-point-mark').textContent=String(idx+1);cell.setAttribute('aria-label',`${core.coord(i)}, candidate ${idx+1}, ${numbered[idx].label}`);}
-      if(numbers.has(i)&&board[i])cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
+      if(numbers.has(i)&&board[i]&&!s.a3?.preview)cell.querySelector('.gr-stone').textContent=String(numbers.get(i));
     }
     $('grFooterNote').textContent=storageNotice?'Storage unavailable: export to keep this review.':'Recorded game unchanged';
     $('rwGlobalNotice').hidden=!$('grFeedback').textContent||panel!=='overview';$('rwGlobalNotice').textContent=$('grFeedback').textContent;
+    renderA4();renderA4Contrast(r,p,concealed,active,panel);
+    renderA3(r,p);
   }
   async function redoBranch(){
     const b=session?.branch;if(!b?.redo?.length)return;
@@ -6425,13 +7157,17 @@ if(typeof window !== 'undefined') (()=>{
       const game=copy(prepared.game);core=core||createGuidedReviewCore(createEngine,createStudioCore);const ps=core.positions(game);
       if(!ps.length){api.finishGuidedReview?.(!prepared.wasReviewing);return false;}
       opener=document.activeElement;document.querySelectorAll('dialog[open]').forEach(d=>d.close());ensureUI();storageNotice='';
-      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',proof:null,panel:'overview',visited:[],guideDone:false,pending:null,moreCandidates:false};
+      session={game,outcome:createEngine(game.variant).replay(game.moves,{initial:game.initial||[],startColor:game.startColor||1,allowLegacyOffCenterOpening:game.renjuCenterRule===false}).result,wasReviewing:prepared.wasReviewing,fingerprint:fingerprint(game),positions:ps,results:Array(ps.length).fill(null),index:0,mode:'game',view:'played',branch:null,branchSerial:0,variations:{},attempt:null,filter:'all',epoch:0,scanning:false,interacting:false,wantsScan:true,touched:false,preset:'deep',lines:5,performanceMode:'full',proof:null,panel:'overview',a3:{mode:'candidates',preview:null,pinned:null},a4:{side:game.mode==='ai'?'mine':'both',category:'key',limit:24},visited:[],guideDone:false,pending:null,moreCandidates:false};
       try{const p=localStorage.getItem('gomoku.analysis2.preset');if(A().PRESETS[p])session.preset=p;}catch{}$('a2Preset').value=session.preset;
+       try{const n=Number(localStorage.getItem('gomoku.analysis3.lines'));if(Number.isInteger(n)&&n>=1&&n<=8)session.lines=n;}catch{}
+       $('a2Lines').value=String(session.lines);
+       try{const m=localStorage.getItem('gomoku.analysis3.performance');if(m==='auto'||m==='full')session.performanceMode=m;}catch{}
+       $('a6Performance').value=session.performanceMode;
       loadCache(session);if(Number.isInteger(options.ply)){session.index=Math.max(0,Math.min(ps.length-1,options.ply-1));session.touched=true;session.panel='review';}
       $('grFilter').value='all';$('rwSettings').hidden=true;$('rwOptions').setAttribute('aria-expanded','false');dialog.showModal();feedback('');render();(session.panel==='overview'?$('rwStart'):$('grRetry')).focus({preventScroll:true});scan();return true;
     }catch(e){console.error('Guided review:',e);const note=document.createElement('p');note.setAttribute('role','alert');note.textContent='Review could not open: '+e.message;note.style.cssText='position:fixed;bottom:20px;left:20px;z-index:99999;max-width:90vw;padding:15px;background:#fff;color:#222;border:2px solid #9e473a';document.body.append(note);setTimeout(()=>note.remove(),10000);return false;}
   }
-  function exportReview(){const s=session;if(!s)return;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function exportReview(){const s=session;if(!s)return;const D=window.GomokuGameDiagnosis4;const diagnosis=D?D.summarize(s.positions,s.results,{mode:s.game.mode==='ai'?'mine':'all',humanColor:s.game.humanColor,rule:s.game.variant,verifyProof:verifyA4Certificate}):null;const data={format:'GomokuGuidedReview',version:VERSION,createdAt:new Date().toISOString(),game:s.game,results:s.results,variations:s.variations,diagnosis};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='gomoku-game-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function boot(){
     if(!window.GomokuStudio){setTimeout(boot,80);return;}
     core=createGuidedReviewCore(createEngine,createStudioCore);
@@ -6439,8 +7175,8 @@ if(typeof window !== 'undefined') (()=>{
     // Capture before legacy handlers; a single entry point, not another review overlay.
     document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;let match=ids.has(b.id);if(b.id==='reviewBtn'||b.id==='v85NextBtn'){try{const g=GomokuStudio.exportGame();match=!!g.terminal||!!createEngine(g.variant).replay(g.moves,{initial:g.initial,startColor:g.startColor}).result;}catch{}}if(!match)return;if(open()){ev.preventDefault();ev.stopImmediatePropagation();}},true);
     const button=$('resultReviewBtn');if(button)button.textContent='Review game';
-    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'2.1.0',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
-      state:()=>session?copy({gameId:session.game.gameId,outcome:session.outcome,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions,proof:session.proof,preset:session.preset,panel:session.panel,pending:session.pending,visited:session.visited,guideDone:session.guideDone}):null,
+    window.GomokuReview=Object.freeze({version:VERSION,workspaceVersion:'3.0.0-a5',setPanel,startGuide,returnToReview,redoBranch,open,close,pause,select:ply=>select(ply-1),deeper,showBest,retry,nextKey,refine,startProof,proofStep,saveMistakes,
+      state:()=>session?copy({gameId:session.game.gameId,game:{variant:session.game.variant,mode:session.game.mode,humanColor:session.game.humanColor},outcome:session.outcome,index:session.index,mode:session.mode,view:session.view,scanning:session.scanning,interacting:session.interacting,results:session.results,branch:session.branch,attempt:session.attempt,positions:session.positions,proof:session.proof,preset:session.preset,lines:session.lines,performanceMode:session.performanceMode,panel:session.panel,a3:session.a3,a4:session.a4,pending:session.pending,visited:session.visited,guideDone:session.guideDone}):null,
       core,exportReview});
   }
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&session&&(session.scanning||session.interacting)){pause();feedback('Analysis paused while this tab is hidden. Resume when you return.');}});
@@ -13239,12 +13975,214 @@ html body.ui-studio dialog b{font-family:var(--ui-font)!important;}
 })();
 
 </script>
+<script id="analysis5-practice-core">
+/* A5 — study plan for actual reviewed Gomoku positions.
+   Pure, deterministic; never edits original mistake cards, schedules or event IDs. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  if(root&&typeof root==='object')root.GomokuPractice5=api;
+})(typeof globalThis==='object'?globalThis:null,function(){
+ 'use strict';
+ const DAY=86400000,POINT=i=>Number.isInteger(i)&&i>=0&&i<225;
+ const THEMES=Object.freeze([
+   {id:'finish',title:'Finish the win',desc:'Spot immediate wins before extending an attack'},
+   {id:'forced-defense',title:'Urgent defense',desc:'Stop an immediate five or a known forcing threat'},
+   {id:'double-threat',title:'Double threats',desc:'Understand open fours and simultaneous finishing points'},
+   {id:'forbidden',title:'Renju legality',desc:'Check forbidden Black formations and exact-five restrictions'},
+   {id:'forcing-sequence',title:'Forcing calculations',desc:'Calculate validated four/three attack continuations'},
+   {id:'opening',title:'Opening fundamentals',desc:'Establish legal early-board foundations'},
+   {id:'position',title:'Position judgment',desc:'Compare promising lines when no tactic is proven'}
+ ]);
+ const TITLE=Object.fromEntries(THEMES.map(t=>[t.id,t]));
+ const equalBoard=(a,b)=>Array.isArray(a)&&Array.isArray(b)&&a.length===225&&a.every((n,i)=>n===b[i]);
+ function theme(result,position={},rule='freestyle'){
+   const f=result?.facts||{};
+   const p=Number.isInteger(position.ply)?position.ply:225;
+   const shape=result?.playedShape||{};
+   if(f.ownWins?.length&&!f.win||result?.label==='Missed win'||result?.label==='Win available')return 'finish';
+   if(f.replies?.length||result?.refutation||result?.opponentThreat||result?.defense?.rootThreat)return 'forced-defense';
+   if(rule==='renju-practice'&&(result?.label==='Illegal'||shape?.reason?.includes('forbidden')))return 'forbidden';
+   if((f.finishes||[]).length>=2||shape.fours?.length>=2)return 'double-threat';
+   if(result?.bestProof||result?.tactical?.verified||shape.threes?.length||shape.fours?.length)return 'forcing-sequence';
+   if(p<=6)return 'opening';
+   return 'position';
+ }
+ // Same-root comparison is an evidence gate, not a winning-percentage estimator.
+ function sameRoot(r){
+   if(!r?.search?.sameRootComparison)return false;
+   const played=r.candidates?.find(c=>c.i===r.played),best=r.candidates?.find(c=>c.i===r.best);
+   return !!(played&&best&&played.bound==='exact'&&best.bound==='exact'&&
+     played.comparison?.scoreComparable===true&&best.comparison?.scoreComparable===true&&
+     played.depth>=2&&played.depth===best.depth&&Number.isFinite(played.score)&&Number.isFinite(best.score));
+ }
+ function qualification(r,p,rule,diagnose){
+   if(!r||!p)return {eligible:false,evidence:'unknown',reason:'This position is not analyzed.'};
+   const cls=typeof diagnose==='function'?diagnose(r,p):null;
+   const facts=r.facts||{},immediate=Array.isArray(facts.ownWins)&&facts.ownWins.length&&!facts.win;
+   const threat=Array.isArray(facts.replies)&&facts.replies.length&&!facts.alreadyLost;
+   if(facts.alreadyLost)return {eligible:false,evidence:'already-lost',reason:'Already lost before this move. Not an avoidable new mistake.'};
+   if(!POINT(r.best)||!POINT(r.played)||r.best===r.played)return {eligible:false,evidence:'unknown',reason:'No separate legal alternative established.'};
+   if(immediate||threat)return {eligible:true,evidence:'rules',reason:immediate?'Missed legal immediate win':'Allowed a legal immediate winning reply'};
+   if(cls?.bucket==='verified'&&cls.needsReview===true)return {eligible:true,evidence:'verified',reason:cls.note};
+   if(sameRoot(r)&&['Blunder','Mistake','Inaccuracy','Losing move','Missed win','Win available'].includes(r.label))
+     return {eligible:true,evidence:'provisional',reason:'Comparable selective-search alternative; recheck during practice'};
+   return {eligible:false,evidence:'unknown',reason:'Incomplete or non-comparable engine evidence. Review, but do not schedule as mastered.'};
+ }
+ function gamePlan(positions,results,game,{analysis,diagnose}={}){
+   const issues=[],skipped=[];
+   if(!Array.isArray(positions)||!Array.isArray(results)||!game||!analysis)return {issues,skipped,byTheme:{},eligible:0};
+   for(let k=0;k<positions.length;k++){
+     const p=positions[k],r=results[k];
+     if(game.mode==='ai'&&p.color!==game.humanColor)continue;
+     const q=qualification(r,p,game.variant,diagnose),t=theme(r,p,game.variant);
+     if(!q.eligible){if(q.evidence==='unknown')skipped.push({index:k,reason:q.reason});continue;}
+     let card=null;try{if(analysis.trainable(r))card=analysis.makeCard(r,p,game);}catch{}
+     if(!card){skipped.push({index:k,reason:'Current card schema or engine does not support this position.'});continue;}
+     issues.push({index:k,ply:p.ply,theme:t,evidence:q.evidence,reason:q.reason,id:card.id,card});
+   }
+   const byTheme={};
+   for(const issue of issues)(byTheme[issue.theme]||(byTheme[issue.theme]=[])).push(issue);
+   return {issues,skipped,byTheme,eligible:issues.length,total:positions.length,
+     warning:'Only eligible problems are copied into the original mistake-card library; attempts are still graded after a fresh analysis.'};
+ }
+ function due(card,now=Date.now()){
+   return Number.isFinite(card?.stats?.due)?card.stats.due<=now:true;
+ }
+ function cardPlan(cards,{now=Date.now(),focus='all',limit=60}={}){
+   const items=[];
+   for(const c of Array.isArray(cards)?cards:[]){
+     if(!c||typeof c.id!=='string'||!Array.isArray(c.board)||c.board.length!==225)continue;
+     const topic=theme(c.reference||{},c.source||{},c.rule);
+     const evidence=qualification(c.reference||{}, {board:c.board,color:c.color}, c.rule).evidence;
+     const dueAt=Number.isFinite(c.stats?.due)?c.stats.due:now;
+     const streak=Math.max(0,Number(c.stats?.streak)||0);
+     const recent=Number.isFinite(c.stats?.last)?c.stats.last:0;
+     const isDue=dueAt<=now;
+     const lapses=Math.max(0,Number(c.stats?.lapses)||0);
+     if(focus!=='all'&&focus!=='due'&&topic!==focus)continue;
+     if(focus==='due'&&!isDue)continue;
+     const priority=(isDue?100:0)+Math.min(35,lapses*7)+(evidence==='rules'?14:evidence==='verified'?10:0)-Math.min(18,streak*3);
+     items.push({id:c.id,theme:topic,title:TITLE[topic]?.title||'Position judgment',evidence,
+       due:isDue,dueAt,priority,streak,lapses,attempts:c.stats?.attempts||0,
+       assisted:c.stats?.assisted||0,from:recent});
+   }
+   items.sort((a,b)=>b.priority-a.priority||a.dueAt-b.dueAt||a.id.localeCompare(b.id));
+   const byTheme={};
+   for(const c of items)byTheme[c.theme]=(byTheme[c.theme]||0)+1;
+   return {items:items.slice(0,Math.max(1,Math.min(500,limit))),due:items.filter(c=>c.due).length,
+     themes:byTheme,shown:Math.min(items.length,Math.max(1,limit)),total:items.length,
+     disclaimer:'Due dates come from existing saved stats. This planner never writes or replaces recall events.'};
+ }
+ function answerPolicy(r,reference,{assisted=false,verifiedTarget=false,verifyProof}={}){
+   const unscored={status:'unresolved',advance:false,assisted,
+     message:'Not enough evidence to score this response. Your review interval and recall history are unchanged.'};
+   if(!r||!reference||r.basis==='insufficient-search'||r.label==='Unscored')return unscored;
+   const needWin=verifiedTarget||reference?.facts?.ownWins?.length>0;
+   const immediateWin=r.facts?.win===true;
+   const certifiedWin=!!(typeof verifyProof==='function'&&r.bestProof?.format==='GomokuStudioProof'&&
+     r.bestProof?.proof?.move===r.played&&r.basis==='verified-proof'&&
+     r.bestProof.rule===r.rule&&r.bestProof.attacker===r.color&&
+     (()=>{try{return verifyProof(r.bestProof)===true;}catch{return false;}})());
+   if(needWin){
+     if(immediateWin||certifiedWin)return {status:'correct',advance:!assisted,assisted,
+       message:assisted?'Winning answer after help; recorded only as assisted.':'Winning line established for this attempt.'};
+     // A 'Good' label from selective search is never enough to solve a proven-win puzzle.
+     return r.refutation?{status:'incorrect',advance:false,assisted,message:'The move allows a proved losing reply; study its verified proof.'}:unscored;
+   }
+   if(r.refutation||r.facts?.replies?.length)
+     return {status:'incorrect',advance:false,assisted,message:'An immediate or independently checked opponent win remains.'};
+   if(sameRoot(r)&&r.played===r.best&&['Best found','Good','Defensive move'].includes(r.label))
+     return {status:'correct',advance:!assisted,assisted,message:assisted?'Search-supported move after help. Not counted as unassisted recall.':'The move is supported by a same-root completed search; still an engine estimate.'};
+   if(sameRoot(r)&&['Blunder','Mistake','Inaccuracy','Losing move'].includes(r.label))
+     return {status:'incorrect',advance:false,assisted,message:'Completed search favors a different legal alternative. Review both lines.'};
+   return unscored;
+ }
+ return Object.freeze({VERSION:'3.0.0-a5',THEMES,theme,sameRoot,qualification,gamePlan,due,cardPlan,answerPolicy,DAY});
+});
+
+</script>
+<script id="analysis8-practice-integrity">
+/* A8 — read-only audit and import preview for the existing v2 practice library.
+   No storage ownership, no migration, no network access, and no mutation. */
+(function(root,factory){
+ const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;
+ if(root&&typeof root==='object')root.GomokuPracticeIntegrity8=api;
+})(typeof globalThis==='object'?globalThis:null,function(){
+ 'use strict';
+ const fmt=x=>typeof x==='string'&&x.length>0;
+ function inspect(rows,{validateCard,backend='unknown',limit=150}={}){
+   const issues=[],seen=new Set(),counts={positions:0,scored:0,assisted:0,successes:0,lapses:0,retainedEvents:0,due:0};
+   const now=Date.now();
+   if(!Array.isArray(rows))return {ok:false,backend,counts,issues:['Library did not return an array.'],recoverable:false};
+   for(let i=0;i<rows.length;i++){
+     const c=rows[i];counts.positions++;
+     if(!c||!fmt(c.id)){issues.push('Card '+i+' has no identifier.');continue;}
+     if(seen.has(c.id))issues.push('Duplicate card identifier '+i+'.');seen.add(c.id);
+     if(c.version!==2||!Array.isArray(c.board)||c.board.length!==225)issues.push('Unsupported saved card '+i+'.');
+     if(typeof validateCard==='function'){
+       try{validateCard(c);}catch(e){issues.push('Card '+i+' requires attention: '+String(e?.message||e).slice(0,160));}
+     }
+     const stats=c.stats||{};
+     for(const key of ['attempts','successes','lapses','assisted','streak','due']){
+       if(!Number.isSafeInteger(stats[key])||stats[key]<0){issues.push('Card '+i+' has invalid '+key+'.');}
+     }
+     counts.scored+=Number.isSafeInteger(stats.attempts)?stats.attempts:0;
+     counts.successes+=Number.isSafeInteger(stats.successes)?stats.successes:0;
+     counts.lapses+=Number.isSafeInteger(stats.lapses)?stats.lapses:0;
+     counts.assisted+=Number.isSafeInteger(stats.assisted)?stats.assisted:0;
+     if(Number.isSafeInteger(stats.due)&&stats.due<=now)counts.due++;
+     if(stats.successes>stats.attempts||stats.assisted>stats.attempts||
+        stats.lapses>stats.attempts||stats.successes+stats.assisted+stats.lapses>stats.attempts)
+       issues.push('Card '+i+' has inconsistent attempt counters.');
+     const ev=Array.isArray(c.events)?c.events:[];
+     if(!Array.isArray(c.events))issues.push('Card '+i+' is missing its recall events.');
+     const ids=new Set();
+     for(const event of ev){
+       if(!event||!fmt(event.id)||ids.has(event.id)||!['correct','incorrect'].includes(event.status)||
+          !Number.isFinite(event.at)){
+         issues.push('Card '+i+' has an invalid or duplicate event.');break;
+       }ids.add(event.id);
+     }
+     counts.retainedEvents+=ev.length;
+     if(ev.length>40)issues.push('Card '+i+' exceeds the bounded recall-event history.');
+   }
+   if(rows.length>limit)issues.push('Library exceeds its configured position limit.');
+   const nonpersistent=backend!=='indexeddb';
+   return {ok:issues.length===0,backend,counts,issues,nonpersistent,
+      backupRecommended:rows.length>0,requiresExport:nonpersistent&&rows.length>0,
+      note:nonpersistent?'This browser session is not backed by IndexedDB. Export before closing.':
+        'Read-only verification; no existing learning events or due dates were changed.'};
+ }
+ function previewImport(existing,incoming,{validateCard,limit=150}={}){
+   if(!incoming||incoming.format!=='GomokuMistakeLibrary'||incoming.version!==2||
+      !Array.isArray(incoming.cards)||incoming.cards.length>limit)
+     throw Error('Unsupported or oversized training-library backup.');
+   if(!Array.isArray(existing))throw Error('Current practice library is unavailable.');
+   const present=new Set(existing.map(x=>x.id)),seen=new Set();
+   let added=0,preserved=0;
+   for(const c of incoming.cards){
+     if(!c||!fmt(c.id)||seen.has(c.id))throw Error('Backup contains duplicate or invalid position IDs.');
+     seen.add(c.id);
+     if(typeof validateCard==='function')validateCard(c);
+     if(present.has(c.id))preserved++;else added++;
+   }
+   if(present.size+added>limit)throw Error('Backup exceeds the combined library limit. No data was imported.');
+   return Object.freeze({added,preserved,incoming:incoming.cards.length,
+     existing:present.size,newTotal:present.size+added,
+     statement:'Import adds new positions. For duplicates, the existing local recall history remains authoritative.'});
+ }
+ return Object.freeze({VERSION:'3.0.0-a8',inspect,previewImport});
+});
+
+</script>
 <script id="analysis2-training">
 /* Personal mistake rehearsal. Separate board and transactional progress;
  * never imports a training position into the live match. */
 if(typeof window!=='undefined') (()=>{
  'use strict';
  const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const P=()=>window.GomokuPractice5;
  const side=c=>c===1?'Black':'White',coord=i=>i<0?'Pass':'ABCDEFGHJKLMNOP'[i%15]+(15-Math.floor(i/15));
  let dialog=null,S=null,A=null,epoch=0,opener=null,restore=null;
  const token=()=>globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -13253,33 +14191,85 @@ if(typeof window!=='undefined') (()=>{
  function ensure(){
    if(dialog)return;A=createAnalysis2(createEngine,createStudioCore,createGuidedReviewCore);
    dialog=document.createElement('dialog');dialog.id='a2Trainer';dialog.setAttribute('aria-labelledby','a2TrainingTitle');
-   dialog.innerHTML=`<div class="gr-shell"><header class="gr-header"><div><p class="gr-kicker">ANALYSIS 2.0 / PERSONAL PRACTICE</p><h2 id="a2TrainingTitle">Your mistake library</h2><p id="a2TrainingMeta"></p></div><button type="button" id="a2TrainingClose" class="gr-btn gr-close">Close ×</button></header><div class="gr-content"><section class="gr-board-column"><div class="gr-board-heading"><div><span class="gr-kicker" id="a2TrainingMode">RECALL, NOT REPLAY</span><h3 id="a2Question">Choose a position to practise</h3></div></div><div id="a2TrainingBoardWrap" class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div id="a2TrainingBoard" class="gr-board" role="grid" aria-label="Mistake training board" aria-rowcount="15" aria-colcount="15"></div></div><p class="gr-board-help" id="a2TrainingHelp">The answer stays hidden until you try. Any independently supported alternative can count.</p><div class="gr-feedback" id="a2TrainingFeedback" role="status" aria-live="polite"></div><nav class="gr-navigation" aria-label="Training queue"><button type="button" class="gr-btn" id="a2TrainingPrev">← Previous</button><span id="a2TrainingCounter"></span><button type="button" class="gr-btn gr-primary" id="a2TrainingNext">Next position →</button></nav></section><section class="gr-inspector"><div class="gr-section-head"><h3 id="a2TrainingVerdict">Learn from your own decisions</h3><button class="gr-link" type="button" id="a2TrainingReset">Try another move</button></div><p id="a2TrainingWhy">Mistakes found during game review are saved here on this device. Review a game to build your personal practice set.</p><div class="gr-action-row a2-training-actions"><button class="gr-btn" type="button" id="a2TrainingHint">Get a hint</button><button class="gr-btn" type="button" id="a2TrainingSolution">Show solution</button><button class="gr-btn" type="button" id="a2TrainingDeepen">Recheck deeper</button></div><p class="gr-muted" id="a2TrainingSchedule"></p><details class="gr-details"><summary>How practice is assessed</summary><p>Every position and attempt is analyzed with the current engine. Equivalent winning moves and supported alternatives count. Unresolved attempts do not advance your schedule. Hints and solutions are recorded as assisted. Only the first resolved attempt per position in this session updates recall history.</p><p>Successful unassisted recalls are suggested again after 1, 3, 7, 14, 30 and 60 days. A miss is due again after 10 minutes. These are practice intervals, not a claim of an optimal memory model. You can practise any saved position at any time.</p></details><section class="gr-record"><div class="gr-section-head"><h4>Saved positions</h4><select id="a2TrainingFilter" aria-label="Filter mistake library"><option value="all">All positions</option><option value="due">Due now</option><option value="game">This game</option></select></div><div id="a2TrainingList" class="a2-library-list"></div></section><div class="a2-library-actions"><button class="gr-link" id="a2TrainingExport" type="button">Export library</button><label class="gr-link a2-import">Import library<input id="a2TrainingImport" type="file" accept="application/json,.json"></label><button class="gr-link" id="a2TrainingRemove" type="button">Remove this position</button></div><p class="gr-muted" id="a2TrainingStorage"></p></section></div><footer class="gr-footer"><span>Practice never changes your recorded game. Escape returns safely.</span><span id="a2RecallTotals"></span></footer></div>`;
+   dialog.innerHTML=`<div class="gr-shell"><header class="gr-header"><div><p class="gr-kicker">ANALYSIS 3.0 / PERSONAL PRACTICE</p><h2 id="a2TrainingTitle">Your mistake library</h2><p id="a2TrainingMeta"></p></div><button type="button" id="a2TrainingClose" class="gr-btn gr-close">Close ×</button></header><div class="gr-content"><section class="gr-board-column"><div class="gr-board-heading"><div><span class="gr-kicker" id="a2TrainingMode">RECALL, NOT REPLAY</span><h3 id="a2Question">Choose a position to practise</h3></div></div><div id="a2TrainingBoardWrap" class="gr-board-wrap"><div class="gr-top-coords" aria-hidden="true">${[...'ABCDEFGHJKLMNOP'].map(c=>`<span>${c}</span>`).join('')}</div><div class="gr-side-coords" aria-hidden="true">${Array.from({length:15},(_,i)=>`<span>${15-i}</span>`).join('')}</div><div id="a2TrainingBoard" class="gr-board" role="grid" aria-label="Mistake training board" aria-rowcount="15" aria-colcount="15"></div></div><p class="gr-board-help" id="a2TrainingHelp">The answer stays hidden until you try. Any independently supported alternative can count.</p><div class="gr-feedback" id="a2TrainingFeedback" role="status" aria-live="polite"></div><nav class="gr-navigation" aria-label="Training queue"><button type="button" class="gr-btn" id="a2TrainingPrev">← Previous</button><span id="a2TrainingCounter"></span><button type="button" class="gr-btn gr-primary" id="a2TrainingNext">Next position →</button></nav></section><section class="gr-inspector"><div class="gr-section-head"><h3 id="a2TrainingVerdict">Learn from your own decisions</h3><button class="gr-link" type="button" id="a2TrainingReset">Try another move</button></div><p id="a2TrainingWhy">Mistakes found during game review are saved here on this device. Review a game to build your personal practice set.</p><div class="gr-action-row a2-training-actions"><button class="gr-btn" type="button" id="a2TrainingHint">Get a hint</button><button class="gr-btn" type="button" id="a2TrainingSolution">Show solution</button><button class="gr-btn" type="button" id="a2TrainingDeepen">Recheck deeper</button></div><span id="a5EvidenceTag" data-proof="unknown">Evidence not checked</span><p class="gr-muted" id="a2TrainingSchedule"></p><section class="a5-dashboard" id="a5Dashboard" aria-label="Personal study plan"><div class="a5-dashboard-head"><div><span class="a5-eyebrow">YOUR PRACTICE TODAY</span><h3 id="a5PlanTitle">Build skill from real games</h3></div><span id="a5PlanMeta"></span></div><div class="a5-figures"><span><b id="a5DueCount">0</b>Due</span><span><b id="a5TotalCount">0</b>Saved</span><span><b id="a5LapsesCount">0</b>Lapses</span></div><div class="a5-practice-controls"><label>Focus <select id="a5Focus" aria-label="Choose tactical practice focus"><option value="all">All themes</option><option value="due">Due today</option><option value="finish">Finish the win</option><option value="forced-defense">Urgent defense</option><option value="double-threat">Double threats</option><option value="forbidden">Renju legality</option><option value="forcing-sequence">Forcing calculations</option><option value="opening">Opening fundamentals</option><option value="position">Position judgment</option></select></label><button type="button" class="gr-btn gr-primary" id="a5StartDue">Practice due</button></div><p id="a5ThemeNote" class="a5-theme-note">Existing due dates and recall events are preserved.</p>
+<div class="a8-recovery-tools"><button type="button" class="gr-btn" id="a8Audit">Check saved data</button><button type="button" class="gr-btn" id="a8Backup">Export backup</button></div>
+<p class="a8-recovery-status" id="a8AuditStatus" role="status" aria-live="polite">A read-only check can verify saved positions and recall-event consistency.</p></section><details class="gr-details"><summary>How practice is assessed</summary><p>Every position and attempt is analyzed with the current engine. Equivalent winning moves and supported alternatives count. Unresolved attempts do not advance your schedule. Hints and solutions are recorded as assisted. Only the first resolved attempt per position in this session updates recall history.</p><p>Successful unassisted recalls are suggested again after 1, 3, 7, 14, 30 and 60 days. A miss is due again after 10 minutes. These are practice intervals, not a claim of an optimal memory model. You can practise any saved position at any time.</p></details><section class="gr-record"><div class="gr-section-head"><h4>Saved positions</h4><select id="a2TrainingFilter" aria-label="Filter mistake library"><option value="all">All positions</option><option value="due">Due now</option><option value="game">This game</option></select></div><div id="a2TrainingList" class="a2-library-list"></div></section><div class="a2-library-actions"><button class="gr-link" id="a2TrainingExport" type="button">Export library</button><label class="gr-link a2-import">Import library<input id="a2TrainingImport" type="file" accept="application/json,.json"></label><button class="gr-link" id="a2TrainingRemove" type="button">Remove this position</button></div><p class="gr-muted" id="a2TrainingStorage"></p></section></div><footer class="gr-footer"><span>Practice never changes your recorded game. Escape returns safely.</span><span id="a2RecallTotals"></span></footer></div>`;
    document.body.append(dialog);
    for(let row=0;row<15;row++){const line=document.createElement('div');line.className='gr-board-row';line.setAttribute('role','row');for(let col=0;col<15;col++){const i=row*15+col,b=document.createElement('button');b.type='button';b.className='gr-cell';b.dataset.a2Point=i;b.setAttribute('role','gridcell');b.setAttribute('aria-rowindex',row+1);b.setAttribute('aria-colindex',col+1);b.tabIndex=i===112?0:-1;b.innerHTML='<span class="gr-stone"></span><span class="gr-point-mark"></span>';line.append(b);} $('a2TrainingBoard').append(line);}
    $('a2TrainingClose').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
    $('a2TrainingFilter').onchange=()=>{S.filter=$('a2TrainingFilter').value;renderList();};
+   $('a5Focus').onchange=()=>{if(!S)return;S.focus=$('a5Focus').value;rebuildA5Queue();};
+   $('a5StartDue').onclick=()=>{if(!S)return;S.focus='due';$('a5Focus').value='due';rebuildA5Queue();};
    $('a2TrainingPrev').onclick=()=>selectIndex(Math.max(0,S.index-1));$('a2TrainingNext').onclick=()=>selectIndex((S.index+1)%S.queue.length);
    $('a2TrainingReset').onclick=()=>{if(!S?.card)return;epoch++;window.GomokuAnalysisRuntime.cancel();S.busy=false;S.attempt=null;S.preview=null;render();note('Try a different move. This does not create another scored recall in the same session.');};
    $('a2TrainingHint').onclick=hint;$('a2TrainingSolution').onclick=solution;$('a2TrainingDeepen').onclick=()=>{if(S?.attempt)attempt(S.attempt.i,2400);else if(S?.card)checkReference(2400);};
+   $('a8Audit').onclick=async()=>{
+     const btn=$('a8Audit');btn.disabled=true;$('a8AuditStatus').textContent='Checking local position and recall records…';
+     try{
+       const audit=await GomokuMistakes.audit();
+       const counts=audit.counts;
+       $('a8AuditStatus').textContent=audit.ok?
+         `${counts.positions} saved positions · ${counts.scored} scored attempts · ${counts.retainedEvents} retained recall events checked. ${audit.requiresExport?'Storage is temporary: export before leaving.':'IndexedDB read-back checked; export a backup to move devices.'}`:
+         `Attention: ${audit.issues.length} saved-data issue(s). No data was changed. ${audit.issues[0]} Export a backup before attempting repairs.`;
+       $('a8AuditStatus').dataset.health=audit.ok?'ok':'attention';
+     }catch(e){
+       $('a8AuditStatus').dataset.health='attention';
+       $('a8AuditStatus').textContent='Saved-data check could not complete: '+e.message+'. Your existing records were not changed.';
+     }finally{btn.disabled=false;}
+   };
+   $('a8Backup').onclick=async()=>{
+     try{const data=await GomokuMistakes.exportData();download(data,'gomoku-practice-backup.json');
+       $('a8AuditStatus').textContent=`Export requested for ${data.cards.length} positions. Keep the JSON file somewhere safe; browser downloads are not automatic cloud backups.`;}
+     catch(e){$('a8AuditStatus').textContent='Backup export unavailable: '+e.message;}
+   };
    $('a2TrainingExport').onclick=async()=>{try{download(await GomokuMistakes.exportData(),'gomoku-mistake-library.json');note('Library exported with your practice history.');}catch(e){note(e.message);}};
-   $('a2TrainingImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{if(f.size>14000000)throw Error('Import limit: 14 MB.');const n=await GomokuMistakes.importData(JSON.parse(await f.text()));await refresh();note(`Imported ${n} validated positions. Existing local recall history was preserved.`);}catch(e){note('Import rejected: '+e.message);}finally{ev.target.value='';}};
+   $('a2TrainingImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{if(f.size>14000000)throw Error('Import limit: 14 MB.');const parsed=JSON.parse(await f.text()),preview=await GomokuMistakes.previewImport(parsed);
+      const n=await GomokuMistakes.importData(parsed);await refresh();
+      note(`Validated ${n} imported positions: ${preview.added} new, ${preview.preserved} already present. Existing local recall events and dates were preserved.`);}catch(e){note('Import rejected: '+e.message);}finally{ev.target.value='';}};
    $('a2TrainingRemove').onclick=async()=>{if(!S?.card)return;try{const id=S.card.id;epoch++;GomokuAnalysisRuntime.cancel();const current=S;await GomokuMistakes.remove(id);if(S!==current)return;S.card=null;S.attempt=null;S.busy=false;await refresh();note('Position removed from the practice library. Your original game is unchanged.');}catch(e){note(e.message);}};
    dialog.addEventListener('click',ev=>{const p=ev.target.closest('[data-a2-point]');if(p){attempt(Number(p.dataset.a2Point));return;}const c=ev.target.closest('[data-a2-card]');if(c){const id=c.dataset.a2Card;if(!S.queue.some(x=>x.id===id))S.queue=S.items.slice();selectIndex(S.queue.findIndex(x=>x.id===id));}});
    dialog.addEventListener('keydown',ev=>{const cell=ev.target.closest('[data-a2-point]');if(!cell||ev.altKey||ev.ctrlKey||ev.metaKey)return;let i=Number(cell.dataset.a2Point),j=i;if(ev.key==='ArrowLeft')j=i%15?i-1:i;else if(ev.key==='ArrowRight')j=i%15<14?i+1:i;else if(ev.key==='ArrowUp')j=Math.max(0,i-15);else if(ev.key==='ArrowDown')j=Math.min(224,i+15);else if(ev.key==='Home')j=i-i%15;else if(ev.key==='End')j=i-i%15+14;else return;ev.preventDefault();cell.tabIndex=-1;const n=dialog.querySelector(`[data-a2-point="${j}"]`);n.tabIndex=0;n.focus();});
  }
+ function rebuildA5Queue(){
+   if(!S)return;
+   const old=S.card?.id,base=S.ids?.length?S.items.filter(c=>S.ids.includes(c.id)):S.items;
+   const plan=P()?.cardPlan(base,{now:Date.now(),focus:S.focus,limit:500});
+   S.queue=plan?plan.items.map(row=>base.find(c=>c.id===row.id)).filter(Boolean):base.slice();
+   S.plan=P()?.cardPlan(S.items,{now:Date.now(),focus:'all',limit:500});
+   const index=S.queue.findIndex(c=>c.id===old);
+   if(index>=0){S.index=index;S.card=S.queue[index];render();}
+   else if(S.queue.length)selectIndex(0);
+   else{epoch++;window.GomokuAnalysisRuntime?.cancel();S.index=-1;S.card=null;S.reference=null;S.referenceEligible=false;S.attempt=null;S.busy=false;render();}
+ }
  async function refresh(){
    if(!S)return;const current=S,items=await GomokuMistakes.list();if(S!==current)return;S.items=items.sort((a,b)=>(a.stats.due||0)-(b.stats.due||0)||b.updated-a.updated);
-   S.queue=S.ids?.length?S.items.filter(c=>S.ids.includes(c.id)):S.items.slice();
+   const base=S.ids?.length?S.items.filter(c=>S.ids.includes(c.id)):S.items;
+   const sorted=P()?.cardPlan(base,{now:Date.now(),focus:S.focus,limit:500});
+   S.queue=sorted?sorted.items.map(row=>base.find(c=>c.id===row.id)).filter(Boolean):base.slice();
+   S.plan=P()?.cardPlan(S.items,{now:Date.now(),focus:'all',limit:500});
    if(S.card){const latest=S.items.find(c=>c.id===S.card.id);if(latest)S.card={...S.card,stats:latest.stats,events:latest.events};}
    render();
  }
  function renderList(){
    if(!S)return;const rows=S.items.filter(c=>S.filter==='due'?c.stats.due<=Date.now():S.filter==='game'?S.ids?.includes(c.id):true);
-   $('a2TrainingList').innerHTML=rows.length?rows.map(c=>`<button type="button" class="a2-library-card" data-a2-card="${esc(c.id)}" aria-current="${S.card?.id===c.id?'true':'false'}"><span><b>Move ${c.source.ply} · ${side(c.color)}</b><small>${esc(c.source.title)} · ${esc(c.rule)}</small></span><span>${c.stats.due<=Date.now()?'Due now':new Date(c.stats.due).toLocaleDateString()}<small>${c.stats.successes||0} successful recall${c.stats.successes===1?'':'s'}</small></span></button>`).join(''):'<p class="gr-muted">No positions in this filter. All saved positions remain available without a time gate.</p>';
+   $('a2TrainingList').innerHTML=rows.length?rows.map(c=>`<button type="button" class="a2-library-card" data-a2-card="${esc(c.id)}" aria-current="${S.card?.id===c.id?'true':'false'}"><span><b>Move ${c.source.ply} · ${side(c.color)}</b><small>${esc(c.source.title)} · ${esc(c.rule)}</small><small class="a5-topic">${esc(P()?.THEMES.find(t=>t.id===P()?.theme(c.reference,c.source,c.rule))?.title||"Position judgment")}</small></span><span>${c.stats.due<=Date.now()?'Due now':new Date(c.stats.due).toLocaleDateString()}<small>${c.stats.successes||0} successful recall${c.stats.successes===1?'':'s'}</small></span></button>`).join(''):'<p class="gr-muted">No positions in this filter. All saved positions remain available without a time gate.</p>';
  }
  function render(){
    if(!S||!dialog.open)return;const c=S.card,at=S.attempt;
-   $('a2TrainingTitle').textContent=c?'Mistake training':'Your mistake library';
+   $('a2TrainingTitle').textContent=c?'Personal tactics training':'Your mistake library';
+   const plan=S.plan||P()?.cardPlan(S.items,{now:Date.now(),limit:500});
+   $('a5DueCount').textContent=String(plan?.due||0);
+   $('a5TotalCount').textContent=String(S.items.length);
+   $('a5LapsesCount').textContent=String(S.items.reduce((n,x)=>n+(x.stats?.lapses||0),0));
+   $('a5PlanTitle').textContent=S.focus==='due'?'Due position review':S.focus==='all'?'Your tactical review':P()?.THEMES.find(t=>t.id===S.focus)?.title||'Tactical review';
+   $('a5PlanMeta').textContent=`${S.queue.length} in this focus · original recall dates kept`;
+   $('a5ThemeNote').textContent=S.queue.length?'Select a position on the board. Hints count as assisted; uncertain results never advance mastery.':'No saved positions match this focus. Choose All themes to view your library.';
+   $('a5Focus').value=S.focus;
+   $('a5StartDue').disabled=!(plan?.due)||S.busy;
+   const topic=c?P()?.theme(S.reference||c.reference,c.source,c.rule):null;
+   const objective=c&&S.reference?P()?.qualification(S.reference,{board:c.board,color:c.color,played:c.played,context:c.context},c.rule):null;
+   $('a5EvidenceTag').dataset.proof=objective?.evidence||'unknown';
+   $('a5EvidenceTag').textContent=c?`${P()?.THEMES.find(t=>t.id===topic)?.title||'Tactical decision'} · ${objective?.evidence==='rules'?'Rule-confirmed exercise':objective?.evidence==='verified'?'Verified evidence':objective?.evidence==='provisional'?'Search estimate · rechecked':'Historical task · recheck pending'}`:'Select a lesson to begin';
    $('a2TrainingMeta').textContent=`${S.items.length} saved · ${S.items.filter(x=>x.stats.due<=Date.now()).length} due now · ${GomokuMistakes.status().persistent?'Stored on this device':'Tab-only storage'}`;
    $('a2Question').textContent=c?`${side(c.color)} to play · original move ${c.source.ply}`:'Choose a saved position below';
    const board=c?c.board.slice():new Array(225).fill(0);const i=S.preview??at?.i;if(c&&Number.isInteger(i))board[i]=c.color;
@@ -13296,22 +14286,33 @@ if(typeof window!=='undefined') (()=>{
  }
  async function selectIndex(index){
    if(!S||index<0||index>=S.queue.length)return;
-   epoch++;GomokuAnalysisRuntime.cancel();S.index=index;S.card=S.queue[index];S.attempt=null;S.preview=null;S.hints=0;S.assisted=false;S.reference=null;S.busy=false;
+   epoch++;GomokuAnalysisRuntime.cancel();S.index=index;S.card=S.queue[index];S.attempt=null;S.preview=null;S.hints=0;S.assisted=false;S.reference=null;S.referenceEligible=false;S.busy=false;
    render();note('Checking the saved position with the current analysis engine…');await checkReference(1000);
  }
  async function checkReference(budget){
    if(!S?.card)return;const s=S,c=s.card,id=++epoch;s.busy=true;render();
-   try{const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,c.played,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;s.reference=r;note(A.trainable(r)?'Position checked. Choose your move; the answer is still hidden.':'Reanalysis no longer confirms the saved mistake. This position is for exploration; deepen the reference search or remove it. Recall history will not change.');}
+   try{const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,c.played,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;
+     s.reference=r;
+     const D=window.GomokuGameDiagnosis4;
+     const q=P()?.qualification(r,{board:c.board,color:c.color,played:c.played,context:c.context,ply:c.source?.ply},c.rule,
+       D?(result,pos)=>D.classification(result,pos,{verifyProof:cert=>A.verify(cert),rule:c.rule}):undefined);
+     s.referenceEligible=A.trainable(r)&&q?.eligible===true;
+     note(s.referenceEligible?'Fresh evidence supports this exercise. Choose a legal move; the target is hidden.':
+       'The saved claim is not currently confirmed or comparable. Explore or recheck deeper; recall history will not change.');}
    catch(e){if(S===s&&epoch===id&&e.name!=='AbortError')note('Analysis unavailable: '+e.message+' Use Recheck deeper to retry.');}
    finally{if(S===s&&epoch===id){s.busy=false;render();}}
  }
  async function attempt(i,budget=1000){
-   if(!S?.card||S.busy)return;const s=S,c=s.card;if(!s.reference){note('Recheck this saved position before scoring an attempt.');return;}
+   if(!S?.card||S.busy)return;const s=S,c=s.card;if(!s.reference||!s.referenceEligible){note('Fresh analysis has not confirmed a trainable target. Recheck deeper before scoring a recall.');return;}
    const legal=A.legal(c.board,c.color,c.rule,i,c.context);if(!legal.legal){note('Illegal move: '+legal.reason);return;}
    const id=++epoch;s.busy=true;s.preview=null;s.attempt={i,result:null,verdict:null};render();note(`Checking ${coord(i)} and the strongest alternatives…`);
    try{
      const r=await GomokuAnalysisRuntime.request(c.board,c.color,c.rule,i,{preset:budget>1000?'deep':'standard',timeMs:budget,context:c.context});if(S!==s||epoch!==id)return;
-     const verdict=A.attemptVerdict(r,s.reference,s.assisted);s.attempt={i,result:r,verdict};
+     const solvedWin=!!(s.reference.facts?.ownWins?.length)||
+       (s.reference.bestProof?.format==='GomokuStudioProof'&&A.verify(s.reference.bestProof));
+     const verdict=P()?P().answerPolicy(r,s.reference,{assisted:s.assisted,verifiedTarget:solvedWin,
+       verifyProof:cert=>A.verify(cert)}):A.attemptVerdict(r,s.reference,s.assisted);
+     s.attempt={i,result:r,verdict};
      await GomokuMistakes.record(c.id,verdict,`${s.runId}:${c.id}`);if(S!==s||epoch!==id)return;
      await refresh();note(verdict.message+(verdict.status!=='unresolved'?' Recall history saved.':''));
    }catch(e){if(S===s&&epoch===id&&e.name!=='AbortError')note('The attempt was not recorded: '+e.message);}
@@ -13334,7 +14335,7 @@ if(typeof window!=='undefined') (()=>{
      opener=document.activeElement;
      if($('grDialog')?.open){GomokuReview.pause();restore=null;}
      else{const p=api.prepareGuidedReview?.();restore=p?()=>api.finishGuidedReview?.(!p.wasReviewing):null;}
-     ensure();S={items:[],queue:[],ids:options.ids||null,index:-1,card:null,reference:null,attempt:null,busy:false,hints:0,assisted:false,preview:null,filter:options.ids?.length?'game':'all',runId:token()};
+     ensure();S={items:[],queue:[],ids:options.ids||null,index:-1,card:null,reference:null,referenceEligible:false,attempt:null,busy:false,hints:0,assisted:false,preview:null,filter:options.ids?.length?'game':'all',focus:options.focus||'all',plan:null,runId:token()};
      dialog.showModal();$('a2TrainingFilter').value=S.filter;await refresh();if(!S||!dialog.open)return;note('Choose a saved position. Due dates are suggestions, never locks.');$('a2TrainingClose').focus();
      if(S.queue.length)await selectIndex(0);
    }catch(e){restore?.();restore=null;console.error('Mistake training:',e);if(dialog?.open)note('Could not open practice: '+e.message);else{const p=document.createElement('p');p.setAttribute('role','alert');p.textContent='Finish the current move before opening mistake training: '+e.message;document.body.append(p);setTimeout(()=>p.remove(),7000);}}
@@ -17434,4 +18435,237 @@ body[data-pj2-route="home"] #mainContent{display:none!important}
 })();
 
 </script>
+<style id="analysis3-workspace-style">
+/* A3 — dedicated analysis studio. Scoped to Free analysis only.
+   Keeps the real board and review actions; no decorative fake heatmap. */
+html body #grDialog.gr-workspace[data-panel="analysis"]{
+ --gr-bg:#101c20;--gr-surface:#17272c;--gr-ink:#e8eeea;--gr-muted:#a5b9b7;
+ --gr-line:#354a4d;--gr-accent:#77cbb5;--rw-soft:#24383d;--gr-good:#9bd1b1;
+ --gr-warn:#e7bb77;--gr-bad:#ef9a88;color:var(--gr-ink);background:var(--gr-bg)
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:minmax(0,1.12fr) minmax(385px,.88fr);background:var(--gr-bg)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{
+ background:radial-gradient(circle at 50% 28%,#25373a 0,#101c20 70%);border-right:1px solid var(--gr-line);
+ padding:12px 24px 10px
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{background:#152328;border-left:0;padding:17px 22px}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-heading{margin-bottom:6px}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-heading h3{color:#eef4ee}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{
+ width:min(100%,max(270px,calc(100dvh - 500px)));border:1px solid #6d654c;background:#d5be8c;box-shadow:0 0 0 1px #ffffff13,0 18px 40px #0005
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-cell:after{background:#d8c392}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap .gr-point-mark{z-index:3}
+html body #grDialog.gr-workspace[data-panel="analysis"] #rwDecision{scroll-padding:14px}
+html body #grDialog.gr-workspace[data-panel="analysis"] :is(.gr-section-head h4,#rwAlternativesTitle){color:var(--gr-ink)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate{background:#1c3034;color:var(--gr-ink);border-color:#365156}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate:hover{background:#284145;border-color:#79c9b3}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate .rw-pv{color:#b1c7c4}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-candidate b{color:#ebf4ee}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-btn{background:#203439;border-color:#3b565a;color:#e9f0ea}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-primary{background:#7bc9b5;color:#142b2d;border:0}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-details{color:var(--gr-muted)}
+html body #grDialog.gr-workspace[data-panel="analysis"] .rw-compare-move{border-color:#3b5155;background:#1d3034;color:#eaf0ec}
+html body #grDialog.gr-workspace[data-panel="analysis"] .rw-compare-move[aria-pressed=true]{border-color:#7bc9b5}
+html body #grDialog.gr-workspace[data-panel="analysis"] #grBoard{position:relative}
+html body #grDialog.gr-workspace .a3-board-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot{fill:#0c3236aa;stroke:#a5edce;stroke-width:1.1}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="best"]{fill:#1c685dcc;stroke:#f1ffcd;stroke-width:1.7}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="threat"]{fill:#8e3625cc;stroke:#ffd8a1;stroke-width:1.8}
+html body #grDialog.gr-workspace .a3-board-svg .a3-dot[data-kind="pinned"]{fill:#75554acc;stroke:#ffe19e;stroke-width:1.4}
+html body #grDialog.gr-workspace .a3-board-svg .a3-arrow{fill:none;stroke:#318a7d;stroke-width:1.5;stroke-linecap:round;opacity:.88}
+html body #grDialog.gr-workspace .a3-commandbar{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-commandbar{
+ display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;
+ margin:4px 0 11px;padding:8px 11px;border:1px solid #365156;
+ background:#1a2c31;border-radius:7px
+}
+html body #grDialog.gr-workspace .a3-mode-group{display:flex;gap:3px;padding:3px;background:#0f2025;border:1px solid #385156;border-radius:6px}
+html body #grDialog.gr-workspace .a3-mode-group button{
+ border:0;background:transparent;color:#b7c9c5;border-radius:4px;min-height:35px;
+ padding:6px 11px;font:650 12px/1.2 var(--ui-font,system-ui);cursor:pointer
+}
+html body #grDialog.gr-workspace .a3-mode-group button[aria-pressed="true"]{background:#3f6864;color:#f3fff8}
+html body #grDialog.gr-workspace .a3-command-meta{font:500 11px/1.4 var(--ui-font,system-ui);color:#a1bcb7}
+html body #grDialog.gr-workspace .a3-variation-dock{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-variation-dock{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;
+ background:#1a2d32;border:1px solid #375155;border-radius:6px;margin:8px 0 3px;padding:8px 10px
+}
+html body #grDialog.gr-workspace .a3-dock-info{min-width:0;display:flex;flex-direction:column;gap:3px}
+html body #grDialog.gr-workspace .a3-dock-info strong{font-size:12px;color:#eaf2ec}
+html body #grDialog.gr-workspace .a3-dock-info small{font-size:10px;color:#a0bab7;line-height:1.45}
+html body #grDialog.gr-workspace .a3-dock-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+html body #grDialog.gr-workspace .a3-dock-actions .gr-btn{padding:5px 8px;min-height:34px;min-width:34px}
+html body #grDialog.gr-workspace .a3-dock-actions button:disabled{opacity:.35}
+html body #grDialog.gr-workspace .a3-insight-bar{
+ display:none;margin:0 0 14px;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-insight-bar{display:grid}
+html body #grDialog.gr-workspace .a3-insight{border:1px solid #3b5558;background:#1d3034;padding:11px 10px;min-width:0;border-radius:6px}
+html body #grDialog.gr-workspace .a3-insight span{display:block;font-size:10px;color:#a9bfbb;text-transform:uppercase;letter-spacing:.075em}
+html body #grDialog.gr-workspace .a3-insight strong{display:block;font:650 16px/1.3 var(--ui-font,system-ui);color:#f0f4ee;margin-top:4px;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a3-compare{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-compare:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 16px}
+html body #grDialog.gr-workspace .a3-compare-card{border:1px solid #405c61;padding:9px 10px;border-radius:5px;background:#20373b}
+html body #grDialog.gr-workspace .a3-compare-card span{font-size:10px;color:#acc7c2}
+html body #grDialog.gr-workspace .a3-compare-card strong{display:block;color:#f1f6ef;font-size:15px;margin:3px 0}
+html body #grDialog.gr-workspace .a3-compare-card small{display:block;line-height:1.4;color:#bad0cb;font-size:11px}
+html body #grDialog.gr-workspace .a3-compare-note{grid-column:1/-1;font-size:11px;color:#a6c5ba}
+html body #grDialog.gr-workspace .a3-candidate-row{border:1px solid #38545a;border-radius:6px;margin:7px 0;overflow:hidden;background:#1b3034}
+html body #grDialog.gr-workspace .a3-candidate-row .gr-candidate{margin:0;border:0;border-radius:0;width:100%;min-height:63px}
+html body #grDialog.gr-workspace .a3-candidate-tools{display:flex;gap:5px;padding:0 10px 8px 54px}
+html body #grDialog.gr-workspace .a3-candidate-tools button{min-height:29px;border:1px solid #425e63;background:#273d42;color:#c8ded8;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer}
+html body #grDialog.gr-workspace .a3-candidate-tools button[aria-pressed="true"]{border-color:#a9cfae;color:#fff;background:#315c58}
+html body #grDialog.gr-workspace .a3-candidate-row[data-loss="true"]{opacity:.72;border-color:#8e655c}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-balance{border-color:#3a5558}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-balance #rwGraphValue{color:#a8c0b9}
+html body #grDialog.gr-workspace[data-panel="analysis"] .gr-footer{background:#16262a;border-color:#3a5559}
+html body #grDialog.gr-workspace .a3-board-status{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"] .a3-board-status{display:block;font-size:10px;line-height:1.5;color:#a0bbb5;margin:1px 0}
+html body #grDialog.gr-workspace .a3-board-status:empty{display:none}
+html body #grDialog.gr-workspace[data-panel="analysis"]:not([data-review-mode="game"]) .a3-commandbar,
+html body #grDialog.gr-workspace[data-panel="analysis"]:not([data-review-mode="game"]) .a3-variation-dock{display:none!important}
+html body #grDialog.gr-workspace[data-panel="analysis"] :is(.a3-mode-group button,.a3-candidate-tools button):focus-visible{outline:2px solid #c7f4c7;outline-offset:2px}
+@media(max-width:1100px) and (min-width:721px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:minmax(0,1fr) minmax(330px,.9fr)}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{padding:10px 12px}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{padding:13px}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{grid-template-columns:1fr}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-column{padding:8px 12px 4px;border-right:0}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{padding:12px 14px 22px;border-top:1px solid #3c5357}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{width:min(100%,max(218px,calc(100dvh - 575px)))}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .a3-commandbar{margin:3px 0 5px;padding:5px;gap:4px}
+ html body #grDialog.gr-workspace .a3-mode-group button{font-size:10px;min-height:32px;padding:5px 7px}
+ html body #grDialog.gr-workspace .a3-command-meta{font-size:10px}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .a3-variation-dock{padding:6px;min-height:42px;margin:4px 0}
+ html body #grDialog.gr-workspace .a3-dock-info small{font-size:9px}
+ html body #grDialog.gr-workspace .a3-dock-actions .gr-btn{min-height:32px;min-width:32px;padding:4px 5px}
+ html body #grDialog.gr-workspace .a3-insight-bar{gap:5px;margin-bottom:9px}
+ html body #grDialog.gr-workspace .a3-insight{padding:8px 7px}
+ html body #grDialog.gr-workspace .a3-insight strong{font-size:13px}
+ html body #grDialog.gr-workspace .a3-candidate-tools{padding-left:12px}
+}
+@media(max-width:720px) and (max-height:740px){
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-content{display:block;overflow-y:auto}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-inspector{overflow:visible}
+ html body #grDialog.gr-workspace[data-panel="analysis"] .gr-board-wrap{width:min(100%,300px)}
+}
+@media(prefers-reduced-motion:reduce){
+ html body #grDialog.gr-workspace .a3-board-svg *,
+ html body #grDialog.gr-workspace .a3-commandbar *{animation:none!important;transition:none!important}
+}
+
+</style>
+<style id="analysis4-game-diagnosis-style">
+html body #grDialog.gr-workspace .a4-evidence-dot{cursor:pointer;stroke:var(--gr-surface);stroke-width:1}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="verified"]{fill:#397e62}
+html body #grDialog.gr-workspace .a4-evidence-dot[data-a4-kind="unknown"]{fill:#a48a63}
+html body #grDialog.gr-workspace .a4-evidence-dot:hover{stroke:var(--gr-ink);stroke-width:2}
+
+/* A4 evidence-driven entire-game diagnosis. Scoped to existing review dialog;
+ * no generated score bars, win probabilities or fabricated graphs. */
+html body #grDialog.gr-workspace .a4-diagnosis{margin:21px 0 22px;padding:19px 0 6px;border-top:1px solid var(--gr-line);border-bottom:1px solid var(--gr-line)}
+html body #grDialog.gr-workspace .a4-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+html body #grDialog.gr-workspace .a4-heading h4{font-size:18px;line-height:1.3;font-weight:700;margin-top:4px;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-heading p{font-size:11px;line-height:1.45;color:var(--gr-muted);text-align:right;max-width:145px}
+html body #grDialog.gr-workspace .a4-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:13px 0}
+html body #grDialog.gr-workspace .a4-metric{padding:12px 8px 11px;border:1px solid var(--gr-line);background:var(--rw-soft);border-radius:5px;min-width:0}
+html body #grDialog.gr-workspace .a4-metric span{display:block;font-weight:650;font-size:11px;line-height:1.4;min-height:30px}
+html body #grDialog.gr-workspace .a4-metric b{font-size:23px;line-height:1.3;font-weight:700;display:block;margin:5px 0;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-metric small{font-size:10px;color:var(--gr-muted);display:block;line-height:1.4}
+html body #grDialog.gr-workspace .a4-scope{font-size:11px;line-height:1.55;color:var(--gr-muted);margin:12px 0}
+html body #grDialog.gr-workspace .a4-filters{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;margin:15px 0 12px}
+html body #grDialog.gr-workspace .a4-filters label{font-weight:650;font-size:11px;color:var(--gr-muted);display:grid;gap:5px}
+html body #grDialog.gr-workspace .a4-filters select{width:100%;border:1px solid var(--gr-line);background:var(--gr-surface);color:var(--gr-ink);padding:9px 10px;min-height:40px;border-radius:5px;font-size:12px}
+html body #grDialog.gr-workspace .a4-events{display:flex;flex-direction:column;gap:0;min-width:0}
+html body #grDialog.gr-workspace .a4-event{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:14px 0;border-top:1px solid var(--gr-line)}
+html body #grDialog.gr-workspace .a4-event-main{display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0}
+html body #grDialog.gr-workspace .a4-number{display:grid;place-items:center;min-width:27px;height:27px;border:1px solid var(--gr-line);border-radius:3px;color:var(--gr-muted);font-size:11px;flex-shrink:0;font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=verified] .a4-number{background:#e2efe6;border-color:#9cb8a9;color:#284b3d}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=estimated] .a4-number{background:#f4ebd9;border-color:#dcc7a1;color:#715016}
+html body #grDialog.gr-workspace .a4-event[data-a4-evidence=unknown] .a4-number{background:var(--rw-soft)}
+html body #grDialog.gr-workspace .a4-event-copy{flex:1;min-width:0}
+html body #grDialog.gr-workspace .a4-event-copy b{font-size:12px;line-height:1.45;font-weight:700;display:block;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-event-copy small{display:block;font-size:11px;line-height:1.5;color:var(--gr-muted);margin:4px 0}
+html body #grDialog.gr-workspace .a4-event-copy em{display:block;font-size:10px;color:var(--gr-muted);font-style:normal;letter-spacing:.01em}
+html body #grDialog.gr-workspace .a4-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:142px}
+html body #grDialog.gr-workspace .a4-actions .gr-btn{min-height:34px;font-size:11px;padding:5px 8px;border-radius:5px}
+html body #grDialog.gr-workspace #a4More{margin:8px 0 15px}
+html body #grDialog.gr-workspace .a4-contrast{padding:14px;border:1px solid var(--gr-line);border-radius:6px;margin:15px 0 12px;background:var(--rw-soft)}
+html body #grDialog.gr-workspace .a4-contrast-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+html body #grDialog.gr-workspace .a4-contrast-heading h4{font-size:13px;font-weight:700;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-contrast-heading span{color:var(--gr-muted);font-size:10px}
+html body #grDialog.gr-workspace .a4-contrast-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html body #grDialog.gr-workspace .a4-contrast-grid>div{padding:9px 10px;border:1px solid var(--gr-line);background:var(--gr-surface);border-radius:4px;min-width:0}
+html body #grDialog.gr-workspace .a4-contrast-grid small{font-size:9px;color:var(--gr-muted);letter-spacing:.065em;font-weight:700;display:block}
+html body #grDialog.gr-workspace .a4-contrast-grid b{font-size:16px;display:block;margin:5px 0;color:var(--gr-ink);font-variant-numeric:tabular-nums}
+html body #grDialog.gr-workspace .a4-contrast-grid p{font-size:11px;line-height:1.6;color:var(--gr-muted);overflow-wrap:anywhere}
+html body #grDialog.gr-workspace .a4-contrast-why{font-size:12px;line-height:1.55;margin-top:10px;color:var(--gr-ink)}
+html body #grDialog.gr-workspace .a4-contrast-note{font-size:10px;line-height:1.55;margin-top:7px;color:var(--gr-muted)}
+@media(max-width:900px){
+ html body #grDialog.gr-workspace .a4-event{display:block}
+ html body #grDialog.gr-workspace .a4-actions{justify-content:flex-start;max-width:none;margin:10px 0 0 37px}
+}
+@media(max-width:720px){
+ html body #grDialog.gr-workspace .a4-heading{display:block}
+ html body #grDialog.gr-workspace .a4-heading p{max-width:none;text-align:left;margin-top:5px}
+ html body #grDialog.gr-workspace .a4-metrics{gap:5px}
+ html body #grDialog.gr-workspace .a4-metric{padding:8px 6px}
+ html body #grDialog.gr-workspace .a4-metric span{font-size:10px}
+ html body #grDialog.gr-workspace .a4-metric b{font-size:19px}
+ html body #grDialog.gr-workspace .a4-filters{gap:6px}
+ html body #grDialog.gr-workspace .a4-event-main{gap:8px}
+ html body #grDialog.gr-workspace .a4-contrast{padding:11px}
+ html body #grDialog.gr-workspace .a4-contrast-grid{gap:6px}
+ html body #grDialog.gr-workspace .a4-contrast-grid>div{padding:8px}
+}
+@media(prefers-reduced-motion:reduce){html body #grDialog.gr-workspace .a4-diagnosis *{transition:none!important;animation:none!important}}
+
+</style>
+<style id="analysis5-practice-style">
+/* A5 practice controls supplement, never replace, the legacy mistake board. */
+#a2Trainer .a5-dashboard{border:1px solid var(--gr-line);background:var(--gr-surface);padding:15px 16px;margin:15px 0 17px}
+#a2Trainer .a5-dashboard-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:12px}
+#a2Trainer .a5-eyebrow{color:var(--gr-muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;font-size:10px}
+#a2Trainer #a5PlanTitle{font-weight:750;font-size:18px;line-height:1.3;margin-top:5px}
+#a2Trainer #a5PlanMeta{font-size:11px;line-height:1.5;color:var(--gr-muted);margin:6px 0 12px}
+#a2Trainer .a5-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--gr-line);border:1px solid var(--gr-line);margin:12px 0}
+#a2Trainer .a5-figures span{background:var(--gr-surface);padding:10px 8px;font-size:10px;line-height:1.5;color:var(--gr-muted)}
+#a2Trainer .a5-figures b{display:block;font-variant-numeric:tabular-nums;font-size:21px;line-height:1.2;color:var(--gr-ink)}
+#a2Trainer .a5-practice-controls{display:flex;gap:7px;align-items:end;flex-wrap:wrap}
+#a2Trainer .a5-practice-controls label{font-size:11px;display:grid;gap:5px;color:var(--gr-muted);flex:1;min-width:150px}
+#a2Trainer .a5-practice-controls select{width:100%;min-height:42px;padding:7px 9px;border:1px solid var(--gr-line);border-radius:5px;color:var(--gr-ink);background:var(--gr-surface);font-size:12px}
+#a2Trainer #a5StartDue{min-height:42px}
+#a2Trainer .a5-theme-note{margin:10px 0 0;font-size:11px;color:var(--gr-muted);line-height:1.55}
+#a2Trainer #a5EvidenceTag{display:inline-flex;align-items:center;border:1px solid var(--gr-line);padding:4px 8px;margin:8px 0 0;border-radius:3px;font-size:10px;line-height:1.4;background:var(--gr-surface);color:var(--gr-muted)}
+#a2Trainer #a5EvidenceTag[data-proof="rules"]{border-color:#779f80;color:#426c4c}
+#a2Trainer #a5EvidenceTag[data-proof="provisional"]{border-color:#b4a278;color:#846d36}
+#a2Trainer #a5EvidenceTag[data-proof="unknown"]{border-color:var(--gr-line)}
+#a2Trainer .a5-lesson-header{margin:18px 0 9px;font-weight:650;font-size:13px;color:var(--gr-ink)}
+#a2Trainer .a2-library-card .a5-topic{display:inline-block;font-size:10px;color:var(--gr-muted);margin-top:2px}
+#grDialog .a5-review-plan{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--gr-line);padding:14px 0;margin-top:8px}
+#grDialog .a5-review-plan span{display:block;font-size:11px;color:var(--gr-muted);line-height:1.45}
+#grDialog .a5-review-plan strong{font-size:13px;color:var(--gr-ink);display:block}
+#grDialog .a5-review-plan .gr-btn{min-width:112px;min-height:42px}
+@media(max-width:720px){
+ #a2Trainer .a5-dashboard{padding:12px}
+ #a2Trainer .a5-dashboard-head{display:block}
+ #a2Trainer .a5-figures span{padding:8px 5px}
+ #a2Trainer .a5-figures b{font-size:18px}
+ #a2Trainer .a5-practice-controls{display:grid;grid-template-columns:1fr}
+ #grDialog .a5-review-plan{display:block}
+ #grDialog .a5-review-plan .gr-btn{width:100%;margin-top:10px}
+}
+
+/* A8 — quiet inline data-integrity controls, not a parallel SaaS dashboard. */
+#a2Trainer .a8-recovery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--gr-line)}
+#a2Trainer .a8-recovery-tools .gr-btn{min-height:36px;padding:6px 11px;font-size:11px}
+#a2Trainer .a8-recovery-status{font-size:11px;line-height:1.55;color:var(--gr-muted);margin:8px 0 0}
+#a2Trainer .a8-recovery-status[data-health=attention]{color:#9b513a}
+@media(max-width:390px){#a2Trainer .a8-recovery-tools .gr-btn{flex:1}}
+
+</style>
 </body></html>
