@@ -21,9 +21,11 @@ function fixture(){
   owner:'SYNTHETIC OWNER',independentWitness:'SYNTHETIC WITNESS',
   a12PreflightDigest:h,ownerAuthorizationDigest:h,deploymentEvidenceDigest:h,
   authorizedAt:'2026-09-30T23:00:00Z',deployedAt:'2026-10-01T00:00:00Z',
-  rollbackArchiveSha256:LOCK.offlineZipSha256,productionDataMigration:'none',
+  candidateArchiveSha256:LOCK.offlineZipSha256,
+  previousStableArchiveSha256:'5'.repeat(64),previousStableSourceSha:'2'.repeat(40),
+  previousStableRestoreTestedAt:'2026-09-30T23:30:00Z',productionDataMigration:'none',
   rollbackAvailable:true};
- const liveProbe={format:'GomokuAnalysis3A13ProductionProbe',origin:orig,
+ const liveProbe={format:'GomokuAnalysis3A13ProductionProbe',version:13,origin:orig,
   sourceSha:LOCK.sourceSha,deploymentId:dep,observedAt:'2026-10-02T01:05:00Z',
   originalResponseDigest:h,
   verifiedAssets:A9.ASSETS.map(path=>({path,sha256:assets[path],bytes:123}))};
@@ -46,7 +48,7 @@ function fixture(){
  const incidents={format:'GomokuAnalysis3A13IncidentReview',deploymentId:dep,
   reviewedAt:'2026-10-02T03:00:00Z',independentReviewer:'SYNTHETIC REVIEWER',
   incidentJournalDigest:h,alertExportDigest:h,rollbackReadinessDigest:h,
-  noOpenSev1OrSev2:true,playerDataLoss:false,rollBackExecuted:false,
+  noOpenSev1OrSev2:true,playerDataLoss:false,rollbackExecuted:false,
   rollbackReady:true,entries:[]};
  const handoff={format:'GomokuAnalysis3A13OperationalHandoff',deploymentId:dep,
   status:'accepted-by-owner-for-independent-review',acceptedAt:'2026-10-02T04:00:00Z',
@@ -73,11 +75,16 @@ test('cutover owner distinct from operator',x=>x.cutover.owner=x.cutover.operato
 test('cutover may not precede owner approval',x=>x.cutover.deployedAt='2026-09-30T22:00:00Z','blocked-cutover');
 test('preview origin never passes production receipt',x=>x.cutover.productionOrigin='https://gomoku-test.vercel.app/','blocked-cutover');
 test('live data migrations outside approved scope',x=>x.cutover.productionDataMigration='db-push','blocked-cutover');
-test('different rollback ZIP cannot certify',x=>x.cutover.rollbackArchiveSha256=q,'blocked-cutover');
+test('different rollback ZIP cannot certify',x=>x.cutover.candidateArchiveSha256=q,'blocked-cutover');
+test('previous stable archive is required independently from candidate',x=>x.cutover.previousStableArchiveSha256='invalid','blocked-cutover');
+test('rollback source must match previous main commit',x=>x.cutover.previousStableSourceSha='3'.repeat(40),'blocked-cutover');
+test('restore rehearsal cannot occur after cutover',x=>x.cutover.previousStableRestoreTestedAt='2026-10-02T00:00:00Z','blocked-cutover');
+test('independent witness may not be owner',x=>x.cutover.independentWitness=x.cutover.owner,'blocked-cutover');
 test('production has to differ from pre-cutover branch',x=>x.cutover.productionCommitSha=x.cutover.previousMainSha,'blocked-cutover');
 test('real production HTTPS probe missing',x=>x.liveProbe=null,'blocked-production-integrity');
 test('production digest fails if one file differs',x=>x.liveProbe.verifiedAssets[0].sha256=q,'blocked-production-integrity');
 test('production digest fails if asset duplicate',x=>x.liveProbe.verifiedAssets[1]={...x.liveProbe.verifiedAssets[0]},'blocked-production-integrity');
+test('reject wrong HTTPS evidence schema version',x=>x.liveProbe.version=12,'blocked-production-integrity');
 test('source mismatch in HTTPS receipt',x=>x.liveProbe.sourceSha='b'.repeat(40),'blocked-production-integrity');
 test('pre-window-end HTTPS proof does not establish 24-hour stability',x=>x.liveProbe.observedAt='2026-10-01T01:05:00Z','blocked-production-integrity');
 test('stale deployment receipt cannot qualify',x=>x.liveProbe.deploymentId='prior-deployment','blocked-production-integrity');
@@ -102,7 +109,7 @@ test('physical case must include evidence digest',x=>x.devices.devices[1].cases[
 test('physical observation before deployment invalid',x=>x.devices.devices[1].observedAt='2026-09-30T00:00:00Z','blocked-physical');
 test('independent incident review required',x=>x.incidents=null,'blocked-incident-review');
 test('open sev1 or sev2 blocks',x=>x.incidents.noOpenSev1OrSev2=false,'blocked-incident-review');
-test('rolled-back release cannot certify as live candidate',x=>x.incidents.rollBackExecuted=true,'blocked-incident-review');
+test('rolled-back release cannot certify as live candidate',x=>x.incidents.rollbackExecuted=true,'blocked-incident-review');
 test('actual user data loss stops closure',x=>x.incidents.playerDataLoss=true,'blocked-incident-review');
 test('unresolved incident stops certification',x=>x.incidents.entries=[{severity:'sev1',status:'open'}],'blocked-incident-review');
 test('handoff must have owner signature',x=>x.handoff.ownerSignatureEvidenceDigest='bad','blocked-handoff');
