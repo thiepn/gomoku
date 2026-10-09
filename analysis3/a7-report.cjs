@@ -87,7 +87,7 @@ function verifyPhysical(worksheetPath){
  const destination=path.join(DIR,'a7-attested-qualification.json');
  fs.writeFileSync(destination,JSON.stringify({...complete,qualification:{
    state:q.state,automationReady:q.automationReady,physicalReady:q.physicalReady,
-   humanApproval:q.humanApproval,blockers:q.blockers}},null,2)+'\\n');
+   humanApproval:q.humanApproval,blockers:q.blockers}},null,2)+'\n');
  console.log(JSON.stringify({result:q.state,blockers:q.blockers,report:destination}));
  if(q.state!=='release-qualified')process.exitCode=2;
  // Human evidence checking is NOT release deployment or publishing.
