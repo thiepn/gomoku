@@ -40,7 +40,13 @@ Use `analysis3/A7-DEVICE-EVIDENCE.template.json` as a human verification workshe
 - **Installed Android PWA** — install from candidate origin, fresh standalone boot, launch while offline, saved game/training persistence across process shutdown, background and recovery, safe service-worker update, retained original progress.
 - Additional recommended: iOS Safari, installed iOS PWA, tablet landscape and desktop Firefox/WebKit where facilities permit.
 
-Record actual device model, Android version, exact browser version, URL, tested `index.html` SHA-256, candidate git SHA, date, observed results, screenshots/logs, limitations and tester attestation. Missing, stale or mismatched SHA evidence must block promotion. A Chromium 390px test is not physical testing.
+Record actual device model, Android version, exact browser version, URL, tested `index.html` SHA-256, candidate git SHA, date, observed results, screenshots/logs, limitations and tester attestation. Complete **all required test-case IDs** for each device; every case needs a distinct `status: "passed"` and a concrete `observation`. Include the named tester, `issuer`, timestamp, tested HTTPS preview URL and human signature. Generic "tested fine" notes cannot satisfy the gate.
+
+After downloading the A7 CI evidence artifact, copy `a7-qualification.json` into `analysis7-test-output/`, complete the separate device worksheet, then run:
+```sh
+node analysis3/a7-report.cjs verify-physical ./completed-A7-DEVICE-EVIDENCE.json
+```
+This compares the worksheet's source SHA and all three artifact hashes with the original CI candidate. The resulting `analysis7-test-output/a7-attested-qualification.json` reports missing tests and approval; it does **not** tag, merge, release or deploy. Missing, stale or mismatched SHA evidence must block promotion. A Chromium 390px test is not physical testing.
 
 ## Acceptance thresholds and evidence
 
