@@ -18,7 +18,7 @@ function reconcile({log,originalLocal,roots=ROOTS,now=new Date()}={}){
  const keys=roots.keys||[];
  if(keys.length===0||!Array.isArray(roots.providerTrustRoots)||roots.providerTrustRoots.length===0)
   return deny('blocked-provider-trust','No independently reviewed signer/provider roots are provisioned.');
- const seenEvent=new Set(),nonce=new Map(),revoked=new Set(),actors=new Map();let head=log.firstRoot,lastTime=null;
+ const seenEvent=new Set(),nonce=new Map(),revoked=new Set(),keyOwners=new Map(keys.map(k=>[k.keyId,k.operator]));let head=log.firstRoot,lastTime=null;
  for(const [i,e] of log.entries.entries()){
   if(!e||!STATES.includes(e.action)||!H.test(e.eventId||'')||
    seenEvent.has(e.eventId)||e.index!==i+1||
@@ -42,7 +42,7 @@ function reconcile({log,originalLocal,roots=ROOTS,now=new Date()}={}){
   }else if(e.action==='revoke'){
    if(typeof e.revokedKeyId!=='string'||!e.revokedKeyId||
      revoked.has(e.revokedKeyId)||!keys.some(k=>k.keyId===e.revokedKeyId)||
-     e.operator===actors.get(e.revokedKeyId))
+     !keyOwners.get(e.revokedKeyId)||e.operator===keyOwners.get(e.revokedKeyId))
     return deny('blocked-revocation','Key revocation must be independently attributable and monotonically recorded.');
    revoked.add(e.revokedKeyId);
   }else if(e.action==='recover'){
