@@ -1,0 +1,101 @@
+name: Analysis 3.0 A25 operator-supplied original evidence handoff qualification
+on:
+  push:
+    branches: [phase/a25-original-evidence-handoff]
+  pull_request:
+    paths:
+      - 'analysis3/a25-*'
+      - 'analysis3/test-a25-*'
+      - 'analysis3/A25-*'
+      - '.github/workflows/verify-analysis3-a25.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: analysis3-a25-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  original-evidence-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # P19 immutable SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # P19 immutable SHA
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # P19 immutable SHA
+        with:
+          python-version: '3.12'
+      - name: Retrieve public original A9 immutable candidate archive only, never live hosted/prod
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # immutable P19 SHA
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a25-source
+      - name: Reverify original candidate archive and all eight genuine original byte assets for A24 and A25
+        run: |
+          python analysis3/a10-stage-preview.py .a25-source analysis24-test-output/preview-static
+          python analysis3/a10-stage-preview.py .a25-source analysis25-test-output/preview-static
+      - name: Run inherited A24 and new A25 adversarial genuine-file-byte, original custody conflict and NO_GO regressions
+        run: |
+          node --check analysis3/a25-handoff.cjs
+          node --check analysis3/test-a25-handoff.cjs
+          node analysis3/test-a24-operator.cjs
+          node analysis3/test-a25-handoff.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Real isolated Chromium desktop/mobile-emulated original and rights file handoff/restore/export tests
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a24-browser.py
+          python analysis3/test-a25-browser.py
+      - name: Source head and NO_GO guard verification with empty independently authenticated roots
+        env:
+          A25_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const R=require('./analysis3/a23-acceptance.cjs').status();
+          const pin=require('./analysis3/a10-source-lock.json');
+          const roots=require('./analysis3/a18-review-roots.json');
+          const p=require('./analysis3/a23-parent-evidence.json');
+          assert.equal(pin.sourceSha,'fca45816ed7d3a95bae550b9aa644e29053875f6');
+          assert.equal(p.realSignerRoots.length,0);
+          assert.equal(p.realProviderRoots.length,0);
+          assert.equal(roots.issuerKeys.length,0);
+          assert.equal(R.status,'NO_GO');assert.equal(R.physicalAccepted,0);
+          for(const k of ['canMerge','canTag','canDeploy','canModifyProductionData','canCertifyPhysical','canCloseRelease','canGrantOwnerAuthority'])
+           assert.equal(R[k],false);
+          const report={format:'GomokuA25OriginalHandoffQualificationOnly',version:25,
+            authoredSourceHeadSha:process.env.A25_HEAD,
+            checkedOutMergeOrPushSha:process.env.GITHUB_SHA,
+            exactQualifiedParentA24:'a5ddd553386d4d5dfd9ad97bb432f47e2f8435af',
+            originalA9SourceSha:pin.sourceSha,originalA9Run:pin.githubRunId,
+            originalNestedOfflineSha256:pin.offlineZipSha256,
+            realHostRequests:0,realHostedResponseAuthentication:false,
+            independentHumanOwnerApproval:false,independentHumanSignerRoots:0,
+            physicalChromeAccepted:0,physicalSamsungAccepted:0,physicalInstalledPwaAccepted:0,
+            genuineAssistiveCasesAccepted:0,realServiceWorkerUpdateOrRollback:false,
+            actualPreviousStablePlayerStateRecovery:false,
+            globalReplayProviderIndependentlyOperated:false,
+            realSignerRevocationOrRotationExecuted:false,
+            actualA12Executed:false,genuineA13MonitoredHours:0,
+            productionPlayerDataAccess:false,productionDeployment:false,
+            humanPostreleaseClosure:false,canMerge:false,canDeploy:false,canCloseRelease:false,
+            result:'NO_GO',testEvidence:'REAL_A9_CI_BYTES_SYNTHETIC_EXTERNAL_FILES_LOCAL_CHROMIUM_ONLY'};
+          fs.writeFileSync('analysis25-test-output/a25-source-qualification.json',
+            JSON.stringify(report,null,2)+'\n');
+          console.log('PASS A25 NO_GO: genuine A9 bytes, original file roundtrips, no real external authority');
+          NODE
+      - name: Archive source-pinned synthetic-only NO_GO qualification metadata (no original private media)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # immutable P19 SHA
+        with:
+          name: a25-original-handoff-nondeploying-qualification
+          path: analysis25-test-output/a25-source-qualification.json
+          retention-days: 14
+          if-no-files-found: warn
