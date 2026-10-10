@@ -46,7 +46,7 @@ function utc(value,now){
 function intake({manifest,captureRoot,originalRoot,now=new Date()}={}){
  if(!manifest||manifest.format!=='GomokuA24OfflineHostedResponseIntake'||
   manifest.version!==24||manifest.repository!=='thiepn/gomoku'||
-  manifest.sourceSha!==PIN.sourceSha||manifest.a23Head!==P23.a22Head &&
+  manifest.sourceSha!==PIN.sourceSha||
   manifest.a23Head!=='d36610bc49aa0cee03f3a649108fda98e99094ee'||
   manifest.purpose!=='MANUAL_OFFLINE_REVIEW_ONLY'||
   manifest.ownerAuthorizationState!=='NOT_GRANTED'||
