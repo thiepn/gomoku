@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gomoku · A17 Evidence Worksheet</title>
+<style>
+:root{color-scheme:light;font:15px/1.5 system-ui,Arial,sans-serif;color:#20242b;background:#f8f9fb}
+*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:32px 22px 60px}
+h1{font-size:27px;letter-spacing:-.04em;margin:6px 0 3px}h2{font-size:19px;margin:26px 0 10px}
+p{margin:6px 0}header{border-bottom:2px solid #303642;padding-bottom:18px}
+small,.muted{color:#555e70}.mono{font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}
+.meta{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
+.stat{border:1px solid #cfd4dd;background:white;padding:12px 16px;min-width:130px}
+.stat b{font-size:22px;display:block;line-height:1.3}
+.status{display:inline-block;border:1px solid #b65c38;color:#803f27;background:#fff3ed;padding:3px 9px;font-weight:650;letter-spacing:.02em}
+.bar{background:#e2e5eb;height:6px;margin:18px 0}.bar span{display:block;width:0%;height:100%;background:#293142}
+.card{background:white;border:1px solid #d2d7e1;margin:12px 0;padding:15px 18px}
+.row{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.case{border-top:1px solid #e5e8ee;padding:10px 0;display:flex;justify-content:space-between;gap:14px}
+.case:first-of-type{border-top:0}
+.case em{font:12px/1.5 ui-monospace,monospace;color:#686f7d;font-style:normal;white-space:nowrap}
+label{display:block;font-weight:600;margin-bottom:5px}select,button,input,textarea{font:inherit;min-height:42px;max-width:100%;border:1px solid #747e8f;background:white;color:inherit;padding:8px 12px;border-radius:2px}input,textarea{width:100%;background:#fff}textarea{min-height:82px;resize:vertical}.capture-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.capture-grid label{font-size:13px}.wide{grid-column:1/-1}@media(max-width:560px){.capture-grid{grid-template-columns:1fr}}
+button{background:#263143;color:white;cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid #3676bf;outline-offset:2px}
+button:hover{background:#37435a}footer{margin-top:28px;border-top:1px solid #cfd4dd;padding-top:16px}
+@media(max-width:560px){main{padding:18px 14px 48px}h1{font-size:23px}.meta{gap:8px}.stat{flex:1;min-width:94px;padding:10px}.stat b{font-size:19px}.case{gap:8px}.case em{white-space:normal;text-align:right}}
+</style></head>
+<body><main>
+<header>
+<small>ANALYSIS 3.0 / A17 · OFFLINE OPERATOR WORKSHEET</small>
+<h1>Original evidence acceptance</h1>
+<p class="muted">Local preparation only. No hosted tests, device acceptance, human signatures or production release have been performed.</p>
+<div class="meta">
+ <div class="stat"><b id="physical-count">0 / 18</b><small>Verified physical cases</small></div>
+ <div class="stat"><b>8 / 8</b><small>Original CI asset hashes</small></div>
+ <div class="stat"><b>OPEN</b><small>Owner acceptance</small></div>
+</div>
+<div class="status" id="release-status" role="status">RELEASE BLOCKED</div><div class="bar" aria-label="Physical acceptance progress: zero of eighteen"><span></span></div>
+</header>
+<section aria-labelledby="physical-title"><h2 id="physical-title">Physical browser acceptance</h2>
+<p class="muted">The rows below are untested. Desktop/mobile emulation does not count as a real Android or installed PWA observation.</p>
+<label for="platform-filter">Filter platform</label>
+<select id="platform-filter"><option value="all">All 18 cases</option><option value="android-chrome">Android Chrome (7)</option><option value="samsung-internet">Samsung Internet (6)</option><option value="installed-android-pwa">Installed Android PWA (5)</option></select>
+<div class="card" aria-labelledby="capture-heading"><h3 id="capture-heading">Record a pending observation</h3><p class="muted">Evidence entered here is never a verified device pass or human approval. Attach its original SHA-256 reference for independent review. The draft stays on this page until exported.</p><div class="capture-grid"><label>Dedicated preview origin<input id="capture-origin" type="url" placeholder="https://approved-preview.vercel.app/" autocomplete="off"></label><label>Case<select id="capture-case"><option value="">Select a platform first</option></select></label><label>Device identifier<input id="capture-device" autocomplete="off" placeholder="Real device model / ID"></label><label>OS version<input id="capture-os" autocomplete="off" placeholder="Android 15"></label><label>Browser version<input id="capture-browser" autocomplete="off" placeholder="Chrome 130"></label><label>Physical operator<input id="capture-operator" autocomplete="off"></label><label>Original evidence SHA-256<input id="capture-hash" autocomplete="off" spellcheck="false" placeholder="64 hex characters"></label><label class="wide">Dated original observation<textarea id="capture-observation" placeholder="Describe exact hardware, interactions, outcome, file or independent evidence reference (minimum 24 characters)"></textarea></label></div><p><button type="button" id="capture-record">Add pending review note</button></p><p role="status" aria-live="polite" id="capture-feedback">Select one platform above, then choose a case to record.</p></div><div id="case-lists"></div></section>
+<section aria-labelledby="gates-title"><h2 id="gates-title">Required independent gates</h2>
+<div class="card">
+<p>Hosted HTTPS eight-asset probes — <strong>NOT COLLECTED</strong></p>
+<p>Same-origin service-worker version change and restoration — <strong>NOT OBSERVED</strong></p>
+<p>Previous stable rollback and saved-record restoration — <strong>NOT OBSERVED</strong></p>
+<p>Independent replay custody and vetted signing keys — <strong>NOT PROVISIONED</strong></p>
+<p>A12 cutover and A13 stability evidence — <strong>NOT EXECUTED</strong></p>
+</div>
+<button id="export" type="button">Export untested worksheet</button>
+<p id="export-note" role="status" aria-live="polite">Export creates a local draft only. It cannot record a passing result.</p></section>
+<footer><p class="mono">Original source: fca45816ed7d3a95bae550b9aa644e29053875f6</p><p class="muted">No authentication, stored player records, backend writes, deployment, or automatic approval on this page.</p></footer>
+</main>
+<script>
+'use strict';
+const sourceSha='fca45816ed7d3a95bae550b9aa644e29053875f6';
+const platforms=[
+ {id:'android-chrome',title:'Android Chrome',cases:['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility']},
+ {id:'samsung-internet',title:'Samsung Internet',cases:['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume']},
+ {id:'installed-android-pwa',title:'Installed Android PWA',cases:['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update']}
+];
+const worksheet=()=>({format:'GomokuA17OriginalDeviceWorksheet',version:17,sourceSha,origin:'',
+physicalAcceptance:'OPEN',controlledSwUpdate:'not_tested',previousStableRollback:'not_tested',
+ownerAuthorization:'not_approved',independentReviewer:'not_approved',
+platforms:Object.fromEntries(platforms.map(p=>[p.id,{platform:p.id,device:'',osVersion:'',browserVersion:'',operator:'',
+cases:p.cases.map(id=>({id,status:'not_tested',observation:'',originalEvidenceDigest:null,observedAt:null}))}]))});
+const draft=worksheet();
+const lists=document.getElementById('case-lists');
+function updateCases(){
+ const id=document.getElementById('platform-filter').value,sel=document.getElementById('capture-case');
+ sel.replaceChildren();
+ const arr=platforms.find(p=>p.id===id)?.cases||[];
+ const empty=document.createElement('option');empty.value='';empty.textContent=arr.length?'Choose one case':'Select a platform first';sel.append(empty);
+ for(const name of arr){const o=document.createElement('option');o.value=name;o.textContent=name.replaceAll('-',' ');sel.append(o);}
+}
+
+function render(){
+ const filter=document.getElementById('platform-filter').value;
+ lists.replaceChildren();
+ for(const p of platforms){
+  if(filter!=='all'&&filter!==p.id)continue;
+  const section=document.createElement('section');section.className='card';section.dataset.platform=p.id;
+  const title=document.createElement('div');title.className='row';
+  const h=document.createElement('strong');h.textContent=p.title;
+  const meta=document.createElement('span');meta.textContent='0 / '+p.cases.length+' verified';meta.className='muted';
+  title.append(h,meta);section.append(title);
+  for(const key of p.cases){
+   const line=document.createElement('div');line.className='case';line.dataset.case=key;
+   const a=document.createElement('span');a.textContent=key.replaceAll('-',' ');
+   const b=document.createElement('em');const record=draft.platforms[p.id].cases.find(c=>c.id===key);b.textContent=record.status==='not_tested'?'NOT TESTED':'PENDING REVIEW';line.append(a,b);section.append(line);
+  }
+  lists.append(section);
+ }
+}
+document.getElementById('platform-filter').addEventListener('change',()=>{updateCases();render();});
+document.getElementById('capture-record').addEventListener('click',()=>{
+ const platform=document.getElementById('platform-filter').value,caseId=document.getElementById('capture-case').value;
+ const origin=document.getElementById('capture-origin').value.trim();
+ const device=document.getElementById('capture-device').value.trim();
+ const osVersion=document.getElementById('capture-os').value.trim();
+ const browser=document.getElementById('capture-browser').value.trim();
+ const operator=document.getElementById('capture-operator').value.trim();
+ const evidence=document.getElementById('capture-hash').value.trim().toLowerCase();
+ const observation=document.getElementById('capture-observation').value.trim();
+ const feedback=document.getElementById('capture-feedback');
+ let u;
+ try{u=new URL(origin);}catch{u=null;}
+ if(!platforms.some(p=>p.id===platform)||!caseId||!u||u.protocol!=='https:'||!u.hostname.endsWith('.vercel.app')||
+    u.port||u.username||u.password||u.pathname!=='/'||u.search||u.hash||!device||!osVersion||!browser||!operator||
+    !/^[a-f0-9]{64}$/.test(evidence)||observation.length<24){
+  feedback.textContent='Incomplete: select a platform/case, exact isolated HTTPS root, device, browser/OS, operator, 24-character observation and original SHA-256.';
+  return;
+ }
+ if(draft.origin&&draft.origin!==u.toString()){
+  feedback.textContent='This worksheet is bound to another original preview origin. Export it before starting a new worksheet.';return;
+ }
+ const row=draft.platforms[platform],record=row.cases.find(c=>c.id===caseId);
+ if(!record||record.status!=='not_tested'||row.device&&row.device!==device||row.operator&&row.operator!==operator){
+  feedback.textContent='Case already recorded or the device/operator differs from earlier evidence.';return;
+ }
+ draft.origin=u.toString();Object.assign(row,{device,osVersion,browserVersion:browser,operator});
+ Object.assign(record,{status:'observed_pending_independent_review',observation,originalEvidenceDigest:evidence,observedAt:new Date().toISOString()});
+ feedback.textContent='Recorded as PENDING INDEPENDENT REVIEW. Verified physical cases remain 0/18. Export draft for separate source verification.';
+ render();
+});
+document.getElementById('export').addEventListener('click',()=>{
+ const bytes=new Blob([JSON.stringify(draft,null,2)+'\n'],{type:'application/json'});
+ const u=URL.createObjectURL(bytes);const a=document.createElement('a');
+ a.href=u;a.download='gomoku-a17-untested-physical-worksheet.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(u),1000);
+ document.getElementById('export-note').textContent='Unverified draft exported. Zero independently verified physical observations.';
+});
+updateCases();render();
+</script></body></html>
