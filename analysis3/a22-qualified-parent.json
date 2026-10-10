@@ -1,0 +1,54 @@
+{
+  "format": "GomokuA22QualifiedParent",
+  "version": 22,
+  "repository": "thiepn/gomoku",
+  "sourceHead": "283a6db789132cf8e4184cb088cd110671b6cde7",
+  "originalA9Source": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "originalA9Run": 37922288752,
+  "originalOfflineZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "runs": [
+    {
+      "type": "A21",
+      "runId": 38068450684,
+      "artifactId": 11675802598,
+      "sha256": "d077d425665934028a44a7bbb346dd244fdb412ce1a6eb8341135a2de1c309fa"
+    },
+    {
+      "type": "P19",
+      "runId": 38068450681
+    },
+    {
+      "type": "P20",
+      "runId": 38068450678
+    },
+    {
+      "type": "R4",
+      "runId": 38068450694,
+      "artifactId": 11676176260,
+      "sha256": "880ba1ffb74fffe4899f60551bdd9f6fb056bf92714ae49b9be219df48988df6"
+    },
+    {
+      "type": "P21",
+      "runId": 38068450676,
+      "artifactId": 11676246461,
+      "sha256": "1260423b1993af010ad6ff5e15cd2796200198e365934c6de0cded8de745cb60"
+    },
+    {
+      "type": "P23",
+      "runId": 38068450689,
+      "artifactId": 11676366314,
+      "sha256": "656d25cdbf840ca4b3db390a76cbb1c8a055847107630042ac966d6a1017d02a"
+    }
+  ],
+  "downloadedZipAndCRCVerified": true,
+  "signerRoots": [],
+  "remoteProviderTrustRoots": [],
+  "humanApprovals": [],
+  "realPhysicalAccepted": 0,
+  "hostedHttpsApproved": false,
+  "actualPriorStableRestore": false,
+  "actualA12Cutover": false,
+  "actualA13MonitoringHours": 0,
+  "releaseState": "NO_GO",
+  "memo": "Real A21 GitHub source/artifact bytes, synthetic-only operator/device/owner documents; never autonomous authority."
+}
