@@ -51,6 +51,7 @@ try:
    page.locator('#case-notes').fill('This is real localhost Chromium code QA, NOT physical Android evidence or human authorization.')
    upload(page,'#source-file','synthetic-original.bin',b'A24 synthetic source original bytes only')
    page.locator('#evidence-form button').click()
+   print('A24 UPLOAD DIAGNOSTIC',label,repr(page.locator('#field-feedback').inner_text()),repr(page.locator('#physical-pending').inner_text()),'fileSize',page.locator('#source-file').evaluate('(e)=>e.files[0]?.size'),flush=True)
    check(label+' original file hashed and pending only',
     'pending independent' in page.locator('#field-feedback').inner_text().lower() and
     page.locator('#physical-pending').inner_text()=='1 / 18')
