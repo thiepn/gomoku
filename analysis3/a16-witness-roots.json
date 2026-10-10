@@ -1,0 +1,10 @@
+{
+  "format": "GomokuA16ExternalWitnessTrustRoots",
+  "version": 16,
+  "repository": "thiepn/gomoku",
+  "a15HeadSha": "df2b958494460d650574351472770458e5ab5f62",
+  "keys": [],
+  "revokedKeyIds": [],
+  "state": "UNPROVISIONED",
+  "notice": "No human/device/owner keys exist. Key enrollment and rotation must be independently authorized, source-reviewed, fingerprint checked and recorded. Test-only synthetic keys never qualify."
+}
