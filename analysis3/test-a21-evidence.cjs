@@ -224,6 +224,52 @@ t('one operator cannot duplicate identical proposal',()=>{
   packetSha256:HEX,operator:'ONE',authorityGranted:false};
  assert.equal(R.reconcileOperators({packets:[p,p],externalRoot:HEX}).status,'blocked-duplicate-operator');
 });
+function compromiseFixture(){
+ const originalBytes=Buffer.from('SYNTHETIC compromise original artifact; not a true signer incident.');
+ const compromised=keys.find(k=>k.role==='device-witness');
+ const pair=crypto.generateKeyPairSync('ed25519');
+ const replacement={role:'device-witness',keyId:'SYNTHETIC-NEW-DEVICE-WITNESS',
+  person:'NEW SYNTHETIC PERSON NOT REAL',
+  publicKeyPem:pair.publicKey.export({format:'pem',type:'spki'}),
+  spkiSha256:hash(pair.publicKey.export({format:'der',type:'spki'}))};
+ const proposedRoots={...roots,
+  issuerKeys:roots.issuerKeys.map(x=>x.role==='device-witness'?replacement:x),
+  revokedKeys:[compromised.keyId],rotationHistory:[]};
+ const payload={priorDigest:W.hash(roots),nextDigest:W.hash(proposedRoots),
+  a17Head:require('./a18-source-pins.json').upstreamA17};
+ const compromise={format:'GomokuA21SignerCompromiseOriginal',version:21,
+  sourceSha:LOCK.sourceSha,a20Head:P.head,originalByteSha256:hash(originalBytes),
+  independentOperatorReceiptSha256:HEX2,compromisedKeyId:compromised.keyId,
+  affectedRole:compromised.role,detectedAt:'2026-10-10T16:01:00Z',
+  reviewerIsCompromisedSigner:false,realSignerAuthorityGranted:false,
+  oldFingerprintSha256:compromised.spkiSha256,newFingerprintSha256:replacement.spkiSha256};
+ return {previousRoots:roots,proposedRoots,rotationReview:{
+  format:'GomokuA18SignedRotationReview',payload,envelope:envelope('key-revocation',payload)},
+  globalDocument:R.prove(recovery()),compromise,originalBytes,now:NOW};
+}
+t('signed synthetic compromise transition revoked old role and preserves manual-only decision',()=>{
+ const r=R.reviewSignerTransition(compromiseFixture());
+ assert.equal(r.status,'signer-compromise-transition-documentary-only',r.reason);
+ assert.equal(r.realKeysInstalled,false);assert.equal(r.canDeploy,false);
+});
+t('rotation cannot silently keep compromised prior key active',()=>{
+ const x=compromiseFixture();x.proposedRoots.revokedKeys=[];
+ assert.equal(R.reviewSignerTransition(x).status,'blocked-compromise-replacement');
+});
+t('compromise original forensic byte mutation blocks replacement',()=>{
+ const x=compromiseFixture();x.originalBytes=Buffer.from('altered compromise bytes');
+ assert.equal(R.reviewSignerTransition(x).status,'blocked-compromise-original');
+});
+t('signature reviewer impersonation or tampered epoch digest denies rotation',()=>{
+ const x=compromiseFixture();
+ const sig=x.rotationReview.envelope.signatures[0].signature;
+ x.rotationReview.envelope.signatures[0].signature=(sig[0]==='A'?'B':'A')+sig.slice(1);
+ assert.equal(R.reviewSignerTransition(x).status,'blocked-signature');
+});
+t('no provisioned real signer roots refuses synthetic compromise source',()=>{
+ const x=compromiseFixture();x.previousRoots=require('./a18-review-roots.json');
+ assert.equal(R.reviewSignerTransition(x).status,'blocked-compromise-trust');
+});
 t('pre-release signed document cannot be evaluated without external originals',()=>{
  const r=G.preflight();assert.equal(r.status,'blocked-prerequisite');assert.equal(r.canDeploy,false);
 });
