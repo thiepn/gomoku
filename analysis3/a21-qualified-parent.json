@@ -1,0 +1,55 @@
+{
+  "format": "GomokuA21VerifiedDevelopmentParent",
+  "version": 21,
+  "repository": "thiepn/gomoku",
+  "head": "7b07f8497d60d6b7c3a97bef09c06e481d2db067",
+  "originalSourceSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "originalA9RunId": 37922288752,
+  "originalNestedZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "ci": [
+    {
+      "name": "A20",
+      "runId": 38065274335,
+      "artifactId": 11675296301,
+      "sha256": "6c26dfdc93e3130bf4d8906ae720db4188e9717cbd031e9aadef171924c4a0b6"
+    },
+    {
+      "name": "P19",
+      "runId": 38065274336
+    },
+    {
+      "name": "P20",
+      "runId": 38065274328
+    },
+    {
+      "name": "R4",
+      "runId": 38065274334,
+      "artifactId": 11675047186,
+      "sha256": "a3addf7c18a97435dffdeea545608c04e1e941c98deeb56d83e1c4e064e2cf9b"
+    },
+    {
+      "name": "P21",
+      "runId": 38065274348,
+      "artifactId": 11674872379,
+      "sha256": "bf334d4ed0a968489f0e75d597c1d73034e6e96cbb2dc6988f9e8ee47ab91256"
+    },
+    {
+      "name": "P23",
+      "runId": 38065274332,
+      "artifactId": 11674527237,
+      "sha256": "aa7f691001de167832965ac59e6b74b4c347d5a36269a3377e73752b7a0f3065"
+    }
+  ],
+  "allExactHeadCiPassed": true,
+  "downloadedZipSha256AndCrcVerified": true,
+  "realTrustRoots": [],
+  "externallyAuthenticatedOwners": [],
+  "externalProviderKeys": [],
+  "revokedKeys": [],
+  "realPhysicalAccepted": 0,
+  "hostedAuthorized": false,
+  "a12Executed": false,
+  "a13ActualTelemetry": false,
+  "releaseState": "NO_GO",
+  "note": "This is development-parent evidence only. Never count CI hashes, synthetic witnesses or documentary signatures as human/physical authorization."
+}
