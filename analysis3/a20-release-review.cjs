@@ -1,6 +1,6 @@
 /* A20 separate hardware, prior stable and manual owner decisions. NEVER grants release. */
 'use strict';
-const W=require('./a18-signer-reconciliation.cjs'),LOCK=require('./a10-source-lock.json');
+const W=require('./a18-signer-reconciliation.cjs'),LOCK=require('./a10-source-lock.json'),A9=require('./rc9-core.cjs');
 const ROOTS=require('./a20-external-roots.json'),A19=require('./a19-device-and-restore.cjs');
 const H=/^[a-f0-9]{64}$/;
 const deny=(status,reason,extra={})=>W.result(status,reason,{...extra,
@@ -19,7 +19,10 @@ function device({packet,originalMedia,priorA19,independent,now=new Date()}={}){
  const hashes=new Set();
  for(const [platform,n] of Object.entries(PLATFORMS)){
   const cases=packet.cases.filter(x=>x.platform===platform);
+  const allowed=A9.DEVICE_CHECKS[platform];
   if(cases.length!==n||new Set(cases.map(x=>x.caseId)).size!==n||
+   cases.some(x=>!allowed.includes(x.caseId))||
+   new Set(cases.map(x=>x.originalSha256)).size!==n||
    cases.some(x=>x.reviewState!=='pending-independent-witness'||!x.originalSha256||
     !H.test(x.originalSha256)||!W.utc(x.observedAt)||W.utc(x.observedAt)>now||
     typeof x.deviceId!=='string'||!x.deviceId.trim()||
@@ -29,6 +32,9 @@ function device({packet,originalMedia,priorA19,independent,now=new Date()}={}){
     return deny('blocked-original-device','Duplicated, altered, missing or unreviewable exact physical source bytes.');
   for(const x of cases)hashes.add(x.originalSha256);
  }
+ if(Object.keys(originalMedia).length!==18||
+  packet.cases.some(x=>!Object.hasOwn(originalMedia,x.platform+':'+x.caseId)))
+  return deny('blocked-extra-original','Unexpected or missing original media byte entry.');
  if(ACCESS.some(id=>!packet.accessibility.some(x=>x.id===id&&
   x.state==='pending-independent-accessibility-review'&&H.test(x.originalDigest||'')&&
   typeof x.notes==='string'&&x.notes.trim().length>=24))||
