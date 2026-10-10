@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process');
 const PIN=require('./a10-source-lock.json'),P=require('./a23-parent-evidence.json');
 const A10=require('./a10-preview-integrity.cjs'),A9=require('./rc9-core.cjs');
-const H=require('./a24-offline-intake.cjs'),F=require('./a24-field-intake.cjs');
+const H=require('./a24-offline-intake.cjs'),F=require('./a24-field-intake.cjs'),T=require('./a24-capture-template.cjs');
 const sha=H.sha,NOW=new Date('2026-10-10T19:00:00Z');
 const base=path.resolve(__dirname,'../analysis24-test-output/preview-static');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'gomoku-a24-'));
@@ -190,6 +190,37 @@ try{
  t('rollback prior original media byte tampering always denied',()=>{
   const m=recovery();write('prior/previous-stable.bin',Buffer.from('tampered'));
   assert.throws(()=>F.rollback({packet:m,root:tmp,now:NOW}),/SHA mismatch/);
+ });
+ t('offline capture worksheet emits eight deliberately unapproved original host entries',()=>{
+  const p=T.template({previewOrigin:'https://synthetic-original-evidence.vercel.app/',operatorId:'SYNTHETIC TESTER'});
+  assert.equal(p.responses.length,8);assert.equal(p.ownerAuthorizationState,'NOT_GRANTED');
+  assert.equal(p.responses[0].status,null);assert.equal(p.responses[0].capturedSha256,null);
+  assert.equal(p.verifiedHumanWitnesses,0);
+  assert.throws(()=>H.intake({manifest:p,captureRoot:tmp,originalRoot:base,now:NOW}),/Rejected original response/);
+ });
+ t('capture worksheet generator refuses public production origins',()=>{
+  assert.throws(()=>T.template({previewOrigin:'https://gomoku.thiepn.dev/',operatorId:'TEST'}),/Preview/);
+ });
+ t('physical partial evidence CLI exports protected NO_GO and refuses overwrite',()=>{
+  const manifest=field(),source=write('field-manifest.json',Buffer.from(JSON.stringify(manifest)));
+  const out=path.join(tmp,'field-pending-output.json');
+  const cli=[path.resolve(__dirname,'a24-field-intake.cjs'),'--mode','field',
+   '--manifest',source,'--root',tmp,'--out',out];
+  const p=cp.spawnSync(process.execPath,cli,{encoding:'utf8'});
+  assert.equal(p.status,0,p.stderr);
+  const r=JSON.parse(fs.readFileSync(out));assert.equal(r.pendingCaseCount,1);
+  assert.equal(r.physicallyAcceptedBySoftware,0);assert.equal(r.canDeploy,false);
+  assert.notEqual(cp.spawnSync(process.execPath,cli,{encoding:'utf8'}).status,0);
+ });
+ t('rollback CLI creates review-only original digest without action',()=>{
+  const packet=recovery(),manifest=write('restore-manifest.json',Buffer.from(JSON.stringify(packet)));
+  const out=path.join(tmp,'restore-pending-output.json');
+  const cli=[path.resolve(__dirname,'a24-field-intake.cjs'),'--mode','rollback',
+    '--manifest',manifest,'--root',tmp,'--out',out];
+  const p=cp.spawnSync(process.execPath,cli,{encoding:'utf8'});
+  assert.equal(p.status,0,p.stderr);
+  const r=JSON.parse(fs.readFileSync(out));assert.equal(r.decision,'NO_GO');
+  assert.equal(r.realServiceWorkerUpdateOrRollbackPerformed,false);
  });
  t('all persisted original release gates remain blocked',()=>{
   const r=F.field({manifest:field(),root:tmp,now:NOW});
