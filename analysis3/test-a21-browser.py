@@ -80,7 +80,7 @@ try:
    file=ROOT/'a21-custody-temp-export.json'
    download.value.save_as(str(file));report=json.loads(file.read_text());file.unlink()
    check(label+' unsigned source-anchored draft has no authority',
-    report['format']=='GomokuA21UnsignedReviewOnly' and
+    report['format']=='GomokuA21UnsignedEscrowDraft' and
     report['releaseState']=='NO_GO' and report['actualPhysicalCasesAccepted']==0 and
     report['realSignerRoots']==0 and report['ownerApproved'] is False and
     report['canDeploy'] is False and report['canCloseRelease'] is False and
