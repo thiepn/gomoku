@@ -1,0 +1,11 @@
+{
+  "format": "GomokuA14PinnedTrustRoots",
+  "version": 1,
+  "repository": "thiepn/gomoku",
+  "a12HeadSha": "e757a9a2ea546b6716bd2dcbaa53dbf31bf43b07",
+  "a13HeadSha": "0801c96d9317c625646eb20bf69ffecbd4f731f9",
+  "keys": [],
+  "revokedKeyIds": [],
+  "status": "NOT_PROVISIONED_NO_REAL_SIGNATURES",
+  "notice": "A reviewed repository commit and independently verified key fingerprints are required before adding any actual operator, reviewer or owner keys. CI must never create, inject or impersonate human keys."
+}
