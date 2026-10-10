@@ -13,17 +13,20 @@ function field(){
  file('media/android-chrome/fresh-launch.bin',a);
  const b=Buffer.from('SYNTHETIC real browser does not equal assisted hardware');
  file('assistive/screen-reader.bin',b);
+ file('rights/android-chrome/fresh-launch.bin',Buffer.from('SYNTHETIC rights document for first device case'));
+ file('rights/accessibility/screen-reader.bin',Buffer.from('SYNTHETIC independent accessibility rights original'));
+
  return{format:'GomokuA24FieldOriginalIntake',version:24,sourceSha:PIN.sourceSha,
   a23Head:HEAD,humanOwnerApproval:'NOT_OBTAINED',releaseState:'NO_GO',
   physicalCasesAccepted:0,productionDataTouched:false,
   cases:[{platform:'android-chrome',caseId:'fresh-launch',status:'OBSERVED_PENDING_INDEPENDENT_REVIEW',
    originalFile:'media/android-chrome/fresh-launch.bin',sha256:A.sha(a),
-   ownerRightsIntakeSha256:'b'.repeat(64),hardwareModel:'NOT REAL PIXEL',androidVersion:'NOT REAL ANDROID 15',
+   ownerRightsIntakeSha256:A.sha(Buffer.from('SYNTHETIC rights document for first device case')),hardwareModel:'NOT REAL PIXEL',androidVersion:'NOT REAL ANDROID 15',
    browserVersion:'SYNTHETIC CHROME',operatorId:'FAKE OPERATOR',observedAt:'2026-10-10T18:00:00Z',
    observation:'This is deliberately synthetic local testing, not an observed physical device.'}],
   accessibility:[{id:'screen-reader',status:'OBSERVED_PENDING_INDEPENDENT_REVIEW',
    originalFile:'assistive/screen-reader.bin',sha256:A.sha(b),
-   ownerRightsIntakeSha256:'a'.repeat(64),assistiveTechnology:'FAKE TALKBACK',
+   ownerRightsIntakeSha256:A.sha(Buffer.from('SYNTHETIC independent accessibility rights original')),assistiveTechnology:'FAKE TALKBACK',
    operatorId:'FAKE OPERATOR',observedAt:'2026-10-10T18:01:00Z',
    observation:'Synthetic screen reader bytes are not independent physical accessible observations.'}]};
 }
@@ -52,7 +55,7 @@ function rollback(){
   observedAt:'2026-10-10T18:04:00Z',previousStableSha256:A.sha(orig),
   beforeSwSha256:A.sha(before),updatedSwSha256:A.sha(update),revertedSwSha256:A.sha(before)};
 }
-function review(o={}){return H.review({fieldManifest:field(),fieldRoot:TMP,now:NOW,...o})}
+function review(o={}){return H.review({fieldManifest:field(),fieldRoot:TMP,rightsRoot:TMP,now:NOW,...o})}
 try{
  t('original immutable A9 source files staged, exact head pinned',()=>{
   assert(fs.existsSync(path.join(BASE,'index.html')));assert.equal(PIN.sourceSha,'fca45816ed7d3a95bae550b9aa644e29053875f6');
@@ -90,7 +93,7 @@ try{
  });
  t('unknown parent or qualified source rejected',()=>{
   const m=field();m.a23Head='0'.repeat(40);
-  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,now:NOW}),/Rejected A24/);
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/Rejected A24/);
  });
  t('field physical approval accidentally set true always blocked',()=>{
   const m=field();m.physicalCasesAccepted=1;
@@ -119,6 +122,14 @@ try{
   const h=host();h.previewOrigin='https://gomoku.thiepn.dev/';
   assert.throws(()=>review({hostManifest:h,hostRoot:TMP,a9OriginalRoot:BASE}),/Preview/);
  });
+ t('tampered original RIGHTS bytes fail source custody and never grant rights',()=>{
+  const m=field();file('rights/android-chrome/fresh-launch.bin',Buffer.from('TAMPERED RIGHTS MEDIA'));
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/rights ORIGINAL bytes mismatch/);
+ });
+ t('missing independent original rights file is rejected even if metadata SHA exists',()=>{
+  const m=field();fs.unlinkSync(path.join(TMP,'rights/android-chrome/fresh-launch.bin'));
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/missing or unsafe separately preserved original rights/);
+ });
  t('no synthetic previous stable can be named as A9 original candidate ZIP',()=>{
   const r=rollback();r.previousStableSha256=PIN.offlineZipSha256;
   assert.throws(()=>review({rollbackManifest:r,rollbackRoot:TMP}),/Rollback review/);
@@ -135,7 +146,7 @@ try{
   const old=review();
   const m=field(),changed=Buffer.from('ALTERNATE FAKE ORIGINAL DEVICE MEDIA');
   file('media/android-chrome/fresh-launch.bin',changed);m.cases[0].sha256=A.sha(changed);
-  const newer=H.review({fieldManifest:m,fieldRoot:TMP,previous:old,now:NOW});
+  const newer=H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,previous:old,now:NOW});
   assert.equal(newer.manualResolutionRequired,true);assert.equal(newer.conflicts.length,1);
   assert.equal(newer.conflicts[0].id,'android-chrome:fresh-launch');
   assert.equal(newer.canCertifyPhysical,false);assert.equal(newer.status,'BLOCKED_ORIGINAL_CUSTODY_CONFLICT');
@@ -150,7 +161,7 @@ try{
  t('CLI writes private immutable NO_GO original handoff and refuses overwrite',()=>{
   const m=field(),inp=file('cli-input-field.json',Buffer.from(JSON.stringify(m)));
   const dest=path.join(TMP,'CLI-HANDOFF.json');
-  const args=[path.resolve(__dirname,'a25-handoff.cjs'),'--field-manifest',inp,'--field-root',TMP,'--out',dest];
+  const args=[path.resolve(__dirname,'a25-handoff.cjs'),'--field-manifest',inp,'--field-root',TMP,'--rights-root',TMP,'--out',dest];
   const r=cp.spawnSync(process.execPath,args,{encoding:'utf8'});
   assert.equal(r.status,0,r.stderr);
   const output=JSON.parse(fs.readFileSync(dest));assert.equal(output.decision,'NO_GO');
