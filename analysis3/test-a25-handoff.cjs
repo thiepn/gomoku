@@ -97,15 +97,15 @@ try{
  });
  t('field physical approval accidentally set true always blocked',()=>{
   const m=field();m.physicalCasesAccepted=1;
-  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,now:NOW}),/Rejected A24/);
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/Rejected A24/);
  });
  t('altered physical file after original SHA receipt always blocks',()=>{
   const m=field();file('media/android-chrome/fresh-launch.bin',Buffer.from('MUTATED'));
-  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,now:NOW}),/SHA mismatch/);
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/SHA mismatch/);
  });
  t('duplicate physical media across categories rejected',()=>{
   const m=field();m.accessibility[0].sha256=m.cases[0].sha256;
-  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,now:NOW}),/accessibility original media/);
+  assert.throws(()=>H.review({fieldManifest:m,fieldRoot:TMP,rightsRoot:TMP,now:NOW}),/accessibility original media/);
  });
  t('replaced hosted body with matching forged manifest SHA still rejected against real A9',()=>{
   const h=host(),fake=Buffer.from('UNAUTHORIZED MODIFIED LIVE SERVER BODY');
