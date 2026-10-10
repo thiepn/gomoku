@@ -1,0 +1,52 @@
+{
+  "format": "GomokuA19QualifiedParentEvidence",
+  "version": 19,
+  "repo": "thiepn/gomoku",
+  "a18Head": "d33b5671a4bd9cfe12bef4ce8eb68788db1b0aa9",
+  "a9OriginalSource": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "a9RunId": 37922288752,
+  "a9ArtifactId": 11612273760,
+  "a9OuterZipSha256": "ba189cfe2e1196e426d651a65e36c1cfa8e8f69bc9d606b237dff9d419653335",
+  "a9NestedZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "runs": [
+    {
+      "name": "A18",
+      "id": 38059997646,
+      "artifactId": 11672891231,
+      "digest": "c23013f01db457edceb8ab925d93031e6927cb11c9ef6f2d29a77ca6be4a5214"
+    },
+    {
+      "name": "P19",
+      "id": 38059997388
+    },
+    {
+      "name": "P20",
+      "id": 38059997537
+    },
+    {
+      "name": "R4",
+      "id": 38059997369,
+      "artifactId": 11672358200,
+      "digest": "a7308402b25b6b31be0c2e7ade01c7b7268328ff9efae83538e02520bb43e805"
+    },
+    {
+      "name": "P21",
+      "id": 38059997459,
+      "artifactId": 11673355412,
+      "digest": "2984554a36866a8ed8c68e614b91259969cb9792811186a3c530566ee5db8b6c"
+    },
+    {
+      "name": "P23",
+      "id": 38059997422,
+      "artifactId": 11672268447,
+      "digest": "c25294e7307a2a3e079c681344d56b55bbdaf3549a3626566e1253e5d41a80ad"
+    }
+  ],
+  "archivesDownloadedAndSha256Verified": true,
+  "realPhysicalDeviceCasesAccepted": 0,
+  "realWitnessKeys": 0,
+  "hostedApproved": false,
+  "actualCutover": false,
+  "actualA13Monitoring": false,
+  "note": "Authentic public CI archive bytes only. No real hosted/device/human/production evidence."
+}
