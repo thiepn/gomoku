@@ -16,13 +16,16 @@ function mocks({failRun,failArtifact,alterRun,alterArtifact}={}){
    const p=[{id:P.a9RunId,sha:P.a9SourceSha},...P.requiredRuns].find(y=>y.id===id);
    assert(p,'Only pinned run fetched');
    payload={id,head_sha:p.sha,status:'completed',conclusion:'success',run_attempt:1,
-    event:id===P.a9RunId?'push':'pull_request',repository:{full_name:'thiepn/gomoku'}};
+    event:id===P.a9RunId?'push':'pull_request',repository:{full_name:'thiepn/gomoku'},
+    name:id===P.a9RunId?'Analysis 3.0 A9 immutable candidate and offline package qualification':
+     Object.fromEntries([['p19-supply-chain','P19 CI supply-chain integrity'],['a14-nondeploying-custody','Analysis 3.0 A14 read-only signed custody and lifecycle verification'],['p20-slo','P20 production SLO governance'],['evidence-and-baseline','Analysis 3.0 R4 evidence and tactical baseline'],['p21-capacity','P21 load concurrency chaos and capacity'],['p23-security','P23 security assurance and abuse resistance']])[p.check]};
    if(id===failRun)payload.conclusion='failure';
    if(id===alterRun)payload.head_sha='f'.repeat(40);
   }else{
    const p=[{...P.a9Artifact,runId:P.a9RunId},...P.additionalArtifacts].find(y=>y.id===id);
    assert(p,'Only pinned artifact fetched');
-   payload={id,name:p.name,digest:p.digest,expired:false,size_in_bytes:4096,workflow_run:{id:p.runId}};
+   payload={id,name:p.name,digest:p.digest,expired:false,size_in_bytes:4096,
+    workflow_run:{id:p.runId,head_sha:p.runId===P.a9RunId?P.a9SourceSha:P.a14HeadSha}};
    if(id===failArtifact)payload.expired=true;
    if(id===alterArtifact)payload.digest='sha256:'+'f'.repeat(64);
   }
@@ -46,6 +49,12 @@ async function sourceTests(){
   ['wrong SHA256 of protected evidence archive',{alterArtifact:11664320609},'blocked-artifact']]){
   const f=mocks(opt);assert.equal((await E.readback({approved:true,fetchFn:f.fetchFn})).status,status);pass(label+' refused');
  }
+ const rehash=structuredClone(P);rehash.additionalArtifacts[0].digest='sha256:'+'f'.repeat(64);
+ const malicious=mocks();assert.equal((await E.readback({approved:true,pins:rehash,fetchFn:malicious.fetchFn})).status,'blocked-pins');
+ assert.equal(malicious.calls.length,0);pass('Manifest cannot silently replace legitimate artifact digest with its own new hash');
+ const reRun=structuredClone(P);reRun.requiredRuns[4].id=123456789;
+ const forged=mocks();assert.equal((await E.readback({approved:true,pins:reRun,fetchFn:forged.fetchFn})).status,'blocked-pins');
+ assert.equal(forged.calls.length,0);pass('Manifest cannot silently change a qualifying exact-head CI run ID');
  const drift=structuredClone(P);drift.a9SourceSha='1'.repeat(40);
  const disallow=mocks();assert.equal((await E.readback({approved:true,pins:drift,fetchFn:disallow.fetchFn})).status,'blocked-pins');
  assert.equal(disallow.calls.length,0);pass('Pinned A9 source drift blocks before networking');
