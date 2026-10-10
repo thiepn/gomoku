@@ -23,8 +23,10 @@ function canonical(x,depth=0){
  throw Error('Only plain canonical JSON data is permitted.');
 }
 const sha=x=>crypto.createHash('sha256').update(canonical(x),'utf8').digest('hex');
-const iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(x)&&
- Number.isFinite(Date.parse(x))&&new Date(x).toISOString()===new Date(x).toISOString();
+const iso=x=>{if(typeof x!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(x)||!Number.isFinite(Date.parse(x)))return false;
+ const canonicalUTC=new Date(x).toISOString();
+ return x===canonicalUTC||(canonicalUTC.endsWith('.000Z')&&x===canonicalUTC.slice(0,-5)+'Z');
+};
 const denied=(status,reason,extra={})=>Object.freeze({format:'GomokuA14CustodyAudit',version:14,
  status,reason,...extra,sourceSha:LOCK.sourceSha,canMerge:false,canTag:false,canDeploy:false,
  canCertifyStable:false,canCloseRelease:false,canModifyProductionData:false,
