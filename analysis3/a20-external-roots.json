@@ -1,0 +1,18 @@
+{
+  "format": "GomokuA20IndependentEvidenceRoots",
+  "version": 20,
+  "repository": "thiepn/gomoku",
+  "a19Head": "5faa7cf25c9d5e5968a069d6ecc094f16c4bb83c",
+  "originalA9Source": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "originalA9RunId": 37922288752,
+  "originalOfflineZipSHA256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "keys": [],
+  "revoked": [],
+  "providerTrustRoots": [],
+  "status": "UNPROVISIONED",
+  "humanApprovals": [],
+  "physicalAccepted": 0,
+  "actualA12Cutover": false,
+  "actualA13Monitoring": false,
+  "note": "No human keys, provider anchors, signed permissions or real external device evidence have been provisioned. Never use synthetic fixtures as acceptance."
+}
