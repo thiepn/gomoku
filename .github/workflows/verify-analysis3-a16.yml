@@ -1,0 +1,55 @@
+name: Analysis 3.0 A16 independent witness and owner closure preparation
+on:
+  push:
+    branches: [phase/a16-witnessed-evidence-integration]
+  pull_request:
+    paths:
+      - 'analysis3/a16-*'
+      - 'analysis3/test-a16-*'
+      - 'analysis3/A16-*'
+      - '.github/workflows/verify-analysis3-a16.yml'
+permissions:
+  contents: read
+concurrency:
+  group: a16-readonly-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a16-witness-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # P19 pinned SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # P19 pinned SHA
+        with:
+          node-version: '22'
+      - name: Validate independent witness, original A9 bytes, A11 physical and release boundary contracts
+        run: |
+          node --check analysis3/a16-independent-custody.cjs
+          node --check analysis3/a16-original-physical.cjs
+          node --check analysis3/a16-owner-decision.cjs
+          node --check analysis3/test-a16-integration.cjs
+          node analysis3/test-a16-integration.cjs
+          node --check analysis3/test-a16-owner-review.cjs
+          node analysis3/test-a16-owner-review.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Assert no signer roots, physical acceptance, actual cutover or automatic release permission
+        run: |
+          set +e
+          node analysis3/a16-owner-decision.cjs > a16-default.json
+          exitcode=$?
+          set -e
+          test "$exitcode" -eq 2
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const roots=require('./analysis3/a16-witness-roots.json');
+          const a14=require('./analysis3/a14-trust-roots.json');
+          const report=require('./a16-default.json');
+          assert.equal(roots.keys.length,0);
+          assert.equal(a14.keys.length,0);
+          assert.equal(report.status,'blocked-source');
+          for(const name of ['canMerge','canTag','canDeploy','canModifyProductionData','canCloseRelease','canCertifyPhysical','canGrantOwnerAuthority'])
+            assert.equal(report[name],false);
+          console.log('PASS A16 denied by default. No physical/human/production evidence fabricated.');
+          NODE
