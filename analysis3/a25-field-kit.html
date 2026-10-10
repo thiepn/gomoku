@@ -63,9 +63,10 @@ footer{margin-top:23px;padding-top:18px;border-top:1px solid #c7d0db}
 <section class="card" aria-labelledby="packet-title"><h2 id="packet-title">4. Export and recheck source-compatible pending evidence</h2>
 <p>All authority flags remain false. The export contains only local SHA-256 receipts and pending observations. It cannot certify source rights, operator identity or device acceptance; real binary originals must remain with their independent custodian.</p>
 <div class="columns"><div><h3>Source-compatible manifest</h3>
-<p>The field manifest matches the A24 command-line importer. Independently preserve each exact binary as <code>media/&lt;platform&gt;/&lt;case&gt;.bin</code> or <code>assistive/&lt;category&gt;.bin</code>. The browser can save the selected original bytes unchanged under the expected basename.</p>
+<p>The field manifest matches the A24 command-line importer. Independently preserve each original-media file AND rights source as <code>media/&lt;platform&gt;/&lt;case&gt;.bin</code> or <code>assistive/&lt;category&gt;.bin</code>. The browser can save the selected original bytes unchanged under the expected basename.</p>
 <div class="row"><button type="button" id="export-cli">Export A24-compatible field manifest</button>
-<button type="button" id="save-original">Save selected original .bin</button></div>
+<button type="button" id="save-original">Save selected original .bin</button>
+<button type="button" id="save-rights">Save original rights document .bin</button></div>
 <p id="cli-feedback" role="status" aria-live="polite">No compatible original manifest exported.</p></div>
 <div><h3>Resume from a previous pending manifest</h3>
 <label for="import-cli">Select prior A24-compatible field manifest</label><input id="import-cli" type="file" accept="application/json,.json">
@@ -85,7 +86,7 @@ const device={ 'android-chrome':['fresh-launch','rules-renju','review-proof','tr
 const access=['screen-reader','keyboard-or-switch','zoom-200','reduced-motion','focus-order','contrast','offline-state-persistence'];
 const assets=['index.html','sw.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png'];
 const all=[...Object.entries(device).flatMap(([category,ids])=>ids.map(id=>({category,id,key:category+':'+id}))),...access.map(id=>({category:'accessibility',id,key:'accessibility:'+id}))];
-const el=id=>document.getElementById(id),records={},rollback={},retainedOriginals={},imported={},statusPending='PENDING_INDEPENDENT_REAL_WORLD_REVIEW';
+const el=id=>document.getElementById(id),records={},rollback={},retainedOriginals={},retainedRights={},imported={},statusPending='PENDING_INDEPENDENT_REAL_WORLD_REVIEW';
 let claimedHost='';
 async function digest(file){const b=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function render(){
@@ -122,6 +123,7 @@ el('evidence-form').addEventListener('submit',async event=>{
    capturedAt:new Date().toISOString(),status:statusPending,
    actualPhysicalAcceptance:false,independentRightsAuthenticated:false};
   retainedOriginals[key]=file;
+  retainedRights[key]=rights;
   delete imported[key];
   output.textContent='Original SHA-256 computed locally; pending independent media custody and human review. Accepted physical cases remain 0 / 18.';
   render();
@@ -197,6 +199,16 @@ el('save-original').addEventListener('click',()=>{
  setTimeout(()=>URL.revokeObjectURL(url),1000);
  feedback.textContent='Exact original bytes downloaded as '+c.id+'.bin. Move it into '+(c.category==='accessibility'?'assistive/':'media/'+c.category+'/')+
  ' under a private custodian-controlled root; inspect original rights separately. No release authority.';
+});
+el('save-rights').addEventListener('click',()=>{
+ const key=el('case-select').value,c=all.find(x=>x.key===key),original=retainedRights[key],
+  feedback=el('cli-feedback');
+ if(!c||!original||!records[key]){feedback.textContent='Rejected: reselect and hash the original source-rights file first.';return;}
+ const link=document.createElement('a'),url=URL.createObjectURL(original);
+ link.href=url;link.download=c.id+'.bin';link.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ feedback.textContent='Exact original RIGHTS bytes saved unchanged. Place under rights/'+c.category+'/'+c.id+
+ '.bin in a private custodian-controlled original evidence root. SHA integrity is NOT owner approval.';
 });
 el('load-cli').addEventListener('click',async()=>{
  const file=el('import-cli').files[0],feedback=el('import-feedback');
