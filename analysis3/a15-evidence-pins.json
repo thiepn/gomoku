@@ -1,0 +1,61 @@
+{
+  "format": "GomokuA15PublicGitHubEvidencePins",
+  "version": 15,
+  "repository": "thiepn/gomoku",
+  "a14HeadSha": "20ed712041029930b41fd76e5c895a6f43c29e1d",
+  "a9SourceSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "a9RunId": 37922288752,
+  "a9Artifact": {
+    "id": 11612273760,
+    "name": "analysis3-a9-immutable-candidate-evidence",
+    "digest": "sha256:ba189cfe2e1196e426d651a65e36c1cfa8e8f69bc9d606b237dff9d419653335",
+    "offlineZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275"
+  },
+  "requiredRuns": [
+    {
+      "check": "p19-supply-chain",
+      "id": 38035130907,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    },
+    {
+      "check": "a14-nondeploying-custody",
+      "id": 38035130905,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    },
+    {
+      "check": "p20-slo",
+      "id": 38035130939,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    },
+    {
+      "check": "evidence-and-baseline",
+      "id": 38035130909,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    },
+    {
+      "check": "p21-capacity",
+      "id": 38035130920,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    },
+    {
+      "check": "p23-security",
+      "id": 38035130942,
+      "sha": "20ed712041029930b41fd76e5c895a6f43c29e1d"
+    }
+  ],
+  "additionalArtifacts": [
+    {
+      "runId": 38035130920,
+      "id": 11663486354,
+      "name": "p21-capacity-evidence-20ed712041029930b41fd76e5c895a6f43c29e1d",
+      "digest": "sha256:ae908a47f0b313fdb3c463bfb783a4930ad59cf308b9913e49e7a481fe74d1e4"
+    },
+    {
+      "runId": 38035130942,
+      "id": 11664320609,
+      "name": "p23-security-evidence-20ed712041029930b41fd76e5c895a6f43c29e1d",
+      "digest": "sha256:7aa07f7642e703cff54c1da3cbad25cc89956bae3afad03911b5a8f64c85d421"
+    }
+  ],
+  "notice": "Pinned public GitHub metadata inspected 2026-10-10. Must be re-fetched independently and checked at execution time. Artifact archive SHA is not the same as the nested A9 offline ZIP SHA. Not release, real-device, or human acceptance."
+}
