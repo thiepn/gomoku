@@ -117,7 +117,7 @@ function rotationTests(){
  const p2=structuredClone(proposal);p2.revokedKeyIds=[];
  assert.equal(Operator.rotation({current,proposal:p2,review}).status,'blocked-review');
  pass('Rotation review cryptographically bound to exact proposed content');
- const p3=structuredClone(proposal);p3.keys[0].id=original.keys[0].id;
+ const p3=structuredClone(proposal);p3.keys[0].id=original.keys[0].id;p3.revokedKeyIds=[];
  assert.equal(Operator.rotation({current,proposal:p3,review}).status,'blocked-key-reuse');
  pass('Pinned historical key ID cannot be reassigned silently');
  const p4=structuredClone(proposal);p4.keys[1].privateKeyPem='TEST SHOULD NOT APPEAR IN PUBLIC REVIEW';
