@@ -14,24 +14,28 @@ function replay({epochs,sourceLedger,priorA18,signature,roots,now=new Date()}={}
   !Array.isArray(epochs.records)||epochs.records.length<2||
   !Array.isArray(epochs.revokedKeyIds)||new Set(epochs.revokedKeyIds).size!==epochs.revokedKeyIds.length||
   !sourceLedger?.entries?.length)return res('blocked-global-ledger','Independent multi-epoch source/object/revocation audit evidence missing.');
- const nonce=new Set(),head=new Set();let last=null;
+ const nonce=new Map(),head=new Set(),events=new Set();let last=null;
  for(const r of epochs.records){
   if(!r||!SHA.test(r.providerRootSha256||'')||head.has(r.providerRootSha256)||
    !SHA.test(r.originalSourceRecordDigest||'')||!SHA.test(r.receiptSha256||'')||
-   !/^[a-f0-9]{32}$/.test(r.challenge||'')||nonce.has(r.challenge)||
+   !SHA.test(r.eventId||'')||events.has(r.eventId)||
+   !/^[a-f0-9]{32}$/.test(r.challenge||'')||
    !Number.isSafeInteger(r.epoch)||r.epoch<1||!W.utc(r.observedAt)||
    last&&(!(r.epoch>last.epoch)||W.utc(r.observedAt)<=W.utc(last.observedAt))||
    !['issue','consume'].includes(r.action))
    return res('blocked-replay-history','Original nonce, root, epoch ordering, recorded timestamp or custody record invalid.');
-  head.add(r.providerRootSha256);nonce.add(r.challenge);last=r;
+  const state=nonce.get(r.challenge);
+  if(r.action==='issue'&&state||r.action==='consume'&&state!=='issued')return res('blocked-replay-history','Nonce reused, unissued, double-consumed or consumed out of sequence.');
+  nonce.set(r.challenge,r.action==='issue'?'issued':'consumed');
+  head.add(r.providerRootSha256);events.add(r.eventId);last=r;
  }
- // A nonce is single-use per challenge, but the issue and consume pair must share its identity.
- // Provider records must therefore be represented by distinct per-event IDs, with shared challenge only across the two local events.
+ // Exactly one issue and one consume per challenge; distinct event IDs and monotonic epoch roots.
  if(epochs.records.length!==sourceLedger.entries.length)
   return res('blocked-ledger-grain','External records must match exact local journal grain.');
  for(let i=0;i<epochs.records.length;i++){
   if(epochs.records[i].originalSourceRecordDigest!==sourceLedger.entries[i].digest||
-     epochs.records[i].action!==sourceLedger.entries[i].action)
+     epochs.records[i].action!==sourceLedger.entries[i].action||
+     epochs.records[i].challenge!==sourceLedger.entries[i].challenge)
    return res('blocked-local-ledger-binding','External record not anchored to source issue/consume event.');
  }
  const payload={sourceSha:LOCK.sourceSha,a18Head:P.a18Head,epochDigest:W.hash(epochs),
