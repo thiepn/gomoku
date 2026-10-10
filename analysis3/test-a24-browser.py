@@ -51,7 +51,7 @@ try:
    page.locator('#case-notes').fill('This is real localhost Chromium code QA, NOT physical Android evidence or human authorization.')
    upload(page,'#source-file','synthetic-original.bin',b'A24 synthetic source original bytes only')
    page.locator('#evidence-form button').click()
-   print('A24 UPLOAD DIAGNOSTIC',label,repr(page.locator('#field-feedback').inner_text()),repr(page.locator('#physical-pending').inner_text()),'fileSize',page.locator('#source-file').evaluate('(e)=>e.files[0]?.size'),flush=True)
+   page.wait_for_function("document.querySelector('#physical-pending').textContent === '1 / 18'")
    check(label+' original file hashed and pending only',
     'pending independent' in page.locator('#field-feedback').inner_text().lower() and
     page.locator('#physical-pending').inner_text()=='1 / 18')
@@ -73,6 +73,7 @@ try:
    upload(page,'#sw-reverted','revert.js',b'synthetic service worker version one')
    upload(page,'#prior-stable','prior.zip',b'synthetic prior stable original not deployed')
    page.locator('#rollback-check').click()
+   page.wait_for_function("document.querySelector('#rollback-feedback').textContent.includes('NO actual same-origin SW update')")
    check(label+' byte SHA reviewed but no actual rollback',
     'NO actual same-origin SW update' in page.locator('#rollback-feedback').inner_text())
    with page.expect_download() as download:
