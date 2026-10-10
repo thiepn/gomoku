@@ -12,12 +12,26 @@ const SOURCE='a5ddd553386d4d5dfd9ad97bb432f47e2f8435af';
 const DIGEST=/^[a-f0-9]{64}$/;
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 function error(message){throw new Error('A25 original handoff blocked: '+message)}
-function review({fieldManifest,fieldRoot,hostManifest,hostRoot,a9OriginalRoot,
+function review({fieldManifest,fieldRoot,rightsRoot,hostManifest,hostRoot,a9OriginalRoot,
  rollbackManifest,rollbackRoot,previous,now=new Date()}={}){
- if(!fieldManifest||!fieldRoot)error('A24 field source manifest and original-media root required');
+ if(!fieldManifest||!fieldRoot||!rightsRoot)error('A24 field manifest, original-media root and independent original-rights root required');
  const field=F.field({manifest:fieldManifest,root:fieldRoot,now});
  if(field.decision!=='NO_GO'||field.physicallyAcceptedBySoftware!==0||
     field.originalA9SourceSha!==A9.sourceSha)error('A24 physical source / acceptance mismatch');
+ const rightsReceipts=[];
+ for(const x of [
+  ...(fieldManifest.cases||[]).map(r=>({group:r.platform,id:r.caseId,sha:r.ownerRightsIntakeSha256})),
+  ...(fieldManifest.accessibility||[]).map(r=>({group:'accessibility',id:r.id,sha:r.ownerRightsIntakeSha256}))
+ ]){
+  if(!DIGEST.test(x.sha)||!x.group||!x.id)error('invalid original rights file descriptor');
+  const relative='rights/'+x.group+'/'+x.id+'.bin';
+  let original;
+  try{original=H.readUnder(rightsRoot,relative)}catch(e){error('missing or unsafe separately preserved original rights file for '+x.group+':'+x.id+' ('+e.message+')')}
+  if(hash(original)!==x.sha)error('retained rights ORIGINAL bytes mismatch for '+x.group+':'+x.id);
+  rightsReceipts.push({id:x.group+':'+x.id,sha256:hash(original),
+   bytes:original.length,status:'RIGHTS_DOCUMENT_BYTES_VERIFIED_NOT_HUMAN_APPROVED'});
+ }
+
  let host=null,rollback=null;
  if(Boolean(hostManifest)!==Boolean(hostRoot)||Boolean(hostManifest)!==Boolean(a9OriginalRoot))
   error('host manifest, original host bodies and immutable A9 originals must be supplied together');
@@ -34,6 +48,7 @@ function review({fieldManifest,fieldRoot,hostManifest,hostRoot,a9OriginalRoot,
     error('rollback source incorrectly treated as real recovery');
  }
  const evidence={
+  rights:rightsReceipts.sort((a,b)=>a.id.localeCompare(b.id)),
   field:field.records.map(x=>({id:x.id,sha256:x.sha256,category:x.category,
    reportedOS:x.reportedOS||null,reportedBrowser:x.reportedBrowser||null,
    status:x.status})).sort((a,b)=>a.id.localeCompare(b.id)),
@@ -55,7 +70,7 @@ function review({fieldManifest,fieldRoot,hostManifest,hostRoot,a9OriginalRoot,
   if(previous?.format!=='GomokuA25OriginalEvidenceHandoff'||previous.version!==25||
      previous.a24QualifiedHead!==SOURCE||previous.originalA9SourceSha!==A9.sourceSha||
      previous.decision!=='NO_GO'||!previous.evidence||
-     !Array.isArray(previous.evidence.field)||!Array.isArray(previous.evidence.host)||
+     !Array.isArray(previous.evidence.rights)||!Array.isArray(previous.evidence.field)||!Array.isArray(previous.evidence.host)||
      !Array.isArray(previous.evidence.rollback)||
      !DIGEST.test(previous.handoffDigest||'')||
      previous.handoffDigest!==hash(Buffer.from(JSON.stringify(previous.evidence))))
@@ -95,7 +110,8 @@ function review({fieldManifest,fieldRoot,hostManifest,hostRoot,a9OriginalRoot,
   originalSourceRunId:A9.githubRunId,
   classification:'OFFLINE_OPERATOR_SUPPLIED_BYTES_PENDING_EXTERNAL_HUMAN_AND_PROVIDER_REVIEW',
   evidence,handoffDigest:hash(Buffer.from(JSON.stringify(evidence))),
-  coverage:{originalPhysicalPending:field.pendingCaseCount,
+  coverage:{originalRightsBytesVerified:rightsReceipts.length,
+   originalPhysicalPending:field.pendingCaseCount,
    originalAccessibilityPending:field.pendingAssistiveCount,actualPhysicalAccepted:0,
    missingCases:field.missingCases,missingAccessibility:field.missingAccessibility,
    originalHostedBytesVerifiedOffline:host?8:0,
@@ -116,10 +132,10 @@ function cli(args){
   if(!args[i]?.startsWith('--')||!args[i+1]||flags[args[i]])error('named flags require unique values');
   flags[args[i]]=args[i+1];
  }
- if(!flags['--field-manifest']||!flags['--field-root']||!flags['--out'])
-  error('usage: --field-manifest FILE --field-root DIRECTORY --out NEW_REPORT [--host-manifest/--host-root/--a9-root, --rollback-manifest/--rollback-root, --previous FILE]');
+ if(!flags['--field-manifest']||!flags['--field-root']||!flags['--rights-root']||!flags['--out'])
+  error('usage: --field-manifest FILE --field-root DIRECTORY --rights-root DIRECTORY --out NEW_REPORT [--host-manifest/--host-root/--a9-root, --rollback-manifest/--rollback-root, --previous FILE]');
  const j=p=>p?JSON.parse(fs.readFileSync(p,'utf8')):undefined;
- const res=review({fieldManifest:j(flags['--field-manifest']),fieldRoot:flags['--field-root'],
+ const res=review({fieldManifest:j(flags['--field-manifest']),fieldRoot:flags['--field-root'],rightsRoot:flags['--rights-root'],
   hostManifest:j(flags['--host-manifest']),hostRoot:flags['--host-root'],
   a9OriginalRoot:flags['--a9-root'],rollbackManifest:j(flags['--rollback-manifest']),
   rollbackRoot:flags['--rollback-root'],previous:j(flags['--previous'])});
