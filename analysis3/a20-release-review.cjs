@@ -7,7 +7,7 @@ const deny=(status,reason,extra={})=>W.result(status,reason,{...extra,
   ownerReleaseAccepted:false,postreleaseClosureAccepted:false,physicalAccepted:0});
 const PLATFORMS=Object.freeze({'android-chrome':7,'samsung-internet':6,'installed-android-pwa':5});
 const ACCESS=['screen-reader','keyboard-or-switch','zoom-200','reduced-motion','focus-order','contrast','offline-state-persistence'];
-function device({packet,originalMedia,priorA19,independent,now=new Date()}={}){
+function device({packet,originalMedia,accessibilityMedia,priorA19,independent,now=new Date()}={}){
  if(priorA19?.status!=='physical-original-custody-reviewable'||priorA19.physicalAccepted!==0||
   packet?.format!=='GomokuA20DeviceWitnessIntake'||packet.version!==20||
   packet.sourceSha!==LOCK.sourceSha||packet.a19Head!==ROOTS.a19Head||
@@ -35,11 +35,16 @@ function device({packet,originalMedia,priorA19,independent,now=new Date()}={}){
  if(Object.keys(originalMedia).length!==18||
   packet.cases.some(x=>!Object.hasOwn(originalMedia,x.platform+':'+x.caseId)))
   return deny('blocked-extra-original','Unexpected or missing original media byte entry.');
- if(ACCESS.some(id=>!packet.accessibility.some(x=>x.id===id&&
+ if(!accessibilityMedia||typeof accessibilityMedia!=='object'||
+  Object.keys(accessibilityMedia).length!==7||
+  ACCESS.some(id=>!packet.accessibility.some(x=>x.id===id&&
   x.state==='pending-independent-accessibility-review'&&H.test(x.originalDigest||'')&&
-  typeof x.notes==='string'&&x.notes.trim().length>=24))||
+  typeof x.notes==='string'&&x.notes.trim().length>=24&&
+  Buffer.isBuffer(accessibilityMedia[id])&&accessibilityMedia[id].length>0&&
+  accessibilityMedia[id].length<=10*1024*1024&&
+  require('node:crypto').createHash('sha256').update(accessibilityMedia[id]).digest('hex')===x.originalDigest))||
   new Set(packet.accessibility.map(x=>x.id)).size!==7)
-  return deny('blocked-assistive-originals','Original seven accessibility witness checks incomplete.');
+  return deny('blocked-assistive-originals','Seven separately preserved actual accessibility byte objects and SHA-matched review records incomplete.');
  if(independent?.format!=='GomokuA20DeviceIndependentReview'||independent.version!==20||
   independent.sourceSha!==LOCK.sourceSha||independent.a19Head!==ROOTS.a19Head||
   independent.deviceOriginalsDigest!==W.hash(packet)||independent.ownerPermissionStatus!=='OPEN'||
