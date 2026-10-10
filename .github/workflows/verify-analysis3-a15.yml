@@ -1,0 +1,56 @@
+name: Analysis 3.0 A15 independently pinned GitHub evidence and replay closure
+on:
+  push:
+    branches: [phase/a15-independent-evidence-closure]
+  pull_request:
+    paths:
+      - 'analysis3/a15-*'
+      - 'analysis3/test-a15-*'
+      - 'analysis3/A15-*'
+      - '.github/workflows/verify-analysis3-a15.yml'
+permissions:
+  contents: read
+concurrency:
+  group: analysis3-a15-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a15-independent-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # P19 reviewed pinned checkout
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # P19 reviewed pinned setup-node
+        with:
+          node-version: '22'
+      - name: Test original source pins, mock GitHub readback, durable replay and operator closure
+        run: |
+          node --check analysis3/a15-public-evidence.cjs
+          node --check analysis3/a15-local-ledger.cjs
+          node --check analysis3/a15-operator-closure.cjs
+          node --check analysis3/test-a15-evidence.cjs
+          node analysis3/test-a15-evidence.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Confirm no live network, unregistered signer or human release authority
+        run: |
+          set +e
+          node analysis3/a15-operator-closure.cjs > a15-closure-result.json
+          closure=$?
+          node analysis3/a15-public-evidence.cjs > a15-github-result.json
+          original=$?
+          set -e
+          test "$closure" -eq 2
+          test "$original" -eq 2
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const a=require('./a15-closure-result.json');
+          const b=require('./a15-github-result.json');
+          const roots=require('./analysis3/a14-trust-roots.json');
+          assert.equal(a.status,'blocked-github');
+          assert.equal(b.status,'blocked-no-input');
+          assert.equal(roots.keys.length,0);
+          for(const k of ['canMerge','canTag','canDeploy','canCloseRelease','canCertifyStable','canModifyProductionData'])
+            assert.equal(a[k],false);
+          console.log('PASS A15 default: zero real trust roots, missing original evidence, no release or closure authority.');
+          NODE
