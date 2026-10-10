@@ -5,6 +5,8 @@ const Ledger=require('./a15-local-ledger.cjs'),Operator=require('./a15-operator-
 const A14=require('./a14-custody.cjs'),LOCK=require('./a10-source-lock.json');
 let n=0;function pass(s){n++;console.log('PASS '+s);}
 const manifest=P;
+const OBS=require('./a15-public-archive-observation.json'),ASSETS=require('./rc9-core.cjs').ASSETS;
+
 function mocks({failRun,failArtifact,alterRun,alterArtifact}={}){
  const calls=[];
  const fetchFn=async(url,opts)=>{
@@ -35,6 +37,19 @@ function mocks({failRun,failArtifact,alterRun,alterArtifact}={}){
 }
 async function sourceTests(){
  assert.equal(E.pinsValid(P),true);pass('Pinned GitHub origins and immutable A9/A14 sources agree');
+ assert.equal(OBS.a9.artifactZipSha256,P.a9Artifact.digest.slice(7));
+ assert.equal(OBS.a9.nestedSha256,LOCK.offlineZipSha256);
+ assert.equal(OBS.a9.candidateSourceSha,LOCK.sourceSha);
+ assert.equal(OBS.a9.matchedAssets,8);
+ assert.deepEqual(Object.keys(OBS.a9.assetByteHashes).sort(),[...ASSETS].sort());
+ assert.equal(OBS.independentHumanReview,false);
+ assert.equal(OBS.releaseAuthorization,false);
+ for(const p of P.additionalArtifacts){
+  const obs=OBS.a14.archives.find(x=>x.artifactId===p.id);
+  assert(obs&&obs.sha256===p.digest.slice(7)&&obs.runId===p.runId);
+ }
+ pass('Read-only original GitHub bytes observation matches pinned SHA-256 and eight A9 asset identities; no human authority');
+
  const m=mocks();const complete=await E.readback({approved:true,fetchFn:m.fetchFn});
  assert.equal(complete.status,'ready-for-original-byte-and-independent-review');
  assert.equal(m.calls.length,10);assert.equal(complete.validatedRuns.length,7);
