@@ -1,0 +1,27 @@
+# Gomoku A23 — Independent Multi-Custodian Acceptance & Operational Readiness Reconciliation
+
+**Status:** stacked nondeploying source change from A22 PR #82 qualified head `c1456dcadc5de43f8dfee97925593882203f504f`. All six A22 jobs and complete logs were verified before branching; four original A22/R4/P21/P23 ZIPs independently downloaded and their SHA-256 and ZIP CRC verified. **No real external hosted, device, provider, signer, operator, rights, or owner acceptance has happened.**
+
+## New real source code and meaningful verification
+
+- `a23-parent-evidence.json`: exact qualified head, six workflow run IDs, four independently hashed archives, locked original A9 original source/nested offline ZIP SHA, and deliberately **zero real trusted public keys or approved physical cases**.
+- `a23-multicustodian.cjs`: immutable source-head and actual provided original byte-buffer SHA-256, two distinct custodian/reviewer documentary **Ed25519** signature verification, independent SPKI fingerprint and person checks, monotonic original receipt hashes and UTC source times, bound owner rights and claim-only provider custody, fork detection and **manual arbitration**, no automatic winner. Source real keys are empty; CI uses ephemeral synthetic keys and real *A9 CI original* bytes, NOT live HTTPS server bytes.
+- `a23-incidents.cjs`: source-anchored global-nonce issue once/consume once, cross-scope and same-operator rejection, provider original byte proof, CAS event uniqueness and monotonic sequence, key compromise/revocation and fingerprint-bound third-party signer rotation, third-operator previous stable **review only** and conflicting incident proposal escrow. Does **not** operate a global provider, enroll or revoke real keys, or execute recovery.
+- `a23-acceptance.cjs`: 18 distinct binary media objects + platform provenance (7 Android Chrome, 6 Samsung Internet, 5 installed Android PWA), seven source-bound accessibility media and original rights, same-platform hardware/browser/OS/observer consistency, distinct SW **before/update/revert bytes** and separate previous-stable archive original that cannot equal A9 candidate, source conflict review. All hardware results return **0 accepted real cases**. Separate human staging review, actual separately authorized A12 execution and real 24–72h A13 postrelease closure conditions, all permanently default-denied.
+- `a23-custody-desk.html`: responsive local reviewer desk for 18 pending-only device originals, seven original accessibility/recovery gate statuses, global nonce duplicate and compromise original conflicts, multi-provider original-object hash forks, and two independent custodian arbitration claims, with unsigned JSON export and permanent **NO_GO**.
+- `test-a23-evidence.cjs`, `test-a23-browser.py`, `.github/workflows/verify-analysis3-a23.yml`: adversarial original-asset byte/provider/source, ephemeral detached Ed25519 fingerprint/person uniqueness, nonce/CAS signer conflicts and 18+7 matrix; real Chromium **localhost** desktop/mobile-emulated browser, zoom and keyboard/export. P19 immutable SHA-pinned read-only actions re-download original A9 archive and stage/check original eight asset bytes. **All external human/operator/host/device documents synthetic; not human consent.** No screenshot golden edits, deployment, secrets or production player data access.
+
+## Actual external acceptance remains OPEN, NOT certified by source/CI
+
+1. No separately owner-authorized dedicated original hosted HTTPS preview and original eight **server response** bodies. Original public A9 GitHub ZIP bytes are not actual hosted responses.
+2. A11 original physical acceptance remains **Android Chrome 0/7**, **Samsung Internet 0/6**, **installed Android PWA 0/5**. Real TalkBack, switch/keyboard, zoom, contrast, persistence and seven physically witnessed accessibility cases absent. Chromium viewport emulation is not a real phone.
+3. Genuine same-origin service-worker version-changing update/reversal and independently witnessed **actual previous deployed** archive/PWA + saved player-state restoration absent. Synthetic original-byte test is not live rollback.
+4. Authentic independent human A11 owner/reviewer consent, externally administered globally single-use replay ledger, vetted human signing keys and compromises/revocations, owner rights and permission absent.
+5. A12 actual separately authorized **executed production cutover** absent. No merge, tag, deploy, migration, publish, production secrets or player database access.
+6. Actual A13 postrelease 24–72h minute-level P20 telemetry, independent real-device/incident follow-up, owner closeout absent.
+
+All return documents maintain `canMerge=false`, `canTag=false`, `canDeploy=false`, `canModifyProductionData=false`, `canCertifyPhysical=false`, `canCloseRelease=false` and `canGrantOwnerAuthority=false`.
+
+## Next A24 — Authentic External Evidence Intake & Human Release Boundary Reconciliation
+
+**Actual status: NOT STARTED.** Priorities: genuine externally witnessed original source/object/rights custody acceptance preparation, original real device/accessibility operators, explicit previous stable recovery separation, conflicting global provider and compromised signer handoff, separate human owner staging/actual authorized production cutover/real postrelease approval. Keep source-only implementation as long as authentic independent permission and real originals are unavailable. Avoid endless synthetic governance expansion: prioritize actionable product and operator evidence collection.
