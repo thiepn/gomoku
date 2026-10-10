@@ -1,0 +1,97 @@
+name: Analysis 3.0 A21 independent original escrow and recovery proofs
+on:
+  push:
+    branches: [phase/a21-original-escrow-recovery-proof]
+  pull_request:
+    paths:
+      - 'analysis3/a21-*'
+      - 'analysis3/test-a21-*'
+      - 'analysis3/A21-*'
+      - '.github/workflows/verify-analysis3-a21.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: analysis3-a21-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  independent-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned reviewed SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # pinned reviewed SHA
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # pinned reviewed SHA
+        with:
+          python-version: '3.12'
+      - name: Retrieve immutable original A9 CI archive, NOT a hosted or production asset
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned reviewed SHA
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a21-input
+      - name: Verify original source SHA, offline ZIP and all eight original static asset body bytes
+        run: python analysis3/a10-stage-preview.py .a21-input analysis21-test-output/preview-static
+      - name: Run source-object custody, adversarial CAS/recovery, accessibility and signed governance tests
+        run: |
+          node --check analysis3/a21-escrow.cjs
+          node --check analysis3/a21-recovery.cjs
+          node --check analysis3/a21-hardware.cjs
+          node --check analysis3/a21-governance.cjs
+          node --check analysis3/test-a21-evidence.cjs
+          node analysis3/test-a21-evidence.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Run REAL local Chromium browser evidence desk, mobile-emulated review and conflicts
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a21-browser.py
+      - name: Verify original-head distinction, empty real trust registry and permanent NO_GO
+        env:
+          A21_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const P=require('./analysis3/a21-qualified-parent.json');
+          const G=require('./analysis3/a21-governance.cjs');
+          const W=require('./analysis3/a18-signer-reconciliation.cjs');
+          const original=require('./analysis3/a20-external-roots.json');
+          const r=G.status();
+          assert.equal(P.realPhysicalAccepted,0);
+          assert.equal(P.realTrustRoots.length,0);
+          assert.equal(P.externalProviderKeys.length,0);
+          assert.equal(original.keys.length,0);
+          assert.equal(original.providerTrustRoots.length,0);
+          assert.equal(W.verifiedRoots(),null);
+          assert.equal(r.status,'NO_GO');
+          for(const k of ['canDeploy','canMerge','canTag','canModifyProductionData','canCertifyPhysical','canCloseRelease','canGrantOwnerAuthority'])
+            assert.equal(r[k],false);
+          const record={format:'GomokuA21SyntheticQualificationOnly',version:21,
+            sourceHeadSha:process.env.A21_SOURCE_HEAD,testedCheckoutSha:process.env.GITHUB_SHA,
+            a20QualifiedHead:P.head,originalA9RunId:P.originalA9RunId,
+            originalA9NestedZipSha256:P.originalNestedZipSha256,
+            testClassification:'SYNTHETIC_NODE_AND_LOCAL_CHROMIUM_ONLY',
+            realAcceptedAndroidChrome:0,realAcceptedSamsungInternet:0,realAcceptedInstalledPwa:0,
+            realHumanSignerRoots:0,realHostedPreviewApproved:false,
+            independentlyAdministeredLedger:false,actualPreviousStableRestore:false,
+            actualA12Cutover:false,realA13PostreleaseHours:0,
+            ownerClosureGranted:false,productionPlayerDataTouched:false,
+            authorityFlagsAllFalse:true,decision:'NO_GO'};
+          fs.writeFileSync('analysis21-test-output/a21-synthetic-report.json',
+            JSON.stringify(record,null,2)+'\n');
+          console.log('PASS A21 NO_GO: 0/18 actual physical cases, no real signer keys, host, A12 or A13');
+          NODE
+      - name: Upload only synthetic exact-head evidence metadata, no screenshots or private keys
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # pinned reviewed SHA
+        with:
+          name: a21-synthetic-escrow-qa
+          path: analysis21-test-output/a21-synthetic-report.json
+          retention-days: 14
+          if-no-files-found: warn
