@@ -31,6 +31,8 @@ jobs:
           node --check analysis3/a16-owner-decision.cjs
           node --check analysis3/test-a16-integration.cjs
           node analysis3/test-a16-integration.cjs
+          node --check analysis3/test-a16-owner-review.cjs
+          node analysis3/test-a16-owner-review.cjs
           node operations/p19-supply-chain-policy.mjs
       - name: Assert no signer roots, physical acceptance, actual cutover or automatic release permission
         run: |
