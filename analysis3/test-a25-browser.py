@@ -77,8 +77,12 @@ try:
      manifest['cases'][0]['ownerRightsIntakeSha256']==hashlib.sha256(RIGHTS).hexdigest())
     binaryPath=saved(page,'#save-original',tmp,label+'-physical.bin')
     check(label+' saved untouched original MEDIA bytes separately',binaryPath.read_bytes()==MEDIA)
+    rightsPath=saved(page,'#save-rights',tmp,label+'-rights.bin')
+    check(label+' saved untouched original RIGHTS document bytes separately',rightsPath.read_bytes()==RIGHTS)
     sourceRoot=tmp/(label+'-custody-root');(sourceRoot/'media/android-chrome').mkdir(parents=True)
     (sourceRoot/'media/android-chrome/fresh-launch.bin').write_bytes(binaryPath.read_bytes())
+    (sourceRoot/'rights/android-chrome').mkdir(parents=True)
+    (sourceRoot/'rights/android-chrome/fresh-launch.bin').write_bytes(rightsPath.read_bytes())
     target=tmp/(label+'-a24-verified.json')
     r=subprocess.run(['node',str(ROOT/'a24-field-intake.cjs'),'--mode','field',
      '--manifest',str(manifestPath),'--root',str(sourceRoot),'--out',str(target)],
@@ -86,6 +90,15 @@ try:
     check(label+' REAL browser-produced manifest accepted by A24 CLI against original file',
      r.returncode==0 and json.loads(target.read_text())['pendingCaseCount']==1 and
      json.loads(target.read_text())['physicallyAcceptedBySoftware']==0)
+    handoff=tmp/(label+'-a25-handoff.json')
+    call=subprocess.run(['node',str(ROOT/'a25-handoff.cjs'),'--field-manifest',
+      str(manifestPath),'--field-root',str(sourceRoot),
+      '--rights-root',str(sourceRoot),'--out',str(handoff)],
+      capture_output=True,text=True)
+    check(label+' browser SOURCE + RIGHTS original preserved bytes accepted by A25 handoff CLI',
+      call.returncode==0 and json.loads(handoff.read_text())['coverage']['originalRightsBytesVerified']==1 and
+      json.loads(handoff.read_text())['coverage']['actualPhysicalAccepted']==0 and
+      json.loads(handoff.read_text())['decision']=='NO_GO')
     page.locator('#host-check').click()
     check(label+' blank host rejected','Rejected' in page.locator('#host-feedback').inner_text())
     page.locator('#host-url').fill('https://gomoku.thiepn.dev/')
@@ -130,7 +143,6 @@ try:
     upload(page2,'#import-cli','previous.json',manifestPath.read_bytes())
     page2.locator('#load-cli').click()
     page2.wait_for_function("document.querySelector('#import-feedback').textContent.includes('receipts loaded') || document.querySelector('#import-feedback').textContent.includes('Rejected') || document.querySelector('#import-feedback').textContent.includes('BLOCKED')")
-    print('A25 IMPORT DIAGNOSTIC',repr(page2.locator('#import-feedback').inner_text()),repr(page2.locator('#coverage').inner_text()[:220]),repr(page2.locator('#physical-pending').inner_text()),flush=True)
     check(label+' reimport original receipt requires reselect binaries',
      'RESELECT ORIGINAL' in page2.locator('#coverage').inner_text() and
      page2.locator('#physical-pending').inner_text()=='0 / 18')
