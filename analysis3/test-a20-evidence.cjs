@@ -55,6 +55,7 @@ function device(){
    originalSha256:sha(bytes),observedAt:'2026-10-10T16:30:00Z',
    deviceId:'SYNTHETIC fake device',operator:'SYNTHETIC TESTER'});
  }
+ const accessibilityMedia=Object.fromEntries(require('./a18-physical-and-restore.cjs').ACCESSIBILITY.map((id,i)=>[id,Buffer.from('SYNTHETIC assisted QA '+i)]));
  const packet={format:'GomokuA20DeviceWitnessIntake',version:20,
   sourceSha:LOCK.sourceSha,a19Head:ROOT.a19Head,humanApprovalStatus:'OPEN',physicalAccepted:0,
   cases,accessibility:require('./a18-physical-and-restore.cjs').ACCESSIBILITY.map((id,i)=>({
@@ -65,7 +66,7 @@ function device(){
   sourceSha:LOCK.sourceSha,a19Head:ROOT.a19Head,deviceOriginalsDigest:A18.hash(packet),
   ownerPermissionStatus:'OPEN',humanSignersIndependentlyAuthenticated:false,
   originalReviewerPacketDigest:prior};
- return{packet,originalMedia,priorA19:{status:'physical-original-custody-reviewable',
+ return{packet,originalMedia,accessibilityMedia,priorA19:{status:'physical-original-custody-reviewable',
   physicalAccepted:0},independent,now:NOW};
 }
 function ledger(){
@@ -139,6 +140,14 @@ test('one actual byte mutation rejected',()=>{
 });
 test('missing screen reader original blocks',()=>{
  const x=device();x.packet.accessibility[0].id='wrong';
+ assert.equal(Review.device(x).status,'blocked-assistive-originals');
+});
+test('tampered original accessibility media bytes denied',()=>{
+ const x=device();x.accessibilityMedia['screen-reader']=Buffer.from('TAMPERED');
+ assert.equal(Review.device(x).status,'blocked-assistive-originals');
+});
+test('missing accessible original media byte object denied',()=>{
+ const x=device();delete x.accessibilityMedia['zoom-200'];
  assert.equal(Review.device(x).status,'blocked-assistive-originals');
 });
 test('fake owner-approved physical outcome forbidden',()=>{
