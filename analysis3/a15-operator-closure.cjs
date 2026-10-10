@@ -26,7 +26,7 @@ function keyInfo(k){
  }catch{return null}
 }
 function rotation({current=ROOTS,proposal,review}={}){
- if(current?.format!=='GomokuA14PinnedTrustRoots'||current.a13HeadSha!==PINS.requiredRuns[0].sha.slice(0,0)+'0801c96d9317c625646eb20bf69ffecbd4f731f9'||
+ if(current?.format!=='GomokuA14PinnedTrustRoots'||current.a13HeadSha!=='0801c96d9317c625646eb20bf69ffecbd4f731f9'||
   !Array.isArray(current.keys)||current.keys.length<3||!Array.isArray(current.revokedKeyIds))
   return deny('blocked-unprovisioned','No previously approved and separately reviewed A14 trust anchors; rotation cannot bootstrap authority from proposed keys.');
  const c=new Map();
