@@ -1,0 +1,49 @@
+name: Analysis 3.0 A14 read-only signed custody and lifecycle verification
+on:
+  push:
+    branches: [phase/a14-custody-lifecycle-assurance]
+  pull_request:
+    paths:
+      - 'analysis3/a14-*'
+      - 'analysis3/test-a14-*'
+      - 'analysis3/A14-*'
+      - '.github/workflows/verify-analysis3-a14.yml'
+permissions:
+  contents: read
+concurrency:
+  group: analysis3-a14-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a14-nondeploying-custody:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # immutable P19-approved checkout
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # immutable P19-approved setup-node
+        with:
+          node-version: '22'
+      - name: Verify Ed25519 chain, expiration, revocation, replay, evidence and original source pins
+        run: |
+          node --check analysis3/a14-custody.cjs
+          node --check analysis3/test-a14-custody.cjs
+          node analysis3/test-a14-custody.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Confirm pinned trust root has zero real keys, and no human signoff is implied
+        run: |
+          set +e
+          node analysis3/a14-custody.cjs > a14-blocked.json
+          code=$?
+          set -e
+          test "$code" -eq 2
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const roots=require('./analysis3/a14-trust-roots.json');
+          const report=require('./a14-blocked.json');
+          assert.equal(roots.keys.length,0);
+          assert.equal(report.status,'blocked-trust-root');
+          for(const k of ['canMerge','canTag','canDeploy','canCertifyStable','canCloseRelease','canModifyProductionData'])
+            assert.equal(report[k],false);
+          console.log('PASS A14 default unprovisioned real operator keys and missing evidence block all promotion and human acceptance');
+          NODE
