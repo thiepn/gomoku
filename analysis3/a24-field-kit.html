@@ -1,0 +1,155 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gomoku — A24 Field Acceptance Kit</title>
+<style>
+:root{font:15px/1.55 system-ui,Arial,sans-serif;color:#263343;background:#f5f6f8}*{box-sizing:border-box}
+body{margin:0}main{max-width:1060px;margin:auto;padding:26px 22px 70px}
+header{border-bottom:2px solid #263343;padding-bottom:16px}h1{font-size:27px;line-height:1.2;letter-spacing:-.035em;margin:5px 0 11px}
+h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:12px 0 4px}p{margin:7px 0}.muted,small{color:#526072}
+aside{font-size:13px}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.status{display:inline-block;padding:6px 11px;border:1px solid #b96e52;background:#fff0e8;color:#752b1e;font-weight:750}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:19px 0}
+.metric{padding:13px;border:1px solid #c8d0db;background:white}.metric b{display:block;font-size:25px;line-height:1.2}
+.card{background:white;border:1px solid #c8d0db;padding:18px;margin:15px 0}.columns{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+label{display:block;font-weight:650;margin:10px 0 4px}select,input,textarea,button{font:inherit;max-width:100%;border:1px solid #8590a0;border-radius:2px;padding:8px 10px;min-height:42px}
+select,input,textarea{display:block;width:100%;background:#fff;color:inherit}textarea{min-height:88px;resize:vertical}
+button{background:#273d54;border-color:#273d54;color:white;cursor:pointer}button:hover{background:#3e566e}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #2875b1;outline-offset:3px}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row button{flex:0 1 auto}
+.list{list-style:none;padding:0;margin:10px 0}.list li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-top:1px solid #e0e4eb;padding:8px 0}
+.list li small{font:12px ui-monospace,monospace}.mono{font:12px ui-monospace,monospace;overflow-wrap:anywhere}
+footer{margin-top:23px;padding-top:18px;border-top:1px solid #c7d0db}
+@media(max-width:680px){main{padding:18px 13px 55px}.metrics{grid-template-columns:1fr 1fr}.columns{grid-template-columns:1fr}h1{font-size:24px}}
+</style></head><body><main><header><div class="eyebrow">Analysis 3.0 · A24 · Real-world acceptance field kit</div>
+<h1>Original evidence, operator handoff and recovery review</h1>
+<p>Offline, nondeploying evidence preparation. The browser checks local file hashes; it cannot determine whether a real Android device, human owner or provider actually authorized the evidence.</p>
+<span class="status" id="release-status" role="status">NO-GO · HUMAN RELEASE BLOCKED</span>
+<div class="metrics"><div class="metric"><b id="physical-accepted">0 / 18</b><span>Physical cases accepted</span></div>
+<div class="metric"><b id="physical-pending">0 / 18</b><span>Physical originals pending</span></div>
+<div class="metric"><b id="assistive-pending">0 / 7</b><span>Accessibility originals pending</span></div>
+<div class="metric"><b id="host-accepted">0</b><span>Approved hosted previews</span></div></div>
+<small class="mono">Qualified A23 parent d36610bc49aa0cee03f3a649108fda98e99094ee · Original A9 source fca45816ed7d3a95bae550b9aa644e29053875f6</small></header>
+<section class="card" aria-labelledby="field-title"><h2 id="field-title">1. Prepare a physical-device or accessibility original</h2>
+<div class="columns"><div><form id="evidence-form" novalidate>
+<label for="case-select">Original case</label><select id="case-select"></select>
+<label for="device-model">Actual device / assistive hardware model</label><input id="device-model" autocomplete="off" placeholder="Exact model, manually recorded">
+<label for="os-version">Android / operating-system version</label><input id="os-version" autocomplete="off" placeholder="Exact OS/version">
+<label for="browser-version">Chrome / Samsung Internet / installed PWA / assistive technology</label><input id="browser-version" autocomplete="off" placeholder="Name and version">
+<label for="operator-id">Evidence operator</label><input id="operator-id" autocomplete="off" placeholder="Who captured it?">
+<label for="source-file">Original unmodified media or capture file</label><input id="source-file" type="file">
+<label for="case-notes">Actual observation and accessibility notes</label><textarea id="case-notes" placeholder="Describe what happened on the physical device and where the original is independently preserved."></textarea>
+<button type="submit">Hash and record pending original</button>
+<p id="field-feedback" role="status" aria-live="polite">No original media has been submitted.</p></form></div>
+<div><h3>Original-source collection coverage</h3>
+<label for="filter">Show case category</label><select id="filter"><option value="all">All 25 originals</option>
+<option value="android-chrome">Android Chrome (7)</option><option value="samsung-internet">Samsung Internet (6)</option><option value="installed-android-pwa">Installed Android PWA (5)</option>
+<option value="accessibility">Accessibility (7)</option></select>
+<ul class="list" id="coverage"></ul><p class="muted">All matching media hashes stay **pending**. The JSON export contains receipts only, never the original binary. Preserve the source file separately for independent witnessing.</p></div></div></section>
+<section class="card" aria-labelledby="host-title"><h2 id="host-title">2. Owner-authorized HTTPS capture preparation</h2><div class="columns"><div>
+<label for="host-url">Dedicated isolated preview host</label><input id="host-url" spellcheck="false" autocomplete="off" placeholder="https://example-project.vercel.app/">
+<button type="button" id="host-check">Check host scope (no network request)</button>
+<p id="host-feedback" role="status" aria-live="polite">Actual HTTPS permission and server-byte observations are OPEN.</p></div>
+<div><h3>Eight actual hosted bodies to preserve</h3><ul class="list" id="host-assets"></ul>
+<small>No live GET is performed. After separate authentic owner permission, an external operator must preserve original response bytes and metadata. The A24 offline importer will compare those supplied bytes with original A9 CI source bytes.</small></div></div></section>
+<section class="card" aria-labelledby="rollback-title"><h2 id="rollback-title">3. Service-worker and previous-stable restoration review</h2>
+<p>Preserve four distinct original byte files locally: SW before, SW updated, SW reverted and the original previous-stable archive. Computing hashes does not execute a rollback, install a PWA or restore any player state.</p>
+<div class="columns"><div><label for="sw-before">Previous service-worker original</label><input type="file" id="sw-before">
+<label for="sw-updated">Updated service-worker original</label><input type="file" id="sw-updated"></div>
+<div><label for="sw-reverted">Reverted service-worker original</label><input type="file" id="sw-reverted">
+<label for="prior-stable">Previous-stable original archive</label><input type="file" id="prior-stable"></div></div>
+<button type="button" id="rollback-check">Check original hashes only</button>
+<p id="rollback-feedback" role="status" aria-live="polite">No original previous-stable restoration accepted.</p></section>
+<section class="card" aria-labelledby="packet-title"><h2 id="packet-title">4. Export an unsigned human-review packet</h2>
+<p>All authority flags remain false. The export contains only local SHA-256 receipts and pending observations. It cannot certify source rights, operator identity or device acceptance; real binary originals must remain with their independent custodian.</p>
+<button type="button" id="export-packet">Export pending-only evidence packet</button><p id="export-feedback" role="status" aria-live="polite"></p></section>
+<footer><strong>Open gates:</strong> hosted HTTPS authorization and external response bytes; physical Chrome 0/7, Samsung Internet 0/6, installed PWA 0/5; seven genuine accessibility witnesses; real same-origin SW update/reversal and previous deployed/player-state restore; independent human keys/provider-global replay, A11 owner decision, executed A12 cutover, genuine A13 24–72h monitoring and human closeout.</footer>
+</main><script>
+'use strict';
+const parent='d36610bc49aa0cee03f3a649108fda98e99094ee',source='fca45816ed7d3a95bae550b9aa644e29053875f6';
+const device={ 'android-chrome':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility'],
+ 'samsung-internet':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume'],
+ 'installed-android-pwa':['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update'] };
+const access=['screen-reader','keyboard-or-switch','zoom-200','reduced-motion','focus-order','contrast','offline-state-persistence'];
+const assets=['index.html','sw.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png'];
+const all=[...Object.entries(device).flatMap(([category,ids])=>ids.map(id=>({category,id,key:category+':'+id}))),...access.map(id=>({category:'accessibility',id,key:'accessibility:'+id}))];
+const el=id=>document.getElementById(id),records={},rollback={},statusPending='PENDING_INDEPENDENT_REAL_WORLD_REVIEW';
+let claimedHost='';
+async function digest(file){const b=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function render(){
+ const selection=el('case-select'),selected=selection.value;selection.replaceChildren();
+ for(const item of all){const o=document.createElement('option');o.value=item.key;o.textContent=item.category+' — '+item.id;selection.append(o);}
+ if(selected&&all.some(x=>x.key===selected))selection.value=selected;
+ const filter=el('filter').value,items=el('coverage');items.replaceChildren();
+ for(const c of all.filter(x=>filter==='all'||filter===x.category)){
+  const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('small');
+  a.textContent=c.key;b.textContent=records[c.key]?'PENDING REVIEW':'NOT COLLECTED';li.append(a,b);items.append(li);
+ }
+ el('physical-pending').textContent=all.filter(x=>x.category!=='accessibility'&&records[x.key]).length+' / 18';
+ el('assistive-pending').textContent=all.filter(x=>x.category==='accessibility'&&records[x.key]).length+' / 7';
+}
+el('filter').addEventListener('change',render);
+el('evidence-form').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const key=el('case-select').value,c=all.find(x=>x.key===key),
+  file=el('source-file').files[0],hardware=el('device-model').value.trim(),
+  os=el('os-version').value.trim(),browser=el('browser-version').value.trim(),
+  operator=el('operator-id').value.trim(),notes=el('case-notes').value.trim(),output=el('field-feedback');
+ if(!c||!file||!hardware||!os||!browser||operator.length<3||notes.length<24||
+  file.size<1||file.size>10*1024*1024){
+  output.textContent='Rejected: original 1–10 MB media, hardware/OS/browser/operator and 24-character observations required.';return;
+ }
+ if(records[key]){output.textContent='Rejected: original case already recorded; conflicting originals require independent manual dispute handling.';return;}
+ try{
+  const h=await digest(file);
+  if(Object.values(records).some(x=>x.sha256===h)){output.textContent='Rejected: reused original bytes across distinct cases.';return;}
+  records[key]={key,category:c.category,caseId:c.id,sha256:h,bytes:file.size,
+   originalFilename:file.name,hardware,os,browser,operator,notes,
+   capturedAt:new Date().toISOString(),status:statusPending,
+   actualPhysicalAcceptance:false,independentRightsAuthenticated:false};
+  output.textContent='Original SHA-256 computed locally; pending independent media custody and human review. Accepted physical cases remain 0 / 18.';
+  render();
+ }catch{output.textContent='Rejected: browser could not hash original bytes.';}
+});
+for(const asset of assets){const li=document.createElement('li'),s=document.createElement('span'),st=document.createElement('small');
+ s.textContent=asset;st.textContent='LIVE HOST UNVERIFIED';li.append(s,st);el('host-assets').append(li);}
+el('host-check').addEventListener('click',()=>{
+ const value=el('host-url').value,feedback=el('host-feedback');let u;
+ try{u=new URL(value);}catch{feedback.textContent='Rejected: invalid HTTPS origin.';return;}
+ if(u.protocol!=='https:'||u.username||u.password||u.port||u.pathname!=='/'||u.search||u.hash||
+  !/^[a-z0-9-]+\.vercel\.app$/.test(u.hostname)||['gomoku.vercel.app','www.vercel.app','api.vercel.app'].includes(u.hostname)){
+  feedback.textContent='Rejected: dedicated HTTPS .vercel.app origin only, no credentials, production aliases or paths.';return;
+ }
+ claimedHost=u.origin+'/';
+ feedback.textContent='Scope only: '+claimedHost+' — NO network request, no owner approval and no actual server-byte observation.';
+});
+el('rollback-check').addEventListener('click',async()=>{
+ const files=['sw-before','sw-updated','sw-reverted','prior-stable'].map(x=>el(x).files[0]),
+  output=el('rollback-feedback');
+ if(files.some(x=>!x||!x.size||x.size>50*1024*1024)){output.textContent='Rejected: four nonempty bounded originals required.';return;}
+ try{
+  const hashes=await Promise.all(files.map(digest));
+  if(hashes[0]===hashes[1]||hashes[0]!==hashes[2]||hashes[3]===hashes[0]){
+   output.textContent='Rejected: SW version must change, revert to identical before bytes, and prior original must be distinct.';return;
+  }
+  Object.assign(rollback,{beforeSha256:hashes[0],updatedSha256:hashes[1],
+    revertedSha256:hashes[2],previousStableSha256:hashes[3],
+    state:'PENDING_ORIGINAL_PREVIOUS_STABLE_CUSTODY',realRestorePerformed:false,
+    playerDataRestored:false,originalFilesNeverUploaded:true});
+  output.textContent='Four original hashes compared locally. NO actual same-origin SW update, deployed restore or player-state recovery performed.';
+ }catch{output.textContent='Rejected: original rollback bytes could not be inspected.';}
+});
+el('export-packet').addEventListener('click',()=>{
+ const packet={format:'GomokuA24UnsignedFieldKitPacket',version:24,a23Head:parent,originalA9SourceSha:source,
+  claimedHost:claimedHost||null,ownerHostApproval:false,actualHostedResponsesAuthenticated:false,
+  actualPhysicalAccepted:0,humanSignerRoots:0,independentGlobalReplayAuthenticated:false,
+  actualA12Cutover:false,actualA13TelemetryHours:0,canMerge:false,canDeploy:false,
+  canCertifyPhysical:false,canCloseRelease:false,decision:'NO_GO',
+  pendingCaseOriginals:Object.values(records),pendingRollback:rollback,
+  originalMediaIncluded:false,independentHumanWitnessApproved:false};
+ const file=new Blob([JSON.stringify(packet,null,2)+'\n'],{type:'application/json'}),
+  url=URL.createObjectURL(file),a=document.createElement('a');
+ a.href=url;a.download='gomoku-a24-unsigned-pending-field-kit.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ el('export-feedback').textContent='Unsigned local receipts exported. Retain actual original binary evidence separately. No acceptance granted.';
+});
+render();
+</script></body></html>
