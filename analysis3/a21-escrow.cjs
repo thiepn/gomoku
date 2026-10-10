@@ -33,7 +33,6 @@ function validate({archive,originals,prior,signatures,roots,now=new Date()}={}){
    e.originalCopyImmutableClaimed!==true||e.providerCustodianId===e.operatorId||
    typeof e.providerCustodianId!=='string'||!e.providerCustodianId.trim()||
    typeof e.operatorId!=='string'||!e.operatorId.trim()||
-   e.receiptDigest!==W.hash({...e,receiptDigest:undefined}) &&
    e.receiptDigest!==W.hash(Object.fromEntries(Object.entries(e).filter(([key])=>key!=='receiptDigest'))))
    return out('blocked-escrow-original','Tampered bytes, replayed object/receipt, untrusted provider identity or broken sequence.');
   identifiers.add(e.objectId);content.add(e.sha256);
