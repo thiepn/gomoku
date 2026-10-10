@@ -1,0 +1,96 @@
+name: Analysis 3.0 A17 authorized original evidence and isolated rehearsal
+on:
+  push:
+    branches: [phase/a17-authorized-evidence-rehearsal]
+  pull_request:
+    paths:
+      - 'analysis3/a17-*'
+      - 'analysis3/test-a17-*'
+      - 'analysis3/A17-*'
+      - '.github/workflows/verify-analysis3-a17.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: a17-evidence-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a17-nondeploying:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # immutable reviewed SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # immutable reviewed SHA
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # immutable reviewed SHA
+        with:
+          python-version: '3.12'
+      - name: Retrieve original A9 passed CI ZIP (read-only evidence, not hosted deployment)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # reviewed SHA
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a17-input
+      - name: Independently match original A9 run, nested ZIP and all 8 static asset bytes
+        run: |
+          python analysis3/a10-stage-preview.py .a17-input analysis17-test-output/preview-static
+      - name: Run adversarial operator, HTTPS mock, physical drafting, custody and dry-run restore tests
+        run: |
+          node --check analysis3/a17-operator-gate.cjs
+          node --check analysis3/a17-preview-collector.cjs
+          node --check analysis3/a17-physical-worksheet.cjs
+          node --check analysis3/a17-isolated-restore.cjs
+          node --check analysis3/a17-external-custody.cjs
+          node --check analysis3/a17-release-desk.cjs
+          node --check analysis3/test-a17-evidence.cjs
+          node analysis3/test-a17-evidence.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Run actual Chromium operator desk interactions at desktop, 200%-zoom and emulated mobile sizes
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a17-browser.py
+      - name: Fail closed without real human/device approvals or production authorization
+        run: |
+          set +e
+          node analysis3/a17-preview-collector.cjs > analysis17-test-output/no-approval.json
+          code=$?
+          set -e
+          test "$code" -eq 2
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const report=require('./analysis17-test-output/no-approval.json');
+          const roots=require('./analysis3/a16-witness-roots.json');
+          const desk=require('./analysis3/a17-release-desk.cjs').readiness();
+          const physical=require('./analysis3/a17-physical-worksheet.cjs').empty();
+          assert.equal(report.status,'blocked-direct-execution');
+          assert.equal(roots.keys.length,0);
+          assert.equal(desk.readiness,'HOLD');
+          assert.equal(desk.gates.length,9);
+          assert.equal(physical.physicalAcceptance,'OPEN');
+          assert.equal(physical.ownerAuthorization,'not_approved');
+          for(const key of ['canMerge','canTag','canDeploy','canCloseRelease','canCertifyPhysical','canModifyProductionData','canGrantOwnerAuthority'])
+            assert.equal(desk[key],false);
+          fs.writeFileSync('analysis17-test-output/a17-ci-result.json',JSON.stringify({
+            format:'GomokuA17SyntheticCIOnly',head:process.env.GITHUB_SHA||null,
+            tests:'synthetic-and-browser-emulation-only',realPhysicalCases:0,realDeviceAcceptance:false,
+            realHostAuthorization:false,realDeployment:false,actualOwnerSignoff:false,
+            status:'BLOCKED_PRODUCTION'
+          },null,2)+'\n');
+          console.log('PASS A17 CI: original A9 byte reconciliation, ZERO physical/human signoffs and release permanently default-denied.');
+          NODE
+      - name: Store synthetic QA packet (no credentials, no signoff, no screenshots goldens)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # reviewed SHA
+        with:
+          name: a17-synthetic-qa-only
+          path: |
+            analysis17-test-output/a17-ci-result.json
+            analysis17-test-output/no-approval.json
+          retention-days: 14
+          if-no-files-found: warn
