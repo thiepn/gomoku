@@ -1,0 +1,152 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gomoku · A21 Independent Original Escrow</title>
+<style>
+:root{font:15px/1.55 system-ui,Arial,sans-serif;color:#222b37;background:#f6f7f9;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:1040px;margin:auto;padding:28px 22px 60px}
+header{border-bottom:2px solid #334052;padding-bottom:15px}h1{font-size:27px;line-height:1.25;letter-spacing:-.035em;margin:5px 0}h2{font-size:19px;margin:23px 0 8px}p{margin:6px 0}
+small,.muted{color:#515d6e}.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}.mono{font:12px ui-monospace,monospace;overflow-wrap:anywhere}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}.metric{background:#fff;padding:12px 14px;border:1px solid #cbd3dd}.metric b{display:block;font-size:24px}
+.hold{display:inline-block;border:1px solid #bf7758;background:#fff0e8;color:#7f3827;padding:5px 9px;font-weight:650}
+.card{background:#fff;border:1px solid #ccd3dd;margin:12px 0;padding:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+select,input,textarea,button{font:inherit;border:1px solid #727e90;border-radius:2px;min-height:42px;padding:8px 11px;max-width:100%}
+select,input,textarea{width:100%;background:#fff;color:inherit}textarea{min-height:100px;resize:vertical}
+button{background:#293b50;color:white;cursor:pointer}button:hover{background:#425873}:focus-visible{outline:3px solid #3775bb;outline-offset:2px}
+label{font-weight:600;display:block;margin:8px 0 4px}.cases{margin:10px 0;padding:0;list-style:none}.cases li{display:flex;align-items:start;justify-content:space-between;gap:12px;border-top:1px solid #e5e9ee;padding:9px 0}.cases li small{font:12px ui-monospace,monospace;color:#5d6878}
+.gate{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #e5e9ee;padding:10px 0}.gate span:last-child{color:#864b34;font-size:12px;font-weight:700;text-align:right}
+footer{border-top:1px solid #cbd3dd;padding-top:16px;margin-top:24px}
+@media(max-width:650px){main{padding:18px 14px 50px}.metrics,.grid{grid-template-columns:1fr}h1{font-size:23px}.metric b{font-size:21px}.gate{gap:7px}}
+</style></head><body><main>
+<header><div class="label">Analysis 3.0 / A21 · Offline original evidence custody</div>
+<h1>Witness intake and release gate review</h1>
+<p class="muted">Local review drafts only. No hosted website, physical Android device, signing key, release owner or production database is contacted.</p>
+<div class="metrics"><div class="metric"><b id="accepted">0 / 18</b><span>Real physical cases accepted</span></div>
+<div class="metric"><b id="signers">0 / 5</b><span>Independently vetted signer roots</span></div>
+<div class="metric"><b>8 / 8</b><span>Original CI asset checks</span></div></div>
+<strong class="hold" id="status" role="status">NO-GO · RELEASE BLOCKED</strong>
+<p class="mono">A20 qualified parent 7b07f8497d60d6b7c3a97bef09c06e481d2db067</p></header>
+<section aria-labelledby="originals"><h2 id="originals">Original device and accessibility records</h2>
+<div class="grid"><div class="card"><label for="platform">Choose physical browser</label><select id="platform"><option value="android-chrome">Android Chrome · 7</option><option value="samsung-internet">Samsung Internet · 6</option><option value="installed-android-pwa">Installed Android PWA · 5</option></select>
+<ul id="case-list" class="cases"></ul></div>
+<div class="card"><form id="review" novalidate><label for="case">Physical original test case</label><select id="case"></select>
+<label for="device">Hardware model and OS</label><input id="device" placeholder="Device + Android version" autocomplete="off">
+<label for="sha">Original capture SHA-256</label><input id="sha" placeholder="64 lowercase hexadecimal characters" spellcheck="false" autocomplete="off">
+<label for="observation">Actual original observation, source location and accessibility details</label><textarea id="observation" placeholder="Minimum 24 characters; do not include personal player data."></textarea>
+<button type="submit">Record pending original</button><p id="feedback" role="status" aria-live="polite">No independently verified real device evidence recorded.</p></form></div></div></section>
+<section aria-labelledby="release"><h2 id="release">Independent release gate status</h2><div id="gates" class="card"></div></section>
+<section aria-labelledby="conflicts"><h2 id="conflicts">Local multi-operator replay review</h2><div class="grid">
+<div class="card"><form id="nonce-form" novalidate><label for="nonce">Original challenge nonce (32 hex characters)</label><input id="nonce" autocomplete="off" spellcheck="false" placeholder="32 hex characters">
+<label for="operator">Evidence operator identity (documentary only)</label><input id="operator" autocomplete="off" placeholder="Distinct witness name or ID">
+<label for="packet-sha">Original packet SHA-256</label><input id="packet-sha" autocomplete="off" spellcheck="false" placeholder="64 hex characters">
+<button type="submit">Record unverified issue</button><p id="nonce-feedback" role="status" aria-live="polite">No independent global ledger connected. Local duplicate prevention is only a demonstration.</p></form></div>
+<div class="card"><h3>Conflict review log</h3><ul id="conflict-list" class="cases"></ul><p class="muted">Duplicate challenges, mismatched scopes and same-operator claims are blocked locally. No remote global anti-replay authority is established.</p></div></div></section>
+<section aria-labelledby="escrow-title"><h2 id="escrow-title">Original-object escrow conflict review</h2><div class="grid">
+<div class="card"><form id="escrow-form" novalidate><label for="escrow-object">Provider object identity</label><input id="escrow-object" autocomplete="off" placeholder="Unique external original ID">
+<label for="escrow-custodian">Independent original custodian</label><input id="escrow-custodian" autocomplete="off" placeholder="Witness role for separate review">
+<label for="escrow-sha">Original SHA-256</label><input id="escrow-sha" spellcheck="false" autocomplete="off" placeholder="64 lowercase hexadecimal characters">
+<button type="submit">Record unsigned original</button><p role="status" aria-live="polite" id="escrow-feedback">No independent original escrow has been authenticated.</p></form></div>
+<div class="card"><h3>Disputed original receipts</h3><ul class="cases" id="escrow-list"></ul>
+<p class="muted">Conflicting hashes for one original object cannot be overwritten or resolved automatically. External human/provider custody remains required.</p></div></div></section>
+<section class="card"><h2>Export custody worksheet</h2><p class="muted">The JSON is an unsigned, unaccepted review draft. Editing it cannot confer production approval.</p><button id="export" type="button">Export review-only packet</button><p id="export-feedback" role="status" aria-live="polite"></p></section>
+<footer><strong>NO-GO:</strong> Real hosted HTTPS approval, physical 0/18, real PWA update and restore, independently authenticated global replay custody, owner decision, A12 cutover and genuine A13 monitoring all remain OPEN.</footer>
+</main><script>
+'use strict';
+const source='fca45816ed7d3a95bae550b9aa644e29053875f6',parent='7b07f8497d60d6b7c3a97bef09c06e481d2db067';
+const matrix={
+ 'android-chrome':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility'],
+ 'samsung-internet':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume'],
+ 'installed-android-pwa':['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update']
+};
+const gateData=[
+ ['Original hosted HTTPS / independent witness','OPEN · no authorized live host'],
+ ['Android Chrome physical acceptance','0 / 7'],
+ ['Samsung Internet physical acceptance','0 / 6'],
+ ['Installed Android PWA physical acceptance','0 / 5'],
+ ['Seven real accessibility originals','OPEN · assistive device witnesses'],
+ ['Same-origin SW update and previous-stable rollback','OPEN · no real restore'],
+ ['Independent signer/revocation and global replay custody','OPEN · zero authenticated keys'],
+ ['A12 separately approved production cutover','NOT EXECUTED'],
+ ['A13 actual 24–72h postrelease telemetry','NOT OBSERVED']
+];
+const el=id=>document.getElementById(id),pending={},nonceHistory={},escrowRecords={},escrowDisputes=[];
+function render(){
+ const platform=el('platform').value,li=el('case-list'),sel=el('case');
+ li.replaceChildren();sel.replaceChildren();
+ for(const c of matrix[platform]){
+  const row=document.createElement('li'),name=document.createElement('span'),state=document.createElement('small');
+  name.textContent=c.replaceAll('-',' ');state.textContent=pending[platform+':'+c]?'PENDING REVIEW':'NOT TESTED';
+  row.append(name,state);li.append(row);
+  const opt=document.createElement('option');opt.value=c;opt.textContent=c.replaceAll('-',' ');sel.append(opt);
+ }
+}
+el('platform').addEventListener('change',render);
+el('escrow-form').addEventListener('submit',event=>{
+ event.preventDefault();
+ const id=el('escrow-object').value.trim(),custodian=el('escrow-custodian').value.trim(),
+  digest=el('escrow-sha').value.trim().toLowerCase(),status=el('escrow-feedback');
+ if(id.length<3||custodian.length<3||!/^[a-f0-9]{64}$/.test(digest)){
+  status.textContent='Rejected: original object ID, custodian, exact SHA-256 required.';return;
+ }
+ const prev=escrowRecords[id];
+ if(prev){
+  if(prev.sha256===digest){status.textContent='BLOCKED: exact duplicate receipt; no new witness accepted.';return;}
+  escrowDisputes.push({objectId:id,firstDigest:prev.sha256,conflictingDigest:digest,
+   firstCustodian:prev.custodian,challenger:custodian,status:'UNRESOLVED_MANUAL_REVIEW'});
+  status.textContent='BLOCKED: conflicting original bytes. Independent manual custody arbitration required.';
+  const li=document.createElement('li'),label=document.createElement('span'),state=document.createElement('small');
+  label.textContent='Object dispute: '+id;state.textContent='UNRESOLVED';li.append(label,state);el('escrow-list').append(li);return;
+ }
+ escrowRecords[id]={objectId:id,sha256:digest,custodian,
+  status:'PENDING_UNAUTHENTICATED_ORIGINAL_REVIEW'};
+ status.textContent='Original SHA noted locally; provider not contacted and no independent receipt authenticated.';
+ const li=document.createElement('li'),label=document.createElement('span'),state=document.createElement('small');
+ label.textContent=id;state.textContent='PENDING';li.append(label,state);el('escrow-list').append(li);
+});
+el('nonce-form').addEventListener('submit',event=>{
+ event.preventDefault();
+ const nonce=el('nonce').value.trim().toLowerCase(),operator=el('operator').value.trim();
+ const digest=el('packet-sha').value.trim().toLowerCase(),feedback=el('nonce-feedback');
+ if(!/^[a-f0-9]{32}$/.test(nonce)||!/^[a-f0-9]{64}$/.test(digest)||operator.length<3){
+  feedback.textContent='Rejected: exact nonce, SHA-256 and operator identity required.';return;
+ }
+ if(nonceHistory[nonce]){
+  feedback.textContent='BLOCKED: duplicate challenge nonce. Independent custody conflict resolution required.';
+  const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('small');
+  a.textContent='Duplicate issue attempt '+nonce.slice(0,8)+'…';b.textContent='CONFLICT · NOT ACCEPTED';
+  li.append(a,b);el('conflict-list').append(li);return;
+ }
+ nonceHistory[nonce]={nonce,operator,packetDigest:digest,status:'pending-independent-ledger-authentication'};
+ const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('small');
+ a.textContent='Issue '+nonce.slice(0,8)+'…';b.textContent='UNVERIFIED LOCAL NOTE';
+ li.append(a,b);el('conflict-list').append(li);
+ feedback.textContent='Local nonce noted; NOT globally consumed, authenticated, or owner-approved.';
+});
+
+el('review').addEventListener('submit',event=>{
+ event.preventDefault();
+ const p=el('platform').value,c=el('case').value,device=el('device').value.trim();
+ const digest=el('sha').value.trim().toLowerCase(),note=el('observation').value.trim(),key=p+':'+c;
+ if(!device||!/^[a-f0-9]{64}$/.test(digest)||note.length<24){
+  el('feedback').textContent='Rejected: require a device/OS, exact SHA-256 and a 24-character original observation.';return;
+ }
+ if(pending[key]){el('feedback').textContent='Rejected: repeated evidence requires separate conflict review.';return;}
+ pending[key]={platform:p,caseId:c,device,originalMediaSha256:digest,observation:note,
+  status:'pending-independent-human-original-review',receivedAt:new Date().toISOString()};
+ el('feedback').textContent='Recorded as PENDING REVIEW, not accepted. Physical counter remains 0 / 18.';
+ render();
+});
+const gates=el('gates');for(const [name,status] of gateData){
+ const row=document.createElement('div');row.className='gate';
+ const a=document.createElement('span'),b=document.createElement('span');a.textContent=name;b.textContent=status;row.append(a,b);gates.append(row);
+}
+el('export').addEventListener('click',()=>{
+ const obj={format:'GomokuA21UnsignedEscrowDraft',version:21,sourceSha:source,
+  a20Head:parent,releaseState:'NO_GO',actualPhysicalCasesAccepted:0,realSignerRoots:0,
+  independentGlobalReplayVerified:false,actualA12Cutover:false,actualA13Telemetry:false,
+  canDeploy:false,canCloseRelease:false,ownerApproved:false,notes:Object.values(pending),unverifiedLocalNonces:Object.values(nonceHistory),unsignedOriginals:Object.values(escrowRecords),unresolvedEscrowDisputes:escrowDisputes};
+ const blob=new Blob([JSON.stringify(obj,null,2)+'\n'],{type:'application/json'});
+ const u=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=u;a.download='gomoku-a21-review-only.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(u),1000);
+ el('export-feedback').textContent='Unsigned pending-only draft exported. Nothing certified.';
+});
+render();
+</script></body></html>
