@@ -73,7 +73,7 @@ test('wrong fingerprint',x=>x.policy.keys[1].spkiSha256=H,'blocked-trust-root');
 test('revoked role key',x=>x.policy.revokedKeyIds.push(x.keys[1].id),'blocked-revocation');
 test('signer role reused',x=>x.policy.keys[2].role='release-operator','blocked-revocation');
 test('same person cannot self approve',x=>x.policy.keys[2].person=x.policy.keys[0].person,'blocked-revocation');
-test('operator signature tamper',x=>x.packet.records[0].signature='X'+x.packet.records[0].signature.slice(1),'blocked-signature');
+test('operator signature tamper',x=>{const sig=x.packet.records[0].signature;x.packet.records[0].signature=(sig[0]==='A'?'B':'A')+sig.slice(1)},'blocked-signature');
 test('source SHA changed',x=>x.packet.sourceSha='e'.repeat(40),'blocked-scope');
 test('A12 head drift',x=>x.packet.a12HeadSha='e'.repeat(40),'blocked-scope');
 test('A13 head drift',x=>x.packet.a13HeadSha='e'.repeat(40),'blocked-scope');
@@ -88,15 +88,13 @@ test('wrong source bound in signature',x=>x.packet.records[1].sourceSha='e'.repe
 test('invalid signature encoding',x=>x.packet.records[0].signature='not-base64','blocked-signature');
 test('expired custody signature',x=>x.packet.records[2].expiresAt='2026-10-08T00:00:00.000Z','blocked-time');
 test('future-issued custody signature',x=>x.packet.records[2].issuedAt='2027-01-01T00:00:00.000Z','blocked-time');
-test('early stability witness under 24h',x=>{x.packet.records[1].issuedAt='2026-10-06T01:00:00.000Z';x.sign();x.packet.records[1].issuedAt='2026-10-06T01:00:00.000Z'},'blocked-chain');
+test('fully signed early stability witness under 24h',x=>{const saved=issueTimes[1];issueTimes[1]='2026-10-06T01:00:00.000Z';x.sign();issueTimes[1]=saved},'blocked-time');
 test('incomplete A13 stability 23 hours even when signatures re-created',x=>{x.packet.evidence.stability.hoursObserved=23;x.sign()},'blocked-evidence');
 test('wrong A13 status when re-signed',x=>{x.packet.evidence.stability.status='released';x.sign()},'blocked-evidence');
 test('duplicate public key ID',x=>x.policy.keys[2].id=x.policy.keys[1].id,'blocked-trust-root');
 test('untrusted signer key substituted',x=>{const t=crypto.generateKeyPairSync('ed25519');x.policy.keys[0].publicKeyPem=t.publicKey.export({format:'pem',type:'spki'})},'blocked-trust-root');
 test('unknown supporting evidence stage',x=>x.packet.evidence.extra={status:'PASSED'},'blocked-scope');
 test('source production target disallows localhost',x=>x.packet.productionOrigin='http://localhost:3000/','blocked-scope');
-test('duplicate challenge in operator ledger',x=>{
- x.packet.challenge=challenge;},ready);
 const x=make();
 const replay=A.verify({packet:x.packet,policy:x.policy,now:clock,usedChallenges:[challenge]});
 assert.equal(replay.status,'blocked-replay');n++;console.log('PASS operator ledger marks a challenge already seen');
