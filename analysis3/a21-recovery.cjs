@@ -101,4 +101,41 @@ function reconcileOperators({packets,externalRoot}={}){
   conflicts.length?'Competing operator proposals against identical root detected; cannot automatically choose a winner.':'Source-bound proposals match documentary intent; authentic global CAS state unavailable.',
   {conflicts,automaticWinner:null,recoveryPerformed:false});
 }
-module.exports={prove,reconcileOperators,fail};
+function reviewSignerTransition({previousRoots,proposedRoots,rotationReview,
+  globalDocument,compromise,originalBytes,now=new Date()}={}){
+ if(globalDocument?.status!=='original-recovery-documentary-only'||
+  !compromise||compromise.format!=='GomokuA21SignerCompromiseOriginal'||
+  compromise.version!==21||compromise.sourceSha!==LOCK.sourceSha||
+  compromise.a20Head!==P.head||
+  !H.test(compromise.originalByteSha256||'')||
+  !H.test(compromise.independentOperatorReceiptSha256||'')||
+  compromise.originalByteSha256===compromise.independentOperatorReceiptSha256||
+  typeof compromise.compromisedKeyId!=='string'||!compromise.compromisedKeyId||
+  typeof compromise.affectedRole!=='string'||!compromise.affectedRole||
+  !W.utc(compromise.detectedAt)||W.utc(compromise.detectedAt)>now||
+  compromise.reviewerIsCompromisedSigner!==false||
+  compromise.realSignerAuthorityGranted!==false||
+  !Buffer.isBuffer(originalBytes)||originalBytes.length<1||
+  originalBytes.length>10*1024*1024||
+  require('node:crypto').createHash('sha256').update(originalBytes).digest('hex')!==compromise.originalByteSha256)
+  return fail('blocked-compromise-original','Original compromise bytes, independent observation, operator roles or source scope missing.');
+ const prior=W.verifiedRoots(previousRoots),next=W.verifiedRoots(proposedRoots);
+ if(!prior||!next)return fail('blocked-compromise-trust','Cannot self-enroll new roots or reuse a revoked, unreviewed signer.');
+ const old=prior.get(compromise.affectedRole),replacement=next.get(compromise.affectedRole);
+ if(!old||!replacement||old.keyId!==compromise.compromisedKeyId||
+  old.keyId===replacement.keyId||
+  !proposedRoots.revokedKeys.includes(old.keyId)||
+  previousRoots.revokedKeys.some(x=>!proposedRoots.revokedKeys.includes(x))||
+  !H.test(compromise.oldFingerprintSha256||'')||
+  old.spkiSha256!==compromise.oldFingerprintSha256||
+  !H.test(compromise.newFingerprintSha256||'')||
+  replacement.spkiSha256!==compromise.newFingerprintSha256||
+  old.person===replacement.person)
+  return fail('blocked-compromise-replacement','Compromised key must be irrevocably revoked and replaced by distinct reviewed fingerprint and person.');
+ const rotation=W.rotation({prior:previousRoots,proposed:proposedRoots,review:rotationReview,now});
+ if(rotation.status!=='ready-for-human-key-rotation-review')return rotation;
+ return fail('signer-compromise-transition-documentary-only',
+  'The immutable compromise bytes, revoked prior fingerprint and independently signed replacement epoch reconcile. No real key was installed or authorized.',
+  {revokedKeyId:old.keyId,newKeyId:replacement.keyId,realKeysInstalled:false});
+}
+module.exports={prove,reconcileOperators,reviewSignerTransition,fail};
