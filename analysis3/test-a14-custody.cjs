@@ -88,6 +88,8 @@ test('wrong source bound in signature',x=>x.packet.records[1].sourceSha='e'.repe
 test('invalid signature encoding',x=>x.packet.records[0].signature='not-base64','blocked-signature');
 test('expired custody signature',x=>x.packet.records[2].expiresAt='2026-10-08T00:00:00.000Z','blocked-time');
 test('future-issued custody signature',x=>x.packet.records[2].issuedAt='2027-01-01T00:00:00.000Z','blocked-time');
+test('impossible February date in purported signature is rejected',x=>x.packet.records[2].issuedAt='2026-02-30T04:00:00.000Z','blocked-time');
+test('custody attestation longer than two weeks is rejected',x=>x.packet.records[2].expiresAt='2027-01-01T00:00:00.000Z','blocked-time');
 test('fully signed early stability witness under 24h',x=>{const saved=issueTimes[1];issueTimes[1]='2026-10-06T01:00:00.000Z';x.sign();issueTimes[1]=saved},'blocked-time');
 test('incomplete A13 stability 23 hours even when signatures re-created',x=>{x.packet.evidence.stability.hoursObserved=23;x.sign()},'blocked-evidence');
 test('wrong A13 status when re-signed',x=>{x.packet.evidence.stability.status='released';x.sign()},'blocked-evidence');
