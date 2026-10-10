@@ -101,4 +101,22 @@ function rollback({packet,root,now=new Date()}={}){
   realServiceWorkerUpdateOrRollbackPerformed:false,playerStateRecoveryAccepted:false,
   humanOwnerAuthority:false,decision:'NO_GO'};
 }
-module.exports={field,rollback,ALL,ACCESS};
+function cli(argv){
+ const args={};for(let i=0;i<argv.length;i+=2){
+  if(!argv[i]?.startsWith('--')||!argv[i+1]||args[argv[i]])throw Error('Explicit argument names and values required');
+  args[argv[i]]=argv[i+1];
+ }
+ if(!['field','rollback'].includes(args['--mode'])||!args['--manifest']||!args['--root']||!args['--out'])
+  throw Error('Usage: --mode field|rollback --manifest <JSON> --root <original-files> --out <new-pending-report>');
+ const manifest=JSON.parse(require('node:fs').readFileSync(args['--manifest'],'utf8'));
+ const result=args['--mode']==='field'?field({manifest,root:args['--root']}):
+  rollback({packet:manifest,root:args['--root']});
+ require('node:fs').writeFileSync(args['--out'],JSON.stringify(result,null,2)+'\n',
+  {flag:'wx',mode:0o600});
+ console.log('A24 '+args['--mode']+': original bytes hashed, pending-only. NO_GO, real physical=0, no actual rollback.');
+}
+module.exports={field,rollback,ALL,ACCESS,cli};
+if(require.main===module){try{cli(process.argv.slice(2))}catch(e){
+ console.error('A24 FAIL CLOSED: '+e.message);process.exitCode=1;
+}}
+
