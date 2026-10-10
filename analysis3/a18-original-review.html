@@ -1,0 +1,105 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gomoku · A18 Original Evidence Review</title>
+<style>
+:root{color-scheme:light;font:15px/1.55 system-ui,-apple-system,Arial,sans-serif;color:#23272e;background:#f7f7f8}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:28px 26px 64px}
+header{border-bottom:2px solid #212c3a;padding-bottom:20px}h1{font-size:28px;letter-spacing:-.035em;margin:5px 0 8px}h2{font-size:19px;margin:26px 0 12px}h3{font-size:15px;margin:0}
+p{margin:4px 0 9px}.sub{color:#515c69}.mono{font:12px/1.5 ui-monospace,monospace;word-break:break-all}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#535b67;font-weight:700}
+.overview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.metric{border:1px solid #ced3db;padding:13px 15px;background:#fff}.metric strong{display:block;font-size:25px;line-height:1.3}
+.panel{border:1px solid #c9d0d9;background:white;margin:13px 0;padding:16px}.panel:focus-within{border-color:#4d7599}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:start}.tag{display:inline-block;font-size:12px;padding:3px 8px;border:1px solid #bd6e55;background:#fff1e9;color:#823b2a;font-weight:650}
+label{font-weight:650;display:block;margin:8px 0 4px}select,input,textarea,button{font:inherit;max-width:100%;padding:8px 10px;min-height:42px;border:1px solid #767f8c;border-radius:2px;background:#fff;color:inherit}
+select,input,textarea{width:100%}textarea{resize:vertical;min-height:74px}button{background:#233247;color:#fff;cursor:pointer}button:hover{background:#3a4c60}
+:focus-visible{outline:3px solid #347ac2;outline-offset:3px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cases{padding:0;margin:8px 0;list-style:none}
+.cases li{padding:9px 0;border-bottom:1px solid #e3e5e8;display:flex;justify-content:space-between;gap:12px}.cases li:last-child{border:0}.cases small{font:12px ui-monospace,monospace;color:#67717c}
+fieldset{border:0;padding:0;margin:0}legend{font-weight:650;margin-bottom:8px}footer{border-top:1px solid #cbd1d7;margin-top:26px;padding-top:18px}
+@media(max-width:680px){main{padding:20px 14px 45px}.overview,.columns{grid-template-columns:1fr}h1{font-size:24px}.metric strong{font-size:23px}.row{flex-wrap:wrap}}
+</style></head><body><main>
+<header><div class="eyebrow">Analysis 3.0 / A18 · Offline acceptance workspace</div><h1>Independent original-evidence review</h1>
+<p class="sub">Evidence may be recorded for separate review. This page never issues keys, verifies a person's identity or grants permission to release.</p>
+<div class="overview">
+<div class="metric"><strong id="case-count">0 / 18</strong><span>Independently accepted physical cases</span></div>
+<div class="metric"><strong>8 / 8</strong><span>Original A9 CI package hashes matched</span></div>
+<div class="metric"><strong id="signer-status">0 / 5</strong><span>Real reviewed signer keys</span></div>
+</div><span class="tag" id="release-state" role="status">RELEASE HOLD</span>
+<p class="mono">Original A9 source: fca45816ed7d3a95bae550b9aa644e29053875f6</p></header>
+<section aria-labelledby="review-heading"><h2 id="review-heading">Review the 18 physical cases</h2>
+<div class="columns">
+<div class="panel"><label for="platform">Choose device platform</label><select id="platform"><option value="android-chrome">Android Chrome · 7 cases</option><option value="samsung-internet">Samsung Internet · 6 cases</option><option value="installed-android-pwa">Installed Android PWA · 5 cases</option></select><ol class="cases" id="case-list"></ol></div>
+<div class="panel"><form id="form" novalidate><fieldset><legend>Prepare an original-evidence review note</legend>
+<label for="case-id">Selected test</label><select id="case-id"></select>
+<label for="evidence-digest">Original evidence SHA-256 (not independently authenticated)</label>
+<input id="evidence-digest" placeholder="64 lowercase hex characters" spellcheck="false" autocomplete="off">
+<label for="witness-note">Original observation (min. 24 characters)</label>
+<textarea id="witness-note" placeholder="Specify the hardware, actual steps, timestamp and original evidence location."></textarea>
+<button type="submit">Record pending review note</button>
+<p class="sub" id="feedback" role="status" aria-live="polite">No physical-device observations have been received.</p>
+</fieldset></form></div>
+</div></section>
+<section aria-labelledby="gates"><h2 id="gates">Operational release gates</h2><div class="panel" id="gate-list"></div>
+<div class="panel"><div class="row"><div><h3>Export review-only packet</h3><p class="sub">Exports the notes currently entered, without any accepted physical tests or signer authority.</p></div><button id="export" type="button">Export unsigned packet</button></div><p id="export-feedback" role="status" aria-live="polite"></p></div>
+</section>
+<footer><strong>Boundary:</strong> Desktop Chromium and mobile emulation are synthetic browser tests. External signed human/physical/production acceptance is required before any release.</footer>
+</main><script>
+'use strict';
+const source='fca45816ed7d3a95bae550b9aa644e29053875f6';
+const platforms={
+ 'android-chrome':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility'],
+ 'samsung-internet':['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume'],
+ 'installed-android-pwa':['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update']
+};
+const gates=[
+ ['Hosted HTTPS originals','OPEN · approved isolated preview not supplied'],
+ ['Android Chrome','0 / 7 actual physical tests accepted'],
+ ['Samsung Internet','0 / 6 actual physical tests accepted'],
+ ['Installed PWA','0 / 5 actual physical tests accepted'],
+ ['Accessibility','OPEN · TalkBack, keyboard, zoom, reduced motion and offline checks'],
+ ['Controlled PWA update and rollback','OPEN · original real-device update and previous stable restore'],
+ ['Independent signer/replay custody','OPEN · zero real reviewed keys or global authoritative ledger'],
+ ['A12 production cutover','NOT EXECUTED'],
+ ['A13 24–72h monitoring','NOT OBSERVED']
+];
+const notes={};
+const el=id=>document.getElementById(id);
+function render(){
+ const id=el('platform').value,cases=platforms[id];
+ const list=el('case-list'),sel=el('case-id');list.replaceChildren();sel.replaceChildren();
+ for(const key of cases){
+  const li=document.createElement('li'),name=document.createElement('span'),s=document.createElement('small');
+  name.textContent=key.replaceAll('-',' ');s.textContent=notes[id+':'+key]?'PENDING REVIEW':'NOT TESTED';
+  li.append(name,s);list.append(li);
+  const opt=document.createElement('option');opt.value=key;opt.textContent=key.replaceAll('-',' ');sel.append(opt);
+ }
+}
+el('platform').addEventListener('change',render);
+el('form').addEventListener('submit',event=>{
+ event.preventDefault();
+ const id=el('platform').value,key=el('case-id').value,digest=el('evidence-digest').value.trim().toLowerCase();
+ const note=el('witness-note').value.trim(),idx=id+':'+key;
+ if(!/^[a-f0-9]{64}$/.test(digest)||note.length<24){
+  el('feedback').textContent='Rejected: enter the original 64-character SHA-256 and a 24-character observation.';return;
+ }
+ if(notes[idx]){el('feedback').textContent='Rejected: existing case cannot be overwritten without a separate review.';return;}
+ notes[idx]={platform:id,caseId:key,originalMediaSha256:digest,observation:note,
+  status:'observed-pending-independent-review',capturedAt:new Date().toISOString()};
+ el('feedback').textContent='Pending independent review only. Accepted physical cases remain 0 of 18.';
+ render();
+});
+const gateList=el('gate-list');
+for(const [name,status] of gates){
+ const div=document.createElement('div');div.className='row';
+ div.style.cssText='padding:8px 0;border-bottom:1px solid #e3e6eb';
+ const a=document.createElement('span'),b=document.createElement('small');a.textContent=name;b.textContent=status;
+ div.append(a,b);gateList.append(div);
+}
+el('export').addEventListener('click',()=>{
+ const packet={format:'GomokuA18OfflineReviewDraft',version:18,sourceSha:source,
+  physicalAccepted:0,realSignerKeys:0,ownerApproved:false,liveHostVerified:false,
+  releaseAuthorized:false,canDeploy:false,canCloseRelease:false,documentaryNotes:Object.values(notes)};
+ const blob=new Blob([JSON.stringify(packet,null,2)+'\n'],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='gomoku-a18-unsigned-review-draft.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ el('export-feedback').textContent='Unsigned review-only draft exported. Nothing is certified or approved.';
+});
+render();
+</script></body></html>
