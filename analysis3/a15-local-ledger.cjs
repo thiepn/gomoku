@@ -84,7 +84,7 @@ function transact({directory,approved=false,action,deploymentId,actor,scopeDiges
   }
   const state=validate(doc);
   const code=action==='issue'?crypto.randomBytes(16).toString('hex'):challenge;
-  if(state.issued.has(code)||action==='consume'&&state.consumed.has(code))
+  if((action==='issue'&&state.issued.has(code))||(action==='consume'&&state.consumed.has(code)))
    return result('blocked-replay','Challenge has already been issued or consumed.');
   if(action==='consume'){
    const orig=state.issued.get(code);
