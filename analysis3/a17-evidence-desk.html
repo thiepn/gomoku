@@ -39,7 +39,7 @@ button:hover{background:#37435a}footer{margin-top:28px;border-top:1px solid #cfd
 <p class="muted">The rows below are untested. Desktop/mobile emulation does not count as a real Android or installed PWA observation.</p>
 <label for="platform-filter">Filter platform</label>
 <select id="platform-filter"><option value="all">All 18 cases</option><option value="android-chrome">Android Chrome (7)</option><option value="samsung-internet">Samsung Internet (6)</option><option value="installed-android-pwa">Installed Android PWA (5)</option></select>
-<div class="card" aria-labelledby="capture-heading"><h3 id="capture-heading">Record a pending observation</h3><p class="muted">Evidence entered here is never a verified device pass or human approval. Attach its original SHA-256 reference for independent review. The draft stays on this page until exported.</p><div class="capture-grid"><label>Dedicated preview origin<input id="capture-origin" type="url" placeholder="https://approved-preview.vercel.app/" autocomplete="off"></label><label>Case<select id="capture-case"><option value="">Select a platform first</option></select></label><label>Device identifier<input id="capture-device" autocomplete="off" placeholder="Real device model / ID"></label><label>Browser and OS<input id="capture-browser" autocomplete="off" placeholder="Chrome version · Android version"></label><label>Physical operator<input id="capture-operator" autocomplete="off"></label><label>Original evidence SHA-256<input id="capture-hash" autocomplete="off" spellcheck="false" placeholder="64 hex characters"></label><label class="wide">Dated original observation<textarea id="capture-observation" placeholder="Describe exact hardware, interactions, outcome, file or independent evidence reference (minimum 24 characters)"></textarea></label></div><p><button type="button" id="capture-record">Add pending review note</button></p><p role="status" aria-live="polite" id="capture-feedback">Select one platform above, then choose a case to record.</p></div><div id="case-lists"></div></section>
+<div class="card" aria-labelledby="capture-heading"><h3 id="capture-heading">Record a pending observation</h3><p class="muted">Evidence entered here is never a verified device pass or human approval. Attach its original SHA-256 reference for independent review. The draft stays on this page until exported.</p><div class="capture-grid"><label>Dedicated preview origin<input id="capture-origin" type="url" placeholder="https://approved-preview.vercel.app/" autocomplete="off"></label><label>Case<select id="capture-case"><option value="">Select a platform first</option></select></label><label>Device identifier<input id="capture-device" autocomplete="off" placeholder="Real device model / ID"></label><label>OS version<input id="capture-os" autocomplete="off" placeholder="Android 15"></label><label>Browser version<input id="capture-browser" autocomplete="off" placeholder="Chrome 130"></label><label>Physical operator<input id="capture-operator" autocomplete="off"></label><label>Original evidence SHA-256<input id="capture-hash" autocomplete="off" spellcheck="false" placeholder="64 hex characters"></label><label class="wide">Dated original observation<textarea id="capture-observation" placeholder="Describe exact hardware, interactions, outcome, file or independent evidence reference (minimum 24 characters)"></textarea></label></div><p><button type="button" id="capture-record">Add pending review note</button></p><p role="status" aria-live="polite" id="capture-feedback">Select one platform above, then choose a case to record.</p></div><div id="case-lists"></div></section>
 <section aria-labelledby="gates-title"><h2 id="gates-title">Required independent gates</h2>
 <div class="card">
 <p>Hosted HTTPS eight-asset probes — <strong>NOT COLLECTED</strong></p>
@@ -98,6 +98,7 @@ document.getElementById('capture-record').addEventListener('click',()=>{
  const platform=document.getElementById('platform-filter').value,caseId=document.getElementById('capture-case').value;
  const origin=document.getElementById('capture-origin').value.trim();
  const device=document.getElementById('capture-device').value.trim();
+ const osVersion=document.getElementById('capture-os').value.trim();
  const browser=document.getElementById('capture-browser').value.trim();
  const operator=document.getElementById('capture-operator').value.trim();
  const evidence=document.getElementById('capture-hash').value.trim().toLowerCase();
@@ -106,7 +107,7 @@ document.getElementById('capture-record').addEventListener('click',()=>{
  let u;
  try{u=new URL(origin);}catch{u=null;}
  if(!platforms.some(p=>p.id===platform)||!caseId||!u||u.protocol!=='https:'||!u.hostname.endsWith('.vercel.app')||
-    u.port||u.username||u.password||u.pathname!=='/'||u.search||u.hash||!device||!browser||!operator||
+    u.port||u.username||u.password||u.pathname!=='/'||u.search||u.hash||!device||!osVersion||!browser||!operator||
     !/^[a-f0-9]{64}$/.test(evidence)||observation.length<24){
   feedback.textContent='Incomplete: select a platform/case, exact isolated HTTPS root, device, browser/OS, operator, 24-character observation and original SHA-256.';
   return;
@@ -118,17 +119,17 @@ document.getElementById('capture-record').addEventListener('click',()=>{
  if(!record||record.status!=='not_tested'||row.device&&row.device!==device||row.operator&&row.operator!==operator){
   feedback.textContent='Case already recorded or the device/operator differs from earlier evidence.';return;
  }
- draft.origin=u.toString();Object.assign(row,{device,browserVersion:browser,operator});
+ draft.origin=u.toString();Object.assign(row,{device,osVersion,browserVersion:browser,operator});
  Object.assign(record,{status:'observed_pending_independent_review',observation,originalEvidenceDigest:evidence,observedAt:new Date().toISOString()});
  feedback.textContent='Recorded as PENDING INDEPENDENT REVIEW. Verified physical cases remain 0/18. Export draft for separate source verification.';
  render();
 });
 document.getElementById('export').addEventListener('click',()=>{
- const bytes=new Blob([JSON.stringify(worksheet(),null,2)+'\n'],{type:'application/json'});
+ const bytes=new Blob([JSON.stringify(draft,null,2)+'\n'],{type:'application/json'});
  const u=URL.createObjectURL(bytes);const a=document.createElement('a');
  a.href=u;a.download='gomoku-a17-untested-physical-worksheet.json';a.click();
  setTimeout(()=>URL.revokeObjectURL(u),1000);
- document.getElementById('export-note').textContent='Untested draft exported. Zero independently verified physical observations.';
+ document.getElementById('export-note').textContent='Unverified draft exported. Zero independently verified physical observations.';
 });
 updateCases();render();
 </script></body></html>
