@@ -1,0 +1,55 @@
+{
+  "format": "GomokuA15ReadOnlyObservedArtifactBytes",
+  "version": 15,
+  "repository": "thiepn/gomoku",
+  "observedDate": "2026-10-10",
+  "method": "GitHub connector read-only workflow artifact downloads; local Python zipfile + hashlib.sha256, no production requests",
+  "a9": {
+    "sourceSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+    "runId": 37922288752,
+    "artifactId": 11612273760,
+    "artifactBytes": 7285962,
+    "artifactZipSha256": "ba189cfe2e1196e426d651a65e36c1cfa8e8f69bc9d606b237dff9d419653335",
+    "nestedPath": "analysis9-test-output/gomoku-analysis3-a9-offline-candidate.zip",
+    "nestedBytes": 704669,
+    "nestedSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+    "candidatePath": "analysis9-test-output/rc9-candidate.json",
+    "candidateSourceSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+    "checkedAssets": 8,
+    "matchedAssets": 8,
+    "assetByteHashes": {
+      "index.html": "415b0dca3780885a7fa9c21537ed91fe95d2b363b8a0699132057138529c4a30",
+      "sw.js": "45ed20763cfc7b723d57837db9127d85b4109a8b8beb7404e97934b2f4ac81bc",
+      "manifest.webmanifest": "3cc7eceaf132deb2be7f0eacfa4436042110bf56fbbc97d6da64e44956c83de3",
+      "icons/icon-192.png": "b5915c93bbe5eb55ee8119ea5cecba62abdc9e6e5d226169210ae81f09f14515",
+      "icons/icon-512.png": "d9a18ea94c2442b02bac4da5805b02e9a7d6f28a89ac23b177dad7a2b5c2f8d9",
+      "icons/maskable-icon-512.png": "d9a18ea94c2442b02bac4da5805b02e9a7d6f28a89ac23b177dad7a2b5c2f8d9",
+      "icons/apple-touch-icon.png": "b2bfbb19a2230de1a320a6927356a1cd8a7e64552d9b34790318203805b95ef5",
+      "icons/favicon-32.png": "3f14abb71a70522cd73d9a3116c52e6190d468f3ac220e93e7e8477d151ba2f3"
+    }
+  },
+  "a14": {
+    "headSha": "20ed712041029930b41fd76e5c895a6f43c29e1d",
+    "archives": [
+      {
+        "artifactId": 11663486354,
+        "runId": 38035130920,
+        "bytes": 7058,
+        "sha256": "ae908a47f0b313fdb3c463bfb783a4930ad59cf308b9913e49e7a481fe74d1e4"
+      },
+      {
+        "artifactId": 11664320609,
+        "runId": 38035130942,
+        "bytes": 6809,
+        "sha256": "7aa07f7642e703cff54c1da3cbad25cc89956bae3afad03911b5a8f64c85d421"
+      }
+    ]
+  },
+  "classification": "PUBLIC_CI_ARTIFACT_BYTES_ONLY",
+  "independentHumanReview": false,
+  "physicalDeviceEvidence": false,
+  "hostedHttpsProductionEvidence": false,
+  "ownerApproval": false,
+  "releaseAuthorization": false,
+  "note": "Live read-only public GitHub artifact bytes actually downloaded and independently hashed; not an independently witnessed human observation, not hosted preview/production device verification and not release approval."
+}
