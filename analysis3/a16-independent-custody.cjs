@@ -8,7 +8,7 @@ const ROOTS=require('./a16-witness-roots.json');
 const PINS=require('./a15-evidence-pins.json');
 const SHA=/^[a-f0-9]{64}$/,HEX40=/^[a-f0-9]{40}$/;
 const roles=['external-ledger-custodian','independent-evidence-reviewer','release-owner'];
-const kinds=['replay-ledger','physical-acceptance','key-rotation','release-decision'];
+const kinds=['replay-ledger','physical-acceptance','key-rotation','release-decision','operational-closure'];
 const digest=x=>A14.sha(x);
 function output(status,reason,extra={}){
  return {format:'GomokuA16IndependentEvidence',version:16,status,reason,...extra,
