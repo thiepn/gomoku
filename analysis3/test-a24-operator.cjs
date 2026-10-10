@@ -228,4 +228,4 @@ try{
   for(const k of ['canMerge','canTag','canDeploy','canCertifyPhysical','canCloseRelease'])assert.equal(r[k],false);
  });
 }finally{fs.rmSync(tmp,{recursive:true,force:true})}
-console.log(total+' A24 actual original A9/offline host and incremental physical/rollback adversarial tests passed. NO real hosted fetch, device or release.');
+console.log(count+' A24 actual original A9/offline host and incremental physical/rollback adversarial tests passed. NO real hosted fetch, device or release.');
