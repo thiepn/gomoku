@@ -1,0 +1,53 @@
+{
+  "format": "GomokuA23VerifiedParent",
+  "version": 23,
+  "repository": "thiepn/gomoku",
+  "a22Head": "c1456dcadc5de43f8dfee97925593882203f504f",
+  "a9OriginalSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "a9OriginalRun": 37922288752,
+  "a9NestedZipSha256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "runs": [
+    {
+      "name": "A22",
+      "run": 38072066910,
+      "artifact": 11677410694,
+      "sha256": "c73b89a0bfec28448c244527eebaf9b3255d8acfffd812ad7e4c4d76e7553a17"
+    },
+    {
+      "name": "P19",
+      "run": 38072066957
+    },
+    {
+      "name": "P20",
+      "run": 38072066917
+    },
+    {
+      "name": "R4",
+      "run": 38072066885,
+      "artifact": 11677158188,
+      "sha256": "59fa50dd4cbe7ef6c73dce53c05d5ba078129a8e10104f1090d8e66711d03b2f"
+    },
+    {
+      "name": "P21",
+      "run": 38072066865,
+      "artifact": 11676574666,
+      "sha256": "28bead795b915dbb83c9fe5e2410b08d3221f2d33286ed5cbc4c7ac5cdbe03f8"
+    },
+    {
+      "name": "P23",
+      "run": 38072066882,
+      "artifact": 11677138583,
+      "sha256": "70bb0fcba750928c25bbac0c5d289d7a2325ae548b79122960c62ae708de7645"
+    }
+  ],
+  "verifiedIndependentDownloadSHAAndZIPCRC": true,
+  "realSignerRoots": [],
+  "realProviderRoots": [],
+  "realOriginalHumanAcceptances": [],
+  "physicalCasesAccepted": 0,
+  "hostedApproval": false,
+  "a12CutoverExecuted": false,
+  "a13TelemetryHours": 0,
+  "releaseState": "NO_GO",
+  "classification": "ORIGINAL_PUBLIC_CI_ARTIFACTS_NOT_EXTERNAL_HUMAN_DEVICE_OR_HOSTED_ACCEPTANCE"
+}
