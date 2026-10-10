@@ -58,8 +58,9 @@ try:
                 page.evaluate("document.body.style.zoom='2'")
                 check(label+' 200% zoom no clipped horizontal content',page.evaluate('document.documentElement.scrollWidth<=innerWidth+2'))
                 page.evaluate("document.body.style.zoom='1'")
+                page.locator('#platform-filter').focus()
                 page.keyboard.press('Tab')
-                check('desktop keyboard focus is visible on controls',page.evaluate('document.activeElement!==document.body'))
+                check('desktop keyboard reaches export action after filter',page.evaluate("document.activeElement?.id==='export'"))
             context.close()
         browser.close()
 finally:
