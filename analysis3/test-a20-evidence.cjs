@@ -84,7 +84,7 @@ function ledger(){
    {action:'consume',index:2,challenge,eventId:'5'.repeat(64),previousRoot:next,
     nextRoot:last,operator:'SYNTHETIC SEPARATE CONSUMER',payloadDigest:scope,
     providerRootId:'SYNTHETIC PROVIDER',observedAt:'2026-10-10T16:01:00Z'}]};
- const roots={...ROOT,keys:[{keyId:'SYNTHETIC KEY NOT REAL'}],
+ const roots={...ROOT,keys:[{keyId:'SYNTHETIC KEY NOT REAL',operator:'SYNTHETIC KEY OWNER'}],
   providerTrustRoots:['SYNTHETIC PROVIDER']};
  return{log,originalLocal:local,roots,now:NOW};
 }
@@ -180,6 +180,46 @@ test('provider CAS root drift blocked',()=>{
 test('missing provider original archive digest refused',()=>{
  const x=ledger();x.log.originalProviderArchiveDigest=null;
  assert.equal(M.reconcile(x).status,'blocked-provider-originals');
+});
+test('independent signer revocation event preserves monotonic provider root history',()=>{
+ const x=ledger(),e={action:'revoke',index:3,challenge,eventId:'6'.repeat(64),
+  previousRoot:'1'.repeat(64),nextRoot:'7'.repeat(64),
+  operator:'SYNTHETIC INDEPENDENT REVOKER',revokedKeyId:'SYNTHETIC KEY NOT REAL',
+  payloadDigest:scope,providerRootId:'SYNTHETIC PROVIDER',observedAt:'2026-10-10T16:02:00Z'};
+ x.log.entries.push(e);x.log.finalRoot=e.nextRoot;
+ x.log.revokedKeyIds=['SYNTHETIC KEY NOT REAL'];
+ const r=M.reconcile(x);
+ assert.equal(r.status,'multioperator-documentary-consistent',r.reason);
+ assert.deepEqual(r.revokedKeys,['SYNTHETIC KEY NOT REAL']);
+});
+test('revoked signer cannot self-revoke as independent operator',()=>{
+ const x=ledger(),e={action:'revoke',index:3,challenge,eventId:'6'.repeat(64),
+  previousRoot:'1'.repeat(64),nextRoot:'7'.repeat(64),
+  operator:'SYNTHETIC KEY OWNER',revokedKeyId:'SYNTHETIC KEY NOT REAL',
+  payloadDigest:scope,providerRootId:'SYNTHETIC PROVIDER',observedAt:'2026-10-10T16:02:00Z'};
+ x.log.entries.push(e);x.log.finalRoot=e.nextRoot;
+ x.log.revokedKeyIds=['SYNTHETIC KEY NOT REAL'];
+ assert.equal(M.reconcile(x).status,'blocked-revocation');
+});
+test('independently proposed prior-stable recovery is a review only, never execution',()=>{
+ const x=ledger(),e={action:'recover',index:3,challenge,eventId:'6'.repeat(64),
+  previousRoot:'1'.repeat(64),nextRoot:'7'.repeat(64),
+  operator:'SYNTHETIC DISTINCT RECOVERY OPERATOR',
+  previousStableArchiveSha256:'8'.repeat(64),realRecoveryExecuted:false,
+  payloadDigest:scope,providerRootId:'SYNTHETIC PROVIDER',observedAt:'2026-10-10T16:02:00Z'};
+ x.log.entries.push(e);x.log.finalRoot=e.nextRoot;
+ const r=M.reconcile(x);
+ assert.equal(r.status,'multioperator-documentary-consistent',r.reason);
+ assert.deepEqual(r.nonceStates,['recovery-reviewed']);assert.equal(r.canExecuteRecovery,false);
+});
+test('recovery self-reviewed by original consumer fails closed',()=>{
+ const x=ledger(),e={action:'recover',index:3,challenge,eventId:'6'.repeat(64),
+  previousRoot:'1'.repeat(64),nextRoot:'7'.repeat(64),
+  operator:'SYNTHETIC SEPARATE CONSUMER',
+  previousStableArchiveSha256:'8'.repeat(64),realRecoveryExecuted:false,
+  payloadDigest:scope,providerRootId:'SYNTHETIC PROVIDER',observedAt:'2026-10-10T16:02:00Z'};
+ x.log.entries.push(e);x.log.finalRoot=e.nextRoot;
+ assert.equal(M.reconcile(x).status,'blocked-recovery');
 });
 test('key compromise rotation from no real previous public roots denied',()=>{
  assert.equal(M.compromisedKey({globalReport:M.reconcile(ledger())}).status,'blocked-prior-roots');
