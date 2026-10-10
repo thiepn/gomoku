@@ -1,0 +1,91 @@
+name: Analysis 3.0 A22 independently witnessed escrow and incident reconciliation
+on:
+  push:
+    branches: [phase/a22-independent-witness-incidents]
+  pull_request:
+    paths:
+      - 'analysis3/a22-*'
+      - 'analysis3/test-a22-*'
+      - 'analysis3/A22-*'
+      - '.github/workflows/verify-analysis3-a22.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: analysis3-a22-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a22-nondeploying:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # reviewed P19 immutable SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # reviewed P19 immutable SHA
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # reviewed P19 immutable SHA
+        with:
+          python-version: '3.12'
+      - name: Retrieve original A9 immutable source CI archive; not hosted or production
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # reviewed immutable SHA
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a22-input
+      - name: Verify original immutable A9 source ZIP and eight exact original bytes
+        run: python analysis3/a10-stage-preview.py .a22-input analysis22-test-output/preview-static
+      - name: Adversarial source escrow, signer compromise, multioperator, hardware and human owner checks
+        run: |
+          node --check analysis3/a22-external-witness.cjs
+          node --check analysis3/a22-incidents.cjs
+          node --check analysis3/a22-acceptance.cjs
+          node --check analysis3/test-a22-evidence.cjs
+          node analysis3/test-a22-evidence.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Real Chromium localhost desktop/mobile-emulated evidence and conflict review only
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a22-browser.py
+      - name: Independently deny production authority and record exact authored source head
+        env:
+          A22_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const P=require('./analysis3/a22-qualified-parent.json');
+          const roots=require('./analysis3/a18-review-roots.json');
+          const R=require('./analysis3/a22-acceptance.cjs').status();
+          assert.equal(P.signerRoots.length,0);
+          assert.equal(P.remoteProviderTrustRoots.length,0);
+          assert.equal(P.realPhysicalAccepted,0);
+          assert.equal(roots.issuerKeys.length,0);
+          assert.equal(R.status,'NO_GO');
+          for(const k of ['canDeploy','canMerge','canTag','canModifyProductionData','canCertifyPhysical','canCloseRelease','canGrantOwnerAuthority'])
+            assert.equal(R[k],false);
+          const report={format:'GomokuA22SyntheticQualificationOnly',version:22,
+            originalA21Head:P.sourceHead,sourceHeadSha:process.env.A22_SOURCE_HEAD,
+            testedCheckoutSha:process.env.GITHUB_SHA,
+            originalA9RunId:P.originalA9Run,originalA9NestedZipSha256:P.originalOfflineZipSha256,
+            tests:'SYNTHETIC_NODE_AND_REAL_LOCALHOST_CHROMIUM_EMULATION',
+            realPhysicalChrome:0,realPhysicalSamsung:0,realInstalledPwa:0,
+            realOwnerSigners:0,realHostAuthorized:false,realDeviceAcceptance:false,
+            realSwUpgrade:false,realPreviousStableRestore:false,
+            authenticatedGlobalLedger:false,actualA12Cutover:false,realA13Hours:0,
+            realPostreleaseClosure:false,realPlayerDataTouched:false,
+            canMerge:false,canDeploy:false,canCloseRelease:false,decision:'NO_GO'};
+          fs.writeFileSync('analysis22-test-output/a22-qualification.json',JSON.stringify(report,null,2)+'\n');
+          console.log('PASS A22 NO_GO: original A9 bytes and source, 0/18 real physical, no owner keys or release authority.');
+          NODE
+      - name: Save synthetic-only nondeploying exact-head qualification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # reviewed immutable SHA
+        with:
+          name: a22-synthetic-evidence-qa
+          path: analysis22-test-output/a22-qualification.json
+          retention-days: 14
+          if-no-files-found: warn
