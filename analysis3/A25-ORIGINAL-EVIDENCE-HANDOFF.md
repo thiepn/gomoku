@@ -6,7 +6,7 @@
 
 **\`analysis3/a25-field-kit.html\`** is a responsive, offline browser worksheet. It uses WebCrypto SHA-256 on locally selected **original media AND a separately retained rights/intake source file**. The operator can work incrementally through **7 Android Chrome + 6 Samsung Internet + 5 installed Android PWA + 7 accessibility** original cases and see which remain missing. All case statuses are pending and 0/18 are real-human approved. Buttons now export actual source-compatible A24 field, rollback and blank eight-response host manifests rather than only an unsigned narrative report.
 
-The exact uploaded media file can be saved unchanged via **Save selected original .bin**. The user's browser download location is **not** the final custody directory: the operator must independently move and preserve the original under the indicated controlled \`media/<platform>/<case-id>.bin\` or \`assistive/<id>.bin\` path, retaining rights originals separately. No original binary is put into a JSON export or uploaded to a web endpoint. Avoid sensitive personal/player data in file names and notes.
+The exact uploaded media file can be saved unchanged via **Save selected original .bin**, and the separate rights original via **Save original rights document .bin**. The user's browser download location is **not** the final custody directory: the operator must independently move and preserve the original under the indicated controlled \`media/<platform>/<case-id>.bin\` or \`assistive/<id>.bin\` path, retaining actual SHA-matched rights originals under \`rights/<platform>/<case-id>.bin\` or \`rights/accessibility/<id>.bin\` in a controlled original custody root. No original binary is put into a JSON export or uploaded to a web endpoint. Avoid sensitive personal/player data in file names and notes.
 
 **Import prior field manifest** checks exact immutable original source/branch, only pending states, unique case identities, correct original paths, byte and owner-rights SHA-256 shapes. Such claims are initially labeled **RESELECT ORIGINAL**, **not** counted as source-verified or human accepted. To restore a pending record after importing, the operator must select the media and rights files again; WebCrypto hashes must match both prior original SHA values. Different originals become a **BLOCKED custody conflict**; there is no automatic winner or overwrite.
 
@@ -44,7 +44,7 @@ Likewise the browser's **A24-compatible rollback JSON** can be independently rev
 
 ### A25 cross-source handoff assembler (actual source bytes)
 
-**\`analysis3/a25-handoff.cjs\`** imports a verified partial A24 physical/accessibility manifest and its original binary directory, optional actual separately supplied eight-host-asset manifest/body/A9 original static root, optional distinct rollback originals, and an optional previous A25 review. It calls the real A24 original byte verifiers, emits exact remaining cases, authenticated-*only-as-bytes* receipts and a review checklist of the actual remaining gates. A previously recorded case, host asset or rollback original changing SHA between handoffs is flagged **BLOCKED_INDEPENDENT_ORIGINAL_REVIEW**, with no automatically selected winner.
+**\`analysis3/a25-handoff.cjs\`** imports a verified partial A24 physical/accessibility manifest and its original binary directory, optional actual separately supplied eight-host-asset manifest/body/A9 original static root, optional distinct rollback originals, and an optional previous A25 review. It calls the real A24 original byte verifiers and **additionally reads and byte-SHA-verifies each separately retained rights source original**, without mistaking a SHA for legally approved rights; emits exact remaining cases, authenticated-*only-as-bytes* receipts and a review checklist of the actual remaining gates. A previously recorded case, host asset or rollback original changing SHA between handoffs is flagged **BLOCKED_INDEPENDENT_ORIGINAL_REVIEW**, with no automatically selected winner.
 
 Example:
 
@@ -52,6 +52,7 @@ Example:
 node analysis3/a25-handoff.cjs \
   --field-manifest /private/originals/field-a24.json \
   --field-root /private/originals/media-custody \
+  --rights-root /private/originals/media-custody \
   --host-manifest /private/originals/host-capture.json \
   --host-root /private/originals/host-bodies \
   --a9-root /private/verified-a9-static \
@@ -61,7 +62,7 @@ node analysis3/a25-handoff.cjs \
   --out /private/originals/NEW-a25-handoff-no-authority.json
 \`\`\`
 
-Only \`--field-manifest\`, \`--field-root\` and \`--out\` are required. Host and rollback flags must be supplied in complete groups. Every review output is a **0600-protected no-overwrite JSON** with original hashes, case IDs, blockers, conflicts, \`NO_GO\` and **zero real physical accepted cases**. It never includes media bytes or claims actual provider/human authentication. In a truly independent custody model, external signatures, source provenance and owner approval must still be independently verified; recomputable local SHA alone **does not authenticate the person or the server**.
+\`--field-manifest\`, \`--field-root\`, \`--rights-root\`, and \`--out\` are required. Host and rollback flags must be supplied in complete groups. Every review output is a **0600-protected no-overwrite JSON** with original hashes, case IDs, blockers, conflicts, \`NO_GO\` and **zero real physical accepted cases**. It never includes media bytes or claims actual provider/human authentication. In a truly independent custody model, external signatures, source provenance and owner approval must still be independently verified; recomputable local SHA alone **does not authenticate the person or the server**.
 
 ### Independent signer/global replay, human release and postrelease handoff
 
