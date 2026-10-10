@@ -1,0 +1,42 @@
+{
+  "format": "GomokuA18ReadOnlySourceAnchors",
+  "version": 18,
+  "repo": "thiepn/gomoku",
+  "upstreamA17": "92cc778bb415ce8e7157d386f29e44056c5f9397",
+  "a9OriginalSha": "fca45816ed7d3a95bae550b9aa644e29053875f6",
+  "a9RunId": 37922288752,
+  "a9ArtifactId": 11612273760,
+  "a9ArchiveSHA256": "ba189cfe2e1196e426d651a65e36c1cfa8e8f69bc9d606b237dff9d419653335",
+  "a9NestedSHA256": "186765f892cc245f198f3bef8c32b853e6c53f0d8727bdc347c7db17fd943275",
+  "a17Runs": [
+    {
+      "id": 38058348619,
+      "type": "A17 synthetic QA",
+      "artifactId": 11672325453,
+      "digest": "282988b33f4e1bc0f8364bf783d62a2c5751fe92d5a6d95648af5d6157130c06"
+    },
+    {
+      "id": 38058348577,
+      "type": "R4 tactical baseline",
+      "artifactId": 11672485177,
+      "digest": "875d554ae0a70f8eb43c2dbbce7882d1ac23e60b222be6d4a0093a98971eefd3"
+    },
+    {
+      "id": 38058348581,
+      "type": "P21 capacity",
+      "artifactId": 11672415576,
+      "digest": "3d8cff21603c64e4ff4afb37f46a9a86b528a3f8032b5a711d8d42a2cc4e369e"
+    },
+    {
+      "id": 38058348648,
+      "type": "P23 security",
+      "artifactId": 11671428623,
+      "digest": "ffe8ad5eb03d60130bd7d376d5e988af6555d5d4c1031ec601e8b15abef83fdc"
+    }
+  ],
+  "verifiedArchiveBytes": true,
+  "realHumanKeysProvisioned": false,
+  "hostedApprovalVerified": false,
+  "physicalAcceptance": 0,
+  "releaseAuthorization": false
+}

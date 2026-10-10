@@ -1,0 +1,93 @@
+name: Analysis 3.0 A18 independent originals and real-environment qualification preparation
+on:
+  push:
+    branches: [phase/a18-attested-environment-qualification]
+  pull_request:
+    paths:
+      - 'analysis3/a18-*'
+      - 'analysis3/test-a18-*'
+      - 'analysis3/A18-*'
+      - '.github/workflows/verify-analysis3-a18.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: analysis3-a18-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  a18-originals-nondeploying:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # approved P19 immutable SHA
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # approved P19 immutable SHA
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # approved P19 immutable SHA
+        with:
+          python-version: '3.12'
+      - name: Download original immutable A9 offline candidate (read-only, not a hosted preview)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # approved P19 immutable SHA
+        with:
+          name: analysis3-a9-immutable-candidate-evidence
+          repository: thiepn/gomoku
+          run-id: 37922288752
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .a18-input
+      - name: Reconcile original A9 source, original nested ZIP SHA and eight actual CI asset bytes
+        run: python analysis3/a10-stage-preview.py .a18-input analysis18-test-output/preview-static
+      - name: Test signer rotation, hosted provenance, device accessibility, external replay and owner review
+        run: |
+          node --check analysis3/a18-signer-reconciliation.cjs
+          node --check analysis3/a18-hosted-provenance.cjs
+          node --check analysis3/a18-physical-and-restore.cjs
+          node --check analysis3/a18-release-reconciliation.cjs
+          node --check analysis3/test-a18-evidence.cjs
+          node analysis3/test-a18-evidence.cjs
+          node operations/p19-supply-chain-policy.mjs
+      - name: Verify real Chromium desktop/mobile-emulated reviewer flows, not real Android device approval
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python analysis3/test-a18-browser.py
+      - name: Certify automation is permanently blocked from owner/device/production authority
+        env:
+          A18_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const W=require('./analysis3/a18-signer-reconciliation.cjs');
+          const D=require('./analysis3/a18-release-reconciliation.cjs');
+          const roots=require('./analysis3/a18-review-roots.json');
+          const source=require('./analysis3/a18-source-pins.json');
+          const r=D.defaultReport();
+          assert.equal(roots.issuerKeys.length,0);
+          assert.equal(W.verifiedRoots(),null);
+          assert.equal(source.physicalAcceptance,0);
+          assert.equal(r.originalRealPhysicalCases,0);
+          assert.equal(r.status,'HOLD');
+          for(const k of ['canMerge','canDeploy','canTag','canModifyProductionData','canCloseRelease','canCertifyPhysical','canGrantOwnerAuthority'])assert.equal(r[k],false);
+          fs.writeFileSync('analysis18-test-output/a18-ci-evidence.json',JSON.stringify({
+            format:'GomokuA18SyntheticCIEvidence',version:18,
+            sourceHeadSha:process.env.A18_SOURCE_HEAD,
+            testedCheckoutSha:process.env.GITHUB_SHA,
+            originalA9RunId:37922288752,originalA9SourceSha:source.a9OriginalSha,
+            originalA9ZipSHA256:source.a9NestedSHA256,
+            testClassification:'SYNTHETIC_NODE_AND_LOCAL_CHROMIUM_ONLY',
+            realPhysicalCases:0,realHumanSignerKeys:0,realHostedPreviewApproved:false,
+            actualA12ProductionCutover:false,actualA13PostreleaseMonitoring:false,
+            productionReleaseAuthorized:false,allReleasePermissions:false
+          },null,2)+'\n');
+          console.log('PASS A18 exact A9 original bytes, unchanged operator HOLD and 0 physical/human acceptance.');
+          NODE
+      - name: Upload read-only synthetic QA evidence, never signer keys or private source files
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # approved P19 immutable SHA
+        with:
+          name: gomoku-a18-synthetic-qualification
+          path: |
+            analysis18-test-output/a18-ci-evidence.json
+          if-no-files-found: warn
+          retention-days: 14

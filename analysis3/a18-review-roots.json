@@ -1,0 +1,11 @@
+{
+  "format": "GomokuA18IndependentOperatorRoots",
+  "version": 18,
+  "repo": "thiepn/gomoku",
+  "a17Head": "92cc778bb415ce8e7157d386f29e44056c5f9397",
+  "issuerKeys": [],
+  "revokedKeys": [],
+  "rotationHistory": [],
+  "state": "ZERO_REAL_TRUST_ROOTS",
+  "note": "Read-only policy manifest; no real human keys, identities or operator authorizations have been provided."
+}
