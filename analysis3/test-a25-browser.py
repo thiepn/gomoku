@@ -129,6 +129,8 @@ try:
     page2=ctx.new_page();page2.goto(url,wait_until='domcontentloaded')
     upload(page2,'#import-cli','previous.json',manifestPath.read_bytes())
     page2.locator('#load-cli').click()
+    page2.wait_for_function("document.querySelector('#import-feedback').textContent.includes('receipts loaded') || document.querySelector('#import-feedback').textContent.includes('Rejected') || document.querySelector('#import-feedback').textContent.includes('BLOCKED')")
+    print('A25 IMPORT DIAGNOSTIC',repr(page2.locator('#import-feedback').inner_text()),repr(page2.locator('#coverage').inner_text()[:220]),repr(page2.locator('#physical-pending').inner_text()),flush=True)
     check(label+' reimport original receipt requires reselect binaries',
      'RESELECT ORIGINAL' in page2.locator('#coverage').inner_text() and
      page2.locator('#physical-pending').inner_text()=='0 / 18')
