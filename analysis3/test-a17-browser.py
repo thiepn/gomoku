@@ -52,6 +52,34 @@ try:
             check(label+' downloaded 7/6/5 statuses all untested',
                   sorted(len(v['cases']) for v in obj['platforms'].values())==[5,6,7] and
                   all(x['status']=='not_tested' for v in obj['platforms'].values() for x in v['cases']))
+            page.get_by_label('Filter platform').select_option('android-chrome')
+            page.locator('#capture-case').select_option('fresh-launch')
+            page.locator('#capture-origin').fill('https://synthetic-evidence-preview.vercel.app/')
+            page.locator('#capture-device').fill('SYNTHETIC CHROMIUM EMULATION, NOT A REAL PHONE')
+            page.locator('#capture-os').fill('SYNTHETIC desktop OS')
+            page.locator('#capture-browser').fill('CHROMIUM SYNTHETIC')
+            page.locator('#capture-operator').fill('SYNTHETIC CI RUNNER')
+            page.locator('#capture-hash').fill('a'*64)
+            page.locator('#capture-observation').fill('SYNTHETIC browser emulator test only, never a physical device observation.')
+            page.locator('#capture-record').click()
+            check(label+' case entry remains PENDING INDEPENDENT REVIEW',
+                  page.locator('.case em').first.inner_text()=='PENDING REVIEW' and
+                  'PENDING INDEPENDENT REVIEW' in page.locator('#capture-feedback').inner_text())
+            check(label+' recording notes never increases verified 0/18',page.locator('#physical-count').inner_text()=='0 / 18')
+            with page.expect_download() as pending:
+                page.get_by_role('button',name='Export untested worksheet').click()
+            pending_path=ROOT/'a17-test-pending-temporary.json'
+            pending.value.save_as(str(pending_path))
+            pending_doc=json.loads(pending_path.read_text())
+            pending_path.unlink()
+            case=pending_doc['platforms']['android-chrome']['cases'][0]
+            check(label+' exported pending case preserves original digest but NO approval',
+                  case['status']=='observed_pending_independent_review' and
+                  case['originalEvidenceDigest']=='a'*64 and
+                  pending_doc['physicalAcceptance']=='OPEN' and
+                  pending_doc['ownerAuthorization']=='not_approved')
+            page.get_by_label('Filter platform').select_option('all')
+
             check(label+' no production or external requests',all(x.startswith('http://127.0.0.1:') for x in requests))
             check(label+' browser startup and export have no JS errors',not errors)
             if label=='desktop':
@@ -60,7 +88,7 @@ try:
                 page.evaluate("document.body.style.zoom='1'")
                 page.locator('#platform-filter').focus()
                 page.keyboard.press('Tab')
-                check('desktop keyboard reaches export action after filter',page.evaluate("document.activeElement?.id==='export'"))
+                check('desktop keyboard reaches case capture form after filter',page.evaluate("document.activeElement?.id==='capture-origin'"))
             context.close()
         browser.close()
 finally:
