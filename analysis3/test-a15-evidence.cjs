@@ -120,7 +120,7 @@ function rotationTests(){
  const p3=structuredClone(proposal);p3.keys[0].id=original.keys[0].id;
  assert.equal(Operator.rotation({current,proposal:p3,review}).status,'blocked-key-reuse');
  pass('Pinned historical key ID cannot be reassigned silently');
- const p4=structuredClone(proposal);p4.keys[1].publicKeyPem+='PRIVATE KEY';
+ const p4=structuredClone(proposal);p4.keys[1].privateKeyPem='TEST SHOULD NOT APPEAR IN PUBLIC REVIEW';
  assert.equal(Operator.rotation({current,proposal:p4,review}).status,'blocked-roles');
  pass('Malformed/unreviewed public key material denied');
  const p5=structuredClone(proposal);p5.keys[1].person=p5.keys[0].person;
