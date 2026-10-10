@@ -84,6 +84,8 @@ function replay({ledger,receipt,roots=ROOTS}={}){
  if(last.action!=='consume'||!issue||last.deploymentId!==issue.deploymentId||
   last.scopeDigest!==issue.scopeDigest||!SHA.test(last.packetDigest||''))
   return output('blocked-replay','Local ledger latest challenge not completed with bound packet hash.');
+ if(receipt?.sourceSha!==LOCK.sourceSha||receipt?.a15HeadSha!=='df2b958494460d650574351472770458e5ab5f62')
+  return output('blocked-binding','Wrong immutable source or A15 exact-head ledger witness identity.');
  if(receipt?.kind!=='replay-ledger'||receipt.deploymentId!==last.deploymentId||
   receipt.productionCommitSha!==receipt.payload?.productionCommitSha||
   receipt.payload?.challenge!==last.challenge||receipt.payload?.packetDigest!==last.packetDigest||
