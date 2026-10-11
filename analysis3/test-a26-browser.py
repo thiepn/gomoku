@@ -67,7 +67,7 @@ try:
     check(profile+' no imported originals at startup',page.locator('#case-id option').count()==0)
     upload(page,'#handoff-file','a25.json',(tmp/'a25.json').read_bytes())
     page.locator('#read-source').click()
-    page.wait_for_function("document.querySelector('#case-id').options.length===1")
+    expect(page.locator('#case-id option')).to_have_count(1)
     check(profile+' A25 imported but not human-authenticated',
       'not authenticate A25 provenance' in page.locator('#source-feedback').inner_text())
     page.locator('#witness-name').fill('FAKE REVIEWER')
