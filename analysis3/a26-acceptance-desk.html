@@ -1,0 +1,170 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<title>Gomoku A26 · Original witness desk (NO-GO)</title>
+<style>
+:root{font:16px system-ui,Arial,sans-serif;color:#192a38;background:#eef1f5}
+*{box-sizing:border-box}body{margin:0}main{max-width:1080px;margin:auto;padding:28px 20px 70px}
+header{border-bottom:2px solid #273d54;padding-bottom:20px}h1{font-size:30px;margin:8px 0}h2{font-size:20px}
+p{line-height:1.55;max-width:85ch}.muted,small{color:#435469}
+.badge{display:inline-block;padding:7px 12px;border:2px solid #8b3030;color:#7f2525;font-weight:800}
+.card{background:white;border:1px solid #b7c1cd;padding:22px;margin-top:18px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+label{font-weight:600;display:block;margin:12px 0 4px}
+input,select,textarea{display:block;width:100%;font:inherit;padding:10px;border:1px solid #65778a;color:inherit;background:white;border-radius:0}
+textarea{min-height:110px}input[type=checkbox]{width:auto;display:inline;margin-right:8px}
+button{font:inherit;border:1px solid #273d54;background:#273d54;color:white;padding:10px 14px;margin-top:12px;cursor:pointer}
+button:disabled{background:#65778a;cursor:not-allowed}
+:focus-visible{outline:3px solid #167bbb;outline-offset:3px}
+#case-list{list-style:none;padding:0;max-height:350px;overflow:auto}
+#case-list li{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #d3d8df;padding:9px 0;gap:8px}
+code{overflow-wrap:anywhere}#review-feedback,#source-feedback,#export-feedback{min-height:24px}
+footer{margin-top:25px;border-top:1px solid #b7c1cd;padding-top:18px}
+@media(max-width:700px){main{padding:14px 12px 40px}.cols{grid-template-columns:1fr}.card{padding:15px}h1{font-size:24px}}
+</style></head><body><main>
+<header><small>Analysis 3.0 / A26 / Local evidence intake</small>
+<h1>Original witness acceptance desk</h1>
+<span id="release-status" class="badge" role="status">NO-GO · HUMAN APPROVAL NOT OBTAINED</span>
+<p>Recheck operator-supplied original media, rights document and a separately retained witness file against an A25 offline handoff. Matching bytes are <strong>not</strong> proof of device identity, owner consent, source rights or human signature. No uploads, calls or persistent browser storage.</p>
+</header>
+<section class="card" aria-labelledby="source-title"><h2 id="source-title">1. Import source handoff</h2>
+<label for="handoff-file">Existing A25 NO-GO JSON handoff</label>
+<input id="handoff-file" type="file" accept=".json,application/json">
+<button id="read-source" type="button">Validate source receipt and show cases</button>
+<p id="source-feedback" role="status" aria-live="polite">No source imported. All release gates remain blocked.</p>
+<div class="cols"><div><label for="case-category">Case group</label>
+<select id="case-category"><option value="all">All pending device and accessibility cases</option>
+<option value="android-chrome">Android Chrome</option><option value="samsung-internet">Samsung Internet</option>
+<option value="installed-android-pwa">Installed PWA</option><option value="accessibility">Accessibility</option></select>
+<ul id="case-list" aria-label="Imported original case receipts"></ul></div>
+<div><p><strong id="count">0 pending witness candidates</strong></p>
+<p>Review is incremental. A26 only matches local bytes and stages candidate files for a separately authorized external human reviewer. Even all 25 source files and all 25 witness candidates would <strong>not</strong> authorize release.</p></div></div>
+</section>
+<section class="card" aria-labelledby="capture-title"><h2 id="capture-title">2. Recheck genuine originals and stage witness candidate</h2>
+<div class="cols"><div>
+<label for="case-id">Original source case</label><select id="case-id"></select>
+<label for="media-file">Original media (must match A25 source SHA)</label>
+<input id="media-file" type="file">
+<label for="rights-file">Original rights/intake document (must match A25 rights SHA)</label>
+<input id="rights-file" type="file">
+<label for="witness-file">Independent witness original (retain separately)</label>
+<input id="witness-file" type="file">
+</div><div>
+<label for="witness-name">Claimed witness alias (not authenticated)</label>
+<input id="witness-name" maxlength="100" autocomplete="off">
+<label for="observation">Actual operator/witness observation (avoid personal data)</label>
+<textarea id="observation" maxlength="2000" placeholder="Describe the actual observed procedure, without asserting approval."></textarea>
+<label><input id="acknowledge" type="checkbox">This is an unsigned candidate only. I understand that SHA matching is not consent, legal rights, a physical pass, or owner approval.</label>
+<button id="record" type="button">Rehash all three originals and stage candidate</button>
+<p id="review-feedback" role="status" aria-live="polite">No witness original rechecked.</p>
+<button id="save-original" type="button" disabled>Save last matched witness original unchanged</button>
+</div></div>
+</section>
+<section class="card" aria-labelledby="export-title"><h2 id="export-title">3. Export for independent offline custodian review</h2>
+<p>Copy each saved witness original unchanged into <code>witness/&lt;platform&gt;/&lt;case-id&gt;.bin</code> under your private controlled root. Use A26's Node verifier with the original A24 field and A25 handoff source roots. Do not place personal originals in GitHub, CI artifacts or public hosting.</p>
+<button id="export" type="button" disabled>Export pending witness candidate manifest</button>
+<p id="export-feedback" role="status" aria-live="polite">Nothing authenticated or released.</p>
+</section><footer>
+<strong>Unchanged release blockers:</strong> actual hosted HTTPS; 18 physical Android/PWA cases; seven assistive originals; real SW change and prior-player-data restore; independently validated human rights/signatures/revocation/global replay; A11 owner approval; authorized A12 cutover; A13 genuine 24–72h monitoring.
+</footer></main><script>
+'use strict';
+const SOURCE='10670c85fbd18077069ad69dc8a8079e0214127f',
+ A24='a5ddd553386d4d5dfd9ad97bb432f47e2f8435af',
+ A9='fca45816ed7d3a95bae550b9aa644e29053875f6',RE=/^[a-f0-9]{64}$/;
+const el=x=>document.getElementById(x),receipts=new Map(),candidates=new Map();
+let handoff=null,lastOriginal=null,lastId=null;
+async function hash(bytes){const v=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(v)].map(n=>n.toString(16).padStart(2,'0')).join('');}
+async function fileHash(f){if(!f||f.size<1||f.size>10*1024*1024)throw Error('original files must be 1 byte to 10 MB each');return hash(await f.arrayBuffer());}
+function fail(where,message){el(where).textContent='BLOCKED: '+message;}
+function refresh(){
+ const c=el('case-id'),keep=c.value,list=el('case-list');c.replaceChildren();list.replaceChildren();
+ const group=el('case-category').value;
+ for(const [id,x] of receipts){
+  const platform=id.split(':')[0];if(group!=='all'&&platform!==group)continue;
+  const o=document.createElement('option');o.value=id;o.textContent=id;c.append(o);
+  const li=document.createElement('li'),name=document.createElement('span'),state=document.createElement('small');
+  name.textContent=id;state.textContent=candidates.has(id)?'WITNESS FILE MATCHED · UNAPPROVED':'SOURCE RECEIPT · RESELECT';li.append(name,state);list.append(li);
+ }
+ if([...c.options].some(o=>o.value===keep))c.value=keep;
+ el('count').textContent=candidates.size+' witness file candidates / '+receipts.size+' imported originals';
+ el('export').disabled=candidates.size===0;
+}
+el('case-category').addEventListener('change',refresh);
+el('read-source').addEventListener('click',async()=>{
+ const file=el('handoff-file').files[0];let p;
+ if(!file||!file.size||file.size>1024*1024){fail('source-feedback','A25 bounded original handoff required');return;}
+ try{p=JSON.parse(await file.text())}catch{fail('source-feedback','malformed JSON');return;}
+ const e=p?.evidence;
+ if(p?.format!=='GomokuA25OriginalEvidenceHandoff'||p.version!==25||
+    p.a24QualifiedHead!==A24||p.originalA9SourceSha!==A9||
+    p.decision!=='NO_GO'||p.ownerApproved!==false||p.canMerge!==false||
+    p.canDeploy!==false||p.actualPhysicalAccepted!==0||
+    p.manualResolutionRequired!==false||p.conflicts?.length!==0||
+    !e||!Array.isArray(e.field)||!Array.isArray(e.rights)||
+    !Array.isArray(e.host)||!Array.isArray(e.rollback)||
+    !RE.test(p.handoffDigest||'')){
+   fail('source-feedback','wrong A25 source, pending authority or disputed custody');return;
+ }
+ let computed;try{computed=await hash(new TextEncoder().encode(JSON.stringify(e)));}
+ catch{fail('source-feedback','WebCrypto unavailable');return;}
+ if(computed!==p.handoffDigest){fail('source-feedback','A25 digest does not match its evidence; no import');return;}
+ const rights=new Map(e.rights.map(x=>[x.id,x]));const fresh=new Map();
+ for(const r of e.field){
+  const x=rights.get(r.id);
+  if(!/^(android-chrome|samsung-internet|installed-android-pwa|accessibility):[a-z0-9-]+$/.test(r.id||'')||
+    fresh.has(r.id)||!RE.test(r.sha256||'')||!x||!RE.test(x.sha256||'')){
+   fail('source-feedback','duplicate/malformed media and rights receipts');return;
+  }
+  fresh.set(r.id,{media:r.sha256,rights:x.sha256});
+ }
+ if(!fresh.size){fail('source-feedback','no verifiable original physical/accessibility receipts');return;}
+ if(candidates.size){fail('source-feedback','first export or abandon staged witnesses; cannot silently change imported source');return;}
+ receipts.clear();fresh.forEach((v,k)=>receipts.set(k,v));handoff=p;lastOriginal=null;lastId=null;
+ el('save-original').disabled=true;refresh();
+ el('source-feedback').textContent='Source receipt structurally verified: '+fresh.size+' cases available for RESELECT ORIGINAL. This self-computed SHA does not authenticate A25 provenance; offline CLI must independently rehash all originals.';
+});
+el('record').addEventListener('click',async()=>{
+ const id=el('case-id').value,expected=receipts.get(id),
+ media=el('media-file').files[0],rights=el('rights-file').files[0],witness=el('witness-file').files[0],
+ name=el('witness-name').value.trim(),note=el('observation').value.trim();
+ if(!handoff||!expected||candidates.has(id)||name.length<3||name.length>100||
+    note.length<24||note.length>2000||!el('acknowledge').checked||
+    /[\u0000-\u001f\u007f]/.test(name+note)){
+  fail('review-feedback','valid unused case, claimed alias, 24-character observation and unsigned acknowledgement required');return;
+ }
+ try{
+  const [a,b,c]=await Promise.all([fileHash(media),fileHash(rights),fileHash(witness)]);
+  if(a!==expected.media||b!==expected.rights||c===a||c===b||
+   [...candidates.values()].some(v=>v.witnessOriginalSha256===c)){
+   fail('review-feedback','original media/rights mismatch or reused witness bytes; human custody conflict, no automatic overwrite');return;
+  }
+  const [platform,caseId]=id.split(':');
+  candidates.set(id,{group:'field',id,mediaSha256:a,rightsSha256:b,
+   witnessOriginalSha256:c,witnessFile:'witness/'+platform+'/'+caseId+'.bin',
+   claimedWitnessAlias:name,observation:note,observedAt:new Date().toISOString(),
+   state:'PENDING_INDEPENDENT_AUTHENTICATION'});
+  lastOriginal=witness;lastId=id;el('save-original').disabled=false;
+  el('review-feedback').textContent='Three original file hashes matched. Pending external human identity, rights, real-device and source review — 0 accepted.';
+  refresh();
+ }catch(e){fail('review-feedback',String(e.message||e));}
+});
+function save(name,blob){
+ const u=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+el('save-original').addEventListener('click',()=>{
+ if(!lastOriginal||!lastId||!candidates.has(lastId)){fail('review-feedback','no matched original');return;}
+ save(lastId.split(':')[1]+'.bin',lastOriginal);
+ el('review-feedback').textContent='Original witness binary exported unchanged for private custody; independent verification still OPEN.';
+});
+el('export').addEventListener('click',()=>{
+ if(!handoff||!candidates.size){fail('export-feedback','first rehash source and independent witness originals');return;}
+ const output={format:'GomokuA26WitnessCandidate',version:26,sourceHead:SOURCE,
+  a25HandoffDigest:handoff.handoffDigest,state:'PENDING_INDEPENDENT_AUTHENTICATION',
+  ownerApproval:'NOT_OBTAINED',releaseState:'NO_GO',humanVerifiedCount:0,
+  entries:[...candidates.values()].sort((a,b)=>a.id.localeCompare(b.id))};
+ save('gomoku-a26-pending-witness-candidates.json',new Blob([JSON.stringify(output,null,2)+'\n'],{type:'application/json'}));
+ el('export-feedback').textContent='Pending JSON exported locally. Preserve each original witness file separately. Physical acceptance 0, human authentication 0, production NO-GO.';
+});
+refresh();
+</script></body></html>
