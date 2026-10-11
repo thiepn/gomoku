@@ -5,7 +5,7 @@ from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from functools import partial
 from threading import Thread
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright,expect
 import json,hashlib,subprocess,tempfile
 ROOT=Path(__file__).resolve().parent
 MEDIA=b'SYNTHETIC A26 browser original, NOT observed physical Chrome'
@@ -77,11 +77,11 @@ try:
     upload(page,'#witness-file','witness.bin',WITNESS)
     page.locator('#acknowledge').check()
     page.locator('#record').click()
-    page.wait_for_function("document.querySelector('#review-feedback').textContent.includes('BLOCKED')")
+    expect(page.locator('#review-feedback')).to_contain_text('BLOCKED')
     check(profile+' SHA mismatch prohibits candidate',page.locator('#export').is_disabled())
     upload(page,'#media-file','media.bin',MEDIA)
     page.locator('#record').click()
-    page.wait_for_function("document.querySelector('#count').textContent.startsWith('1 witness')")
+    expect(page.locator('#count')).to_contain_text('1 witness')
     check(profile+' 3 local original file hashes matched', 'Three original file hashes matched' in page.locator('#review-feedback').inner_text())
     saved=tmp/(profile+'-witness.bin')
     save(page,'#save-original',saved)
