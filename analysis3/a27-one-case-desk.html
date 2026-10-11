@@ -1,0 +1,228 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<title>Gomoku A27 · Physical Acceptance, One Case at a Time</title>
+<style>
+:root{font:16px/1.5 system-ui,Arial,sans-serif;color:#172537;background:#edf0f4}
+*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:auto;padding:24px 18px 70px}
+header{border-bottom:2px solid #263e53;padding-bottom:16px}
+h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:5px 0 12px}h2{font-size:21px;margin-top:0}
+p{max-width:76ch}.panel{background:#fff;border:1px solid #b8c3d0;padding:22px;margin-top:17px}
+.label{font-size:12px;letter-spacing:.11em;text-transform:uppercase;font-weight:750;color:#43566a}
+.badge{display:inline-block;border:2px solid #86342b;color:#76261c;font-weight:800;padding:5px 10px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.stat{border:1px solid #a9b8c7;background:white;padding:12px}.stat strong{display:block;font-size:23px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.controls button{margin:0}
+label{display:block;font-weight:650;margin:12px 0 5px}input,select,textarea,button{font:inherit;border-radius:0}
+input:not([type=checkbox]),select,textarea{display:block;width:100%;border:1px solid #61758b;padding:9px;background:white;color:#172537}
+textarea{min-height:115px;resize:vertical}.cols{display:grid;grid-template-columns:1fr 1fr;gap:19px}
+button{padding:10px 13px;border:1px solid #213e57;background:#213e57;color:white;cursor:pointer}
+button.secondary{background:white;color:#213e57}button:disabled{opacity:.45;cursor:not-allowed}
+input[type=checkbox]{display:inline-block;margin-right:8px}
+:focus-visible{outline:3px solid #1477af;outline-offset:3px}
+small,.muted{color:#475c70}.case{border-top:1px solid #d6dce3;margin-top:15px;padding-top:15px}
+#case-name{font-size:22px;font-weight:750;margin-top:4px;overflow-wrap:anywhere}
+#case-instructions{padding-left:22px}
+#case-instructions li{margin-bottom:8px}
+meter{display:block;width:100%;height:12px}.mono{font:12px ui-monospace,monospace;overflow-wrap:anywhere}
+footer{border-top:1px solid #b5c2cf;margin-top:24px;padding-top:20px}
+@media(max-width:650px){main{padding:14px 12px 40px}.panel{padding:15px}.cols{grid-template-columns:1fr}.stats{gap:5px}.stat{padding:8px}.stat strong{font-size:20px}}
+</style></head><body><main>
+<header><div class="label">Analysis 3.0 · A27 · Offline owner-operated field desk</div>
+<h1>Physical acceptance — one case at a time</h1>
+<span class="badge" id="release-status" role="status">NO-GO · REAL HUMAN APPROVAL 0</span>
+<p>This is an <strong>offline observation worksheet</strong>, not a hosted test, physical-device emulator, approval service or deployment. It never requests your test URL, captures network traffic, loads media remotely or saves browser storage. Cases default to <strong>NOT TESTED</strong>.</p></header>
+<div class="stats" aria-label="Self-reported observation counts">
+<div class="stat"><strong id="pass-count">0</strong><span>Reported PASS, not certified</span></div>
+<div class="stat"><strong id="fail-count">0</strong><span>Reported FAIL, needs triage</span></div>
+<div class="stat"><strong id="untested-count">25</strong><span>NOT TESTED</span></div></div>
+<section class="panel" aria-labelledby="case-title">
+<div class="controls"><div><div class="label" id="case-position">Case 1 of 25</div><div id="case-name">Android Chrome — fresh launch</div></div>
+<div><button id="previous" type="button" class="secondary">Previous</button> <button id="next" type="button" class="secondary">Next</button></div></div>
+<meter id="progress" min="0" max="25" value="0" aria-label="Recorded observation cases"></meter>
+<h2 id="case-title" class="case">Actual field procedure</h2>
+<ol id="case-instructions"></ol>
+<div class="cols">
+<div><label for="status">Only your actually observed outcome</label>
+<select id="status"><option value="NOT_TESTED">NOT TESTED — no claim</option>
+<option value="PASS">PASS — operator-reported only</option>
+<option value="FAIL">FAIL — observed defect to investigate</option></select>
+<label for="tested-origin">Separately authorized isolated HTTPS origin (manually observed; no fetch)</label>
+<input id="tested-origin" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://isolated-example.vercel.app/">
+<label for="hardware">Actual physical device / assistive equipment</label>
+<input id="hardware" autocomplete="off" maxlength="120">
+<label for="os">Exact OS and version</label>
+<input id="os" autocomplete="off" maxlength="120">
+<label for="browser">Exact browser / installed PWA / assistive software version</label>
+<input id="browser" autocomplete="off" maxlength="120">
+<label for="operator">Operator alias (not verified identity)</label>
+<input id="operator" autocomplete="off" maxlength="120">
+</div><div>
+<label for="observation">Actual result, precise steps and defect reproduction if failed</label>
+<textarea id="observation" maxlength="2000" placeholder="Describe exactly what happened on actual hardware. Do not include personal or player data."></textarea>
+<label for="a26-receipt">Optional A26 private pending source receipt, needed for PASS</label>
+<input id="a26-receipt" type="file" accept=".json,application/json">
+<label for="media-file">Original device / assistive capture file (for PASS)</label>
+<input id="media-file" type="file">
+<label for="rights-file">Separate original capture rights/intake file (for PASS)</label>
+<input id="rights-file" type="file">
+<label for="witness-file">Separate original human-witness document (for PASS)</label>
+<input id="witness-file" type="file">
+<label><input type="checkbox" id="actual">I actually observed this test on physical hardware at a separately owner-authorized isolated origin. My status is not a release approval.</label>
+<button type="button" id="record">Record this case locally</button>
+<p id="case-feedback" role="status" aria-live="polite">NOT TESTED. Nothing has been asserted.</p>
+</div></div>
+</section>
+<section class="panel" aria-labelledby="export-title"><h2 id="export-title">Private observation handoff</h2>
+<p>Exported JSON contains manually entered observations. Keep it private. The A27 verifier can rehash three original files against an A26 pending receipt, but matching hashes cannot authenticate a human or provider. Genuine original binaries stay under independent custody; do not upload to GitHub or CI.</p>
+<button id="export" type="button">Export local NO-GO observation manifest</button>
+<button id="reset" type="button" class="secondary">Discard unsaved local session</button>
+<p id="export-feedback" role="status" aria-live="polite">25 NOT TESTED. No physical or human acceptance.</p>
+</section><footer><strong>Other gates remain open:</strong> separately authorized isolated hosted HTTP response capture and provider witness, all 25 physical/accessibility checks, same-origin SW and prior-state recovery, independent identity/consent/signature/replay, A11 owner approval, A12 cutover and A13 24–72-hour monitoring. None is approved by this form.</footer>
+</main><script>
+'use strict';
+const A26='407bfb88430539932ab6bf07df1b33ae7b86829c',
+ A9='fca45816ed7d3a95bae550b9aa644e29053875f6';
+const groups=[
+ ['android-chrome',['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume','accessibility']],
+ ['samsung-internet',['fresh-launch','rules-renju','review-proof','training','offline-reconnect','resume']],
+ ['installed-android-pwa',['install-preview','standalone-launch','offline-launch','saved-data-relaunch','service-worker-update']],
+ ['accessibility',['screen-reader','keyboard-or-switch','zoom-200','reduced-motion','focus-order','contrast','offline-state-persistence']]
+];
+const cases=groups.flatMap(([group,ids])=>ids.map(id=>({group,id,key:group+':'+id})));
+const el=id=>document.getElementById(id),results=new Map(),RE=/^[a-f0-9]{64}$/;
+const state={current:0};const titleCase=x=>x.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+function steps(c){
+ const common=[
+  'Use only an isolated HTTPS preview explicitly authorized by the owner. Do not use production, personal accounts, credentials or protected player data.',
+  'On a REAL physical Android device or assistive setup, execute this named case and directly observe its result. This offline desk does not perform that test.',
+  'Record exact device/OS/browser versions, tested preview origin, reproducible observation and any defect. If not performed, leave NOT TESTED.'
+ ];
+ const details={
+ 'fresh-launch':'Start with the browser fully closed. Launch the authorized preview; confirm the playable board renders, rules screen is reachable and touch targets respond.',
+ 'rules-renju':'Switch rule variants; verify legal/illegal move feedback and Renju restrictions using known test positions.',
+ 'review-proof':'Complete a synthetic local game and inspect replay/analysis and proof labels without claiming tactical correctness not tested.',
+ 'training':'Open training, perform one exercise and verify controls, state changes and review feedback.',
+ 'offline-reconnect':'After an authorized initial load, disable connectivity, exercise offline mode, reconnect and check state consistency; do not modify live data.',
+ 'resume':'Create only disposable test progress, close and reopen the browser, and verify expected resume behavior.',
+ 'accessibility':'With the physical phone accessibility settings, check focus/labels and board navigation, record observed gaps.',
+ 'install-preview':'Install only the separately authorized preview PWA; verify isolated origin, manifest and install flow.',
+ 'standalone-launch':'Launch installed preview from the home screen and verify standalone behavior.',
+ 'offline-launch':'With installed preview already cached, turn off networking and launch; document unavailable content without guessing.',
+ 'saved-data-relaunch':'Use disposable progress only; force-close and reopen installed preview, check what persisted.',
+ 'service-worker-update':'Only under separate explicit owner approval for this isolated preview, update SW then verify expected version and recovery; otherwise NOT TESTED.',
+ 'screen-reader':'Operate with real screen reader, test announced labels, board state and status changes.',
+ 'keyboard-or-switch':'Operate with actual keyboard or switch control and verify all essential actions without touch.',
+ 'zoom-200':'Set actual browser/accessibility zoom to 200%; verify content is readable and key controls remain reachable.',
+ 'reduced-motion':'Enable reduced motion in physical OS and verify non-essential animation suppression.',
+ 'focus-order':'Navigate through controls sequentially on real hardware and record any lost or misleading focus.',
+ 'contrast':'Inspect critical UI text, overlays and board states with actual device accessibility contrast settings.',
+ 'offline-state-persistence':'On physical device, use disposable saved progress and verify accessibility/reconnect state persistence offline.'
+ };
+ return [...common,'Case-specific check: '+details[c.id]];
+}
+function counts(){
+ const all=[...results.values()];el('pass-count').textContent=all.filter(x=>x.reportedStatus==='PASS').length;
+ el('fail-count').textContent=all.filter(x=>x.reportedStatus==='FAIL').length;
+ el('untested-count').textContent=cases.length-all.length;
+ el('progress').value=all.length;
+}
+function display(){
+ const c=cases[state.current],r=results.get(c.key);
+ el('case-position').textContent='Case '+(state.current+1)+' of '+cases.length;
+ el('case-name').textContent=titleCase(c.group)+' — '+titleCase(c.id);
+ el('previous').disabled=state.current===0;el('next').disabled=state.current===cases.length-1;
+ const ol=el('case-instructions');ol.replaceChildren();
+ for(const item of steps(c)){const li=document.createElement('li');li.textContent=item;ol.append(li);}
+ for(const [key,name] of [['tested-origin','testedOrigin'],['hardware','deviceModel'],['os','osVersion'],
+ ['browser','browserVersion'],['operator','operatorAlias'],['observation','observation']])
+  el(key).value=r?.[name]||'';
+ el('status').value=r?.reportedStatus||'NOT_TESTED';
+ for(const key of ['media-file','rights-file','witness-file','a26-receipt'])el(key).value='';
+ el('actual').checked=false;
+ el('case-feedback').textContent=r?('Recorded '+r.reportedStatus+' as OPERATOR-REPORTED, never human certified.'):'NOT TESTED. No observation recorded.';
+ counts();
+}
+el('previous').addEventListener('click',()=>{if(state.current>0){state.current--;display();}});
+el('next').addEventListener('click',()=>{if(state.current<cases.length-1){state.current++;display();}});
+async function sha(f){
+ if(!f||f.size<1||f.size>10*1024*1024)throw Error('each original must be a nonempty file <= 10 MiB');
+ const bytes=await f.arrayBuffer(),v=await crypto.subtle.digest('SHA-256',bytes);
+ return [...new Uint8Array(v)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function isolated(value){
+ let u;try{u=new URL(value)}catch{throw Error('Invalid preview origin')}
+ if(u.protocol!=='https:'||u.username||u.password||u.port||u.pathname!=='/'||u.search||u.hash||
+  u.origin+'/'!==value||!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(u.hostname)||
+  u.hostname==='thiepn.dev'||u.hostname.endsWith('.thiepn.dev'))
+  throw Error('Only exact non-production isolated HTTPS origin permitted');
+ return value;
+}
+async function receiptFor(caseKey,file){
+ if(!file||file.size>1024*1024||file.size<1)throw Error('A26 pending source receipt file needed for PASS');
+ let p;try{p=JSON.parse(await file.text())}catch{throw Error('Malformed A26 receipt JSON')}
+ if(p?.format!=='GomokuA26UnverifiedOriginalWitnessHandoff'||p.version!==26||
+  p.sourceHead!==A26||p.originalA9SourceSha!==A9||
+  p.decision!=='NO_GO'||p.canDeploy!==false||p.ownerApproved!==false||
+  p.actualPhysicalAccepted!==0||p.independentHumanIdentityVerified!==false||
+  !Array.isArray(p.candidateRecords))throw Error('A26 original receipt source/authority invalid');
+ const matches=p.candidateRecords.filter(x=>x.id===caseKey);
+ if(matches.length!==1)throw Error('No unique pending A26 original triple for current case');
+ return matches[0];
+}
+el('record').addEventListener('click',async()=>{
+ const c=cases[state.current],status=el('status').value,out=el('case-feedback');
+ if(status==='NOT_TESTED'){
+  results.delete(c.key);out.textContent='NOT TESTED preserved; no PASS/FAIL claim.';counts();return;
+ }
+ if(!['PASS','FAIL'].includes(status)){out.textContent='BLOCKED: invalid status';return;}
+ const detail={
+  testedOrigin:el('tested-origin').value.trim(),deviceModel:el('hardware').value.trim(),
+  osVersion:el('os').value.trim(),browserVersion:el('browser').value.trim(),
+  operatorAlias:el('operator').value.trim(),observation:el('observation').value.trim()
+ };
+ if(!el('actual').checked){out.textContent='BLOCKED: no actual physical observation acknowledgement';return;}
+ try{
+  isolated(detail.testedOrigin);
+  if(Object.entries(detail).filter(([k])=>k!=='testedOrigin'&&k!=='observation').some(([,v])=>v.length<3||v.length>120)||
+    detail.observation.length<24||detail.observation.length>2000||
+    /[\u0000-\u001f\u007f]/.test(Object.values(detail).join('')))
+   throw Error('Actual device/operator fields and 24-character reproduction observation required');
+  const files=['media-file','rights-file','witness-file'].map(k=>el(k).files[0]);
+  const all=files.every(Boolean),none=files.every(x=>!x);
+  if(!all&&!none)throw Error('Provide all three original files together or none for FAIL');
+  if(status==='PASS'&&!all)throw Error('PASS requires A26 source receipt plus all three reselected original files');
+  let hashes=[null,null,null];
+  if(all){
+   const previous=await receiptFor(c.key,el('a26-receipt').files[0]);
+   hashes=await Promise.all(files.map(sha));
+   if(hashes[0]!==previous.sourceMediaSha256||
+      hashes[1]!==previous.sourceRightsSha256||
+      hashes[2]!==previous.originalWitnessSha256)
+     throw Error('Original media/rights/witness SHA differs from A26 source; custody conflict');
+  }
+  const old=results.get(c.key);
+  if(old&&(old.reportedStatus!==status||old.originalMediaSha256!==hashes[0]||
+   old.originalRightsSha256!==hashes[1]||old.originalWitnessSha256!==hashes[2]))
+   throw Error('Previously recorded case conflict; export separately for independent manual review before replacement');
+  results.set(c.key,{id:c.key,reportedStatus:status,...detail,observedAt:new Date().toISOString(),
+   originalMediaSha256:hashes[0],originalRightsSha256:hashes[1],originalWitnessSha256:hashes[2]});
+  counts();
+  out.textContent='Recorded '+status+' as OPERATOR-REPORTED only. Human acceptance remains 0. Export privately; no network request was made.';
+ }catch(err){out.textContent='BLOCKED: '+err.message;}
+});
+function download(name,data){
+ const blob=new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+el('export').addEventListener('click',()=>{
+ const packet={format:'GomokuA27PhysicalObservationDraft',version:27,
+  a26QualifiedHead:A26,originalA9SourceSha:A9,releaseState:'NO_GO',
+  humanOwnerApproval:'NOT_OBTAINED',observations:cases.filter(c=>results.has(c.key)).map(c=>results.get(c.key))};
+ download('gomoku-a27-private-operator-observations-NO_GO.json',packet);
+ el('export-feedback').textContent='Private, unsigned observations downloaded; no original binaries included. No human or hosted-source authorization. Release NO_GO.';
+});
+el('reset').addEventListener('click',()=>{results.clear();state.current=0;display();el('export-feedback').textContent='Session discarded without persistent storage.';});
+display();
+</script></body></html>
