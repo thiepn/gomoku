@@ -23,10 +23,21 @@ def normalize_ai2_hooks(content):
     assert 'AI2_SEARCH_HOOK' not in content and 'AI2_CONFIG_HOOK' not in content and 'AI2_TELEMETRY_HOOK' not in content, 'Unrecognized AI 2.0 game-app hook'
     return content
 
+def normalize_approved_u2_health(content):
+    """Exact-hash U2 four-route adjustment; historical v117 baseline stays immutable."""
+    approved='6287218afa7e8d5a77c80364c16c18fd4f44cf469fd004707e25c6ec0b041848'
+    assert hashlib.sha256(content.encode()).hexdigest()==approved, 'Unreviewed U2 resilience source'
+    common="const primary=[...document.querySelectorAll('#v92Primary button')].filter(b=>getComputedStyle(b).display!=='none');"
+    old=common+"if(primary.length!==3)issues.push('Primary navigation exposes '+primary.length+' visible destinations instead of 3.');"
+    new=common+"const expectedNav=window.GomokuArena?.version==='2.0.0-u2'&&window.GomokuArena.destinations?.join(',')==='play,analyze,learn,library'&&document.querySelectorAll('#v92Primary button[data-v92-route]').length===3&&document.getElementById('arenaAnalyze')?.getAttribute('aria-label')==='Analyze'?4:3;if(primary.length!==expectedNav)issues.push('Primary navigation exposes '+primary.length+' visible destinations instead of '+expectedNav+'.');"
+    assert content.count(new)==1, 'Expected exact scoped U2 navigation audit'
+    return content.replace(new,old)
+
 for name,digest in baseline['preserved'].items():
     content=modules['game-app'] if name=='_game-app-excluding-material' else modules[name]
     if name=='_game-app-excluding-material':
         content=normalize_ai2_hooks(content);a=content.index('function bake(){');b=content.index('function drawTri(',a);content=content[:a]+content[b:]
+    if name=='v117-resilience-script':content=normalize_approved_u2_health(content)
     assert hashlib.sha256(content.encode()).hexdigest()==digest,'Baseline logic changed: '+name
 for tag,name,file in [('script','analysis2-core','core.js'),('script','analysis6-runtime-policy','../analysis3/runtime-policy.js'),('script','analysis2-runtime','runtime.js'),('script','analysis2-training','training.js'),('style','analysis2-style','analysis.css'),('script','analysis5-practice-core','../analysis3/practice-core.js'),('script','analysis8-practice-integrity','../analysis3/practice-integrity.js'),('style','analysis5-practice-style','../analysis3/practice.css')]:
     matches=re.findall(fr'<{tag} id="{name}">(.*?)</{tag}>',html,re.S)

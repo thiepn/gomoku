@@ -1,0 +1,82 @@
+name: U2 Precision Arena isolated source and browser qualification
+on:
+  pull_request:
+    paths:
+      - 'ui/arena.css'
+      - 'ui/arena.js'
+      - 'ui/build.py'
+      - 'ui/test-arena.py'
+      - '.github/workflows/verify-u2-precision-arena.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: u2-arena-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 pinned
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 pinned
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5 pinned
+        with:
+          python-version: '3.12'
+      - name: Syntax and source safety
+        run: |
+          node --check ui/arena.js
+          python -m py_compile ui/build.py ui/test-arena.py
+          git diff --exit-code -- ui/board-material.js ui/studio.js review/ analysis/ learning/ sw.js
+      - name: Build isolated generated candidate (never commit or deploy)
+        run: |
+          python review/build.py
+          python ui/build.py
+          python analysis/build.py
+          python ui/test-integrity.py
+          python analysis/test-integrity.py
+          python review/ux/test-integrity.py
+          python - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text()
+          assert html.count('id="precision-arena-style"')==1
+          assert html.count('id="precision-arena-script"')==1
+          assert 'ui-arena' in html
+          print('U2 isolated embed verified')
+          PY
+      - name: Rebuild idempotence (without changing sources)
+        run: |
+          sha256sum index.html > /tmp/arena-before.sha
+          python ui/build.py
+          sha256sum index.html > /tmp/arena-after.sha
+          diff -u /tmp/arena-before.sha /tmp/arena-after.sha
+          python ui/test-integrity.py
+      - name: Non-visual invariant checks
+        run: |
+          node review/test-core.cjs
+          node analysis/test-core.cjs
+      - name: Chromium browser runtime
+        run: |
+          pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Real isolated browser tests and screenshots
+        env:
+          U2_URL: http://127.0.0.1:8765/
+          UI_URL: http://127.0.0.1:8765/
+          CHROMIUM_PATH: playwright
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/u2-http.log 2>&1 &
+          python ui/test-arena.py
+          python ui/test-ui.py
+      - name: Upload original screenshot/report evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 pinned
+        with:
+          name: u2-precision-arena-${{ github.sha }}
+          path: |
+            u2-test-output/
+            ui-test-output/
+          retention-days: 21
+          if-no-files-found: warn
