@@ -32,6 +32,10 @@ with sync_playwright() as pw:
         ck(str(width)+'px navigation labels',page.evaluate("JSON.stringify(Array.from(document.querySelectorAll('#v92Primary .v92-nav-main > .v92-nav-btn'),x=>x.getAttribute('aria-label')))==='[\"Play\",\"Analyze\",\"Learn\",\"Library\"]'"))
         ck(str(width)+'px exactly one current nav',page.evaluate('document.querySelectorAll("#v92Primary .v92-nav-main > button[aria-current=page]").length===1'))
         ck(str(width)+'px design token applied',page.evaluate('getComputedStyle(document.body).getPropertyValue("--arena-accent").trim().length>0'))
+        page.wait_for_function('window.GomokuReleaseHealth && window.GomokuReleaseHealth.integrity')
+        integrity=page.evaluate('GomokuReleaseHealth.integrity()')
+        print('U2_RESILIENCE '+str(width)+' '+json.dumps(integrity),flush=True)
+        ck(str(width)+'px complete startup integrity',integrity['pass'])
         if width>=768:
             ck(str(width)+'px fixed desktop rail',page.evaluate('getComputedStyle(document.querySelector("header.top")).position==="fixed"'))
         else:
