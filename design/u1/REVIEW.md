@@ -36,7 +36,7 @@ Editorial, quiet, warm ivory with parchment, brown/oxblood accent and serif disp
 | Analysis/learning flexibility (15%) | 4 | 4 | 4 |
 | Distinctiveness (10%) | 5 | 5 | 4 |
 | Source integration simplicity (5%) | 4 | 4 | 4 |
-| **Weighted subjective / 5** | **4.55** | **4.15** | **4.35** |
+| **Weighted subjective / 5** | **4.55** | **4.10** | **4.40** |
 
 **Recommendation**: A plus C's generous mobile touch spacing, *not a visual reference lock*. No selection can be inferred from a recommendation.
 
