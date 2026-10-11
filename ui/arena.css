@@ -200,3 +200,16 @@ html body.ui-studio.ui-arena.focus-mode aside.panel{display:none!important;}
 @media(prefers-reduced-motion:reduce){
  html body.ui-studio.ui-arena :is(.v92-nav-btn,#arenaAnalyze,.v92-game-btn){transition:none!important;animation:none!important;}
 }
+
+/* Screenshot-confirmed corrections: do not reuse Tournament Table's red underline
+   as the text-label background, and keep the board plus controls within desktop view. */
+html body.ui-studio.ui-arena #v92Primary .v92-nav-btn[aria-current="page"]::after{
+ position:static!important;inset:auto!important;height:auto!important;width:auto!important;
+ background:transparent!important;box-shadow:none!important;border:0!important;
+ color:inherit!important;
+}
+@media(min-width:761px) and (max-height:1100px){
+ html body.ui-studio.ui-arena[data-v92-route="play"] .board-col{
+   width:min(100%,720px,max(420px,calc(100dvh - 312px)))!important;
+ }
+}
