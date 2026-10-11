@@ -27,6 +27,21 @@ for tag,name,filename in [('style','precision-arena-style','arena.css'),('script
     else:
         if s.count('</body>')!=1:raise SystemExit('Expected exactly one closing body for '+name)
         s=s.replace('</body>',block+'\n</body>',1)
+# The original V11.7 resilience audit expects exactly three visible destinations.
+# U2 adds the fourth approved destination. Change only this *scoped* invariant;
+# every readiness, storage, board and accessibility check stays byte-identical.
+health_begin=s.index('<script id="v117-resilience-script">')
+health_end=s.index('</script>',health_begin)
+health=s[health_begin:health_end]
+old_nav="const primary=[...document.querySelectorAll('#v92Primary button')].filter(b=>getComputedStyle(b).display!=='none');if(primary.length!==3)issues.push('Primary navigation exposes '+primary.length+' visible destinations instead of 3.');"
+new_nav="const primary=[...document.querySelectorAll('#v92Primary button')].filter(b=>getComputedStyle(b).display!=='none');const expectedNav=window.GomokuArena?.version==='2.0.0-u2'&&window.GomokuArena.destinations?.join(',')==='play,analyze,learn,library'&&document.querySelectorAll('#v92Primary button[data-v92-route]').length===3&&document.getElementById('arenaAnalyze')?.getAttribute('aria-label')==='Analyze'?4:3;if(primary.length!==expectedNav)issues.push('Primary navigation exposes '+primary.length+' visible destinations instead of '+expectedNav+'.');"
+if old_nav in health:health=health.replace(old_nav,new_nav)
+elif new_nav not in health:raise SystemExit('Unexpected resilience audit; refusing silent change.')
+s=s[:health_begin]+health+s[health_end:]
+import hashlib
+health_script=re.search(r'<script id="v117-resilience-script">(.*?)</script>',s,re.S)
+print('U2_V117_SHA256='+hashlib.sha256(health_script.group(1).encode()).hexdigest())
+
 # Apply tokens before the first paint; feature-dependent elements wait for mounting.
 body=re.search(r'<body\b[^>]*>',s)
 if not body:raise SystemExit('Body missing')
