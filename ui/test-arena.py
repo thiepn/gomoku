@@ -36,6 +36,9 @@ with sync_playwright() as pw:
             ck(str(width)+'px fixed desktop rail',page.evaluate('getComputedStyle(document.querySelector("header.top")).position==="fixed"'))
         else:
             ck(str(width)+'px fixed mobile nav',page.evaluate('getComputedStyle(document.getElementById("v92Primary")).position==="fixed"'))
+        if width>=1280:
+            ck(str(width)+'px Play label has no inherited red block',page.evaluate('getComputedStyle(document.querySelector("#v92Primary [data-v92-route=play]"),"::after").backgroundColor==="rgba(0, 0, 0, 0)"'))
+            ck(str(width)+'px board actions remain inside viewport',page.evaluate('document.getElementById("v92GameBar").getBoundingClientRect().bottom<=innerHeight+3'))
         page.screenshot(path=str(OUT/('play-'+str(width)+'.png')),full_page=False)
         if width in (1440,390):
             page.locator('#arenaAnalyze').click()
