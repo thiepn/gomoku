@@ -221,3 +221,11 @@ html body.ui-studio.ui-arena #v112WelcomeDialog :is(.v112-kicker,#v112Local em,#
 html body.ui-studio.ui-arena .ui-course-copy .ui-kicker{
  color:#ff8b7c!important;
 }
+
+
+/* P25 full-play Axe audit (2026-10-11): existing accent text was 4.43:1
+ * (.eyebrow) and 2.75:1 (#ai2Details). Use text-only accessible accent. */
+html body.ui-studio.ui-arena .v92-section-head .eyebrow,
+html body.ui-studio.ui-arena #ai2Details {
+  color:#ff8b7c!important;
+}
