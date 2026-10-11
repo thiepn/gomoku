@@ -27,10 +27,9 @@ with sync_playwright() as pw:
         ck(str(width)+'px preserved 655 tasks',page.evaluate('GomokuAppearance.courseSummary().reduce((s,x)=>s+(x.total||0),0)===655'))
         ck(str(width)+'px no horizontal page overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth+2'))
         ck(str(width)+'px original game begins unchanged',page.evaluate('GomokuStudio.diagnostics().moves===0'))
-        nav=page.locator('#v92Primary .v92-nav-main > button')
-        print('U2_NAV_DOM '+str(width)+' '+str(page.evaluate("""() => ({html:document.querySelector('#v92Primary .v92-nav-main')?.innerHTML.slice(0,1600),direct:Array.from(document.querySelectorAll('#v92Primary .v92-nav-main > button'),b=>b.getAttribute('aria-label')),legacy:document.querySelectorAll('#v92Primary [data-v92-route]').length,extra:document.querySelectorAll('#arenaAnalyze').length})""")),flush=True)
+        nav=page.locator('#v92Primary .v92-nav-main > .v92-nav-btn')
         ck(str(width)+'px four actual nav buttons',nav.count()==4)
-        ck(str(width)+'px navigation labels',page.evaluate("JSON.stringify(Array.from(document.querySelectorAll('#v92Primary .v92-nav-main > button'),x=>x.getAttribute('aria-label')))==='[\"Play\",\"Analyze\",\"Learn\",\"Library\"]'"))
+        ck(str(width)+'px navigation labels',page.evaluate("JSON.stringify(Array.from(document.querySelectorAll('#v92Primary .v92-nav-main > .v92-nav-btn'),x=>x.getAttribute('aria-label')))==='[\"Play\",\"Analyze\",\"Learn\",\"Library\"]'"))
         ck(str(width)+'px exactly one current nav',page.evaluate('document.querySelectorAll("#v92Primary .v92-nav-main > button[aria-current=page]").length===1'))
         ck(str(width)+'px design token applied',page.evaluate('getComputedStyle(document.body).getPropertyValue("--arena-accent").trim().length>0'))
         if width>=768:
