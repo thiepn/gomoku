@@ -38,6 +38,7 @@ jobs:
           path: .a26-original-a9
       - name: Reverify immutable original A9 assets for inherited A25 regression
         run: |
+          python analysis3/a10-stage-preview.py .a26-original-a9 analysis24-test-output/preview-static
           python analysis3/a10-stage-preview.py .a26-original-a9 analysis25-test-output/preview-static
       - name: Inherited A24/A25 source-byte and new A26 adversarial tests
         run: |
