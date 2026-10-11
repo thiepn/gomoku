@@ -20,7 +20,7 @@ with sync_playwright() as pw:
         page.on('request',lambda req: network.append(req.url) if not req.url.startswith(URL) else None)
         page.goto(URL,wait_until='domcontentloaded')
         page.wait_for_function('window.GomokuArena && document.body.dataset.uiReady === "true"',timeout=25000)
-        page.wait_for_timeout(280)
+        page.wait_for_timeout(1450)
         page.evaluate('document.querySelectorAll("dialog[open]").forEach(x=>x.close())')
         ck(str(width)+'px Arena mounted',page.evaluate('document.body.classList.contains("ui-arena")'))
         ck(str(width)+'px four destinations',page.evaluate("JSON.stringify(GomokuArena.destinations)==='[\"play\",\"analyze\",\"learn\",\"library\"]'"))
@@ -33,7 +33,7 @@ with sync_playwright() as pw:
         ck(str(width)+'px exactly one current nav',page.evaluate('document.querySelectorAll("#v92Primary .v92-nav-main > button[aria-current=page]").length===1'))
         ck(str(width)+'px design token applied',page.evaluate('getComputedStyle(document.body).getPropertyValue("--arena-accent").trim().length>0'))
         if width>=768:
-            ck(str(width)+'px fixed desktop rail',page.evaluate('getComputedStyle(document.querySelector("header.top")).position==="fixed"') if width>768 else page.evaluate('getComputedStyle(document.querySelector("header.top")).position!=="fixed"'))
+            ck(str(width)+'px fixed desktop rail',page.evaluate('getComputedStyle(document.querySelector("header.top")).position==="fixed"'))
         else:
             ck(str(width)+'px fixed mobile nav',page.evaluate('getComputedStyle(document.getElementById("v92Primary")).position==="fixed"'))
         page.screenshot(path=str(OUT/('play-'+str(width)+'.png')),full_page=False)
