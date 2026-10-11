@@ -21,12 +21,12 @@ for tag,name,filename in [('style','tournament-table-style','studio.css'),('scri
 for tag,name,filename in [('style','precision-arena-style','arena.css'),('script','precision-arena-script','arena.js')]:
     content=(root/'ui'/filename).read_text()
     if '</'+tag in content.lower():raise SystemExit('Unsafe inline terminator in '+filename)
-    block=f'<{tag} id="{name}">\\n{content}\\n</{tag}>'
+    block=f'<{tag} id="{name}">\n{content}\n</{tag}>'
     pattern=rf'<{tag} id="{name}">.*?</{tag}>'
     if re.search(pattern,s,re.S):s=re.sub(pattern,lambda _:block,s,count=1,flags=re.S)
     else:
         if s.count('</body>')!=1:raise SystemExit('Expected exactly one closing body for '+name)
-        s=s.replace('</body>',block+'\\n</body>',1)
+        s=s.replace('</body>',block+'\n</body>',1)
 # Apply tokens before the first paint; feature-dependent elements wait for mounting.
 body=re.search(r'<body\b[^>]*>',s)
 if not body:raise SystemExit('Body missing')
@@ -37,11 +37,11 @@ if 'ui-studio' not in body.group():
     s=s[:body.start()]+new+s[body.end():]
 # Pre-paint opt-in on the isolated U2 branch. Keep original classes and settings.
 if 'ui-arena' not in s[body.start():body.start()+300]:
-    body2=re.search(r'<body\\b[^>]*>',s)
+    body2=re.search(r'<body\b[^>]*>',s)
     tag=body2.group()
     tag=tag.replace('class="','class="ui-arena ',1) if 'class="' in tag else tag.replace('<body','<body class="ui-arena"',1)
     s=s[:body2.start()]+tag+s[body2.end():]
-s=re.sub(r'(<meta name="theme-color" content=")[^"]+("[^>]*>)',r'\\g<1>#111b20\\2',s,count=1)
+s=re.sub(r'(<meta name="theme-color" content=")[^"]+("[^>]*>)',r'\g<1>#111b20\2',s,count=1)
 p.write_text(s)
 # Keep the existing review builder and this builder on one PWA cache version.
 r=root/'review/build.py';t=re.sub(r"gomoku-v12\.1\.0-review-1\.0\.0(?:-table-[A-Za-z0-9.\-]+)?",cache,r.read_text())
