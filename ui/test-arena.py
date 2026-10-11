@@ -38,6 +38,8 @@ with sync_playwright() as pw:
             ck(str(width)+'px fixed mobile nav',page.evaluate('getComputedStyle(document.getElementById("v92Primary")).position==="fixed"'))
         if width>=1280:
             ck(str(width)+'px Play label has no inherited red block',page.evaluate('getComputedStyle(document.querySelector("#v92Primary [data-v92-route=play]"),"::after").backgroundColor==="rgba(0, 0, 0, 0)"'))
+            print('U2_LAYOUT '+str(width)+' '+str(page.evaluate("""() => ({viewport:innerHeight,board:document.querySelector('.board-shell')?.getBoundingClientRect().toJSON(),actions:document.getElementById('v92GameBar')?.getBoundingClientRect().toJSON(),place:document.querySelector('.placement')?.getBoundingClientRect().toJSON()})""")),flush=True)
+            page.screenshot(path=str(OUT/('play-'+str(width)+'.png')),full_page=False)
             ck(str(width)+'px board actions remain inside viewport',page.evaluate('document.getElementById("v92GameBar").getBoundingClientRect().bottom<=innerHeight+3'))
         page.screenshot(path=str(OUT/('play-'+str(width)+'.png')),full_page=False)
         if width in (1440,390):
