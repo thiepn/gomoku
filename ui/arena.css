@@ -210,6 +210,6 @@ html body.ui-studio.ui-arena #v92Primary .v92-nav-btn[aria-current="page"]::afte
 }
 @media(min-width:761px) and (max-height:1100px){
  html body.ui-studio.ui-arena[data-v92-route="play"] .board-col{
-   width:min(100%,720px,max(420px,calc(100dvh - 312px)))!important;
+   width:min(100%,720px,max(420px,calc(100dvh - 352px)))!important;
  }
 }
