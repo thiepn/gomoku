@@ -52,11 +52,14 @@ function clear(){
  status.matchId=null;status.selected=null;status.ply=0;status.hints=0;status.reveal=false;
  status.feedback='';status.nativeDetail=false;status.open=false;lastError='';
  const box=$('b8-review');if(box)box.hidden=true;
+}
+function signalClosed(){
  window.dispatchEvent(new CustomEvent('gomoku:bot-e8-position',{detail:{open:false,matchId:null,ply:null}}));
 }
+function closeReview(){clear();signalClosed();}
 function syncOwner(){
  const who=owner();
- if(who!==status.owner){clear();status.owner=who;}
+ if(who!==status.owner){clear();status.owner=who;signalClosed();}
  return who;
 }
 function currentMatch(){
@@ -195,7 +198,7 @@ function ensure(){
  '<button type="button" class="btn ghost" id="b8-close">Close review</button></div>'+
  '<div id="b8-main"></div>';
  const anchor=$('b7-training');if(anchor)anchor.insertAdjacentElement('afterend',el);else hub.append(el);
- $('b8-close').onclick=()=>{clear();};
+ $('b8-close').onclick=closeReview;
  return el;
 }
 function focusIndex(board){
@@ -350,7 +353,7 @@ function seekVerifiedPly(ply){
  if(!status.open||!m||!verifiedReplay(m)||!Number.isInteger(ply)||ply<0||ply>m.moves.length)return false;
  status.ply=ply;resetDecision();render();return true;
 }
-window.GomokuBotReviewE8=Object.freeze({version:'e8.2',openById,close:clear,seekVerifiedPly,readOnlyState:()=>{
+window.GomokuBotReviewE8=Object.freeze({version:'e8.2',openById,close:closeReview,seekVerifiedPly,readOnlyState:()=>{
  const who=syncOwner(),m=currentMatch();
  return Object.freeze({ownerPresent:!!who,reviewOpen:!!m&&status.open,matchId:m?.id||null,ply:m?status.ply:null,
   selectedIndex:m&&status.open?status.selected:null,
