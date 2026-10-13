@@ -14602,4 +14602,149 @@ html body #grDialog.gr-workspace .rw-candidate-point[data-candidate-tone=neutral
 })();
 
 </script>
+<!-- BOT-ELO-E1:START -->
+<script id="bot-elo-e1-rating">
+/* Bot Elo E1: deterministic hypothetical calculations ONLY; never an authority for match settlement. */
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.GomokuBotEloE1=api;})(typeof globalThis==='object'?globalThis:null,function(){
+'use strict';
+const VERSION='bot-elo-e1/1.0.0',RULE='renju-practice',INITIAL=1200,MIN=400,SCALE=400,GAP=400;
+const PLACEMENT=10,PROVISIONAL=20,ESTABLISHED=100;
+const K=Object.freeze({provisional:40,regular:24,established:16});
+// IDs, labels, search budgets mirror createStudioData().levels in index.html.
+// Rating targets are hypothetical design anchors; NONE has been measured or approved.
+const rows=[
+ ['first','Beginner',120,2,10,500],['beg','Casual',200,3,10,800],
+ ['club','Club',330,4,11,1100],['mid','Tactical',540,5,12,1400],
+ ['advanced','Advanced',850,6,14,1700],['high','Challenging',1350,7,16,2000],
+ ['expert','Expert',2150,8,18,2300],['maximum','Master',3400,10,22,2600]
+];
+const BOTS=Object.freeze(rows.map(([id,label,timeMs,maxDepth,width,ratingTarget],index)=>Object.freeze({
+ id,label,order:index+1,nativeLevel:id,ruleset:RULE,
+ nativeBudget:Object.freeze({timeMs,maxDepth,width}),aiPolicy:'human-v11.3',
+ configurationVersion:'studio-12.1.0',ratingTarget,ratingStatus:'uncalibrated',
+ calibrationGames:0,ratingUncertainty:null,ratedEnabled:false
+})));
+const BY_ID=Object.freeze(Object.fromEntries(BOTS.map(x=>[x.id,x])));
+const CONFIG=Object.freeze({version:VERSION,ruleset:RULE,initialRating:INITIAL,minimumRating:MIN,
+ scale:SCALE,farmingGap:GAP,placementGames:PLACEMENT,provisionalGames:PROVISIONAL,
+ establishedGames:ESTABLISHED,kFactors:K,colorAdjustment:0,ratedBackendAvailable:false});
+function normalizeProfile(raw={}){
+ if(!raw||typeof raw!=='object')throw new TypeError('Invalid profile');
+ const rating=raw.rating===undefined?INITIAL:Number(raw.rating),games=raw.games===undefined?0:Number(raw.games);
+ if(!Number.isFinite(rating)||rating<MIN||rating>10000||!Number.isInteger(games)||games<0||games>10000000)throw new RangeError('Invalid simulated rating or games');
+ const wins=raw.wins===undefined?0:Number(raw.wins),draws=raw.draws===undefined?0:Number(raw.draws),losses=raw.losses===undefined?0:Number(raw.losses);
+ if(![wins,draws,losses].every(n=>Number.isInteger(n)&&n>=0)||wins+draws+losses>games)throw new RangeError('Invalid simulated results');
+ return Object.freeze({rating:Math.round(rating*1000)/1000,games,wins,draws,losses,
+  placementRemaining:Math.max(0,PLACEMENT-games),provisional:games<PROVISIONAL});
+}
+function phase(raw){const p=normalizeProfile(raw);return p.games<PLACEMENT?'placement':p.games<PROVISIONAL?'provisional':p.games<ESTABLISHED?'regular':'established';}
+function kFactor(raw){const p=normalizeProfile(raw);return p.games<PROVISIONAL?40:p.games<ESTABLISHED?24:16;}
+function getBot(id){return BY_ID[String(id)]||null;}
+function expectedScore(player,bot,adjustment=0){
+ if(![player,bot,adjustment].every(Number.isFinite))throw new RangeError('Ratings must be finite');
+ return 1/(1+10**((bot-player-adjustment)/SCALE));
+}
+function delta(k,e,s){if(![0,0.5,1].includes(s))throw new RangeError('Invalid score');return Math.round(k*(s-e)*1000)/1000;}
+function inspect(input={}){
+ const profile=normalizeProfile(input.profile||{}),bot=getBot(input.level),k=kFactor(profile);
+ const expected=bot?expectedScore(profile.rating,bot.ratingTarget):null;
+ const points=bot?Object.freeze({win:delta(k,expected,1),draw:delta(k,expected,.5),loss:delta(k,expected,0)}):null;
+ const reasons=[];
+ if(!bot)reasons.push('Unknown engine difficulty');
+ if((input.mode||'ai')!=='ai')reasons.push('Only computer matches qualify');
+ if((input.ruleset||RULE)!==RULE)reasons.push('Unrated ruleset');
+ if((input.opening||'empty')!=='empty')reasons.push('Teaching starts are practice only');
+ if((input.style||'balanced')!=='balanced')reasons.push('Fixed balanced personality required');
+ if(input.assisted===true)reasons.push('Assisted games are practice only');
+ if(bot&&profile.rating-bot.ratingTarget>=GAP)reasons.push('Player is 400+ above this bot');
+ // Decide eligibility before play: do not truncate wins but retain full losses.
+ if(bot&&profile.rating+points.win>bot.ratingTarget+GAP+0.0000001)reasons.push('A win would exceed this bot rating ceiling');
+ return Object.freeze({version:VERSION,bot,profile,phase:phase(profile),k,expected,points,
+  hypotheticalEligible:!reasons.length,ratedEligible:false,ratedAvailable:false,
+  ceiling:bot?bot.ratingTarget+GAP:null,reasons:Object.freeze(reasons),
+  notice:'E1 simulation only. No calibrated ratings, trusted matches or account rating writes.'});
+}
+function project(input={},outcome='win'){
+ if(!['win','draw','loss'].includes(outcome))throw new RangeError('Invalid outcome');
+ const p=inspect(input);if(!p.hypotheticalEligible)return Object.freeze({eligible:false,delta:0,rating:p.profile.rating,reason:p.reasons.join('; ')});
+ const next=Math.max(MIN,Math.round((p.profile.rating+p.points[outcome])*1000)/1000);
+ return Object.freeze({eligible:true,simulated:true,authoritative:false,rating:next,
+  delta:Math.round((next-p.profile.rating)*1000)/1000,outcome});
+}
+function suggest(raw){const p=normalizeProfile(raw);return BOTS.slice().sort((a,b)=>Math.abs(a.ratingTarget-p.rating-100)-Math.abs(b.ratingTarget-p.rating-100))[0];}
+function checkRegistry(nativeLevels){const keys=nativeLevels&&typeof nativeLevels==='object'?Object.keys(nativeLevels):[];
+ const missing=BOTS.filter(b=>!keys.includes(b.id)).map(b=>b.id),extra=keys.filter(x=>!BY_ID[x]);
+ return Object.freeze({ok:!missing.length&&!extra.length,missing,extra});}
+return Object.freeze({VERSION,CONFIG,BOTS,getBot,normalizeProfile,phase,kFactor,expectedScore,delta,inspect,project,suggest,checkRegistry});
+});
+
+</script>
+<script id="bot-elo-e1-preview">
+/* E1 learner-facing preview in the native setup and opponent panels. No persistence. */
+(function(){
+'use strict';
+const E=window.GomokuBotEloE1,$=id=>document.getElementById(id);
+if(!E||$('botEloE1New'))return;
+const styles=document.createElement('style');styles.id='botEloE1Styles';
+styles.textContent=[
+ '.be1{margin:12px 0;padding:12px;border:1px solid var(--hair2,#999);border-radius:8px;background:var(--card2,#f5f5f4);color:var(--ink,#222);font-size:12px}',
+ '.be1-title{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}',
+ '.be1-title strong{font-size:13px}.be1-flag{border:1px solid currentColor;border-radius:4px;padding:2px 6px;font-size:10px}',
+ '.be1-controls{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}.be1-controls label{flex:1;min-width:125px;font-size:11px;display:grid;gap:3px}',
+ '.be1-controls input,.be1-controls select{width:100%;box-sizing:border-box;min-height:34px}',
+ '.be1-data{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:9px 0}',
+ '.be1-data b{display:block;font-size:17px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}',
+ '.be1-data small{display:block;font-size:10px;opacity:.76}.be1-note{margin:6px 0 0;font-size:11px;opacity:.85}',
+ '@media(max-width:430px){.be1-data{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+].join('');
+document.head.append(styles);
+const simulation={rating:1200,games:20},fmt=n=>(n>0?'+':'')+n.toFixed(2);
+function mount(id,node,compact=false){
+ if(!node||$(id))return null;
+ const el=document.createElement('section');el.id=id;el.className='be1';el.setAttribute('aria-label','Bot Elo E1 preview');
+ el.innerHTML='<div class="be1-title"><strong>Bot Elo · scoring preview</strong><span class="be1-flag">Practice only</span></div>'+
+ (compact?'':'<div class="be1-controls"><label>Simulated player Elo<input class="be1-rating" aria-label="Simulated player rating" type="number" min="400" max="3200" step="50" inputmode="numeric" value="1200"></label><label>Experience · K-factor<select class="be1-games" aria-label="Simulated games"><option value="0">Placement · 0</option><option value="20" selected>Regular · 20</option><option value="100">Established · 100</option></select></label></div>')+
+ '<div class="be1-content" aria-live="polite"></div>';node.insertAdjacentElement('afterend',el);return el;
+}
+const newBox=mount('botEloE1New',$('newAIFields'));
+const sideBox=mount('botEloE1Side',$('levelSection')?.querySelector('.engine-note'),true);
+const otherDialog=$('v97CompetitiveDialog'),otherBox=mount('botEloE1Competitive',otherDialog?.querySelector('.v97-body')?.lastElementChild);
+function renderItem(box,place){
+ if(!box)return;
+ const mode=place==='side'?'ai':place==='new'?$('modeSelect')?.value:
+  $('v97ModeAI')?.getAttribute('aria-pressed')==='true'?'ai':'local';
+ box.hidden=mode!=='ai';if(box.hidden)return;
+ const liveLevel=window.GomokuStudio?.diagnostics?.()?.ai?.level;
+ const level=place==='side'?(E.getBot(liveLevel)?liveLevel:$('levelSelect')?.value):
+  place==='new'?$('levelSelect')?.value:$('v97Level')?.value;
+ const data=E.inspect({level,mode,opening:place==='new'?$('openingSelect')?.value:'empty',
+  style:place==='side'?$('styleSelect')?.value:'balanced',profile:simulation});
+ const bot=data.bot,content=box.querySelector('.be1-content');
+ if(!bot){content.textContent='No supported AI level selected.';return;}
+ // All values are from the trusted local registry, not external player input.
+ content.innerHTML='<p class="be1-note">'+bot.label+' · '+bot.id+' · provisional design target (not measured)</p>'+
+ '<div class="be1-data"><div><small>Bot target</small><b>'+bot.ratingTarget+'</b></div>'+
+ '<div><small>Expected player score</small><b>'+(data.expected*100).toFixed(1)+'%</b></div>'+
+ '<div><small>Win / draw / loss</small><b>'+fmt(data.points.win)+'</b><small>'+fmt(data.points.draw)+' / '+fmt(data.points.loss)+'</small></div></div>'+
+ '<p class="be1-note">'+(data.hypotheticalEligible?'Theoretical eligibility: within rating range':data.reasons.join(' · '))+'</p>'+
+ '<p class="be1-note">K '+data.k+' · '+data.phase+'. Ratings are uncalibrated; games here remain ordinary practice. No account rating is read or changed.</p>';
+}
+function render(){renderItem(newBox,'new');renderItem(sideBox,'side');renderItem(otherBox,'other');}
+for(const box of [newBox,otherBox]){
+ if(!box)continue;
+ box.querySelector('.be1-rating')?.addEventListener('input',e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=400&&n<=3200){simulation.rating=n;for(const field of document.querySelectorAll('.be1-rating'))if(field!==e.target)field.value=String(n);render();}});
+ box.querySelector('.be1-games')?.addEventListener('change',e=>{simulation.games=Number(e.target.value);for(const field of document.querySelectorAll('.be1-games'))if(field!==e.target)field.value=e.target.value;render();});
+}
+for(const id of ['levelSelect','modeSelect','openingSelect','colorSelect','styleSelect','v97Level','v97Opening','v97Rule'])$(id)?.addEventListener('change',render);
+$('levels')?.addEventListener('click',()=>queueMicrotask(render));
+for(const id of ['v97ModeAI','v97ModeLocal'])$(id)?.addEventListener('click',()=>queueMicrotask(render));
+const obs=new MutationObserver(render);
+for(const d of [$('newDialog'),otherDialog])if(d)obs.observe(d,{attributes:true,attributeFilter:['open']});
+window.addEventListener('gomoku:v97-open',()=>queueMicrotask(render));
+render();
+window.GomokuBotEloPreviewE1=Object.freeze({version:E.VERSION,refresh:render,simulatedProfile:()=>E.normalizeProfile(simulation)});
+})();
+
+</script>
+<!-- BOT-ELO-E1:END -->
 </body></html>
