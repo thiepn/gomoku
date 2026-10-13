@@ -39,7 +39,7 @@ function options(argv){
    maxGames:flags.has('all')?Infinity:number(flags.get('--max-games')||8,'max games this run',1,1000)
  });
 }
-async function fingerprint(){
+export async function fingerprint(){
  const files={
    search:'supabase/functions/gomoku-room/native-bot-engine.js',
    rules:'supabase/functions/gomoku-room/rules.js',
@@ -51,7 +51,7 @@ async function fingerprint(){
  for(const [k,path] of Object.entries(files))out[k]=sum(await readFile(resolve(ROOT,path)));
  return Object.freeze(out);
 }
-function opening(seed,index){
+export function opening(seed,index){
  if(index%4===0)return [];
  const rand=rng((seed^(index*0x9e3779b9))>>>0),board=new Int8Array(225),moves=[];
  const positionCount=index%4===1?1:index%4===2?3:5;
@@ -75,7 +75,7 @@ function opening(seed,index){
  }
  return moves;
 }
-function plan(config){
+export function plan(config){
  const games=[];
  for(let a=0;a<BOT_IDS.length;a++)for(let b=a+1;b<BOT_IDS.length;b++){
    for(let o=0;o<config.openings;o++){
