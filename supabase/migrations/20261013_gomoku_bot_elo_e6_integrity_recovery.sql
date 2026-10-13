@@ -133,6 +133,10 @@ begin
     if p_status='resigned' then
       raise exception 'Move cannot change match to resigned' using errcode='22023';
     end if;
+    if p_status='active' and next_count<>prior_count+2 then
+      raise exception 'A nonterminal human move requires a verified server bot reply'
+        using errcode='22023';
+    end if;
     if (p_status='active' and (p_result is not null or p_completed_at is not null)) or
        (p_status='completed' and (p_result is null or p_completed_at is null)) then
       raise exception 'Terminal state and game result disagree' using errcode='22023';
