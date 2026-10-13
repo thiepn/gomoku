@@ -189,10 +189,21 @@ async function start(){
 }
 async function resume(){
  const b=auth();if(!b)return;
- await work(async()=>{const data=await b.accountGet('/api/bot-matches/active');
+ await work(async()=>{
+   // After a lost response, the saved command may have ENDED the game.
+   // Recover by the account-owned match id before querying only active games.
+   const held=COMMAND()?.pending?.();
+   if(held){
+     const prior=await b.accountGet('/api/bot-matches/'+encodeURIComponent(held.matchId));
+     if(prior?.match){
+       updateGame(prior.match);await resolveCommand(b);return;
+     }
+     throw Error('Pending command match is unavailable; do not replay it on another board.');
+   }
+   const data=await b.accountGet('/api/bot-matches/active');
    if(!data.match){updateGame(null);message='No active verified bot match. Start one above.';return;}
    updateGame(data.match);
-   if(COMMAND()?.pending?.())await resolveCommand(b);});
+ });
 }
 async function refresh(){
  const b=auth();if(!b||!game)return;
