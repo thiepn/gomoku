@@ -134,7 +134,7 @@ function ensure(){
    const section=document.createElement('section');section.id='b5-hub';section.className='b5-hub';
    section.setAttribute('aria-label','Bot challenge rating and opponent readiness');
    section.innerHTML='<div class="b5-top"><div><h3>Bot challenge</h3><p class="b5-status" id="b5-mode" role="status" aria-live="polite"></p></div>'+
-     '<button class="btn ghost" type="button" id="b5-refresh">Refresh account and matches</button></div>'+
+     '<div class="b5-top-actions"><button class="btn ghost" type="button" id="b5-connect" hidden>Connect THIEPN Account</button> <button class="btn ghost" type="button" id="b5-refresh">Refresh account and matches</button></div></div>'+
      '<div class="b5-kpis"><div class="b5-kpi"><span>Account Bot Elo</span><strong id="b5-rating">Not rated</strong></div>'+
      '<div class="b5-kpi"><span>Personal best</span><strong id="b5-peak">—</strong></div>'+
      '<div class="b5-kpi"><span>Rated matches</span><strong id="b5-games">0</strong></div></div>'+
@@ -143,6 +143,7 @@ function ensure(){
      '<div id="b5-suggest" class="b5-recommend"></div>';
    content.insertBefore(section,content.querySelector('.b2-fields'));
    $('b5-refresh').onclick=refresh;
+   $('b5-connect').onclick=()=>$('onlineBtn')?.click();
  }
  if(!$('b5-history')){
    const region=document.createElement('section');region.id='b5-history';
@@ -210,6 +211,14 @@ function renderJourney(p){
 }
 function renderChoice(){
  const selected=nativeSelected(),bot=E.getBot(selected),official=selectedChoice(),ranked=releaseActive();
+ const list=$('b2-level');
+ if(list)for(const option of list.options){
+   const measured=state.opponents?.opponents?.find(b=>b.id===option.value);
+   const native=E.getBot(option.value);
+   if(native)option.textContent=native.label+
+     (ranked&&Number.isFinite(measured?.measuredRating)?
+       ' · reviewed '+num(measured.measuredRating):' · strength not measured');
+ }
  const name=esc(locationLabel(bot));
  let html='<strong>'+name+'</strong> · Native difficulty '+(bot?.order||'—')+' / 8';
  if(!official||!ranked||!Number.isFinite(official.measuredRating)){
@@ -219,7 +228,8 @@ function renderChoice(){
    html+='<p class="b5-conditions">Reviewed bot strength: '+num(official.measuredRating)+
      ' · Expected player score: '+(100*official.expectedScore).toFixed(1)+
      '% · K '+official.kFactor+'</p>';
-   html+='<p class="b5-conditions">'+esc(labelReason(official.reason))+'</p>';
+   html+='<p class="b5-conditions">'+esc(labelReason(official.reason))+'</p>'+
+     '<p class="b5-aux">Color advantage is not included in these indicative changes; the final server admission remains authoritative.</p>';
    if(official.ratedEligible&&official.changes){
      html+='<div class="b5-rewards" aria-label="Indicative Bot Elo changes">'+
        [['Win',official.changes.win],['Draw',official.changes.draw],['Loss',official.changes.loss]]
@@ -345,6 +355,8 @@ function render(){
    active?'Reviewed calibration active · eligible bot matches may award Elo after server admission.':
    'Practice-only mode · no approved measured bot Elo release. No rating changes.';
  $('b5-refresh').disabled=state.loading||!connected();
+ $('b5-refresh').hidden=!connected();
+ $('b5-connect').hidden=connected();
  renderChoice();renderRecommendation();renderResult();renderHistory();
  const legacy=$('botRatingAccountE4');
  if(legacy&&!legacy.parentElement?.classList.contains('b5-account-details'))ensure();
