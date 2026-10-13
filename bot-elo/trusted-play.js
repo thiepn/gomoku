@@ -76,8 +76,8 @@ function render(){
  if(!dialog)return;
  $('b2-level').value=selectedBot;$('b2-color').value=String(selectedColor);
  const isPlaying=!!game&&game.status==='active',hasGame=!!game,bridge=BRIDGE();
- $('b2-level').disabled=busy||hasGame;$('b2-color').disabled=busy||hasGame;
- $('b2-start').disabled=busy||hasGame||!bridge?.account?.().connected;
+ $('b2-level').disabled=busy||isPlaying;$('b2-color').disabled=busy||isPlaying;
+ $('b2-start').disabled=busy||isPlaying||!bridge?.account?.().connected;
  $('b2-resume').disabled=busy;
  $('b2-refresh').hidden=!hasGame;$('b2-refresh').disabled=busy;
  $('b2-resign').hidden=!isPlaying;$('b2-resign').disabled=busy;
@@ -106,7 +106,7 @@ function render(){
 }
 async function work(callback){
  if(busy)return;busy=true;message='Contacting verified Gomoku server…';render();
- try{await callback();message='';}catch(e){
+ try{message='';await callback();}catch(e){
    message=e.status===404?'Bot match API is not available on the deployed server yet. E2 remains a draft.':
      String(e.message||'Server request failed.');
  }finally{busy=false;render();}
