@@ -16,7 +16,7 @@ alter table public.gomoku_bot_matches
     check (status in ('active','completed','resigned','abandoned'));
 alter table public.gomoku_bot_matches
   add constraint gomoku_bot_e6_abandon_consistency check (
-    (status='abandoned' and abandoned_at is not null and result->>'reason'='idle-expiry'
+    (status='abandoned' and abandoned_at is not null and result->>'reason' in ('idle-expiry','user-abandoned')
        and (result->>'winner')::integer=0)
     or (status<>'abandoned' and abandoned_at is null)
   );
@@ -168,19 +168,48 @@ begin
    completed_at=now(),abandoned_at=now(),updated_at=now(),
    revision=revision+1
  where owner_user_id=p_owner and status='active'
+   and coalesce(rating_admission->>'rated','false')<>'true'
    and updated_at<now()-interval '30 days';
  get diagnostics changed=row_count;
  return changed;
 end;
 $$;
+-- Explicit leave is restricted to PRACTICE matches. A pre-admitted rated game
+-- can only finish by a verified outcome/resignation; never erase an Elo loss.
+create or replace function public.gomoku_bot_e6_abandon_practice(
+  p_owner uuid,p_match uuid
+) returns jsonb language plpgsql security definer set search_path='' as $
+declare m public.gomoku_bot_matches%rowtype;
+begin
+  if p_owner is null or p_match is null then
+    raise exception 'Missing verified owner or game id' using errcode='22023';
+  end if;
+  select * into m from public.gomoku_bot_matches
+    where owner_user_id=p_owner and id=p_match for update;
+  if not found then raise exception 'Bot match not found' using errcode='42501';end if;
+  if m.status<>'active' then
+    return jsonb_build_object('status','already-closed','match',to_jsonb(m));
+  end if;
+  if coalesce(m.rating_admission->>'rated','false')='true' then
+    return jsonb_build_object('status','rated-resignation-required','match',to_jsonb(m));
+  end if;
+  update public.gomoku_bot_matches set
+    status='abandoned',result='{"winner":0,"reason":"user-abandoned"}'::jsonb,
+    abandoned_at=now(),completed_at=now(),updated_at=now(),revision=m.revision+1
+   where owner_user_id=p_owner and id=p_match returning * into m;
+  return jsonb_build_object('status','abandoned','match',to_jsonb(m));
+end;
+$;
 revoke all on function public.gomoku_bot_e6_commit_action(
  uuid,uuid,text,text,bigint,text,jsonb,text,jsonb,text,timestamptz)
  from public,anon,authenticated;
-revoke all on function public.gomoku_bot_e6_expire_idle(uuid)
+revoke all on function public.gomoku_bot_e6_expire_idle(uuid),
+ public.gomoku_bot_e6_abandon_practice(uuid,uuid)
  from public,anon,authenticated;
 grant execute on function public.gomoku_bot_e6_commit_action(
  uuid,uuid,text,text,bigint,text,jsonb,text,jsonb,text,timestamptz),
- public.gomoku_bot_e6_expire_idle(uuid) to service_role;
+ public.gomoku_bot_e6_expire_idle(uuid),
+ public.gomoku_bot_e6_abandon_practice(uuid,uuid) to service_role;
 
 comment on table public.gomoku_bot_match_commands is
  'Immutable owner-private command IDs for atomic, retry-safe verified E2 bot turns. No rating or game state duplicate.';
