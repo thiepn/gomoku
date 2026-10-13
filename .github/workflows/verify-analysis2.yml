@@ -1,10 +1,9 @@
 name: Analysis 2.0 verification
 on:
-  pull_request:
-    paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-analysis2.yml']
   push:
     branches: [main]
     paths: ['index.html', 'sw.js', 'analysis/**', 'review/**', 'ui/**', '.github/workflows/verify-analysis2.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

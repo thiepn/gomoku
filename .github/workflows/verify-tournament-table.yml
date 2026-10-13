@@ -1,10 +1,9 @@
 name: Tournament Table verification
 on:
-  pull_request:
-    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', '.github/workflows/verify-tournament-table.yml']
   push:
     branches: [main]
     paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'ui/**', 'review/**', '.github/workflows/verify-tournament-table.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

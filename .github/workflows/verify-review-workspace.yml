@@ -1,10 +1,9 @@
 name: Review Workspace verification
 on:
-  pull_request:
-    paths: ['index.html', 'sw.js', 'review/**', 'analysis/**', 'ui/**', '.github/workflows/verify-review-workspace.yml']
   push:
     branches: [main]
     paths: ['index.html', 'sw.js', 'review/**', 'analysis/**', 'ui/**', '.github/workflows/verify-review-workspace.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
