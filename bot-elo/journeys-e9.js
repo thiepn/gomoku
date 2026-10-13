@@ -53,7 +53,7 @@ function sync(){
  const allowed=!!who&&UUID.test(who)&&s?.ownerVerified===true&&s.ownerKey===who&&
   r?.reviewOpen===true&&UUID.test(String(match||''))&&Array.isArray(s.matches);
  if(!allowed)return null;
- const m=s.matches.find(x=>x.id===match);
+ const m=s.matches.find(x=>x?.id===match);
  if(!m||m.ownerVerified!==true||m.integrity?.serverAuthoritative!==true||
     m.integrity?.verifiedRules!==true||m.rule!=='renju-practice'||
     !['resigned','completed'].includes(m.status)||!m.result||
@@ -234,6 +234,29 @@ function afterHuman(m,ply){
  const current=m.moves[ply],future=m.moves.slice(ply+1,state.chain[state.step+1]??Math.min(m.moves.length,ply+3));
  return {record:current,follow:future};
 }
+function historicalNativeFollowup(n,m,d){
+ const move=d.record;
+ let analysis;
+ try{analysis=n.legalMove(d.board,move.i,d.side,d.ply);}catch(_){return 'Original move classification unavailable.';}
+ if(!analysis?.legal)return 'The original rules did not confirm this historical move; no tactical feedback is asserted.';
+ let message='Native classification of the recorded human move: '+
+   (analysis.win?'immediate legal five':'legal move')+
+   '; native four groups '+(analysis.fours?.length||0)+
+   ', native three groups '+(analysis.threes?.length||0)+'.';
+ const response=m.moves[d.ply+1];
+ if(!analysis.win&&response?.actor==='bot'){
+   try{
+     const played=n.replay(m.moves.slice(0,d.ply+2));
+     if(!played.result){
+       const wins=validWins(n,played.board,m.playerColor,d.ply+2);
+       message+=' After the actual recorded bot reply '+coord(response.i)+
+         ', the native kernel finds '+wins.length+' legal immediate-five option'+
+         (wins.length===1?'':'s')+' for the human player.';
+     }else message+=' The verified transcript reaches a terminal result after that recorded reply.';
+   }catch(_){message+=' The subsequent source position cannot be classified.';}
+ }
+ return message+' Shape counts are heuristics, not a proof of optimality.';
+}
 function ensure(){
  const e8=$('b8-review');if(!e8)return null;
  if(!$('b9-css')){
@@ -297,6 +320,7 @@ function render(){
   (state.status?'<p class="b9-muted" role="status">'+esc(state.status)+'</p>':'')+
   (state.reveal?'<div class="b9-answer"><strong>Actual source decision:</strong> '+esc(coord(following.record.i))+
     ' by '+esc(following.record.actor)+'. Not necessarily the optimal move.'+
+    '<p>'+esc(historicalNativeFollowup(n,ctx.m,d))+'</p>'+
     (following.follow.length?'<p>Recorded intervening moves: '+following.follow.map(m=>esc(m.actor+' '+coord(m.i))).join(' → ')+
      '. These are authenticated historical replies, not bot responses to your hypothetical choice.</p>':'')+
     '</div>':'')+
