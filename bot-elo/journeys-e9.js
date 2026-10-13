@@ -359,7 +359,16 @@ window.addEventListener('gomoku:bot-e8-position',render);
 window.addEventListener('gomoku:bot-training-data-updated',render);
 window.addEventListener('gomoku:bot-workspace-opened',render);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
-window.GomokuBotTrainingE9=Object.freeze({version:'e9.1',render,readOnlyState:()=>{
+function focusVerifiedDecision(ply){
+ const ctx=sync(),n=engine();
+ if(!ctx||!n||!recheck(ctx.m,n)||!Number.isInteger(ply))return false;
+ if(!state.initialized)build(ctx.m,n);
+ const position=state.decisions.findIndex(x=>x.ply===ply);
+ if(position<0)return false;
+ startChain(position,ctx.m);render();
+ return replay()?.readOnlyState?.()?.ply===ply;
+}
+window.GomokuBotTrainingE9=Object.freeze({version:'e9.2',render,focusVerifiedDecision,readOnlyState:()=>{
  const ctx=sync();
  return Object.freeze({ready:!!ctx,matchId:ctx?.m.id||null,chainLength:state.chain.length,
   step:state.step,sessionInspections:[...state.records.values()].reduce((a,x)=>a+x.attempts,0),
