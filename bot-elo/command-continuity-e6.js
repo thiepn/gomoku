@@ -41,7 +41,9 @@ function clear(){
 }
 function pending(){
  const p=safeRead(),active=owner();
- if(!active){clear();return null;}
+ // THIEPN OAuth may still be restoring when the standalone scripts boot.
+ // Keep the envelope unread until identity is resolved; never replay it as guest.
+ if(!active)return null;
  if(!p)return null;
  if(p.owner!==active){clear();return null;}
  return {...p};
