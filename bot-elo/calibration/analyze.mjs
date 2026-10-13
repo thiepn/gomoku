@@ -130,17 +130,6 @@ function normalizeGame(raw,scenario){
    score:info.ended.winner===0?0.5:info.ended.winner===1?1:0,
    plies:moves.length,openingPly:scenario.prefix.length};
 }
-export async function readEvidence(path){
- const text=await readFile(path,'utf8'),lines=text.split(/\r?\n/).filter(Boolean);
- assert(lines.length>0,'no observed matches; refusing to invent results');
- const first=JSON.parse(lines[0]),seed=Number(first.seed),experimentId=first.experimentId;
- // Experiment seed belongs to a campaign, but per-game seed is different.
- const manifest=first.source;
- const current=await fingerprint();
- assert(JSON.stringify(manifest)===JSON.stringify(current),'source revision/hash mismatch; start a new experiment');
- assert(typeof experimentId==='string'&&/^[a-f0-9]{64}$/.test(experimentId),'invalid campaign id');
- return {lines,experimentId,source:manifest};
-}
 export async function analyze(path,{openings=16,seed=20261013,replicates=120}={}){
  if(!Number.isInteger(replicates)||replicates<20||replicates>800)throw Error('Invalid bootstrap size');
  const raw=await readFile(path,'utf8');
@@ -167,10 +156,13 @@ export async function analyze(path,{openings=16,seed=20261013,replicates=120}={}
    bounds=bootstrap(balanced,replicates,seed^0xbeef1)||
      {ratings:Object.fromEntries(IDS.map(id=>[id,{low:null,high:null}])),color:{low:null,high:null}};
  const stats=Object.fromEntries(IDS.map(id=>[id,{games:0,wins:0,draws:0,losses:0,
-   black:0,white:0,opponents:new Set(),openings:new Set(),points:0}]));
+   black:0,white:0,blackPoints:0,whitePoints:0,opponents:new Set(),openings:new Set(),points:0,openingFamilies:{empty:{games:0,points:0},center:{games:0,points:0},short:{games:0,points:0},extended:{games:0,points:0}}}]));
  for(const g of balanced){
    for(const [id,color,outcome] of [[g.black,'black',g.score],[g.white,'white',1-g.score]]){
      const st=stats[id];st.games++;st[color]++;st.points+=outcome;
+     st[color+'Points']+=outcome;
+     const family=g.openingPly===0?'empty':g.openingPly===1?'center':g.openingPly===3?'short':'extended';
+     st.openingFamilies[family].games++;st.openingFamilies[family].points+=outcome;
      if(outcome===1)st.wins++;else if(outcome===0.5)st.draws++;else st.losses++;
      st.opponents.add(id===g.black?g.white:g.black);st.openings.add(g.group);
    }
@@ -187,6 +179,10 @@ export async function analyze(path,{openings=16,seed=20261013,replicates=120}={}
      record:{wins:s.wins,draws:s.draws,losses:s.losses,black:s.black,white:s.white},
      distinctOpponents:s.opponents.size,distinctMatchedOpenings:s.openings.size,
      averageScore:s.games?approx(s.points/s.games):null,
+     byColor:{blackScoreRate:s.black?approx(s.blackPoints/s.black):null,
+       whiteScoreRate:s.white?approx(s.whitePoints/s.white):null},
+     byOpeningFamily:Object.fromEntries(Object.entries(s.openingFamilies).map(([family,v])=>[
+       family,{games:v.games,scoreRate:v.games?approx(v.points/v.games):null}])),
      candidateRelativeRating:approx(model.ratings[id]),
      confidence95:low===null?null:{low:approx(low),high:approx(high)},
      status:sufficient?'review-candidate':'provisional-insufficient-evidence',
