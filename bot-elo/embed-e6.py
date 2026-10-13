@@ -14,6 +14,13 @@ MODULES=[
 ]
 def main():
     html=PAGE.read_text(encoding="utf-8")
+    # Extend the EXISTING authenticated bridge with its established session
+    # user id, never a new login or private token. E6 uses this only for
+    # client-side isolation; the backend still verifies every request.
+    old="account:()=>({connected:roomAccountState.connected===true,username:roomAccountState.profile?.username||null}),"
+    new="account:()=>({connected:roomAccountState.connected===true,username:roomAccountState.profile?.username||null,userId:roomAccountState.session?.user?.id||null}),"
+    if old in html:html=html.replace(old,new,1)
+    elif new not in html:raise ValueError("Original Account bridge is unavailable")
     for phase,element,path in MODULES:
         content=(ROOT/path).read_text(encoding="utf-8")
         if re.search(r"</script",content,re.I):raise ValueError("Unsafe source "+path)
