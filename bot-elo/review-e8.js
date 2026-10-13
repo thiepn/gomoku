@@ -53,9 +53,13 @@ function clear(){
  status.feedback='';status.nativeDetail=false;status.open=false;lastError='';
  const box=$('b8-review');if(box)box.hidden=true;
 }
+function signalClosed(){
+ window.dispatchEvent(new CustomEvent('gomoku:bot-e8-position',{detail:{open:false,matchId:null,ply:null}}));
+}
+function closeReview(){clear();signalClosed();}
 function syncOwner(){
  const who=owner();
- if(who!==status.owner){clear();status.owner=who;}
+ if(who!==status.owner){clear();status.owner=who;signalClosed();}
  return who;
 }
 function currentMatch(){
@@ -194,7 +198,7 @@ function ensure(){
  '<button type="button" class="btn ghost" id="b8-close">Close review</button></div>'+
  '<div id="b8-main"></div>';
  const anchor=$('b7-training');if(anchor)anchor.insertAdjacentElement('afterend',el);else hub.append(el);
- $('b8-close').onclick=()=>{clear();};
+ $('b8-close').onclick=closeReview;
  return el;
 }
 function focusIndex(board){
@@ -321,6 +325,7 @@ function render(){
  }
  main.querySelectorAll('[data-b8-jump]').forEach(node=>node.onclick=()=>at(Number(node.dataset.b8Jump)));
  if(boardWasFocused)focusIndex($('b8-board'))?.focus({preventScroll:true});
+ window.dispatchEvent(new CustomEvent('gomoku:bot-e8-position',{detail:{open:true,matchId:m.id,ply:status.ply}}));
 }
 function resetDecision(){status.selected=null;status.hints=0;status.reveal=false;status.feedback='';status.nativeDetail=false;status.focus=112;}
 function openById(id,ply){
@@ -343,9 +348,15 @@ window.addEventListener('gomoku:bot-workspace-opened',()=>{ensure();render();});
 window.addEventListener('gomoku:bot-training-data-updated',render);
 window.addEventListener('gomoku:bot-match-updated',()=>{if(status.open)render();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&status.open)render();});
-window.GomokuBotReviewE8=Object.freeze({version:'e8.1',openById,close:clear,readOnlyState:()=>{
+function seekVerifiedPly(ply){
+ const m=currentMatch();
+ if(!status.open||!m||!verifiedReplay(m)||!Number.isInteger(ply)||ply<0||ply>m.moves.length)return false;
+ status.ply=ply;resetDecision();render();return true;
+}
+window.GomokuBotReviewE8=Object.freeze({version:'e8.2',openById,close:closeReview,seekVerifiedPly,readOnlyState:()=>{
  const who=syncOwner(),m=currentMatch();
  return Object.freeze({ownerPresent:!!who,reviewOpen:!!m&&status.open,matchId:m?.id||null,ply:m?status.ply:null,
+  selectedIndex:m&&status.open?status.selected:null,
   certifiedTrainingGrade:false,ratedPointsAwarded:false,engine:typeof window.createEngine==='function'?'native-studio':'unavailable'});
 }});
 })();
