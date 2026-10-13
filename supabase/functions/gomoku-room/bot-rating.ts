@@ -57,7 +57,7 @@ function admissionView(admission:any,status:string,settledAt:unknown){
     ratingBefore:rated?millipoints(a.ratingBeforeMilli):null,
     botRating:rated?millipoints(a.botRatingMilli):null,
     kFactor:rated?Number(a.kFactor):null,
-    ratedEnabledForNewMatches:false // E4 has no approved active release; never infer enabled from candidate E3.
+    previewOnly:!rated // E1 previews and E2 practice cannot issue actual Elo.
   };
 }
 export function publicMatchRating(row:any){
@@ -121,7 +121,7 @@ export async function handleBotRatingRequest(req:Request,parts:string[],s:Servic
   if(parts[2]==='history'&&req.method==='GET'&&parts.length===3){
     const rows=await rest('gomoku_bot_rating_events?owner_user_id=eq.'+q(owner)+
       '&select=*&order=applied_at.desc&limit=50');
-    return json({events:(Array.isArray(rows)?rows:[]).map(safeEvent),rated:false===true,
+    return json({events:(Array.isArray(rows)?rows:[]).map(safeEvent),separateFromPvP:true,
       note:'Immutable authenticated Bot Elo events, separate from human PvP.'});
   }
   if(parts[2]==='recover'&&req.method==='POST'&&parts.length===3)
