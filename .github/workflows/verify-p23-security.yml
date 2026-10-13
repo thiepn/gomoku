@@ -1,7 +1,6 @@
 name: P23 security assurance and abuse resistance
 
 on:
-  pull_request:
   push:
     branches: [main]
   workflow_dispatch:

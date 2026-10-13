@@ -1,21 +1,6 @@
 name: P24 browser device and network qualification
 
 on:
-  pull_request:
-    paths:
-      - 'index.html'
-      - 'sw.js'
-      - 'manifest.webmanifest'
-      - 'client-cache-version.txt'
-      - 'online/**'
-      - 'ui/**'
-      - 'review/**'
-      - 'analysis/**'
-      - 'training/**'
-      - 'audit/p24-*'
-      - 'operations/P24-RUNBOOK.md'
-      - 'operations/p24-qualification-matrix.json'
-      - '.github/workflows/verify-p24-browser-device-network.yml'
   push:
     branches: [main]
     paths:

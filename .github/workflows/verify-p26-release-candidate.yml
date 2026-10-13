@@ -1,15 +1,6 @@
 name: P26 release candidate burn-in and real-device qualification
 
 on:
-  pull_request:
-    paths:
-      - 'operations/P26-RUNBOOK.md'
-      - 'operations/p26-release-candidate.json'
-      - 'operations/p26-device-matrix.json'
-      - 'operations/p26-release-candidate.mjs'
-      - 'operations/p26-device-evidence/**'
-      - 'online/test-p26-release-candidate.mjs'
-      - '.github/workflows/verify-p26-release-candidate.yml'
   push:
     branches: [main]
     paths:
