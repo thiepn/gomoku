@@ -11,7 +11,19 @@ const BRIDGE=()=>window.GomokuCompetitionBridge;
 const files='ABCDEFGHJKLMNOP';
 const stoneName=c=>c===1?'Black':c===2?'White':'Empty';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let dialog=null,game=null,busy=false,pendingId=null,selectedColor=1,selectedBot='mid',message='';
+let dialog=null,game=null,busy=false,pendingId=null,selectedColor=1,selectedBot='mid',message='',boardFocus=112;
+function publish(settlement=null){window.dispatchEvent(new CustomEvent('gomoku:bot-match-updated',{detail:{match:game,settlement}}));}
+function updateGame(next,settlement=null){
+ game=next;pendingId=null;
+ if(game){selectedBot=game.botId;selectedColor=Number(game.playerColor);}
+ publish(settlement);
+}
+function selectBot(id){
+ if(!E.getBot(id)||game?.status==='active')return false;
+ selectedBot=id;if(dialog)render();
+ window.dispatchEvent(new CustomEvent('gomoku:bot-selection-updated',{detail:{level:id}}));
+ return true;
+}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 const css=[
 '.b2-panel{width:min(96vw,720px);max-width:720px;max-height:94dvh;overflow-y:auto;padding:0;background:var(--paper,#fff);color:var(--ink,#242424);border:1px solid var(--hair,#999);border-radius:10px}',
@@ -39,23 +51,31 @@ function ensure(){
  const st=document.createElement('style');st.id='b2-style';st.textContent=css;document.head.append(st);
  dialog=document.createElement('dialog');dialog.id='botEloE2Dialog';dialog.className='b2-panel';
  dialog.setAttribute('aria-labelledby','b2-heading');
- dialog.innerHTML='<header class="b2-head"><div><h2 id="b2-heading">Play against a verified bot</h2><p>E2 · server-controlled match · no rating changes</p></div><button type="button" class="btn ghost" id="b2-close" aria-label="Close bot match">Close</button></header>'+
+ dialog.innerHTML='<header class="b2-head"><div><h2 id="b2-heading">Play a bot</h2><p>Verified server games · practice first · Bot Elo when approved</p></div><button type="button" class="btn ghost" id="b2-close" aria-label="Close bot match">Close</button></header>'+
  '<div class="b2-content"><div class="b2-fields"><label>Opponent<select id="b2-level"></select></label><label>Your color<select id="b2-color"><option value="1">Black · first</option><option value="2">White · second</option></select></label></div>'+
- '<div class="b2-toolbar"><button class="btn" id="b2-start" type="button">Start verified match</button><button class="btn ghost" type="button" id="b2-resume">Resume active match</button><button class="btn ghost" type="button" id="b2-refresh" hidden>Refresh state</button><button class="btn ghost" type="button" id="b2-resign" hidden>Resign</button></div>'+
+ '<div class="b2-toolbar"><button class="btn" id="b2-start" type="button">Start verified practice</button><button class="btn ghost" type="button" id="b2-resume">Resume active match</button><button class="btn ghost" type="button" id="b2-refresh" hidden>Refresh state</button><button class="btn ghost" type="button" id="b2-pass" hidden>Pass</button><button class="btn ghost" type="button" id="b2-resign" hidden>Resign</button></div>'+
  '<div class="b2-status" id="b2-status" role="status" aria-live="polite"></div>'+
  '<div id="b2-board" class="b2-board" role="group" aria-label="Verified Gomoku board" hidden></div>'+
  '<p class="b2-note" id="b2-description">Your moves are submitted to the original authenticated Gomoku server. Bot decisions and results come back from the server. This mode awards no Elo until later phases.</p></div>';
  document.body.append(dialog);
  for(const b of E.BOTS){const o=document.createElement('option');o.value=b.id;o.textContent=b.label+' · provisional tier';$('b2-level').append(o);}
  $('b2-level').value=selectedBot;$('b2-color').value=String(selectedColor);
- $('b2-level').addEventListener('change',e=>{selectedBot=e.target.value;render();});
+ $('b2-level').addEventListener('change',e=>{selectBot(e.target.value);});
  $('b2-color').addEventListener('change',e=>{selectedColor=Number(e.target.value);render();});
  $('b2-close').addEventListener('click',()=>dialog.close());
  $('b2-start').addEventListener('click',start);
  $('b2-resume').addEventListener('click',resume);
  $('b2-refresh').addEventListener('click',refresh);
  $('b2-resign').addEventListener('click',()=>{if(game?.status==='active'&&confirm('Resign this verified bot match?'))send('resign',null);});
- $('b2-board').addEventListener('click',e=>{const cell=e.target.closest?.('[data-b2-cell]');if(cell&&!cell.disabled)send('move',Number(cell.dataset.b2Cell));});
+ $('b2-pass').addEventListener('click',()=>{if(game?.status==='active'&&game.moves.length>=3&&confirm('Pass this turn?'))send('move',-1);});
+ $('b2-board').addEventListener('click',e=>{const cell=e.target.closest?.('[data-b2-cell]');
+   if(cell?.dataset.playable==='true')send('move',Number(cell.dataset.b2Cell));});
+ $('b2-board').addEventListener('focusin',e=>{const cell=e.target.closest?.('[data-b2-cell]');
+   if(cell){boardFocus=Number(cell.dataset.b2Cell);
+     for(const b of $('b2-board').querySelectorAll('[data-b2-cell]'))
+       b.tabIndex=b===cell?0:-1;
+   }
+ });
  $('b2-board').addEventListener('keydown',e=>{
    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
    const el=e.target.closest?.('[data-b2-cell]');if(!el)return;
@@ -81,6 +101,8 @@ function render(){
  $('b2-resume').disabled=busy;
  $('b2-refresh').hidden=!hasGame;$('b2-refresh').disabled=busy;
  $('b2-resign').hidden=!isPlaying;$('b2-resign').disabled=busy;
+ $('b2-pass').hidden=!isPlaying||!game||game.moves.length<3;
+ $('b2-pass').disabled=busy||!isPlaying||game.moves.length%2+1!==Number(game.playerColor);
  const board=$('b2-board');board.hidden=!hasGame;
  let status=message||'Select a bot. Account sign-in and the E2 backend are required.';
  if(game){
@@ -89,18 +111,24 @@ function render(){
      game.result?.reason==='resign'?'You resigned.':
      game.result?.winner===0?'Game drawn.':
      game.result?.winner===me?'You won the verified match.':'Bot won the verified match.')+
-     ' · '+(bot?.label||game.botId)+' · '+game.moves.length+' moves · no Elo adjustment.';
+     ' · '+(bot?.label||game.botId)+' · '+game.moves.length+' moves · '+
+     (game.rating?.admitted?'server-admitted rated match; see verified ledger':'practice only; no Elo adjustment')+'.';
    const current=new Array(225).fill(0);let last=-1;
    for(const m of game.moves){if(m.i>=0){current[m.i]=m.color;last=m.i;}}
    const interactive=isPlaying&&turn===me&&!busy;
+   const priorFocus=board.contains(document.activeElement);
+   if(priorFocus&&document.activeElement?.dataset?.b2Cell)
+     boardFocus=Number(document.activeElement.dataset.b2Cell);
    board.innerHTML=current.map((color,i)=>{
      const coord=files[i%15]+(15-Math.floor(i/15)),occupied=!!color;
      return '<button class="b2-cell" type="button" data-b2-cell="'+i+'" data-last="'+(i===last)+
-       '" aria-label="'+coord+' '+stoneName(color)+'" '+(!interactive||occupied?'disabled':'')+'>'+
+       '" data-playable="'+(interactive&&!occupied)+'" aria-disabled="'+(!interactive||occupied)+
+       '" tabindex="'+(i===boardFocus?0:-1)+'" aria-label="'+coord+' '+stoneName(color)+'">'+
        (color?'<span class="b2-stone" data-color="'+color+'" aria-hidden="true"></span>':'')+'</button>';
    }).join('');
+   if(priorFocus)board.querySelector('[data-b2-cell="'+boardFocus+'"]')?.focus({preventScroll:true});
    $('b2-description').textContent='Match '+game.id+' · revision '+game.revision+' · '+game.bot.policy+
-     '. Server-owned moves and outcome. No undo, hints, local AI decisions, historical Elo or offline rating.';
+     '. Server-owned moves and outcome. No undo, hints or local AI decisions. Rating changes, if approved, appear only in the verified account ledger.';
  }
  $('b2-status').textContent=status;
 }
@@ -116,34 +144,36 @@ async function start(){
  const requestId=pendingId||uid();pendingId=requestId;
  await work(async()=>{const data=await b.accountPost('/api/bot-matches',{requestId,level:selectedBot,color:selectedColor});
    if(!data.match)throw Error('Server did not return a verified match.');
-   game=data.match;pendingId=null;selectedBot=game.botId;selectedColor=game.playerColor;});
+   updateGame(data.match,data.settlement||null);});
 }
 async function resume(){
  const b=auth();if(!b)return;
  await work(async()=>{const data=await b.accountGet('/api/bot-matches/active');
-   if(!data.match){game=null;message='No active verified bot match. Start one above.';return;}
-   game=data.match;pendingId=null;selectedBot=game.botId;selectedColor=game.playerColor;});
+   if(!data.match){updateGame(null);message='No active verified bot match. Start one above.';return;}
+   updateGame(data.match);});
 }
 async function refresh(){
  const b=auth();if(!b||!game)return;
  await work(async()=>{const data=await b.accountGet('/api/bot-matches/'+encodeURIComponent(game.id));
-   if(!data.match)throw Error('Server could not find this match.');game=data.match;});
+   if(!data.match)throw Error('Server could not find this match.');updateGame(data.match);});
 }
 async function send(action,i){
  const b=auth();if(!b||!game||game.status!=='active')return;
  const identity=uid(),revision=game.revision,matchId=game.id;
  await work(async()=>{const data=await b.accountPost('/api/bot-matches/'+encodeURIComponent(matchId)+'/action',
-   {commandId:identity,revision,action,i});if(!data.match)throw Error('Missing authoritative match state.');game=data.match;});
+   {commandId:identity,revision,action,i});if(!data.match)throw Error('Missing authoritative match state.');updateGame(data.match,data.settlement||null);});
 }
 function open(){
  ensure();if(!dialog.open)dialog.showModal();
- render();window.GomokuBotRatingAccountE4?.open?.();if(BRIDGE()?.account?.().connected&&!game)resume();
+ render();window.dispatchEvent(new CustomEvent('gomoku:bot-workspace-opened',{
+   detail:{selectedBot,match:game}}));
+ window.GomokuBotRatingAccountE4?.open?.();if(BRIDGE()?.account?.().connected&&!game)resume();
 }
 function launch(){
  for(const area of ['botEloE1New','botEloE1Side','botEloE1Competitive']){
    const host=$(area);if(!host||host.querySelector('[data-b2-launch]'))continue;
    const b=document.createElement('button');b.type='button';b.className='btn ghost b2-launch';b.dataset.b2Launch='true';
-   b.textContent='Play verified bot training · E2 (no Elo yet)';
+   b.textContent='Open verified Bot Challenge · practice';
    b.onclick=()=>{if(area==='botEloE1New')selectedBot=$('levelSelect')?.value||'mid';
      if(area==='botEloE1Side')selectedBot=window.GomokuStudio?.diagnostics?.()?.ai?.level||'mid';
      if(area==='botEloE1Competitive')selectedBot=$('v97Level')?.value||'mid';
@@ -152,5 +182,11 @@ function launch(){
  }
 }
 launch();
-window.GomokuTrustedBotE2=Object.freeze({version:'e2.1',open,refresh,reset:()=>{if(!game||game.status!=='active'){game=null;render();}}});
+async function loadMatch(id){
+ const b=auth();if(!b||typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id))return;
+ await work(async()=>{const data=await b.accountGet('/api/bot-matches/'+encodeURIComponent(id));
+   if(!data?.match)throw Error('Verified match unavailable.');updateGame(data.match);});
+}
+window.GomokuTrustedBotE2=Object.freeze({version:'e5.1',open,refresh,loadMatch,selectBot,
+  selected:()=>selectedBot,match:()=>game,reset:()=>{if(!game||game.status!=='active'){updateGame(null);render();}}});
 })();

@@ -7,7 +7,9 @@
 if(window.GomokuBotRatingAccountE4)return;
 const $=id=>document.getElementById(id);
 const bridge=()=>window.GomokuCompetitionBridge;
-let mount=null,busy=false,loaded=false,last=null,history=[],error='';
+let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null;
+const activeOwner=()=>bridge()?.account?.().connected===true?
+  String(bridge()?.account?.().username||'connected-account'):null;
 const fmt=n=>typeof n==='number'&&Number.isFinite(n)?Math.round(n).toLocaleString():'—';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function setup(){
@@ -46,7 +48,8 @@ function render(){
  if(!setup())return;
  const account=bridge()?.account?.(),connected=account?.connected===true;
  $('b4-refresh').disabled=busy||!connected;
- const p=last?.profile,availability=last?.availability;
+ const sameOwner=loadedFor!==null&&loadedFor===activeOwner();
+ const p=sameOwner?last?.profile:null,availability=sameOwner?last?.availability:null;
  $('b4-recover').hidden=!connected||!availability?.newRatedMatches;
  $('b4-recover').disabled=busy;
  if(!connected){
@@ -57,7 +60,7 @@ function render(){
    $('b4-summary').innerHTML='<p class="b4-message" role="alert">'+safe(error)+'</p>';
    return;
  }
- if(!loaded){
+ if(!loaded||!sameOwner){
    $('b4-summary').innerHTML='<p class="b4-message">'+(busy?'Reading verified account rating…':'No rating loaded. Select Refresh.')+'</p>';
    return;
  }
@@ -83,8 +86,9 @@ function render(){
  }
 }
 async function refresh(){
- if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];render();return;}
+ if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];loadedFor=null;render();announce();return;}
  if(!setup())return;
+ const ownerAtRequest=activeOwner();
  busy=true;error='';render();
  try{
    const [profile,ledger]=await Promise.all([
@@ -92,13 +96,15 @@ async function refresh(){
    ]);
    if(profile?.mode!=='bot-elo'||!profile?.profile||!Array.isArray(ledger?.events))
      throw Error('Server rating authority returned an incomplete response.');
-   last=profile;history=ledger.events;loaded=true;
+   if(!ownerAtRequest||activeOwner()!==ownerAtRequest)
+     throw Error('THIEPN Account changed during rating refresh.');
+   last=profile;history=ledger.events;loaded=true;loadedFor=ownerAtRequest;
  }catch(e){
    error=e?.status===404?
      'Bot Elo account API is not deployed. The E4 code is only in a draft PR.':
      String(e?.message||'Rating authority unavailable.');
-   loaded=false;
- }finally{busy=false;render();}
+   loaded=false;last=null;history=[];loadedFor=null;
+ }finally{busy=false;render();announce();}
 }
 async function recover(){
  const b=bridge();if(busy||!b?.account?.().connected)return;
@@ -110,7 +116,19 @@ async function recover(){
    busy=false;if(!error){await refresh();}else render();
  }
 }
-const api=Object.freeze({version:'e4.1',open:async()=>{if(setup())await refresh();},refresh,
+function snapshot(){
+ const connected=bridge()?.account?.().connected===true,
+   sameOwner=connected&&loadedFor!==null&&loadedFor===activeOwner();
+ return Object.freeze({connected,loaded:connected&&loaded&&sameOwner,error:connected?error:'',
+   profile:sameOwner&&loaded&&last?.profile?{...last.profile}:null,
+   availability:sameOwner&&loaded&&last?.availability?{...last.availability}:null,
+   events:sameOwner&&loaded?history.map(e=>({...e})):[]
+ });
+}
+function announce(){
+ window.dispatchEvent(new CustomEvent('gomoku:bot-rating-updated',{detail:snapshot()}));
+}
+const api=Object.freeze({version:'e4.1',open:async()=>{if(setup())await refresh();},refresh,snapshot,
   state:()=>({connected:bridge()?.account?.().connected===true,
     loaded,enabled:last?.availability?.newRatedMatches===true,error})});
 window.GomokuBotRatingAccountE4=api;
