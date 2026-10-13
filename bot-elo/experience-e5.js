@@ -277,6 +277,7 @@ function ratingChart(events){
    '</svg></div>';
 }
 function resultName(game){
+ if(game?.status==='abandoned')return 'Practice closed';
  if(!game?.result)return game?.status==='active'?'In progress':'Not complete';
  if(game.result.winner===0)return 'Draw';
  return game.result.winner===game.playerColor?'Win':'Loss';
@@ -300,6 +301,7 @@ function renderResult(){
  if(state.settlement?.status==='retry-required'){
    expl+=' The backend reported that settlement must be retried; no points have been assumed.';
  }
+ if(match.status==='abandoned')expl='This practice match closed without a scored win, loss or Elo adjustment. The server retains its verified move history.';
  region.innerHTML='<div class="b5-result" role="status" aria-live="polite">'+
    '<h3>'+esc(score)+' against '+esc(b?.label||match.botId)+'</h3>'+
    '<p>'+match.moves.length+' recorded turns · Played as '+color+
@@ -321,7 +323,7 @@ function renderHistory(){
          event=events.find(e=>e.matchId===m.id);
        const outcome=resultName(m);
        const ratingResult=event?' · Elo '+signed(Number(event.delta)):
-         rated?' · Settlement pending':' · Practice only';
+         rated?' · Server settlement pending':m.status==='abandoned'?' · Closed without rating':' · Practice only';
        return '<li><div class="b5-history-row"><span><strong>'+esc(outcome)+'</strong> · '+
          esc(b?.label||m.botId)+' · '+date(m.completedAt||m.startedAt)+
          '<br><span class="b5-aux">'+Number(m.moves?.length||0)+' moves'+esc(ratingResult)+'</span></span>'+
