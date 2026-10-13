@@ -106,7 +106,9 @@ function auth(){
  const b=BRIDGE();
  if(!b||!b.account?.().connected){
    // Never keep another owner's board on screen after sign-out.
-   game=null;matchOwner=null;COMMAND()?.clear?.();
+   game=null;matchOwner=null;
+   // Do not destroy a transport command while OAuth is still restoring.
+   // The envelope stays inaccessible until the same original user id returns.
    message='Connect your THIEPN Account through Online Rooms to start or resume a verified bot match.';
    render();return null;
  }
@@ -117,8 +119,12 @@ function render(){
  $('b2-level').value=selectedBot;$('b2-color').value=String(selectedColor);
  const who=COMMAND()?.owner?.()||null;
  if(matchOwner&&(!who||matchOwner!==who)){
-   // A match from another account is not a valid local view, even before a read.
-   game=null;matchOwner=null;COMMAND()?.clear?.();recoveryState='account-changed';
+   // Clear the private display immediately. Only discard a pending command
+   // after a DIFFERENT verified user identity appears, not during OAuth load.
+   const changedToAnother=!!who&&matchOwner!==who;
+   game=null;matchOwner=null;
+   if(changedToAnother)COMMAND()?.clear?.();
+   recoveryState=changedToAnother?'account-changed':'unreachable';
  }
  const held=COMMAND()?.pending?.()||null;
  const isPlaying=!!game&&game.status==='active',hasGame=!!game,bridge=BRIDGE();
