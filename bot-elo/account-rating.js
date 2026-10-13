@@ -9,7 +9,7 @@ const $=id=>document.getElementById(id);
 const bridge=()=>window.GomokuCompetitionBridge;
 let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null,lastRecovery=null;
 const activeOwner=()=>bridge()?.account?.().connected===true?
-  String(bridge()?.account?.().username||'connected-account'):null;
+  String(bridge()?.account?.().userId||''):null;
 const fmt=n=>typeof n==='number'&&Number.isFinite(n)?Math.round(n).toLocaleString():'—';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function setup(){
