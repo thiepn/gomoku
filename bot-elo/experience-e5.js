@@ -17,7 +17,7 @@ const num=n=>typeof n==='number'&&Number.isFinite(n)?Math.round(n).toLocaleStrin
 const signed=n=>Number.isFinite(n)?(n>0?'+':'')+n.toFixed(3):'—';
 const NATIVE_IDS=E.BOTS.map(b=>b.id);
 const state={view:null,opponents:null,matchHistory:[],loading:false,error:'',
- connectedKey:null,currentMatch:null,settlement:null,selection:null,reportLoaded:false};
+ connectedKey:null,currentMatch:null,settlement:null,selection:null,reportLoaded:false,historyVerified:false};
 const css=[
 '.b5-hub{padding:13px;border:1px solid var(--hair,#9da5aa);border-radius:8px;background:var(--card,#fff);margin-bottom:14px;line-height:1.5}',
 '.b5-top{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}',
@@ -65,7 +65,7 @@ function accountKey(){
 }
 function clearDisconnected(){
  state.opponents=null;state.matchHistory=[];state.currentMatch=null;state.settlement=null;
- state.reportLoaded=false;state.error='';state.view=null;
+ state.reportLoaded=false;state.historyVerified=false;state.error='';state.view=null;
 }
 function profileSnapshot(){
  const snap=ownerAPI()?.snapshot?.();
@@ -373,7 +373,8 @@ async function refresh(){
  if(!connected()){
    clearDisconnected();state.connectedKey=null;render();return;
  }
- state.loading=true;state.error='';state.connectedKey=accountKey();render();
+ const ownerAtStart=accountKey();
+ state.loading=true;state.error='';state.connectedKey=ownerAtStart;render();
  const b=bridge();
  try{
    // Account rating remains solely the E4 owner-authenticated profile authority.
@@ -383,6 +384,10 @@ async function refresh(){
      ownerAPI()?.refresh?.()
    ];
    const all=await Promise.allSettled(requests);
+   // Never install an old owner's responses after a session transition.
+   if(!connected()||accountKey()!==ownerAtStart){
+     clearDisconnected();state.connectedKey=connected()?accountKey():null;return;
+   }
    if(all[0].status==='fulfilled'&&all[0].value?.verifiedForOwner===true){
      state.opponents=all[0].value;
    }else{
@@ -391,8 +396,9 @@ async function refresh(){
    }
    if(all[1].status==='fulfilled'&&Array.isArray(all[1].value?.matches)){
      state.matchHistory=all[1].value.matches;
+     state.historyVerified=true;
    }else{
-     state.matchHistory=[];
+     state.matchHistory=[];state.historyVerified=false;
      state.error+=(state.error?' ':'')+
        'Verified match history could not be retrieved.';
    }
@@ -407,7 +413,15 @@ async function refresh(){
    state.error=String(e?.message||'Could not fetch verified bot account data.');
  }finally{
    state.loading=false;render();
+   window.dispatchEvent(new Event('gomoku:bot-training-data-updated'));
  }
+}
+function trainingSnapshot(){
+ const owner=accountKey(),valid=connected()&&!!owner&&state.connectedKey===owner&&state.historyVerified;
+ return Object.freeze({ownerVerified:valid,ownerKey:valid?owner:null,
+   matches:valid?state.matchHistory.map(m=>({...m,moves:Array.isArray(m.moves)?m.moves.slice():[]})):[],
+   currentMatch:valid&&state.currentMatch?.ownerVerified===true?{...state.currentMatch}:null,
+   releaseActive:valid&&releaseActive(),selectedBot:nativeSelected()});
 }
 function onOpened(e){
  ensure();state.currentMatch=e?.detail?.match||gameAPI()?.match?.()||null;
@@ -427,6 +441,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 decorateLaunchers();
 window.GomokuBotWorkspaceE5=Object.freeze({version:'e5.1',refresh,open:()=>gameAPI()?.open?.(),
+ e7SourceSnapshot:trainingSnapshot,
  readOnlyState:()=>({connected:connected(),releaseActive:releaseActive(),hasAuthoritativeProfile:!!profileSnapshot()?.profile,
    selectedBot:nativeSelected(),historyCount:state.matchHistory.length,error:state.error})});
 })();
