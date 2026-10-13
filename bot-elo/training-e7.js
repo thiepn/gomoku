@@ -168,6 +168,8 @@ function render(){
  const s=source(),user=account(),owner=user?.connected===true?String(user.userId||''):null;
  if(lastOwner!==owner){lastOwner=owner;notice='';selectedFilter='review';}
  const root=$('b7-content');
+ const opened=Object.fromEntries([...root.querySelectorAll('details[id]')].map(d=>[d.id,d.open]));
+ const focusWasFilter=document.activeElement?.id==='b7-filter';
  if(!owner||!s?.ownerVerified||s.ownerKey!==owner){
    root.innerHTML='<p class="b7-muted" role="status">'+(!owner?
      'Connect THIEPN Account to use your owner-private verified practice history. Offline games and illustrative sample ratings are excluded.':
@@ -216,7 +218,9 @@ function render(){
       'An approved rated release is reported active. Server admission and E4 ledger alone determine actual rated outcomes.':
       'Bot Elo remains uncalibrated or inactive here. All suggestions are for practice only; no points or proficiency claims.')+'</p>';
  root.innerHTML=html;
+ for(const [id,open] of Object.entries(opened))if($(id))$(id).open=open;
  $('b7-filter').value=selectedFilter;
+ if(focusWasFilter)$('b7-filter').focus({preventScroll:true});
  $('b7-filter').onchange=e=>{selectedFilter=e.target.value;render();};
  $('b7-select').onclick=()=>choose(analysis.proposed?.id);
  $('b7-review-latest')?.addEventListener('click',()=>view(analysis.reviews[0]?.id));
@@ -241,6 +245,10 @@ async function view(id){
  try{
    await game()?.loadMatch?.(id);
    if(source()?.ownerKey!==account()?.userId){notice='Account changed. The previous private board is no longer available.';render();return;}
+   const loaded=game()?.match?.();
+   if(loaded?.id!==id||loaded.ownerVerified!==true){
+     notice='The verified board was not returned. Reconnect and retry from match history.';render();return;
+   }
    notice='Board loaded. Review the recorded positions using the original match view; no local engine conclusion is implied.';
    render();$('b2-board')?.scrollIntoView?.({block:'nearest',behavior:'auto'});
  }catch(e){
