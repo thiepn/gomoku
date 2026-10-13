@@ -81,6 +81,23 @@ export async function settleBotRatingMatch(rest:Services['rest'],owner:string,ma
     throw new Error('Bot Elo settlement authority did not return a valid status.');
   return result;
 }
+async function recoverySummary(rest:Services['rest'],q:Services['q'],owner:string){
+  // Owner-only read; no mutation and no inferred settlement from a browser result.
+  const rows=await rest('gomoku_bot_matches?owner_user_id=eq.'+q(owner)+
+    '&status=in.(completed,resigned)&rating_settled_at=is.null'+
+    '&select=id,rating_admission,status,completed_at&order=completed_at.asc&limit=100');
+  const pending=(Array.isArray(rows)?rows:[]).filter((r:any)=>
+    r.rating_admission?.schema===ADMISSION_SCHEMA&&r.rating_admission?.rated===true);
+  return {
+    pending:pending.length,
+    matches:pending.slice(0,15).map((r:any)=>({
+      id:r.id,status:'awaiting-authoritative-settlement',
+      completedAt:r.completed_at,releaseId:r.rating_admission?.releaseId||null
+    })),
+    recoveryAvailable:pending.length>0,
+    note:'Only an admitted, owner-verified completed match can enter the PostgreSQL Elo ledger. Recovery cannot create or activate a calibration release.'
+  };
+}
 async function recoverOwner(rest:Services['rest'],q:Services['q'],owner:string,limit:number){
   // Owner-filter first. The DB RPC rechecks ownership, admission, result and release;
   // only completed sessions with a pending settlement can be retried.
@@ -205,6 +222,8 @@ export async function handleBotRatingRequest(req:Request,parts:string[],s:Servic
     return json({events:(Array.isArray(rows)?rows:[]).map(safeEvent),separateFromPvP:true,
       note:'Immutable authenticated Bot Elo events, separate from human PvP.'});
   }
+  if(parts[2]==='recovery'&&req.method==='GET'&&parts.length===3)
+    return json(await recoverySummary(rest,q,owner));
   if(parts[2]==='recover'&&req.method==='POST'&&parts.length===3)
     return json(await recoverOwner(rest,q,owner,10));
   return fail('Bot rating route not found.',404);
