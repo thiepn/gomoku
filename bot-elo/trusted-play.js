@@ -106,7 +106,7 @@ function render(){
 }
 async function work(callback){
  if(busy)return;busy=true;message='Contacting verified Gomoku server…';render();
- try{message='';await callback();}catch(e){
+ try{message='';await callback();window.GomokuBotRatingAccountE4?.refresh?.();}catch(e){
    message=e.status===404?'Bot match API is not available on the deployed server yet. E2 remains a draft.':
      String(e.message||'Server request failed.');
  }finally{busy=false;render();}
@@ -137,7 +137,7 @@ async function send(action,i){
 }
 function open(){
  ensure();if(!dialog.open)dialog.showModal();
- render();if(BRIDGE()?.account?.().connected&&!game)resume();
+ render();window.GomokuBotRatingAccountE4?.open?.();if(BRIDGE()?.account?.().connected&&!game)resume();
 }
 function launch(){
  for(const area of ['botEloE1New','botEloE1Side','botEloE1Competitive']){
