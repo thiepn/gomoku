@@ -7,9 +7,9 @@
 if(window.GomokuBotRatingAccountE4)return;
 const $=id=>document.getElementById(id);
 const bridge=()=>window.GomokuCompetitionBridge;
-let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null;
+let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null,lastRecovery=null;
 const activeOwner=()=>bridge()?.account?.().connected===true?
-  String(bridge()?.account?.().username||'connected-account'):null;
+  String(bridge()?.account?.().userId||''):null;
 const fmt=n=>typeof n==='number'&&Number.isFinite(n)?Math.round(n).toLocaleString():'—';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function setup(){
@@ -50,7 +50,7 @@ function render(){
  $('b4-refresh').disabled=busy||!connected;
  const sameOwner=loadedFor!==null&&loadedFor===activeOwner();
  const p=sameOwner?last?.profile:null,availability=sameOwner?last?.availability:null;
- $('b4-recover').hidden=!connected||!availability?.newRatedMatches;
+ $('b4-recover').hidden=!connected||!sameOwner||lastRecovery?.recoveryAvailable!==true;
  $('b4-recover').disabled=busy;
  if(!connected){
    $('b4-summary').innerHTML='<p class="b4-message">Connect your THIEPN Account in Online Rooms to view your server-owned Bot Elo profile. Local practice and simulated E1 ratings are not account Elo.</p>';
@@ -69,6 +69,7 @@ function render(){
  const score=p?.rating==null?'Not rated':fmt(p.rating);
  const progress=p?.rating==null?'—':(p.provisional?'Provisional':'Established');
  const stats=p?((p.wins||0)+' W · '+(p.draws||0)+' D · '+(p.losses||0)+' L'):'No rated games';
+ const pending=lastRecovery?.pending||0;
  $('b4-summary').innerHTML=
    '<p class="b4-message"><strong>'+safe(badge)+'</strong> · Server-owned, separate from human PvP.</p>'+
    '<div class="b4-kpis"><div class="b4-kpi"><small>Bot Elo</small><b>'+score+'</b></div>'+
@@ -76,7 +77,8 @@ function render(){
    '<div class="b4-kpi"><small>Rated games</small><b>'+Number(p?.ratedGames||0)+'</b></div></div>'+
    '<p class="b4-message">'+safe(progress)+' · '+safe(stats)+'.'+
    (p?.placementRemaining>0?' '+p.placementRemaining+' placement games remaining.':'')+'</p>'+
-   '<p class="b4-message">E1 example ratings are not calibrated. E2 verified training matches do not generate Elo while the E4 activation gate is off.</p>';
+   '<p class="b4-message">E1 example ratings are not calibrated. E2 verified training matches do not generate Elo while the E4 activation gate is off.</p>'+
+   (pending?'<p class="b4-message">'+pending+' previously admitted completed match(es) await server-only settlement. Recovery cannot enable an unapproved release.</p>':'');
  if(!history.length){
    $('b4-events').innerHTML='<p class="b4-message">No verified Bot Elo events yet. This is expected until measured calibration and rating activation.</p>';
  }else{
@@ -86,24 +88,26 @@ function render(){
  }
 }
 async function refresh(){
- if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];loadedFor=null;render();announce();return;}
+ if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];lastRecovery=null;loadedFor=null;render();announce();return;}
  if(!setup())return;
  const ownerAtRequest=activeOwner();
  busy=true;error='';render();
  try{
-   const [profile,ledger]=await Promise.all([
-     b.accountGet('/api/bot-rating/me'),b.accountGet('/api/bot-rating/history')
+   const [profile,ledger,recovery]=await Promise.all([
+     b.accountGet('/api/bot-rating/me'),b.accountGet('/api/bot-rating/history'),
+     b.accountGet('/api/bot-rating/recovery')
    ]);
    if(profile?.mode!=='bot-elo'||!profile?.profile||!Array.isArray(ledger?.events))
      throw Error('Server rating authority returned an incomplete response.');
    if(!ownerAtRequest||activeOwner()!==ownerAtRequest)
      throw Error('THIEPN Account changed during rating refresh.');
-   last=profile;history=ledger.events;loaded=true;loadedFor=ownerAtRequest;
+   last=profile;history=ledger.events;lastRecovery=recovery?.recoveryAvailable===true?recovery:{pending:0,recoveryAvailable:false};
+   loaded=true;loadedFor=ownerAtRequest;
  }catch(e){
    error=e?.status===404?
      'Bot Elo account API is not deployed. The E4 code is only in a draft PR.':
      String(e?.message||'Rating authority unavailable.');
-   loaded=false;last=null;history=[];loadedFor=null;
+   loaded=false;last=null;history=[];lastRecovery=null;loadedFor=null;
  }finally{busy=false;render();announce();}
 }
 async function recover(){
@@ -122,7 +126,8 @@ function snapshot(){
  return Object.freeze({connected,loaded:connected&&loaded&&sameOwner,error:connected?error:'',
    profile:sameOwner&&loaded&&last?.profile?{...last.profile}:null,
    availability:sameOwner&&loaded&&last?.availability?{...last.availability}:null,
-   events:sameOwner&&loaded?history.map(e=>({...e})):[]
+   events:sameOwner&&loaded?history.map(e=>({...e})):[],
+   recovery:sameOwner&&loaded&&lastRecovery?{...lastRecovery}:null
  });
 }
 function announce(){
