@@ -12,8 +12,8 @@ let volatile=null;
 const VALID=/^[A-Za-z0-9._:-]{8,96}$/,UUID=/^[a-f0-9-]{36}$/i;
 function owner(){
  const a=window.GomokuCompetitionBridge?.account?.();
- return a?.connected===true&&typeof a.username==='string'&&a.username?
-   a.username:null;
+ return a?.connected===true&&typeof a.userId==='string'&&
+   /^[0-9a-f-]{36}$/i.test(a.userId)?a.userId:null;
 }
 function safeRead(){
  let raw=null;
