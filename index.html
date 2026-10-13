@@ -14747,6 +14747,109 @@ window.GomokuBotEloPreviewE1=Object.freeze({version:E.VERSION,refresh:render,sim
 
 </script>
 <!-- BOT-ELO-E1:END -->
+<!-- BOT-ELO-E6:START -->
+<script id="bot-elo-e6-command-continuity">
+/* Gomoku E6 command continuity.
+ * Stores ONE pending human command envelope in sessionStorage, never a board,
+ * result, rating, account token or second match history. The server owns all
+ * moves/outcomes. Automatic replay is deliberately DISABLED after uncertainty:
+ * users first reconcile the immutable server command receipt.
+ */
+(function(){
+'use strict';
+if(window.GomokuBotCommandE6)return;
+const KEY='gomoku.bot.e6.pending-command.v1';
+let volatile=null;
+const VALID=/^[A-Za-z0-9._:-]{8,96}$/,UUID=/^[a-f0-9-]{36}$/i;
+function owner(){
+ const a=window.GomokuCompetitionBridge?.account?.();
+ return a?.connected===true&&typeof a.username==='string'&&a.username?
+   a.username:null;
+}
+function safeRead(){
+ let raw=null;
+ try{raw=sessionStorage.getItem(KEY);}catch{}
+ if(!raw&&volatile)raw=JSON.stringify(volatile);
+ if(!raw)return null;
+ try{
+   const p=JSON.parse(raw);
+   if(!p||p.version!=='e6.1'||!UUID.test(p.matchId)||!VALID.test(p.commandId)||
+     typeof p.owner!=='string'||!Number.isSafeInteger(p.revision)||
+     p.revision<0||!['move','resign'].includes(p.action)||
+     (p.action==='move'&&(!Number.isInteger(p.i)||p.i< -1||p.i>224))||
+     typeof p.issuedAt!=='number')throw Error('Invalid saved command');
+   if(Date.now()-p.issuedAt>7*24*60*60*1000)return null;
+   return p;
+ }catch{return null;}
+}
+function save(p){
+ volatile=p;
+ try{sessionStorage.setItem(KEY,JSON.stringify(p));}catch{}
+}
+function clear(){
+ volatile=null;
+ try{sessionStorage.removeItem(KEY);}catch{}
+}
+function pending(){
+ const p=safeRead(),active=owner();
+ if(!active){clear();return null;}
+ if(!p)return null;
+ if(p.owner!==active){clear();return null;}
+ return {...p};
+}
+function prepare(match,action,i){
+ const existing=pending();
+ if(existing)throw Error('A previous move is awaiting server confirmation. Resolve it before playing again.');
+ const who=owner();
+ if(!who)throw Error('Connect the original THIEPN Account before sending a verified move.');
+ if(!match?.id||match.status!=='active'||!Number.isSafeInteger(match.revision))
+   throw Error('There is no active verified match.');
+ const p={version:'e6.1',matchId:match.id,commandId:crypto.randomUUID?
+   crypto.randomUUID():[Date.now().toString(36),Math.random().toString(36).slice(2)].join('-'),
+   owner:who,revision:match.revision,action,i:action==='resign'?null:i,issuedAt:Date.now()};
+ save(p);return {...p};
+}
+async function inspect(transport,match){
+ const p=pending();
+ if(!p)return {status:'clear',pending:null,match};
+ if(!transport?.accountGet||!match||p.matchId!==match.id)
+   return {status:'different-match',pending:p,match};
+ try{
+   const response=await transport.accountGet('/api/bot-matches/'+encodeURIComponent(p.matchId)+
+     '/commands/'+encodeURIComponent(p.commandId));
+   if(!response?.match)throw Error('Missing verified recovery state.');
+   if(response.state==='applied'){
+     clear();return {status:'applied',pending:null,match:response.match,appliedRevision:response.appliedRevision};
+   }
+   if(response.state!=='unknown')throw Error('Unexpected recovery result.');
+   if(response.match.status!=='active'||Number(response.match.revision)!==p.revision){
+     // Do not replay a stale command over another tab's legitimate move.
+     clear();return {status:'stale',pending:null,match:response.match};
+   }
+   return {status:'unconfirmed',pending:p,match:response.match};
+ }catch(e){
+   return {status:'unreachable',pending:p,match,error:String(e?.message||'Unable to reach match server')};
+ }
+}
+async function retry(transport){
+ const p=pending();
+ if(!p)throw Error('No preserved command remains.');
+ if(!transport?.accountPost)throw Error('Account API is not connected.');
+ return transport.accountPost('/api/bot-matches/'+encodeURIComponent(p.matchId)+'/action',{
+   commandId:p.commandId,revision:p.revision,action:p.action,i:p.i
+ });
+}
+function acknowledge(match){
+ const p=pending();
+ if(!p||!match||p.matchId!==match.id)return;
+ // Successful server response with a revision advance is proof of acceptance.
+ if(Number(match.revision)>p.revision)clear();
+}
+window.GomokuBotCommandE6=Object.freeze({version:'e6.1',prepare,pending,inspect,retry,acknowledge,clear,owner});
+})();
+
+</script>
+<!-- BOT-ELO-E6:END -->
 <!-- BOT-ELO-E2:START -->
 <script id="bot-elo-e2-trusted-play">
 /* E2 trusted bot games inside Gomoku Studio. Board here is presentation ONLY:
@@ -14759,13 +14862,15 @@ if(window.GomokuTrustedBotE2)return;
 const $=id=>document.getElementById(id),E=window.GomokuBotEloE1;
 if(!E)return;
 const BRIDGE=()=>window.GomokuCompetitionBridge;
+const COMMAND=()=>window.GomokuBotCommandE6;
+let matchOwner=null,recoveryState='clear';
 const files='ABCDEFGHJKLMNOP';
 const stoneName=c=>c===1?'Black':c===2?'White':'Empty';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let dialog=null,game=null,busy=false,pendingId=null,selectedColor=1,selectedBot='mid',message='',boardFocus=112;
 function publish(settlement=null){window.dispatchEvent(new CustomEvent('gomoku:bot-match-updated',{detail:{match:game,settlement}}));}
 function updateGame(next,settlement=null){
- game=next;pendingId=null;
+ game=next;pendingId=null;if(next)matchOwner=COMMAND()?.owner?.()||null;
  if(game){selectedBot=game.botId;selectedColor=Number(game.playerColor);}
  publish(settlement);
 }
@@ -14794,6 +14899,11 @@ const css=[
 '.b2-cell[data-last="true"] .b2-stone{outline:2px solid var(--seal,#27605f);outline-offset:2px}',
 '.b2-note{font-size:11px;line-height:1.5;color:var(--ink2,#5b6571)}',
 '.b2-launch{margin-top:8px;min-height:37px;width:100%;font-size:12px}',
+'.b6-recovery{padding:10px;margin:10px 0;border:1px solid var(--hair,#aaa);background:var(--card2,#f5f5f2);font-size:12px;line-height:1.5}',
+'.b6-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.b6-actions button{min-height:42px}',
+'.b6-actions button:focus-visible{outline:2px solid var(--seal,#24655d);outline-offset:2px}',
+'.b6-status{margin:0;font-size:12px}.b6-busy{font-weight:700}',
+'@media(max-width:480px){.b6-actions button{flex:1;min-width:130px}}',
 '.b2-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}',
 '@media(max-width:480px){.b2-content{padding:10px}.b2-head{padding:12px}.b2-board{padding:2px}}'
 ].join('');
@@ -14806,6 +14916,11 @@ function ensure(){
  '<div class="b2-content"><div class="b2-fields"><label>Opponent<select id="b2-level"></select></label><label>Your color<select id="b2-color"><option value="1">Black · first</option><option value="2">White · second</option></select></label></div>'+
  '<div class="b2-toolbar"><button class="btn" id="b2-start" type="button">Start verified practice</button><button class="btn ghost" type="button" id="b2-resume">Resume active match</button><button class="btn ghost" type="button" id="b2-refresh" hidden>Refresh state</button><button class="btn ghost" type="button" id="b2-pass" hidden>Pass</button><button class="btn ghost" type="button" id="b2-resign" hidden>Resign</button></div>'+
  '<div class="b2-status" id="b2-status" role="status" aria-live="polite"></div>'+
+ '<section class="b6-recovery" id="b6-recovery" aria-label="Network and match recovery" hidden>'+
+ '<p class="b6-status" id="b6-message" role="status" aria-live="polite"></p>'+
+ '<div class="b6-actions"><button class="btn ghost" id="b6-check" type="button">Check server result</button>'+
+ '<button class="btn" id="b6-retry" type="button">Retry same command</button>'+
+ '<button class="btn ghost" id="b6-abandon" type="button">Leave practice match</button></div></section>'+
  '<div id="b2-board" class="b2-board" role="group" aria-label="Verified Gomoku board" hidden></div>'+
  '<p class="b2-note" id="b2-description">Your moves are submitted to the original authenticated Gomoku server. Bot decisions and results come back from the server. This mode awards no Elo until later phases.</p></div>';
  document.body.append(dialog);
@@ -14816,6 +14931,9 @@ function ensure(){
  $('b2-close').addEventListener('click',()=>dialog.close());
  $('b2-start').addEventListener('click',start);
  $('b2-resume').addEventListener('click',resume);
+ $('b6-check').addEventListener('click',reconcilePending);
+ $('b6-retry').addEventListener('click',retryPending);
+ $('b6-abandon').addEventListener('click',abandonPractice);
  $('b2-refresh').addEventListener('click',refresh);
  $('b2-resign').addEventListener('click',()=>{if(game?.status==='active'&&confirm('Resign this verified bot match?'))send('resign',null);});
  $('b2-pass').addEventListener('click',()=>{if(game?.status==='active'&&game.moves.length>=3&&confirm('Pass this turn?'))send('move',-1);});
@@ -14840,25 +14958,37 @@ function ensure(){
 }
 function auth(){
  const b=BRIDGE();
- if(!b||!b.account?.().connected){message='Connect your THIEPN Account through Online Rooms to start or resume a verified bot match.';render();return null;}
+ if(!b||!b.account?.().connected){
+   // Never keep another owner's board on screen after sign-out.
+   game=null;matchOwner=null;COMMAND()?.clear?.();
+   message='Connect your THIEPN Account through Online Rooms to start or resume a verified bot match.';
+   render();return null;
+ }
  return b;
 }
 function render(){
  if(!dialog)return;
  $('b2-level').value=selectedBot;$('b2-color').value=String(selectedColor);
+ const who=COMMAND()?.owner?.()||null;
+ if(matchOwner&&(!who||matchOwner!==who)){
+   // A match from another account is not a valid local view, even before a read.
+   game=null;matchOwner=null;COMMAND()?.clear?.();recoveryState='account-changed';
+ }
+ const held=COMMAND()?.pending?.()||null;
  const isPlaying=!!game&&game.status==='active',hasGame=!!game,bridge=BRIDGE();
  $('b2-level').disabled=busy||isPlaying;$('b2-color').disabled=busy||isPlaying;
- $('b2-start').disabled=busy||isPlaying||!bridge?.account?.().connected;
+ $('b2-start').disabled=busy||isPlaying||!!held||!bridge?.account?.().connected;
  $('b2-resume').disabled=busy;
  $('b2-refresh').hidden=!hasGame;$('b2-refresh').disabled=busy;
- $('b2-resign').hidden=!isPlaying;$('b2-resign').disabled=busy;
+ $('b2-resign').hidden=!isPlaying;$('b2-resign').disabled=busy||!!held;
  $('b2-pass').hidden=!isPlaying||!game||game.moves.length<3;
- $('b2-pass').disabled=busy||!isPlaying||game.moves.length%2+1!==Number(game.playerColor);
+ $('b2-pass').disabled=busy||!!held||!isPlaying||game.moves.length%2+1!==Number(game.playerColor);
  const board=$('b2-board');board.hidden=!hasGame;
  let status=message||'Select a bot. Account sign-in and the E2 backend are required.';
  if(game){
    const turn=game.moves.length%2+1,me=Number(game.playerColor),bot=E.getBot(game.botId);
-   status=(game.status==='active'?(turn===me?'Your turn.':'Server bot turn pending.'):
+   status=(game.status==='abandoned'?'Practice match closed without Elo adjustment.':
+     game.status==='active'?(turn===me?'Your turn.':'Server bot turn pending.'):
      game.result?.reason==='resign'?'You resigned.':
      game.result?.winner===0?'Game drawn.':
      game.result?.winner===me?'You won the verified match.':'Bot won the verified match.')+
@@ -14866,7 +14996,7 @@ function render(){
      (game.rating?.admitted?'server-admitted rated match; see verified ledger':'practice only; no Elo adjustment')+'.';
    const current=new Array(225).fill(0);let last=-1;
    for(const m of game.moves){if(m.i>=0){current[m.i]=m.color;last=m.i;}}
-   const interactive=isPlaying&&turn===me&&!busy;
+   const interactive=isPlaying&&turn===me&&!busy&&!held;
    const priorFocus=board.contains(document.activeElement);
    if(priorFocus&&document.activeElement?.dataset?.b2Cell)
      boardFocus=Number(document.activeElement.dataset.b2Cell);
@@ -14882,6 +15012,20 @@ function render(){
      '. Server-owned moves and outcome. No undo, hints or local AI decisions. Rating changes, if approved, appear only in the verified account ledger.';
  }
  $('b2-status').textContent=status;
+ const panel=$('b6-recovery'),retry=$('b6-retry'),abandon=$('b6-abandon');
+ panel.hidden=!held&&!isPlaying&&!['stale','account-changed','unreachable'].includes(recoveryState);
+ retry.hidden=!held||!isPlaying||!game||held.matchId!==game.id;
+ retry.disabled=busy||recoveryState!=='unconfirmed';
+ abandon.hidden=!isPlaying||game?.rating?.admitted===true||!!held;
+ abandon.disabled=busy;
+ $('b6-check').hidden=!held;
+ $('b6-check').disabled=busy||!game||held?.matchId!==game.id;
+ $('b6-message').textContent=held?
+   (recoveryState==='unconfirmed'?
+     'The server has not recorded this command. Check connectivity, then retry the SAME command ID.':
+     'A previously submitted command may have succeeded. Check the server before retrying; the board is temporarily locked.'):
+   isPlaying?'This match remains on the server. You can resume it after reconnecting. Practice matches can be left without Elo; rated matches require resignation.':
+   recoveryState==='account-changed'?'Account changed. Previous private game controls were cleared.':'';
 }
 async function work(callback){
  if(busy)return;busy=true;message='Contacting verified Gomoku server…';render();
@@ -14901,21 +15045,88 @@ async function resume(){
  const b=auth();if(!b)return;
  await work(async()=>{const data=await b.accountGet('/api/bot-matches/active');
    if(!data.match){updateGame(null);message='No active verified bot match. Start one above.';return;}
-   updateGame(data.match);});
+   updateGame(data.match);
+   if(COMMAND()?.pending?.())await resolveCommand(b);});
 }
 async function refresh(){
  const b=auth();if(!b||!game)return;
  await work(async()=>{const data=await b.accountGet('/api/bot-matches/'+encodeURIComponent(game.id));
-   if(!data.match)throw Error('Server could not find this match.');updateGame(data.match);});
+   if(!data.match)throw Error('Server could not find this match.');updateGame(data.match);
+   if(COMMAND()?.pending?.())await resolveCommand(b);});
+}
+async function resolveCommand(b){
+ const pending=COMMAND()?.pending?.();
+ if(!pending)return;
+ const reply=await COMMAND().inspect(b,game);
+ recoveryState=reply.status;
+ if(reply.match&&reply.status!=='different-match')updateGame(reply.match);
+ if(reply.status==='applied'){
+   message='The server confirmed your previous command. No duplicate move was played.';
+ }else if(reply.status==='stale'){
+   message='Another tab or session advanced this match. Your old command will not be replayed.';
+ }else if(reply.status==='unconfirmed'){
+   message='Command still unconfirmed. You may retry with the same command ID.';
+ }else if(reply.status==='unreachable'){
+   message='Cannot confirm the previous command. Your command is preserved in this tab.';
+ }
+}
+async function reconcilePending(){
+ const b=auth();if(!b||!game)return;
+ await work(async()=>{await resolveCommand(b);});
+}
+async function retryPending(){
+ const b=auth();if(!b||!game||game.status!=='active')return;
+ const pending=COMMAND()?.pending?.();
+ if(!pending||pending.matchId!==game.id||recoveryState!=='unconfirmed')return;
+ await work(async()=>{
+   const data=await COMMAND().retry(b);
+   if(!data?.match)throw Error('Server did not acknowledge the saved command.');
+   updateGame(data.match,data.settlement||null);
+   COMMAND()?.acknowledge?.(data.match);
+   recoveryState='clear';
+ });
+}
+async function abandonPractice(){
+ const b=auth();if(!b||!game||game.status!=='active'||game.rating?.admitted===true)return;
+ if(COMMAND()?.pending?.()){
+   message='Resolve the outstanding command before leaving this practice match.';render();return;
+ }
+ if(!confirm('Leave this verified practice match? Its move history will remain available. No Elo will be awarded.'))return;
+ await work(async()=>{
+   const out=await b.accountPost('/api/bot-matches/'+encodeURIComponent(game.id)+'/abandon',{});
+   if(!out?.match)throw Error('Server could not close the practice match.');
+   if(out.status==='rated-resignation-required'){
+     message='This server-admitted rated match must be resigned, not abandoned.';return;
+   }
+   updateGame(out.match);
+   message='Practice match closed and retained in verified history.';
+ });
 }
 async function send(action,i){
- const b=auth();if(!b||!game||game.status!=='active')return;
- const identity=uid(),revision=game.revision,matchId=game.id;
- await work(async()=>{const data=await b.accountPost('/api/bot-matches/'+encodeURIComponent(matchId)+'/action',
-   {commandId:identity,revision,action,i});if(!data.match)throw Error('Missing authoritative match state.');updateGame(data.match,data.settlement||null);});
+ const b=auth();if(!b||!game||game.status!=='active'||busy)return;
+ let pending;
+ try{pending=COMMAND()?.prepare?.(game,action,i);}
+ catch(e){message=String(e.message||'Resolve the previous command first.');render();return;}
+ if(!pending){message='Command continuity is unavailable; no move was sent.';render();return;}
+ recoveryState='checking';
+ await work(async()=>{
+   const data=await b.accountPost('/api/bot-matches/'+encodeURIComponent(game.id)+'/action',
+     {commandId:pending.commandId,revision:pending.revision,action:pending.action,i:pending.i});
+   if(!data?.match)throw Error('Server did not return its authoritative match receipt.');
+   updateGame(data.match,data.settlement||null);
+   COMMAND()?.acknowledge?.(data.match);
+   recoveryState='clear';
+ });
+ if(COMMAND()?.pending?.()){
+   recoveryState='uncertain';
+   message='Response uncertain. The exact command is preserved; use Check server result before retrying.';
+   render();
+ }
 }
+
 function open(){
  ensure();if(!dialog.open)dialog.showModal();
+ recoveryState=COMMAND()?.pending?.()?'uncertain':'clear';
  render();window.dispatchEvent(new CustomEvent('gomoku:bot-workspace-opened',{
    detail:{selectedBot,match:game}}));
  window.GomokuBotRatingAccountE4?.open?.();if(BRIDGE()?.account?.().connected&&!game)resume();
@@ -14955,7 +15166,7 @@ window.GomokuTrustedBotE2=Object.freeze({version:'e5.1',open,refresh,loadMatch,s
 if(window.GomokuBotRatingAccountE4)return;
 const $=id=>document.getElementById(id);
 const bridge=()=>window.GomokuCompetitionBridge;
-let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null;
+let mount=null,busy=false,loaded=false,last=null,history=[],error='',loadedFor=null,lastRecovery=null;
 const activeOwner=()=>bridge()?.account?.().connected===true?
   String(bridge()?.account?.().username||'connected-account'):null;
 const fmt=n=>typeof n==='number'&&Number.isFinite(n)?Math.round(n).toLocaleString():'—';
@@ -14998,7 +15209,7 @@ function render(){
  $('b4-refresh').disabled=busy||!connected;
  const sameOwner=loadedFor!==null&&loadedFor===activeOwner();
  const p=sameOwner?last?.profile:null,availability=sameOwner?last?.availability:null;
- $('b4-recover').hidden=!connected||!availability?.newRatedMatches;
+ $('b4-recover').hidden=!connected||!sameOwner||lastRecovery?.recoveryAvailable!==true;
  $('b4-recover').disabled=busy;
  if(!connected){
    $('b4-summary').innerHTML='<p class="b4-message">Connect your THIEPN Account in Online Rooms to view your server-owned Bot Elo profile. Local practice and simulated E1 ratings are not account Elo.</p>';
@@ -15017,6 +15228,7 @@ function render(){
  const score=p?.rating==null?'Not rated':fmt(p.rating);
  const progress=p?.rating==null?'—':(p.provisional?'Provisional':'Established');
  const stats=p?((p.wins||0)+' W · '+(p.draws||0)+' D · '+(p.losses||0)+' L'):'No rated games';
+ const pending=lastRecovery?.pending||0;
  $('b4-summary').innerHTML=
    '<p class="b4-message"><strong>'+safe(badge)+'</strong> · Server-owned, separate from human PvP.</p>'+
    '<div class="b4-kpis"><div class="b4-kpi"><small>Bot Elo</small><b>'+score+'</b></div>'+
@@ -15024,7 +15236,8 @@ function render(){
    '<div class="b4-kpi"><small>Rated games</small><b>'+Number(p?.ratedGames||0)+'</b></div></div>'+
    '<p class="b4-message">'+safe(progress)+' · '+safe(stats)+'.'+
    (p?.placementRemaining>0?' '+p.placementRemaining+' placement games remaining.':'')+'</p>'+
-   '<p class="b4-message">E1 example ratings are not calibrated. E2 verified training matches do not generate Elo while the E4 activation gate is off.</p>';
+   '<p class="b4-message">E1 example ratings are not calibrated. E2 verified training matches do not generate Elo while the E4 activation gate is off.</p>'+
+   (pending?'<p class="b4-message">'+pending+' previously admitted completed match(es) await server-only settlement. Recovery cannot enable an unapproved release.</p>':'');
  if(!history.length){
    $('b4-events').innerHTML='<p class="b4-message">No verified Bot Elo events yet. This is expected until measured calibration and rating activation.</p>';
  }else{
@@ -15034,24 +15247,26 @@ function render(){
  }
 }
 async function refresh(){
- if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];loadedFor=null;render();announce();return;}
+ if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];lastRecovery=null;loadedFor=null;render();announce();return;}
  if(!setup())return;
  const ownerAtRequest=activeOwner();
  busy=true;error='';render();
  try{
-   const [profile,ledger]=await Promise.all([
-     b.accountGet('/api/bot-rating/me'),b.accountGet('/api/bot-rating/history')
+   const [profile,ledger,recovery]=await Promise.all([
+     b.accountGet('/api/bot-rating/me'),b.accountGet('/api/bot-rating/history'),
+     b.accountGet('/api/bot-rating/recovery')
    ]);
    if(profile?.mode!=='bot-elo'||!profile?.profile||!Array.isArray(ledger?.events))
      throw Error('Server rating authority returned an incomplete response.');
    if(!ownerAtRequest||activeOwner()!==ownerAtRequest)
      throw Error('THIEPN Account changed during rating refresh.');
-   last=profile;history=ledger.events;loaded=true;loadedFor=ownerAtRequest;
+   last=profile;history=ledger.events;lastRecovery=recovery?.recoveryAvailable===true?recovery:{pending:0,recoveryAvailable:false};
+   loaded=true;loadedFor=ownerAtRequest;
  }catch(e){
    error=e?.status===404?
      'Bot Elo account API is not deployed. The E4 code is only in a draft PR.':
      String(e?.message||'Rating authority unavailable.');
-   loaded=false;last=null;history=[];loadedFor=null;
+   loaded=false;last=null;history=[];lastRecovery=null;loadedFor=null;
  }finally{busy=false;render();announce();}
 }
 async function recover(){
@@ -15070,7 +15285,8 @@ function snapshot(){
  return Object.freeze({connected,loaded:connected&&loaded&&sameOwner,error:connected?error:'',
    profile:sameOwner&&loaded&&last?.profile?{...last.profile}:null,
    availability:sameOwner&&loaded&&last?.availability?{...last.availability}:null,
-   events:sameOwner&&loaded?history.map(e=>({...e})):[]
+   events:sameOwner&&loaded?history.map(e=>({...e})):[],
+   recovery:sameOwner&&loaded&&lastRecovery?{...lastRecovery}:null
  });
 }
 function announce(){
@@ -15365,6 +15581,7 @@ function ratingChart(events){
    '</svg></div>';
 }
 function resultName(game){
+ if(game?.status==='abandoned')return 'Practice closed';
  if(!game?.result)return game?.status==='active'?'In progress':'Not complete';
  if(game.result.winner===0)return 'Draw';
  return game.result.winner===game.playerColor?'Win':'Loss';
@@ -15388,6 +15605,7 @@ function renderResult(){
  if(state.settlement?.status==='retry-required'){
    expl+=' The backend reported that settlement must be retried; no points have been assumed.';
  }
+ if(match.status==='abandoned')expl='This practice match closed without a scored win, loss or Elo adjustment. The server retains its verified move history.';
  region.innerHTML='<div class="b5-result" role="status" aria-live="polite">'+
    '<h3>'+esc(score)+' against '+esc(b?.label||match.botId)+'</h3>'+
    '<p>'+match.moves.length+' recorded turns · Played as '+color+
@@ -15409,7 +15627,7 @@ function renderHistory(){
          event=events.find(e=>e.matchId===m.id);
        const outcome=resultName(m);
        const ratingResult=event?' · Elo '+signed(Number(event.delta)):
-         rated?' · Settlement pending':' · Practice only';
+         rated?' · Server settlement pending':m.status==='abandoned'?' · Closed without rating':' · Practice only';
        return '<li><div class="b5-history-row"><span><strong>'+esc(outcome)+'</strong> · '+
          esc(b?.label||m.botId)+' · '+date(m.completedAt||m.startedAt)+
          '<br><span class="b5-aux">'+Number(m.moves?.length||0)+' moves'+esc(ratingResult)+'</span></span>'+
