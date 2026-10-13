@@ -148,6 +148,18 @@ begin
   if bot_milli not between 400000 and 6000000 then
     raise exception 'Reviewed calibration bot rating is out of range' using errcode='22023';
   end if;
+  -- A previous admitted game must settle before another can freeze a fresh
+  -- starting rating. If recovery is pending, new games remain valid practice.
+  perform 1 from public.gomoku_bot_matches
+   where owner_user_id=p_owner and ruleset=p_ruleset
+     and status in ('completed','resigned')
+     and rating_settled_at is null
+     and rating_admission->>'rated'='true'
+   limit 1;
+  if found then
+    return jsonb_build_object('schema','bot-elo-admission/v1','rated',false,
+      'reason','earlier-rated-game-awaits-settlement','botId',p_bot_id);
+  end if;
   insert into public.gomoku_bot_rating_profiles(owner_user_id,ruleset)
     values(p_owner,p_ruleset) on conflict(owner_user_id,ruleset) do nothing;
   select * into p from public.gomoku_bot_rating_profiles
