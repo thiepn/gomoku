@@ -45,10 +45,6 @@ function inspectMoves(moves:any[]){
  let ended:any=null,passes=0,stones=0;
  for(let j=0;j<moves.length;j++){
    const x=moves[j],color=j%2+1,i=x?.i;
-   if(!x||!Number.isInteger(i)||i< -1||i>=225||x.color!==color||
-      x.actor!==(color===moves[0]?.playerColor?'player':x.actor)) {
-      // Actor ownership is validated against the immutable playerColor below.
-   }
    if(!x||!Number.isInteger(i)||i< -1||i>=225||x.color!==color||!['player','bot'].includes(x.actor))
      throw error('Stored bot transcript contains an invalid move.',500);
    if(ended)throw error('Bot transcript continues after game end.',500);
@@ -142,7 +138,7 @@ export async function handleBotMatchRequest(req:Request,parts:string[],services:
      id:b.id,label:b.label,ratingTarget:b.ratingTarget,ratingStatus:b.ratingStatus,ratedEnabled:false}))});
  const account=await verifiedAccount(req,true),owner=account.userId;
  const ownerPath='owner_user_id=eq.'+q(owner);
- const find=async matchId=>{
+ const find=async (matchId:string)=>{
    const rows=await rest('gomoku_bot_matches?'+ownerPath+'&id=eq.'+q(matchId)+'&select=*');
    if(!Array.isArray(rows)||!rows[0])throw error('Bot match not found.',404);
    return rows[0];
