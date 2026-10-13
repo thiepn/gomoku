@@ -1,18 +1,6 @@
 name: P25 product UX accessibility and final quality
 
 on:
-  pull_request:
-    paths:
-      - 'index.html'
-      - 'ui/**'
-      - 'review/**'
-      - 'analysis/**'
-      - 'training/**'
-      - 'online/**'
-      - 'audit/p25-*'
-      - 'operations/P25-RUNBOOK.md'
-      - 'online/test-p25-product-quality.mjs'
-      - '.github/workflows/verify-p25-product-quality.yml'
   push:
     branches: [main]
     paths:

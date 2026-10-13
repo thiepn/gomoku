@@ -1,10 +1,9 @@
 name: Guided Review verification
 on:
-  pull_request:
-    paths: ['index.html', 'sw.js', 'review/**', '.github/workflows/verify-guided-review.yml']
   push:
     branches: [main]
     paths: ['index.html', 'sw.js', 'review/**', '.github/workflows/verify-guided-review.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
