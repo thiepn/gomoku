@@ -34,6 +34,16 @@ node bot-elo/calibration/assignments.mjs \
   --approve-reviewed --accept-relative-anchor
 \`\`\`
 
+To produce a readable Markdown interpretation from the empirical report:
+
+\`\`\`sh
+node bot-elo/calibration/render-report.mjs \
+  bot-elo/calibration/local-evidence/report.json \
+  bot-elo/calibration/local-evidence/report.md
+\`\`\`
+
+The report preserves raw observed wins/draws/losses, color-specific scores and opening-family breakdowns. Its \`review-candidate\` status does not mean a bot's Elo has been published.
+
 The final example is deliberately an approval gate and **will refuse** release unless its evidence meets thresholds. It is not a command that has been executed, and the sample review note is not an actual endorsement.
 
 ## Method and uncertainties
