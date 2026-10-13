@@ -14865,14 +14865,21 @@ const $=id=>document.getElementById(id),E=window.GomokuBotEloE1;
 if(!E)return;
 const BRIDGE=()=>window.GomokuCompetitionBridge;
 const COMMAND=()=>window.GomokuBotCommandE6;
-let matchOwner=null,recoveryState='clear';
+let matchOwner=null,recoveryState='clear',requestOwner=null;
 const files='ABCDEFGHJKLMNOP';
 const stoneName=c=>c===1?'Black':c===2?'White':'Empty';
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let dialog=null,game=null,busy=false,pendingId=null,selectedColor=1,selectedBot='mid',message='',boardFocus=112;
 function publish(settlement=null){window.dispatchEvent(new CustomEvent('gomoku:bot-match-updated',{detail:{match:game,settlement}}));}
 function updateGame(next,settlement=null){
- game=next;pendingId=null;if(next)matchOwner=COMMAND()?.owner?.()||null;
+ const currentOwner=COMMAND()?.owner?.()||null;
+ if(next&&(!currentOwner||(requestOwner!==null&&currentOwner!==requestOwner))){
+   // An in-flight request can finish after OAuth switches accounts.
+   // Its verified but OLD-owner match must never enter the new owner's UI.
+   game=null;matchOwner=null;pendingId=null;publish();
+   throw Error('Account changed while retrieving the match. Reconnect and resume your own game.');
+ }
+ game=next;pendingId=null;if(next)matchOwner=currentOwner;
  if(game){selectedBot=game.botId;selectedColor=Number(game.playerColor);}
  publish(settlement);
 }
@@ -15036,11 +15043,20 @@ function render(){
    recoveryState==='account-changed'?'Account changed. Previous private game controls were cleared.':'';
 }
 async function work(callback){
- if(busy)return;busy=true;message='Contacting verified Gomoku server…';render();
+ if(busy)return;
+ requestOwner=COMMAND()?.owner?.()||null;
+ if(!requestOwner){
+   message='A verified THIEPN Account identity is required to access this private match.';
+   render();requestOwner=null;return;
+ }
+ busy=true;message='Contacting verified Gomoku server…';render();
  try{message='';await callback();window.GomokuBotRatingAccountE4?.refresh?.();}catch(e){
    message=e.status===404?'Bot match API is not available on the deployed server yet. E2 remains a draft.':
      String(e.message||'Server request failed.');
- }finally{busy=false;render();}
+ }finally{
+   requestOwner=null;
+   busy=false;render();
+ }
 }
 async function start(){
  const b=auth();if(!b)return;
