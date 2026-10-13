@@ -61,7 +61,7 @@ function connected(){
 }
 function accountKey(){
  const a=bridge()?.account?.();
- return a?.connected?String(a.username||'connected-account'):'';
+ return a?.connected?String(a.userId||''):'';
 }
 function clearDisconnected(){
  state.opponents=null;state.matchHistory=[];state.currentMatch=null;state.settlement=null;
