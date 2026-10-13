@@ -83,7 +83,7 @@ function render(){
  }
 }
 async function refresh(){
- if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];render();return;}
+ if(busy)return;const b=bridge();if(!b?.account?.().connected){loaded=false;last=null;history=[];render();announce();return;}
  if(!setup())return;
  busy=true;error='';render();
  try{
@@ -98,7 +98,7 @@ async function refresh(){
      'Bot Elo account API is not deployed. The E4 code is only in a draft PR.':
      String(e?.message||'Rating authority unavailable.');
    loaded=false;
- }finally{busy=false;render();}
+ }finally{busy=false;render();announce();}
 }
 async function recover(){
  const b=bridge();if(busy||!b?.account?.().connected)return;
@@ -110,7 +110,18 @@ async function recover(){
    busy=false;if(!error){await refresh();}else render();
  }
 }
-const api=Object.freeze({version:'e4.1',open:async()=>{if(setup())await refresh();},refresh,
+function snapshot(){
+ const connected=bridge()?.account?.().connected===true;
+ return Object.freeze({connected,loaded:connected&&loaded,error:connected?error:'',
+   profile:connected&&loaded&&last?.profile?{...last.profile}:null,
+   availability:connected&&loaded&&last?.availability?{...last.availability}:null,
+   events:connected&&loaded?history.map(e=>({...e})):[]
+ });
+}
+function announce(){
+ window.dispatchEvent(new CustomEvent('gomoku:bot-rating-updated',{detail:snapshot()}));
+}
+const api=Object.freeze({version:'e4.1',open:async()=>{if(setup())await refresh();},refresh,snapshot,
   state:()=>({connected:bridge()?.account?.().connected===true,
     loaded,enabled:last?.availability?.newRatedMatches===true,error})});
 window.GomokuBotRatingAccountE4=api;
