@@ -5,6 +5,7 @@
 import '../../../bot-elo/rating.js';
 import { createNativeBotEngine } from './native-bot-engine.js';
 import { createEngine } from './rules.js';
+import { POLICY_ID, snapshotForLevel, choosePinnedMove } from '../../../bot-elo/calibration/e2-policy.mjs';
 
 type Services={
   rest:(path:string,init?:{method?:string,body?:unknown,prefer?:string})=>Promise<any>,
@@ -31,14 +32,8 @@ function bot(id:unknown){const value=registry.getBot(String(id||''));if(!value||
 function id(value:unknown){const s=String(value||'');if(!VALID_UUID.test(s))throw error('Invalid bot match id.');return s;}
 function token(value:unknown,re:RegExp,label:string){const s=String(value||'');if(!re.test(s))throw error('Invalid '+label);return s;}
 function seed(){return crypto.getRandomValues(new Uint32Array(1))[0];}
-function snapshot(level:any){
- return {id:level.id,configurationVersion:level.configurationVersion,
-   nativeLevel:level.nativeLevel,nativeBudget:level.nativeBudget,
-   engine:'original-studio-rules-engine',policy:POLICY,
-   ratingStatus:'uncalibrated',rated:false,verifiedServerMoves:true,
-   searchBudgetMs:Math.min(1000,level.nativeBudget.timeMs),
-   policyVersion:'e2.1',colorPolicy:'selected',opening:'center-first'};
-}
+function snapshot(level:any){return snapshotForLevel(level);}
+
 function inspectMoves(moves:any[]){
  if(!Array.isArray(moves)||moves.length>227)throw error('Stored bot transcript is invalid.',500);
  const board=new Int8Array(225),verified:BotMove[]=[];
@@ -81,20 +76,16 @@ function inspectRow(row:any){
 function selectBotMove(moves:BotMove[],snap:any,serverSeed:number){
  const info=inspectMoves(moves),color=moves.length%2+1;
  if(info.ended)throw error('Bot cannot move in a finished game.',409);
- const candidate=native.chooseMove(info.board,color,{
-   timeMs:Math.max(20,Math.min(1000,Number(snap.searchBudgetMs)||120)),
-   maxDepth:Number(snap.nativeBudget?.maxDepth)||2,width:Number(snap.nativeBudget?.width)||10,
-   randomPool:1,seed:((serverSeed^(moves.length*2654435761))>>>0)||17,style:'balanced'
- });
+ const {decision:candidate,config}=choosePinnedMove(native,info.board,color,snap,serverSeed,moves.length);
  const i=Number(candidate.move),r=rules.legalMove(info.board,i,color,moves.length),
    n=native.legalMove(info.board,i,color,moves.length);
  if(!Number.isInteger(i)||i< -1||i>=225||!r.legal||!n.legal||
     (moves.length===0&&i!==112)||r.win!==n.win)throw error('Native bot returned an unverified move.',503);
  return {i,color,actor:'bot' as const,decision:{
-   policy:POLICY,reason:String(candidate.reason||'search').slice(0,48),
+   policy:POLICY_ID,reason:String(candidate.reason||'search').slice(0,48),
    searchDepth:Number(candidate.depth)||0,nodes:Number(candidate.nodes)||0,
    elapsedMs:Number(candidate.elapsedMs)||0,
-   seed:(serverSeed^(moves.length*2654435761))>>>0}};
+   seed:config.seed}};
 }
 function applyHumanMove(row:any,index:number,kind:'move'|'resign'){
  const transcript=inspectRow(row),moves=[...transcript.moves],player=Number(row.player_color);
