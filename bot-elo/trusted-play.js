@@ -111,7 +111,8 @@ function render(){
      game.result?.reason==='resign'?'You resigned.':
      game.result?.winner===0?'Game drawn.':
      game.result?.winner===me?'You won the verified match.':'Bot won the verified match.')+
-     ' · '+(bot?.label||game.botId)+' · '+game.moves.length+' moves · no Elo adjustment.';
+     ' · '+(bot?.label||game.botId)+' · '+game.moves.length+' moves · '+
+     (game.rating?.admitted?'server-admitted rated match; see verified ledger':'practice only; no Elo adjustment')+'.';
    const current=new Array(225).fill(0);let last=-1;
    for(const m of game.moves){if(m.i>=0){current[m.i]=m.color;last=m.i;}}
    const interactive=isPlaying&&turn===me&&!busy;
@@ -127,7 +128,7 @@ function render(){
    }).join('');
    if(priorFocus)board.querySelector('[data-b2-cell="'+boardFocus+'"]')?.focus({preventScroll:true});
    $('b2-description').textContent='Match '+game.id+' · revision '+game.revision+' · '+game.bot.policy+
-     '. Server-owned moves and outcome. No undo, hints, local AI decisions, historical Elo or offline rating.';
+     '. Server-owned moves and outcome. No undo, hints or local AI decisions. Rating changes, if approved, appear only in the verified account ledger.';
  }
  $('b2-status').textContent=status;
 }
@@ -172,7 +173,7 @@ function launch(){
  for(const area of ['botEloE1New','botEloE1Side','botEloE1Competitive']){
    const host=$(area);if(!host||host.querySelector('[data-b2-launch]'))continue;
    const b=document.createElement('button');b.type='button';b.className='btn ghost b2-launch';b.dataset.b2Launch='true';
-   b.textContent='Play verified bot training · E2 (no Elo yet)';
+   b.textContent='Open verified Bot Challenge · practice';
    b.onclick=()=>{if(area==='botEloE1New')selectedBot=$('levelSelect')?.value||'mid';
      if(area==='botEloE1Side')selectedBot=window.GomokuStudio?.diagnostics?.()?.ai?.level||'mid';
      if(area==='botEloE1Competitive')selectedBot=$('v97Level')?.value||'mid';
