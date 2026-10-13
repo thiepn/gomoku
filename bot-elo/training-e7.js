@@ -161,7 +161,8 @@ function reviewMarkup(m){
    '</strong> · '+esc(name)+' · '+esc(m.playerColor===1?'Black':'White')+
    ' · '+esc(m.moves.length)+' recorded plies'+
    '<span class="b7-muted" style="display:block">'+esc(reviewPrompt(m))+'</span></span>'+
-   '<button class="btn ghost" type="button" data-b7-board="'+esc(m.id)+'">View verified board</button></div></li>';
+   '<button class="btn ghost" type="button" data-b7-board="'+esc(m.id)+'">View verified board</button>'+
+   '<button class="btn" type="button" data-b7-study="'+esc(m.id)+'">Practice positions</button></div></li>';
 }
 function render(){
  const p=ensure();if(!p)return;
@@ -192,7 +193,8 @@ function render(){
    (current?'<p class="b7-muted">An active verified match is open. Complete or close it before changing opponents.</p>':'')+
    '<div class="b7-actions"><button class="btn" type="button" id="b7-select" '+
    (current?'disabled':'')+'>Select suggested opponent</button>'+
-   (analysis.reviews.length?'<button class="btn ghost" type="button" id="b7-review-latest">Review a recorded game</button>':'')+'</div></div>'+
+   (analysis.reviews.length?'<button class="btn ghost" type="button" id="b7-review-latest">Review a recorded game</button>'+
+   '<button class="btn ghost" type="button" id="b7-practice-latest">Practice recorded decisions</button>':'')+'</div></div>'+
    '<details id="b7-goals"><summary>Observed milestones · '+analysis.completedGoals+'/'+analysis.milestones.length+
    ' in loaded history</summary><ol>'+
    analysis.milestones.map(x=>'<li class="b7-goal"><span>'+esc(x.done?'Observed: ':'Not yet observed: ')+
@@ -224,11 +226,15 @@ function render(){
  $('b7-filter').onchange=e=>{selectedFilter=e.target.value;render();};
  $('b7-select').onclick=()=>choose(analysis.proposed?.id);
  $('b7-review-latest')?.addEventListener('click',()=>view(analysis.reviews[0]?.id));
+ $('b7-practice-latest')?.addEventListener('click',()=>practice(analysis.reviews[0]?.id));
  root.querySelectorAll('[data-b7-bot]').forEach(button=>{
    button.onclick=()=>choose(button.dataset.b7Bot);
  });
  root.querySelectorAll('[data-b7-board]').forEach(button=>{
    button.onclick=()=>view(button.dataset.b7Board);
+ });
+ root.querySelectorAll('[data-b7-study]').forEach(button=>{
+   button.onclick=()=>practice(button.dataset.b7Study);
  });
 }
 function choose(id){
@@ -236,6 +242,14 @@ function choose(id){
  if(game()?.selectBot?.(id)){
    notice='Selected '+bot(id).label+'. Set your color above, then start a verified game when ready.';
  }else notice='Could not change opponents while a verified match remains active.';
+ render();
+}
+function practice(id){
+ const s=source();
+ if(!s?.ownerVerified||!s.matches.some(m=>verifiedMatch(m)&&m.id===id))return;
+ if(window.GomokuBotReviewE8?.openById?.(id)){
+   notice='Opened position-by-position practice using the original native rules. No automatic Elo or skill grade.';
+ }else notice='Interactive review is unavailable. Refresh your verified match history and try again.';
  render();
 }
 async function view(id){
