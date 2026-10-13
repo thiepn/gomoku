@@ -310,7 +310,7 @@ function render(){
  function at(p){status.ply=p;resetDecision();render();}
  $('b8-first').onclick=()=>at(0);$('b8-prev').onclick=()=>at(status.ply-1);
  $('b8-next').onclick=()=>at(status.ply+1);$('b8-last').onclick=()=>at(m.moves.length);
- $('b8-range').oninput=e=>at(Number(e.target.value));
+ $('b8-range').onchange=e=>at(Number(e.target.value));
  $('b8-mode').value=status.mode;
  $('b8-mode').onchange=e=>{status.mode=e.target.value;status.hints=0;status.feedback='';render();};
  if(next){
@@ -329,7 +329,8 @@ function openById(id,ply){
  const m=s.matches.find(x=>x?.id===id);
  if(!m||!UUID.test(String(id))||m.ownerVerified!==true||
    m.integrity?.serverAuthoritative!==true||m.integrity?.verifiedRules!==true||
-   !['completed','resigned'].includes(m.status)||!E?.getBot(m.botId))return false;
+   !['completed','resigned'].includes(m.status)||!E?.getBot(m.botId)||
+   m.rule!=='renju-practice'||!Array.isArray(m.moves)||!m.result)return false;
  status.matchId=id;status.ply=Number.isInteger(ply)?Math.max(0,Math.min(m.moves.length,ply)):Math.max(0,m.moves.length-1);
  status.mode='independent';status.open=true;resetDecision();lastError='';
  render();if($('b8-review')&&!$('b8-review').hidden){
